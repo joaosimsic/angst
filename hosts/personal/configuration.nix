@@ -1,8 +1,10 @@
-{ config, pkgs, inputs, hostname, ... }:
+{ config, pkgs, inputs, hostname, capabilities, ... }:
 
 {
   imports = [
     ./hardware.nix
+
+    capabilities.audio
   ];
 
   networking.hostName = hostname;

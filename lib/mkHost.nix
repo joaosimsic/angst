@@ -3,12 +3,13 @@
 hostname:
 let
   hostConfig = loadHost hostname;
+  capabilities = import ../capabilities { };
 in
 inputs.nixpkgs.lib.nixosSystem {
   system = hostConfig.system;
 
   specialArgs = {
-    inherit inputs hostname envPath;
+    inherit inputs hostname envPath capabilities;
 
     userConfig = hostConfig.user;
     
