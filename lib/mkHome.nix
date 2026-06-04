@@ -15,5 +15,5 @@ inputs.home-manager.lib.homeManagerConfiguration {
     userConfig = hostConfig.user;
   };
 
-  modules = [ ../home.nix ];
+  modules = [ ../core/home.nix ];
 }
