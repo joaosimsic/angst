@@ -11,6 +11,8 @@ inputs.nixpkgs.lib.nixosSystem {
     inherit inputs hostname envPath;
 
     userConfig = hostConfig.user;
+    
+    monitors = hostConfig.monitors or {};
   };
 
   modules = [

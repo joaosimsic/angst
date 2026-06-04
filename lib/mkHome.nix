@@ -12,7 +12,10 @@ inputs.home-manager.lib.homeManagerConfiguration {
 
   extraSpecialArgs = {
     inherit inputs envPath;
+
     userConfig = hostConfig.user;
+
+    monitors = hostConfig.monitors or {};
   };
 
   modules = [ ../core/home.nix ];
