@@ -1,6 +1,10 @@
 { config, lib, pkgs, userConfig, ... }:
 
 {
+  imports = [
+    ../profiles/base.nix
+  ];
+
   console.keyMap = lib.mkDefault "br-abnt2";
   services.xserver.xkb = {
     layout = lib.mkDefault "br";
@@ -29,14 +33,6 @@
   environment.shells = [ pkgs.bash pkgs.nushell ];
 
   users.users.root.initialPassword = "changeme";
-
-  environment.systemPackages = with pkgs; [
-    git
-    wget
-    nushell
-    home-manager
-    starship
-  ];
 
   programs.nix-ld.enable = true;
 }
