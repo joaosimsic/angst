@@ -1,0 +1,24 @@
+config-file = colors.conf
+
+font-family = JetBrainsMono Nerd Font
+font-size = 13
+
+cursor-style = block
+cursor-style-blink = false
+
+window-decoration = false
+
+window-padding-x = 2
+window-padding-y = 2
+
+background-opacity = 1.0
+
+bold-is-bright = true
+
+font-feature = +calt
+font-feature = +liga
+font-feature = +dlig
+
+scrollback-limit = 10000
+
+keybind = ctrl+q=text:\x11

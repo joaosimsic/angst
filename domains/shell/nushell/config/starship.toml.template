@@ -1,0 +1,98 @@
+format = """
+$directory $git_branch$git_status$all
+$character"""
+
+add_newline = true
+
+[directory]
+format = "[$path]($style)[$read_only]($read_only_style)"
+style = "bold #{{BRIGHT}}"
+read_only = " RO"
+read_only_style = "bold #{{RED}}"
+truncation_length = 3
+truncate_to_repo = false
+
+[git_branch]
+format = "on [$branch]($style)"
+style = "#{{COMMENT}}"
+symbol = ""
+
+[git_status]
+format = " [$all_status$ahead_behind]($style)"
+style = "#{{YELLOW}}"
+conflicted = "!"
+ahead = "+"
+behind = "-"
+diverged = "+-"
+untracked = "?"
+stashed = "*"
+modified = "~"
+staged = ">"
+renamed = "r"
+deleted = "x"
+
+[character]
+success_symbol = "[>](bold #{{GREEN}})"
+error_symbol = "[>](bold #{{RED}})"
+vimcmd_symbol = "[<](bold #{{BASE}})"
+
+[username]
+format = "[$user]($style) "
+style_user = "bold #{{BRIGHT}}"
+style_root = "bold #{{RED}}"
+show_always = false
+
+[hostname]
+format = "[@$hostname]($style) "
+style = "bold #{{COMMENT}}"
+ssh_only = true
+
+[nodejs]
+format = "[$symbol($version)]($style) "
+symbol = "node "
+style = "#{{COMMENT}}"
+
+[python]
+format = "[$symbol$version]($style) "
+symbol = "py "
+style = "#{{COMMENT}}"
+
+[rust]
+format = "[$symbol($version)]($style) "
+symbol = "rs "
+style = "#{{COMMENT}}"
+
+[golang]
+format = "[$symbol($version)]($style) "
+symbol = "go "
+style = "#{{COMMENT}}"
+
+[java]
+format = "[$symbol($version)]($style) "
+symbol = "java "
+style = "#{{COMMENT}}"
+
+[php]
+format = "[$symbol($version)]($style) "
+symbol = "php "
+style = "#{{COMMENT}}"
+
+[ruby]
+format = "[$symbol($version)]($style) "
+symbol = "rb "
+style = "#{{COMMENT}}"
+
+[nix_shell]
+format = "[$symbol$state]($style) "
+symbol = "nix "
+style = "#{{COMMENT}}"
+
+[docker_context]
+format = "[$symbol$context]($style) "
+symbol = "docker "
+style = "#{{COMMENT}}"
+
+[package]
+format = "[$symbol$version]($style) "
+symbol = "pkg "
+style = "#{{COMMENT}}"

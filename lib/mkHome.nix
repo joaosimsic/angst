@@ -3,6 +3,8 @@
 hostname: 
 let
   hostConfig = loadHost hostname;
+
+  domains = import ../domains { };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   pkgs = import inputs.nixpkgs {
@@ -11,7 +13,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
   };
 
   extraSpecialArgs = {
-    inherit inputs envPath;
+    inherit inputs envPath domains;
 
     userConfig = hostConfig.user;
 

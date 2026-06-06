@@ -1,11 +1,8 @@
 { config, lib, pkgs, userConfig, ... }:
 
 {
-  imports = [
-    ../profiles/base.nix
-  ];
-
   console.keyMap = lib.mkDefault "br-abnt2";
+
   services.xserver.xkb = {
     layout = lib.mkDefault "br";
     variant = lib.mkDefault "abnt2";

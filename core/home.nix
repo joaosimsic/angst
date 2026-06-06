@@ -1,8 +1,10 @@
-{ config, pkgs, userConfig, ... }:
+{ config, pkgs, userConfig, domains, ... }:
 
 {
   imports = [
-    ../profiles
+    domains.shell.nushell
+    domains.terminal.ghostty
+    domains.terminal.zellij
   ];
 
   programs.home-manager.enable = true;

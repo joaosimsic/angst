@@ -1,0 +1,59 @@
+$env.config.color_config = {
+    separator:                   "#{{DIM}}"
+    leading_trailing_space_bg:   { attr: n }
+    header:                      { fg: "#{{BASE}}" attr: b }
+    empty:                       "#{{COMMENT}}"
+    bool:                        "#{{BRIGHT}}"
+    int:                         "#{{BASE}}"
+    filesize:                    "#{{BASE}}"
+    duration:                    "#{{BASE}}"
+    date:                        "#{{BRIGHT}}"
+    range:                       "#{{BASE}}"
+    float:                       "#{{BASE}}"
+    string:                      "#{{BASE}}"
+    nothing:                     "#{{COMMENT}}"
+    binary:                      "#{{COMMENT}}"
+    cell_path:                   "#{{BRIGHT}}"
+    row_index:                   { fg: "#{{COMMENT}}" attr: b }
+    record:                      "#{{BASE}}"
+    list:                        "#{{BASE}}"
+    block:                       "#{{BASE}}"
+    hints:                       "#{{DIM}}"
+    search_result:               { fg: "#{{BLACK}}" bg: "#{{BASE}}" }
+
+    shape_and:                   { fg: "#{{BASE}}" attr: b }
+    shape_binary:                "#{{COMMENT}}"
+    shape_block:                 "#{{COMMENT}}"
+    shape_bool:                  "#{{BRIGHT}}"
+    shape_custom:                "#{{BASE}}"
+    shape_datetime:              "#{{BRIGHT}}"
+    shape_directory:             { fg: "#{{BASE}}" attr: u }
+    shape_external:              "#{{BASE}}"
+    shape_externalarg:           "#{{BASE}}"
+    shape_filepath:              { fg: "#{{BASE}}" attr: u }
+    shape_flag:                  { fg: "#{{BRIGHT}}" attr: b }
+    shape_float:                 "#{{BASE}}"
+    shape_garbage:               { fg: "#{{RED}}" attr: b }
+    shape_globpattern:           "#{{CYAN}}"
+    shape_int:                   "#{{BASE}}"
+    shape_internalcall:          { fg: "#{{BRIGHT}}" attr: b }
+    shape_keyword:               { fg: "#{{BASE}}" attr: b }
+    shape_list:                  "#{{COMMENT}}"
+    shape_literal:               "#{{BASE}}"
+    shape_match_pattern:         "#{{BASE}}"
+    shape_matching_brackets:     { attr: u }
+    shape_nothing:               "#{{COMMENT}}"
+    shape_operator:              "#{{BASE}}"
+    shape_or:                    { fg: "#{{BASE}}" attr: b }
+    shape_pipe:                  { fg: "#{{BRIGHT}}" attr: b }
+    shape_range:                 "#{{BASE}}"
+    shape_record:                "#{{COMMENT}}"
+    shape_redirection:           { fg: "#{{BRIGHT}}" attr: b }
+    shape_signature:             "#{{BRIGHT}}"
+    shape_string:                "#{{COMMENT}}"
+    shape_string_interpolation:  "#{{BRIGHT}}"
+    shape_table:                 "#{{COMMENT}}"
+    shape_variable:              "#{{BRIGHT}}"
+    shape_vardecl:               "#{{BRIGHT}}"
+    shape_raw_string:            "#{{COMMENT}}"
+}

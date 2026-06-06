@@ -1,7 +1,16 @@
-{ pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
+let
+  cfg = config.capabilities.git;
+in
 {
-  environment.systemPackages = with pkgs; [
-    git
-  ];
+  options.capabilities.git = {
+    enable = lib.mkEnableOption "Git version control";
+  };
+
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = with pkgs; [
+      git
+    ];
+  };
 }

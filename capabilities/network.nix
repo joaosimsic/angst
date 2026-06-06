@@ -1,8 +1,17 @@
-{ pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
+let
+  cfg = config.capabilities.network;
+in
 {
-  environment.systemPackages = with pkgs; [
-    wget
-    curl
-  ];
+  options.capabilities.network = {
+    enable = lib.mkEnableOption "Basic networking tools";
+  };
+
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = with pkgs; [
+      wget
+      curl
+    ];
+  };
 }

@@ -1,19 +1,28 @@
-{ pkgs, userConfig, ... }:
+{ config, lib, pkgs, userConfig, ... }:
 
+let
+  cfg = config.capabilities.container;
+in
 {
-  virtualisation.docker = {
-    enable = true;
-    autoPrune = {
+  options.capabilities.container = {
+    enable = lib.mkEnableOption "Container runtimes via Docker and Podman";
+  };
+
+  config = lib.mkIf cfg.enable {
+    virtualisation.docker = {
       enable = true;
-      dates = "weekly";
+      autoPrune = {
+        enable = true;
+        dates = "weekly";
+      };
     };
-  };
 
-  virtualisation.podman = {
-    enable = true;
-    dockerCompat = false; 
-    defaultNetwork.settings.dns_enabled = true;
-  };
+    virtualisation.podman = {
+      enable = true;
+      dockerCompat = false;
+      defaultNetwork.settings.dns_enabled = true;
+    };
 
-  users.users.${userConfig.username}.extraGroups = [ "docker" "podman" ];
+    users.users.${userConfig.username}.extraGroups = [ "docker" "podman" ];
+  };
 }

@@ -5,6 +5,9 @@
     ./hardware.nix
 
     capabilities.audio
+    capabilities.network
+    capabilities.container
+    capabilities.git
   ];
 
   networking.hostName = hostname;

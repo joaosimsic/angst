@@ -1,14 +1,23 @@
-{ pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
+let
+  cfg = config.capabilities.audio;
+in
 {
-  security.rtkit.enable = true;
-
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
+  options.capabilities.audio = {
+    enable = lib.mkEnableOption "System audio processing via Pipewire";
   };
-  
-  environment.systemPackages = [ pkgs.pavucontrol ];
+
+  config = lib.mkIf cfg.enable {
+    security.rtkit.enable = true;
+
+    services.pipewire = {
+      enable = true;
+      alsa.enable = true;
+      alsa.support32Bit = true;
+      pulse.enable = true;
+    };
+    
+    environment.systemPackages = [ pkgs.pavucontrol ];
+  };
 }
