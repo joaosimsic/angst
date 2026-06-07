@@ -19,5 +19,5 @@ inputs.nixpkgs.lib.nixosSystem {
   modules = [
     ../core
     ../hosts/${hostname}/configuration.nix
-  ];
+  ] ++ builtins.attrValues capabilities;
 }

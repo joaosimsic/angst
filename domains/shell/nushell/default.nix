@@ -5,17 +5,19 @@ let
 in 
 {
   options.domains.shell.nushell = {
-    enable = lib.mkEnableOption "Nushell configuration environment";
+    enable = lib.mkEnableOption "Nushell configuration";
   };
 
   config = lib.mkIf cfg.enable {
     programs.nushell = {
       enable = true;
+      configFile.source = ./config/config.nu;
+      envFile.source = ./config/env.nu;
     };
 
     programs.starship = {
       enable = true;
-      enableNushellIntegration = true;
+      settings = pkgs.lib.importTOML ./config/starship.toml;
     };
   };
 }

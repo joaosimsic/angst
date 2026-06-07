@@ -1,12 +1,6 @@
-{ config, pkgs, userConfig, domains, ... }:
+{ config, pkgs, userConfig, ... }:
 
 {
-  imports = [
-    domains.shell.nushell
-    domains.terminal.ghostty
-    domains.terminal.zellij
-  ];
-
   programs.home-manager.enable = true;
 
   home.username = userConfig.username;
@@ -14,4 +8,8 @@
   home.stateVersion = "24.05";
 
   fonts.fontconfig.enable = true;
+
+  domains.shell.nushell.enable = true;
+  domains.terminal.ghostty.enable = true;
+  domains.terminal.zellij.enable = true;
 }

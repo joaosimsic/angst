@@ -1,13 +1,8 @@
-{ config, pkgs, inputs, hostname, capabilities, ... }:
+{ config, pkgs, inputs, hostname, ... }:
 
 {
   imports = [
     ./hardware.nix
-
-    capabilities.audio
-    capabilities.network
-    capabilities.container
-    capabilities.git
   ];
 
   networking.hostName = hostname;
@@ -29,4 +24,9 @@
   hardware.cpu.amd.updateMicrocode = true;
 
   zramSwap.enable = true;
+
+  capabilities.audio.enable = true;
+  capabilities.network.enable = true;
+  capabilities.container.enable = true;
+  capabilities.git.enable = true;
 }
