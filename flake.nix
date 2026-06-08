@@ -15,12 +15,12 @@
     env = {
       inherit inputs;
 
-      envPath = "/home/joao/.config/angst";
       loadHost = hostname: import (./hosts + "/${hostname}");
     };
 
-    mkHost = import ./lib/mkHost.nix env;
-    mkHome = import ./lib/mkHome.nix env;
+    homeLib = import ./lib/mkHome.nix env;
+    mkHost = import ./lib/mkHost.nix (env // { mkHomeProfile = homeLib.mkHomeProfile; });
+    mkHome = homeLib.mkHome;
   in
   {
     nixosConfigurations = nixpkgs.lib.genAttrs hosts mkHost; 
