@@ -1,7 +1,21 @@
 { lib }:
 
 let
-  inherit (lib) attrNames foldl' hasSuffix;
+  inherit (lib)
+    attrNames
+    concatStringsSep
+    elem
+    filter
+    genAttrs
+    hasSuffix
+    mapAttrs'
+    nameValuePair
+    removeSuffix
+    ;
+
+  schema = import ./schema.nix;
+  inherit (schema) requiredTokens optionalTokens;
+  allColorTokens = requiredTokens ++ optionalTokens;
 
   hexToRgb = hex:
     let
@@ -32,33 +46,62 @@ let
     in
     "${toString (hexByte 0)} ${toString (hexByte 2)} ${toString (hexByte 4)}";
 
+  isValidHex = value: builtins.match "[0-9a-fA-F]{6}" value != null;
+
+  validateTheme =
+    name: theme:
+    let
+      missing = filter (t: !(theme ? ${t})) requiredTokens;
+      definedColorKeys = filter (k: elem k allColorTokens && theme ? ${k}) (attrNames theme);
+      invalid = filter (t: !isValidHex theme.${t}) definedColorKeys;
+    in
+    if missing != [ ] then
+      builtins.throw "Theme '${name}' missing tokens: ${concatStringsSep ", " missing}"
+    else if invalid != [ ] then
+      builtins.throw "Theme '${name}' has invalid hex for: ${concatStringsSep ", " invalid}"
+    else
+      theme;
+
   withRgb =
     theme:
-    foldl'
-      (acc: name:
-        if hasSuffix "_RGB" name then
-          acc
-        else
-          acc // {
-            "${name}_RGB" = hexToRgb theme.${name};
-          }
-      )
-      theme
-      (attrNames theme);
+    let
+      colorKeys = filter (k: elem k allColorTokens && theme ? ${k}) (attrNames theme);
+    in
+    theme
+    // genAttrs (map (k: "${k}_RGB") colorKeys) (name:
+      hexToRgb theme.${lib.removeSuffix "_RGB" name}
+    );
 
-  themes = {
-    monochrome = import ./monochrome.nix;
-  };
+  themesDir = ./.;
+  themeFiles =
+    lib.filterAttrs
+      (filename: type:
+        type == "regular"
+        && hasSuffix ".nix" filename
+        && filename != "default.nix"
+        && filename != "schema.nix"
+      )
+      (builtins.readDir themesDir);
+
+  themes =
+    mapAttrs'
+      (filename: _:
+        let
+          name = removeSuffix ".nix" filename;
+        in
+        nameValuePair name (import (themesDir + "/${filename}"))
+      )
+      themeFiles;
 in
 {
-  inherit themes;
+  inherit themes schema requiredTokens optionalTokens allColorTokens;
 
   default = "monochrome";
 
   get =
     name:
     if themes ? ${name} then
-      withRgb themes.${name}
+      withRgb (validateTheme name themes.${name})
     else
       builtins.throw "Unknown theme: ${name}";
 }

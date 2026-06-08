@@ -13,7 +13,7 @@ let
       inherit (pkgs) lib;
 
       themesLib = import ../themes/default.nix { inherit lib; };
-      theme = themesLib.get (hostConfig.theme or themesLib.default);
+      hostTheme = hostConfig.theme or themesLib.default;
 
       domainsPath = ../domains;
       domainsLib = import ./domains.nix { inherit lib domainsPath; };
@@ -24,7 +24,7 @@ let
       inherit pkgs;
 
       extraSpecialArgs = {
-        inherit inputs theme;
+        inherit inputs themesLib hostTheme;
 
         userConfig = hostConfig.user;
 
@@ -33,18 +33,22 @@ let
 
       modules = [
         ../core/home.nix
+        (import ../lib/themeModule.nix { inherit lib themesLib hostTheme; })
         ../hosts/${hostname}/home.nix
       ] ++ homeModules;
     };
 in
-{
+rec {
   inherit mkHomeProfile;
 
-  mkHome = hostname:
+  mkHomeWithExtraModules = hostname: extraModules:
     let
       profile = mkHomeProfile hostname;
     in
     inputs.home-manager.lib.homeManagerConfiguration {
-      inherit (profile) pkgs extraSpecialArgs modules;
+      inherit (profile) pkgs extraSpecialArgs;
+      modules = profile.modules ++ extraModules;
     };
+
+  mkHome = hostname: mkHomeWithExtraModules hostname [ ];
 }

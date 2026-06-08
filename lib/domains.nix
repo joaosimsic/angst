@@ -140,10 +140,11 @@ let
       hasCustomModule = builtins.pathExists modulePath;
 
       baseModule =
-        { config, lib, pkgs, theme, ... }:
+        { config, lib, pkgs, themesLib, ... }:
         let
           cfg = config.domains.${category}.${name};
           optionDescription = meta.description or "${name} configuration";
+          theme = themesLib.get config.theme;
         in
         {
           options.domains.${category}.${name} = {

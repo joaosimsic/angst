@@ -99,8 +99,13 @@ including auto-generated domain modules. Custom domain modules can also accept
 | File | Role |
 |------|------|
 | `themes/default.nix` | Theme registry, `get`/`default`, `hexToRgb`, `withRgb` |
+| `themes/schema.nix` | Required and optional token lists |
 | `themes/monochrome.nix` | Palette for the monochrome theme (bare hex, no `#`) |
-| `lib/renderTemplate.nix` | `{{TOKEN}}` string substitution |
+| `themes/catppuccin-mocha.nix` | Reference colorful palette (Catppuccin Mocha) |
+| `lib/renderTemplate.nix` | `{{TOKEN}}` string substitution with leftover detection |
+| `lib/templatePlaceholders.nix` | Extract `{{TOKEN}}` placeholders from template text |
+| `lib/lintThemes.nix` | Validate themes and templates (`nix run .#lint-themes`) |
+| `lib/themeModule.nix` | Home Manager `options.theme` enum |
 | `lib/domains.nix` | `mkXdgSymlinks` — recursive template discovery and rendering |
 | `lib/mkHome.nix` | Loads theme from host config, injects into HM |
 | `hosts/*/default.nix` | Per-host `theme` field |
@@ -810,22 +815,22 @@ Do this before adding a second theme.
 
 #### 1. Template validation at eval time
 
-- [ ] Extend `renderTemplate.nix` to detect leftover `{{TOKEN}}` in rendered output
-- [ ] Error message includes template path and unmatched token name
-- [ ] Error message lists available theme keys
-- [ ] (Optional) Extract all placeholders from template upfront and diff against theme keys
-- [ ] Verify: intentional typo in a template causes eval failure
-- [ ] Verify: existing templates pass with monochrome theme
+- [x] Extend `renderTemplate.nix` to detect leftover `{{TOKEN}}` in rendered output
+- [x] Error message includes template path and unmatched token name
+- [x] Error message lists available theme keys
+- [x] (Optional) Extract all placeholders from template upfront and diff against theme keys
+- [x] Verify: intentional typo in a template causes eval failure
+- [x] Verify: existing templates pass with monochrome theme
 
 #### 2. Shared theme schema
 
-- [ ] Create `themes/schema.nix` with `requiredTokens` list
-- [ ] Add `optionalTokens` list (e.g. `BLUE`, `MAGENTA`)
-- [ ] Implement `validateTheme` in `themes/default.nix`
-- [ ] Reject themes with missing required tokens
-- [ ] Reject themes with invalid hex values (not `[0-9a-fA-F]{6}`)
-- [ ] Call `validateTheme` inside `themesLib.get`
-- [ ] Verify: removing a token from `monochrome.nix` fails at eval
+- [x] Create `themes/schema.nix` with `requiredTokens` list
+- [x] Add `optionalTokens` list (e.g. `BLUE`, `MAGENTA`)
+- [x] Implement `validateTheme` in `themes/default.nix`
+- [x] Reject themes with missing required tokens
+- [x] Reject themes with invalid hex values (not `[0-9a-fA-F]{6}`)
+- [x] Call `validateTheme` inside `themesLib.get`
+- [x] Verify: removing a token from `monochrome.nix` fails at eval
 
 ---
 
@@ -833,17 +838,17 @@ Do this before adding a second theme.
 
 #### 3. Reference colorful theme
 
-- [ ] Choose palette (catppuccin-mocha, gruvbox-dark, or custom)
-- [ ] Create `themes/<name>.nix` with all required tokens
-- [ ] Register theme (manual or via auto-discovery)
-- [ ] Update `ghostty/colors.conf.template` — use `BLUE` / `MAGENTA` in palette slots 5 and 13
-- [ ] Add `BLUE` and `MAGENTA` to schema (`optionalTokens` or `requiredTokens`)
-- [ ] Set `theme = "<name>"` on a test host and build
+- [x] Choose palette (catppuccin-mocha, gruvbox-dark, or custom)
+- [x] Create `themes/<name>.nix` with all required tokens
+- [x] Register theme (manual or via auto-discovery)
+- [x] Update `ghostty/colors.conf.template` — use `BLUE` / `MAGENTA` in palette slots 5 and 13
+- [x] Add `BLUE` and `MAGENTA` to schema (`optionalTokens` or `requiredTokens`)
+- [x] Set `theme = "<name>"` on a test host and build (via `homeConfigurations.joao-theme-override-test` + `checks.home-catppuccin-mocha`)
 - [ ] Visual check: ghostty palette shows distinct hues
 - [ ] Visual check: zellij status bar and tab bar
 - [ ] Visual check: starship prompt (success vs error vs muted)
 - [ ] Visual check: nushell syntax highlighting
-- [ ] Template validation passes for both monochrome and new theme
+- [x] Template validation passes for both monochrome and new theme
 
 ---
 
@@ -851,29 +856,29 @@ Do this before adding a second theme.
 
 #### 4. Auto-discover themes
 
-- [ ] Scan `themes/` with `builtins.readDir`
-- [ ] Import every `*.nix` except `default.nix` and `schema.nix`
-- [ ] Theme name derived from filename (without `.nix`)
-- [ ] Remove manual `themes = { ... }` attrset
-- [ ] Verify: new file `themes/foo.nix` is selectable as `"foo"` without editing `default.nix`
+- [x] Scan `themes/` with `builtins.readDir`
+- [x] Import every `*.nix` except `default.nix` and `schema.nix`
+- [x] Theme name derived from filename (without `.nix`)
+- [x] Remove manual `themes = { ... }` attrset
+- [x] Verify: new file `themes/foo.nix` is selectable as `"foo"` without editing `default.nix`
 
 #### 6. Restrict `_RGB` generation
 
-- [ ] Limit `withRgb` to schema-listed color keys (or hex-pattern match)
-- [ ] Verify: non-color metadata on a theme does not produce `*_RGB` keys
-- [ ] Verify: all existing `*_RGB` tokens still generate correctly
+- [x] Limit `withRgb` to schema-listed color keys (or hex-pattern match)
+- [x] Verify: non-color metadata on a theme does not produce `*_RGB` keys
+- [x] Verify: all existing `*_RGB` tokens still generate correctly
 
 #### 8. Template lint command
 
-- [ ] Create `lib/lintThemes.nix`
-- [ ] Collect all `domains/**/*.template` files
-- [ ] Extract `{{TOKEN}}` placeholders from each template
-- [ ] Validate every registered theme against required tokens
-- [ ] Render each template and check for leftover placeholders
-- [ ] Add `nix run .#lint-themes` flake app
-- [ ] Exit code 1 on any failure
-- [ ] Runs in under a few seconds (no full HM eval)
-- [ ] (Optional) Wire into CI or pre-commit
+- [x] Create `lib/lintThemes.nix`
+- [x] Collect all `domains/**/*.template` files
+- [x] Extract `{{TOKEN}}` placeholders from each template (via `lib/templatePlaceholders.nix`)
+- [x] Validate every registered theme against required tokens
+- [x] Render each template and check for leftover placeholders
+- [x] Add `nix run .#lint-themes` flake app
+- [x] Exit code 1 on any failure
+- [x] Runs in under a few seconds (no full HM eval)
+- [x] (Optional) Wire into CI or pre-commit (`nix flake check` runs `checks.lint-themes`, `checks.theme-override`, and `checks.home-catppuccin-mocha`)
 
 ---
 
@@ -890,19 +895,19 @@ Do this before adding a second theme.
 
 #### 7. Home Manager theme option
 
-- [ ] Add `options.theme` enum to Home Manager module
-- [ ] Wire `mkHome.nix` to read HM option with host config as default
-- [ ] Verify: host `default.nix` theme still works unchanged
-- [ ] Verify: override in `home.nix` takes effect
-- [ ] Verify: invalid theme name rejected by enum type
+- [x] Add `options.theme` enum to Home Manager module
+- [x] Wire `mkHome.nix` to read HM option with host config as default
+- [x] Verify: host `default.nix` theme still works unchanged
+- [x] Verify: override in `home.nix` takes effect (via `homeConfigurations.joao-theme-override-test` and `checks.theme-override`)
+- [x] Verify: invalid theme name rejected by enum type
 
 #### 9. Rendered config inspection
 
-- [ ] Add `nix run .#render-template` flake app
-- [ ] Accept template path + theme name as arguments
-- [ ] Print rendered output to stdout
-- [ ] Verify: inspect output without full HM build
-- [ ] Verify: diff two themes with shell redirection
+- [x] Add `nix run .#render-template` flake app
+- [x] Accept template path + theme name as arguments
+- [x] Print rendered output to stdout
+- [x] Verify: inspect output without full HM build
+- [x] Verify: diff two themes with shell redirection
 
 #### 10. Expand templated coverage
 
@@ -924,7 +929,7 @@ Do this before adding a second theme.
 - [ ] Register theme (edit `themes/default.nix` or rely on auto-discovery)
 - [ ] Set `theme = "<name>"` in target host's `default.nix`
 - [ ] Run `nix build .#homeConfigurations.joao.activationPackage`
-- [ ] Run lint command when available: `nix run .#lint-themes`
+- [x] Run lint command when available: `nix run .#lint-themes`
 - [ ] Switch and visually verify all templated tools (see Phase 2 visual checks)
 
 ---
@@ -939,7 +944,7 @@ Do this before adding a second theme.
 - [ ] Confirm all placeholders exist in `themes/schema.nix` (add new tokens to schema if needed)
 - [ ] Update every existing theme file with any new tokens
 - [ ] Build Home Manager config
-- [ ] Verify rendered file in nix store or via render command
+- [x] Verify rendered file in nix store or via render command
 - [ ] Confirm target application loads the config without parse errors
 
 ---
@@ -990,13 +995,17 @@ These are explicitly out of scope for the theme system:
 # Build home config (validates full eval including templates)
 nix build .#homeConfigurations.joao.activationPackage
 
+# Run all theme checks (lint, override, catppuccin build)
+nix flake check
+
 # Switch theme (today)
 # Edit hosts/personal/default.nix → theme = "monochrome";
+# Or override in hosts/personal/home.nix → theme = "catppuccin-mocha";
 # Then rebuild and switch.
 
-# Future: lint templates
-# nix run .#lint-themes
+# Lint templates
+nix run .#lint-themes
 
-# Future: preview a rendered template
-# nix run .#render-template -- ghostty/colors.conf monochrome
+# Preview a rendered template
+nix run .#render-template -- terminal/ghostty/config/colors.conf monochrome
 ```

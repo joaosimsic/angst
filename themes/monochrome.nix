@@ -8,4 +8,6 @@
   GREEN = "a7a7a7";
   YELLOW = "b3b3b3";
   CYAN = "8f8f8f";
+  BLUE = "858585";
+  MAGENTA = "919191";
 }
