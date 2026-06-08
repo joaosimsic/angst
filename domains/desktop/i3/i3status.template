@@ -1,0 +1,39 @@
+general {
+    colors = true
+    interval = 5
+    markup = pango
+    color_good = "#{{GREEN}}"
+    color_degraded = "#{{YELLOW}}"
+    color_bad = "#{{RED}}"
+}
+
+order = "wireless ethernet cpu memory _disk_0 _tztime"
+
+wireless {
+    format_up = " <span color='#{{CYAN}}'>W: %essid (%quality)</span> "
+    format_down = " <span color='#{{DIM}}'>W: down</span> "
+}
+
+ethernet {
+    format_up = " <span color='#{{CYAN}}'>E: %ip</span> "
+    format_down = " <span color='#{{DIM}}'>E: down</span> "
+}
+
+cpu {
+    format = " <span color='#{{BASE}}'>CPU %usage</span> "
+    max_threshold = 90
+}
+
+memory {
+    format = " <span color='#{{BASE}}'>RAM %used</span> "
+    threshold_degraded = "80%"
+    threshold_critical = "95%"
+}
+
+disk "/" {
+    format = " <span color='#{{DIM}}'>DISK %avail</span> "
+}
+
+tztime "local" {
+    format = " <span color='#{{BRIGHT}}'>%Y-%m-%d %H:%M</span> "
+}
