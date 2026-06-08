@@ -1,6 +1,8 @@
 {
   system = "x86_64-linux";
 
+  theme = "monochrome";
+
   user = {
     username = "joao";
     homeDirectory = "/home/joao";

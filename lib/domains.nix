@@ -1,12 +1,22 @@
 { lib, domainsPath }:
 
 let
-  inherit (lib) foldl' filter concatStringsSep attrNames concatLists mapAttrsToList optional;
+  inherit (lib) foldl' filter concatStringsSep attrNames concatLists mapAttrsToList optional removeSuffix;
+
+  renderTemplate = import ./renderTemplate.nix;
 
   mkXdgSymlinks =
-    { configDir, xdgName ? null, xdgFile ? null }:
+    { configDir, theme, xdgName ? null, xdgFile ? null }:
     let
       isTemplate = name: builtins.match ".*\\.template$" name != null;
+
+      templateFor = name: "${name}.template";
+
+      hasTemplate = dir: name:
+        let
+          entries = builtins.readDir dir;
+        in
+        entries ? ${templateFor name} && entries.${templateFor name} == "regular";
 
       joinPath = parts: concatStringsSep "/" (filter (p: p != "") parts);
 
@@ -18,7 +28,11 @@ let
           let
             fullPath = "${dir}/${entryName}";
             entry = entries.${entryName};
-            xdgRel = joinPath [ relPath entryName ];
+            xdgRel =
+              if isTemplate entryName then
+                joinPath [ relPath (removeSuffix ".template" entryName) ]
+              else
+                joinPath [ relPath entryName ];
             xdgKey =
               if xdgName != null then
                 joinPath [ xdgName xdgRel ]
@@ -26,8 +40,19 @@ let
                 xdgRel;
           in
           if entry == "directory" then
-            acc // readDirRecursive fullPath xdgRel
+            acc // readDirRecursive fullPath (joinPath [ relPath entryName ])
           else if isTemplate entryName then
+            acc // {
+              ${xdgKey} = {
+                text = renderTemplate {
+                  inherit lib;
+                  templatePath = fullPath;
+                  tokens = theme;
+                };
+                force = true;
+              };
+            }
+          else if hasTemplate dir entryName then
             acc
           else
             acc // {
@@ -39,12 +64,28 @@ let
         ) { } (attrNames entries);
     in
     if xdgFile != null then
-      {
-        ${xdgFile} = {
-          source = "${configDir}/${xdgFile}";
-          force = true;
-        };
-      }
+      let
+        templatePath = "${configDir}/${xdgFile}.template";
+        filePath = "${configDir}/${xdgFile}";
+      in
+      if builtins.pathExists templatePath then
+        {
+          ${xdgFile} = {
+            text = renderTemplate {
+              inherit lib;
+              inherit templatePath;
+              tokens = theme;
+            };
+            force = true;
+          };
+        }
+      else
+        {
+          ${xdgFile} = {
+            source = filePath;
+            force = true;
+          };
+        }
     else
       readDirRecursive configDir "";
 
@@ -99,7 +140,7 @@ let
       hasCustomModule = builtins.pathExists modulePath;
 
       baseModule =
-        { config, lib, pkgs, ... }:
+        { config, lib, pkgs, theme, ... }:
         let
           cfg = config.domains.${category}.${name};
           optionDescription = meta.description or "${name} configuration";
@@ -114,6 +155,7 @@ let
 
             xdg.configFile = mkXdgSymlinks {
               configDir = "${path}/config";
+              inherit theme;
               xdgName = meta.xdg or null;
               xdgFile = meta.xdgFile or null;
             };

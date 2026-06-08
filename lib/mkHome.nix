@@ -12,6 +12,9 @@ let
 
       inherit (pkgs) lib;
 
+      themesLib = import ../themes/default.nix { inherit lib; };
+      theme = themesLib.get (hostConfig.theme or themesLib.default);
+
       domainsPath = ../domains;
       domainsLib = import ./domains.nix { inherit lib domainsPath; };
 
@@ -21,7 +24,7 @@ let
       inherit pkgs;
 
       extraSpecialArgs = {
-        inherit inputs;
+        inherit inputs theme;
 
         userConfig = hostConfig.user;
 
