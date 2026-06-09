@@ -132,41 +132,32 @@ let
     )
     (builtins.readDir domainsPath));
 
-  mkDomainModule = entry:
-    let
-      inherit (entry) category name meta path;
+  mkDomainModule = entry: { config, lib, pkgs, hostTheme, themesLib, ... }:
+  let
+    inherit (entry) category name meta path;
+    modulePath = "${path}/module.nix";
+    hasCustomModule = builtins.pathExists modulePath;
 
-      modulePath = "${path}/module.nix";
-      hasCustomModule = builtins.pathExists modulePath;
+    baseModule = {
+      options.domains.${category}.${name} = {
+        enable = lib.mkEnableOption "Enable ${meta.description or name}";
+      };
 
-      baseModule =
-        { config, lib, pkgs, themesLib, ... }:
-        let
-          cfg = config.domains.${category}.${name};
-          optionDescription = meta.description or "${name} configuration";
-          theme = themesLib.get config.theme;
-        in
-        {
-          options.domains.${category}.${name} = {
-            enable = lib.mkEnableOption optionDescription;
-          };
-
-          config = lib.mkIf cfg.enable {
-            home.packages = [ pkgs.${meta.package} ];
-
-            xdg.configFile = mkXdgSymlinks {
-              configDir = "${path}/config";
-              inherit theme;
-              xdgName = meta.xdg or null;
-              xdgFile = meta.xdgFile or null;
-            };
-          };
+      config = lib.mkIf config.domains.${category}.${name}.enable {
+        xdg.configFile = mkXdgSymlinks {
+          configDir = path;
+          theme = themesLib.get hostTheme;
+          xdgName = meta.xdg or null;
+          xdgFile = meta.xdgFile or null;
         };
-    in
-    {
-      imports = [ baseModule ]
-        ++ optional hasCustomModule (import modulePath);
+      };
     };
+
+    customModule = if hasCustomModule then import modulePath else {};
+  in
+  {
+    imports = [ baseModule customModule ];
+  };
 in
 {
   inherit homeEntries mkDomainModule;

@@ -91,6 +91,10 @@
         self.homeConfigurations.joao-theme-override-test.activationPackage;
     };
 
+    packages.${system} = {
+      default = self.homeConfigurations.joao.activationPackage;
+    };
+
     apps.${system} = {
       lint-themes = {
         type = "app";

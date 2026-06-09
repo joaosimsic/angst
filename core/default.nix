@@ -1,6 +1,8 @@
 { config, lib, pkgs, userConfig, ... }:
 
 {
+  system.stateVersion = "25.11"; 
+
   console.keyMap = lib.mkDefault "br-abnt2";
 
   services.xserver.xkb = {
