@@ -18,4 +18,4 @@ palette = 11=#{{YELLOW}}
 palette = 12=#{{BLUE}}
 palette = 13=#{{MAGENTA}}
 palette = 14=#{{CYAN}}
-palette = 15=#{{BRIGHT}}
+palette = 15=#{{BASE}}

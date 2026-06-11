@@ -132,21 +132,27 @@ let
     )
     (builtins.readDir domainsPath));
 
-  mkDomainModule = entry: { config, lib, pkgs, hostTheme, themesLib, ... }:
+  mkDomainModule = entry: { config, lib, pkgs, themesLib, ... }:
   let
     inherit (entry) category name meta path;
     modulePath = "${path}/module.nix";
     hasCustomModule = builtins.pathExists modulePath;
+    configSubdir = "${path}/config";
+    configDir =
+      if builtins.pathExists configSubdir then
+        configSubdir
+      else
+        path;
 
     baseModule = {
       options.domains.${category}.${name} = {
         enable = lib.mkEnableOption "Enable ${meta.description or name}";
       };
 
-      config = lib.mkIf config.domains.${category}.${name}.enable {
+      config = lib.mkIf (config.domains.${category}.${name}.enable && !(meta.customXdg or false)) {
         xdg.configFile = mkXdgSymlinks {
-          configDir = path;
-          theme = themesLib.get hostTheme;
+          inherit configDir;
+          theme = themesLib.get config.theme;
           xdgName = meta.xdg or null;
           xdgFile = meta.xdgFile or null;
         };

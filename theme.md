@@ -105,6 +105,9 @@ including auto-generated domain modules. Custom domain modules can also accept
 | `lib/renderTemplate.nix` | `{{TOKEN}}` string substitution with leftover detection |
 | `lib/templatePlaceholders.nix` | Extract `{{TOKEN}}` placeholders from template text |
 | `lib/lintThemes.nix` | Validate themes and templates (`nix run .#lint-themes`) |
+| `lib/lintDesktop.nix` | Parse-check rendered i3/i3status configs (`nix run .#lint-desktop`) |
+| `lib/lintShell.nix` | Parse-check rendered starship/nushell configs (`nix run .#lint-shell`) |
+| `lib/themeRenderedChecks.nix` | Assert catppuccin-mocha renders distinct hues per tool |
 | `lib/themeModule.nix` | Home Manager `options.theme` enum |
 | `lib/domains.nix` | `mkXdgSymlinks` — recursive template discovery and rendering |
 | `lib/mkHome.nix` | Loads theme from host config, injects into HM |
@@ -119,6 +122,8 @@ including auto-generated domain modules. Custom domain modules can also accept
 | zellij | `domains/terminal/zellij/config/layouts/default.kdl.template` | `~/.config/zellij/layouts/default.kdl` |
 | nushell | `domains/shell/nushell/config/colors.nu.template` | `~/.config/nushell/colors.nu` |
 | starship | `domains/shell/starship/config/starship.toml.template` | `~/.config/starship/starship.toml` |
+| i3 | `domains/desktop/i3/config/config.template` | `~/.config/i3/config` |
+| i3status | `domains/desktop/i3/i3status.template` | `~/.config/i3status/config` |
 
 Non-color configs (e.g. `ghostty/config`, `nushell/config.nu`, `nushell/env.nu`)
 are deployed as static files and are **not** theme-aware.
@@ -127,20 +132,29 @@ are deployed as static files and are **not** theme-aware.
 
 ## Token contract
 
-Themes are flat attrsets. The **monochrome** theme defines these base tokens
-(all values are 6-character lowercase hex strings, without a leading `#`):
+Themes are flat attrsets with two token layers:
 
-| Token | Monochrome value | Typical role |
-|-------|------------------|--------------|
-| `BASE` | `eeeeee` | Primary foreground / body text |
+1. **Semantic tokens** — what templates should reference for meaning (`FG`, `ERROR`, …).
+2. **Palette tokens** — ANSI slot colors for ghostty's 16-color block only (`RED`, `BLUE`, …).
+
+The **monochrome** theme defines these semantic tokens (bare hex, no `#`):
+
+| Token | Monochrome value | Role |
+|-------|------------------|------|
+| `FG` | `eeeeee` | Primary foreground / body text |
 | `BRIGHT` | `ebebeb` | Emphasis, highlights, active states |
-| `DIM` | `6b6b6b` | Secondary / de-emphasized foreground |
-| `BLACK` | `0a0a0a` | Background, inverse foreground |
+| `MUTED` | `6b6b6b` | Secondary / de-emphasized foreground |
+| `BG` | `0a0a0a` | Background, inverse foreground |
 | `COMMENT` | `838383` | Comments, metadata, muted text |
-| `RED` | `9b9b9b` | Errors, destructive (monochrome: gray) |
-| `GREEN` | `a7a7a7` | Success (monochrome: gray) |
-| `YELLOW` | `b3b3b3` | Warnings, git status (monochrome: gray) |
-| `CYAN` | `8f8f8f` | Info, glob patterns (monochrome: gray) |
+| `ERROR` | `9b9b9b` | Errors, destructive (monochrome: gray) |
+| `SUCCESS` | `a7a7a7` | Success (monochrome: gray) |
+| `WARNING` | `b3b3b3` | Warnings, git status (monochrome: gray) |
+| `INFO` | `8f8f8f` | Info, glob patterns (monochrome: gray) |
+
+Palette tokens (`BLACK`, `RED`, `GREEN`, `YELLOW`, `CYAN`, `BLUE`, `MAGENTA`,
+`BASE`, `DIM`) are defined separately for ghostty's ANSI palette. In colorful
+themes they may differ from semantic roles; in monochrome they alias to the same
+grays.
 
 ### Derived tokens
 
@@ -148,8 +162,8 @@ Themes are flat attrsets. The **monochrome** theme defines these base tokens
 via `withRgb`. Example:
 
 ```
-BASE      = "eeeeee"
-BASE_RGB  = "238 238 238"
+FG        = "eeeeee"
+FG_RGB    = "238 238 238"
 ```
 
 These are consumed exclusively by zellij's KDL theme blocks. Templates should
@@ -157,24 +171,21 @@ never define `*_RGB` manually in theme files.
 
 ### Token usage by tool
 
-**ghostty** (`colors.conf.template`) — uses base hex tokens only:
-`BLACK`, `BASE`, `DIM`, `RED`, `GREEN`, `YELLOW`, `CYAN`, `BRIGHT`.
+**ghostty** (`colors.conf.template`) — uses palette tokens only:
+`BLACK`, `BASE`, `DIM`, `RED`, `GREEN`, `YELLOW`, `CYAN`, `BLUE`, `MAGENTA`, `BRIGHT`.
 
-Note: ghostty's 16-color palette remaps slots 5 and 13 to `RED` and slots 6
-and 14 to `CYAN` because the monochrome palette has no distinct magenta/blue.
-A colorful theme should introduce `BLUE` and `MAGENTA` tokens and update the
-template accordingly.
+**starship** (`starship.toml.template`) — uses semantic tokens:
+`BRIGHT`, `ERROR`, `COMMENT`, `WARNING`, `SUCCESS`, `FG`.
 
-**starship** (`starship.toml.template`) — uses:
-`BRIGHT`, `RED`, `COMMENT`, `YELLOW`, `GREEN`, `BASE`.
+**nushell** (`colors.nu.template`) — uses semantic tokens.
 
-**nushell** (`colors.nu.template`) — uses all nine base tokens.
+**zellij** (`config.kdl.template`) — uses `*_RGB` variants of semantic tokens:
+`BRIGHT`, `BG`, `FG`, `MUTED`, `ERROR`.
 
-**zellij** (`config.kdl.template`) — uses `*_RGB` variants of:
-`BRIGHT`, `BLACK`, `BASE`, `DIM`, `RED`.
+**zellij layout** (`layouts/default.kdl.template`) — uses semantic hex with `#`
+prefix in zjstatus format strings: `FG`, `BG`, `BRIGHT`.
 
-**zellij layout** (`layouts/default.kdl.template`) — uses base hex with `#`
-prefix in zjstatus format strings: `BASE`, `BLACK`, `BRIGHT`.
+**i3** (`config/config.template`, `i3status.template`) — uses semantic tokens.
 
 ---
 
@@ -219,9 +230,11 @@ without forcing all tools into one format.
    enabled, `mkXdgSymlinks` walks `domains/<cat>/<name>/config/` recursively.
 
 5. **Template discovery rules** (in `mkXdgSymlinks`):
+   - Scans `domains/<cat>/<name>/config/` when that directory exists (otherwise the domain root).
    - `foo.template` → rendered to `foo` (`.template` suffix stripped).
    - `foo` with a sibling `foo.template` → skipped (template takes precedence).
    - Everything else → deployed as a static `source` file.
+   - Domains with `customXdg = true` in `meta.nix` (e.g. i3) manage `xdg.configFile` in `module.nix` instead.
 
 6. **`renderTemplate.nix`** reads the template and replaces every
    `{{TOKEN}}` where `TOKEN` is a key in the theme attrset.
@@ -230,36 +243,38 @@ without forcing all tools into one format.
 
 ## Adding a theme today
 
-1. Create `themes/<name>.nix`:
+1. Copy an existing theme file, e.g. `themes/catppuccin-mocha.nix` → `themes/<name>.nix`.
+
+2. Define all tokens from `themes/schema.nix` — `semanticTokens` plus `paletteTokens`.
+   Values are 6-char lowercase hex without `#`. Do not define `*_RGB` manually.
+
    ```nix
    {
-     BASE = "cdd6f4";
+     FG = "cdd6f4";
+     BG = "1e1e2e";
      BRIGHT = "bac2de";
-     # ... all required tokens
+     # ... remaining semantic + palette tokens
    }
    ```
 
-2. Register it in `themes/default.nix`:
+3. The theme is auto-discovered from the filename (`<name>.nix` → `"<name>"`).
+
+4. Set it on a host (or override in `home.nix`):
    ```nix
-   themes = {
-     monochrome = import ./monochrome.nix;
-     catppuccin  = import ./catppuccin.nix;
-   };
+   theme = "<name>";
    ```
 
-3. Set it on a host:
-   ```nix
-   theme = "catppuccin";
-   ```
-
-4. Rebuild:
+5. Validate and build:
    ```bash
+   nix run .#lint-themes
+   nix flake check
    nix build .#homeConfigurations.joao.activationPackage
    home-manager switch --flake .#joao
    ```
 
-There is no validation step — if you forget a token, templates silently retain
-unreplaced placeholders (see [Known limitations](#known-limitations)).
+Missing tokens, invalid hex, and unresolved template placeholders fail at eval
+time. `nix run .#lint-themes` catches template issues without a full Home Manager
+build.
 
 ---
 
@@ -292,54 +307,12 @@ unreplaced placeholders (see [Known limitations](#known-limitations)).
 
 ## Known limitations
 
-### 1. Silent unreplaced placeholders
-
-`renderTemplate.nix` iterates over `attrNames tokens` and replaces matching
-placeholders. It does **not** scan the template for placeholders and verify they
-were all substituted.
-
-If a template references `{{MAGENTA}}` but the theme lacks `MAGENTA`, the output
-will literally contain `{{MAGENTA}}`. The tool will then misparse or ignore those
-sections with no Nix error.
-
-### 2. No theme schema
-
-Themes are untyped attrsets. Nothing enforces:
-
-- All themes define the same keys.
-- Values are valid 6-character hex strings.
-- No unexpected extra keys (harmless today, confusing later).
-
-The contract exists only implicitly in templates.
-
-### 3. Palette names vs semantic roles
-
-Templates use ANSI-ish names (`RED`, `GREEN`) for semantic purposes (`shape_garbage`,
-`error_symbol`). This works for monochrome (all grays) but breaks down for
-colorful themes where "error red" and "ANSI red" should differ.
-
-### 4. Naive `_RGB` derivation
-
-`withRgb` generates `FOO_RGB` for **every** key that does not already end in
-`_RGB`. Adding non-color metadata to a theme (e.g. `name = "Monochrome"`) would
-produce a bogus `name_RGB` entry.
-
-### 5. Manual theme registration
-
-Each new theme file must be manually imported in `themes/default.nix`. Easy to
-forget.
-
-### 6. Single theme in production
-
-Only `monochrome` exists. The abstraction has not been stress-tested with a
-second palette that uses distinct hues for RED/GREEN/YELLOW/CYAN.
-
-### 7. Partial tool coverage
+### 1. Partial tool coverage
 
 Font settings, keybinds, and structural config are static. Only color-bearing
 files are templated. New tools with colors require a conscious decision.
 
-### 8. No runtime theme switching
+### 2. No runtime theme switching
 
 Theme is fixed at Home Manager evaluation time. Changing themes requires a
 rebuild and `home-manager switch`, not a live toggle.
@@ -409,23 +382,13 @@ base tokens (and optionally their descriptions):
 
 ```nix
 {
-  # Base palette tokens (bare hex). *_RGB variants are derived automatically.
-  requiredTokens = [
-    "BASE"
-    "BRIGHT"
-    "DIM"
-    "BLACK"
-    "COMMENT"
-    "RED"
-    "GREEN"
-    "YELLOW"
-    "CYAN"
+  semanticTokens = [
+    "FG" "BG" "BRIGHT" "MUTED" "COMMENT"
+    "ERROR" "SUCCESS" "WARNING" "INFO"
   ];
 
-  # Optional tokens for colorful themes (not required by monochrome).
-  optionalTokens = [
-    "BLUE"
-    "MAGENTA"
+  paletteTokens = [
+    "BLACK" "RED" "GREEN" "YELLOW" "CYAN" "BLUE" "MAGENTA" "BASE" "DIM"
   ];
 }
 ```
@@ -435,7 +398,8 @@ Add a `validateTheme` function in `themes/default.nix`:
 ```nix
 validateTheme = name: theme:
   let
-    missing = lib.filter (t: !(theme ? ${t})) schema.requiredTokens;
+    required = schema.semanticTokens ++ schema.paletteTokens;
+    missing = lib.filter (t: !(theme ? ${t})) required;
     invalid = lib.filter (t:
       !builtins.match "[0-9a-fA-F]{6}" theme.${t}
     ) (lib.attrNames theme);
@@ -486,7 +450,7 @@ When adding a colorful theme, also update `ghostty/colors.conf.template` to use
 - `domains/terminal/ghostty/config/colors.conf.template` (palette slots)
 
 **Acceptance criteria:**
-- `theme = "<new-theme>"` builds and deploys all five templated configs.
+- `theme = "<new-theme>"` builds and deploys all templated configs (ghostty, zellij, nushell, starship, i3).
 - Visual inspection: ghostty, zellij status bar, starship prompt, and nushell
   syntax highlighting show distinct hues where semantics differ (error vs success
   vs comment).
@@ -609,7 +573,7 @@ a hex pattern):
 withRgb = theme:
   let
     colorKeys = lib.filter
-      (k: lib.elem k schema.requiredTokens || lib.elem k schema.optionalTokens)
+      (k: lib.elem k schema.semanticTokens || lib.elem k schema.paletteTokens)
       (lib.attrNames theme);
   in
   theme // lib.genAttrs
@@ -652,9 +616,9 @@ options.theme = lib.mkOption {
 };
 ```
 
-Wire it so `mkHome.nix` reads the option (with host config as default) instead of
-only `hostConfig.theme`. Host config remains the default source; the HM option
-allows overrides in `hosts/<name>/home.nix`.
+Wire it so domain modules read `config.theme` (with host config as the option
+default) instead of only `hostConfig.theme`. Host config remains the default
+source; the HM option allows overrides in `hosts/<name>/home.nix`.
 
 **Affected files:**
 - `core/home.nix` or new `lib/themeModule.nix`
@@ -824,8 +788,7 @@ Do this before adding a second theme.
 
 #### 2. Shared theme schema
 
-- [x] Create `themes/schema.nix` with `requiredTokens` list
-- [x] Add `optionalTokens` list (e.g. `BLUE`, `MAGENTA`)
+- [x] Create `themes/schema.nix` with `semanticTokens` and `paletteTokens` lists
 - [x] Implement `validateTheme` in `themes/default.nix`
 - [x] Reject themes with missing required tokens
 - [x] Reject themes with invalid hex values (not `[0-9a-fA-F]{6}`)
@@ -842,12 +805,13 @@ Do this before adding a second theme.
 - [x] Create `themes/<name>.nix` with all required tokens
 - [x] Register theme (manual or via auto-discovery)
 - [x] Update `ghostty/colors.conf.template` — use `BLUE` / `MAGENTA` in palette slots 5 and 13
-- [x] Add `BLUE` and `MAGENTA` to schema (`optionalTokens` or `requiredTokens`)
+- [x] Add `BLUE` and `MAGENTA` to schema (`paletteTokens`)
 - [x] Set `theme = "<name>"` on a test host and build (via `homeConfigurations.joao-theme-override-test` + `checks.home-catppuccin-mocha`)
-- [ ] Visual check: ghostty palette shows distinct hues
-- [ ] Visual check: zellij status bar and tab bar
-- [ ] Visual check: starship prompt (success vs error vs muted)
-- [ ] Visual check: nushell syntax highlighting
+- [x] Automated: `checks.theme-semantic-distinct` — catppuccin-mocha semantic roles are distinct hues
+- [x] Automated: `checks.theme-rendered` — ghostty palette slots, starship SUCCESS/ERROR, nushell ERROR/INFO, zellij FG/BRIGHT render distinct catppuccin-mocha hues
+- [x] Automated: `checks.lint-shell` — rendered starship.toml and colors.nu parse cleanly (taplo + nu)
+- [x] Automated: `checks.lint-desktop` — rendered i3/i3status configs parse cleanly
+- [ ] Visual spot-check after `home-manager switch` (optional; automated checks cover parse + hue wiring)
 - [x] Template validation passes for both monochrome and new theme
 
 ---
@@ -878,7 +842,7 @@ Do this before adding a second theme.
 - [x] Add `nix run .#lint-themes` flake app
 - [x] Exit code 1 on any failure
 - [x] Runs in under a few seconds (no full HM eval)
-- [x] (Optional) Wire into CI or pre-commit (`nix flake check` runs `checks.lint-themes`, `checks.theme-override`, and `checks.home-catppuccin-mocha`)
+- [x] (Optional) Wire into CI or pre-commit (`nix flake check` runs `checks.lint-themes`, `checks.lint-desktop`, `checks.lint-shell`, `checks.theme-rendered`, `checks.theme-override`, `checks.theme-semantic-distinct`, and `checks.home-catppuccin-mocha`)
 
 ---
 
@@ -886,12 +850,12 @@ Do this before adding a second theme.
 
 #### 5. Semantic tokens
 
-- [ ] Decide approach: nested `palette` attrset vs flat semantic names (`ERROR`, `FG`, …)
-- [ ] Add semantic tokens to schema
-- [ ] Update theme files with semantic roles
-- [ ] Migrate templates off palette names where meaning differs (e.g. `{{RED}}` → `{{error}}`)
-- [ ] Keep palette-specific tokens only in ghostty 16-color block
-- [ ] Both monochrome and colorful themes render correctly
+- [x] Decide approach: flat semantic names (`FG`, `ERROR`, …) + separate palette tokens for ghostty
+- [x] Add semantic tokens to schema (`semanticTokens` + `paletteTokens`)
+- [x] Update theme files with semantic roles
+- [x] Migrate templates off palette names where meaning differs (e.g. `{{RED}}` → `{{ERROR}}`)
+- [x] Keep palette-specific tokens only in ghostty 16-color block
+- [x] Both monochrome and colorful themes render correctly
 
 #### 7. Home Manager theme option
 
@@ -911,7 +875,7 @@ Do this before adding a second theme.
 
 #### 10. Expand templated coverage
 
-- [ ] Audit new domains for hardcoded hex/rgb values
+- [x] Audit new domains for hardcoded hex/rgb values (none under `domains/`; colors are template-driven)
 - [ ] tmux status bar colors (if domain added)
 - [ ] delta git diff colors
 - [ ] fzf `--color` flags (wrapper or env)
@@ -923,7 +887,7 @@ Do this before adding a second theme.
 ### Runbook: add a new theme
 
 - [ ] Copy an existing theme file as starting point (`themes/<name>.nix`)
-- [ ] Define all tokens listed in `themes/schema.nix` `requiredTokens`
+- [ ] Define all tokens listed in `themes/schema.nix` (`semanticTokens` + `paletteTokens`)
 - [ ] Values are 6-char lowercase hex, no leading `#`
 - [ ] Do not define `*_RGB` keys manually — they are derived
 - [ ] Register theme (edit `themes/default.nix` or rely on auto-discovery)
@@ -995,7 +959,7 @@ These are explicitly out of scope for the theme system:
 # Build home config (validates full eval including templates)
 nix build .#homeConfigurations.joao.activationPackage
 
-# Run all theme checks (lint, override, catppuccin build)
+# Run all theme checks (lint, desktop/shell parse, rendered hues, override, catppuccin build)
 nix flake check
 
 # Switch theme (today)
@@ -1005,6 +969,10 @@ nix flake check
 
 # Lint templates
 nix run .#lint-themes
+
+# Parse-check rendered desktop/shell configs
+nix run .#lint-desktop
+nix run .#lint-shell
 
 # Preview a rendered template
 nix run .#render-template -- terminal/ghostty/config/colors.conf monochrome

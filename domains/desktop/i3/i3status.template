@@ -2,36 +2,36 @@ general {
     colors = true
     interval = 5
     markup = pango
-    color_good = "#{{GREEN}}"
-    color_degraded = "#{{YELLOW}}"
-    color_bad = "#{{RED}}"
+    color_good = "#{{SUCCESS}}"
+    color_degraded = "#{{WARNING}}"
+    color_bad = "#{{ERROR}}"
 }
 
 order = "wireless _first_ ethernet _first_ cpu_usage memory disk / tztime local"
 
 wireless _first_ {
-    format_up = " <span color='#{{CYAN}}'>W: %essid (%quality)</span> "
-    format_down = " <span color='#{{DIM}}'>W: down</span> "
+    format_up = " <span color='#{{INFO}}'>W: %essid (%quality)</span> "
+    format_down = " <span color='#{{MUTED}}'>W: down</span> "
 }
 
 ethernet _first_ {
-    format_up = " <span color='#{{CYAN}}'>E: %ip</span> "
-    format_down = " <span color='#{{DIM}}'>E: down</span> "
+    format_up = " <span color='#{{INFO}}'>E: %ip</span> "
+    format_down = " <span color='#{{MUTED}}'>E: down</span> "
 }
 
 cpu_usage {
-    format = " <span color='#{{BASE}}'>CPU %usage</span> "
+    format = " <span color='#{{FG}}'>CPU %usage</span> "
     max_threshold = 90
 }
 
 memory {
-    format = " <span color='#{{BASE}}'>RAM %used</span> "
+    format = " <span color='#{{FG}}'>RAM %used</span> "
     threshold_degraded = "80%"
     threshold_critical = "95%"
 }
 
 disk "/" {
-    format = " <span color='#{{DIM}}'>DISK %avail</span> "
+    format = " <span color='#{{MUTED}}'>DISK %avail</span> "
 }
 
 tztime "local" {

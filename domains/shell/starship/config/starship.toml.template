@@ -8,7 +8,7 @@ add_newline = true
 format = "[$path]($style)[$read_only]($read_only_style)"
 style = "bold #{{BRIGHT}}"
 read_only = " RO"
-read_only_style = "bold #{{RED}}"
+read_only_style = "bold #{{ERROR}}"
 truncation_length = 3
 truncate_to_repo = false
 
@@ -19,7 +19,7 @@ symbol = ""
 
 [git_status]
 format = " [$all_status$ahead_behind]($style)"
-style = "#{{YELLOW}}"
+style = "#{{WARNING}}"
 conflicted = "!"
 ahead = "+"
 behind = "-"
@@ -32,14 +32,14 @@ renamed = "r"
 deleted = "x"
 
 [character]
-success_symbol = "[>](bold #{{GREEN}})"
-error_symbol = "[>](bold #{{RED}})"
-vimcmd_symbol = "[<](bold #{{BASE}})"
+success_symbol = "[>](bold #{{SUCCESS}})"
+error_symbol = "[>](bold #{{ERROR}})"
+vimcmd_symbol = "[<](bold #{{FG}})"
 
 [username]
 format = "[$user]($style) "
 style_user = "bold #{{BRIGHT}}"
-style_root = "bold #{{RED}}"
+style_root = "bold #{{ERROR}}"
 show_always = false
 
 [hostname]

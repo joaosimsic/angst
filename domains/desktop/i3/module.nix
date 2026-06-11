@@ -32,6 +32,12 @@ in
     ];
 
     xdg.configFile = {
+      "i3/config".text = renderTemplate {
+        inherit lib;
+        templatePath = ./config/config.template;
+        tokens = theme;
+      };
+
       "i3/monitors.conf".text = monitorsConf;
 
       "i3status/config".text = renderTemplate {

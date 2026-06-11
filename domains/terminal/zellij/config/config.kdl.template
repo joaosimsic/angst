@@ -251,110 +251,110 @@ themes {
     custom {
         text_unselected {
             base {{BRIGHT_RGB}}
-            background {{BLACK_RGB}}
-            emphasis_0 {{BASE_RGB}}
-            emphasis_1 {{BASE_RGB}}
-            emphasis_2 {{BASE_RGB}}
+            background {{BG_RGB}}
+            emphasis_0 {{FG_RGB}}
+            emphasis_1 {{FG_RGB}}
+            emphasis_2 {{FG_RGB}}
             emphasis_3 {{BRIGHT_RGB}}
         }
         text_selected {
             base {{BRIGHT_RGB}}
-            background {{BLACK_RGB}}
-            emphasis_0 {{BASE_RGB}}
-            emphasis_1 {{BASE_RGB}}
-            emphasis_2 {{BASE_RGB}}
+            background {{BG_RGB}}
+            emphasis_0 {{FG_RGB}}
+            emphasis_1 {{FG_RGB}}
+            emphasis_2 {{FG_RGB}}
             emphasis_3 {{BRIGHT_RGB}}
         }
         ribbon_selected {
-            base {{BLACK_RGB}}
-            background {{BASE_RGB}}
-            emphasis_0 {{DIM_RGB}}
-            emphasis_1 {{BASE_RGB}}
+            base {{BG_RGB}}
+            background {{FG_RGB}}
+            emphasis_0 {{MUTED_RGB}}
+            emphasis_1 {{FG_RGB}}
             emphasis_2 {{BRIGHT_RGB}}
-            emphasis_3 {{BASE_RGB}}
+            emphasis_3 {{FG_RGB}}
         }
         ribbon_unselected {
-            base {{BLACK_RGB}}
-            background {{BASE_RGB}}
-            emphasis_0 {{DIM_RGB}}
+            base {{BG_RGB}}
+            background {{FG_RGB}}
+            emphasis_0 {{MUTED_RGB}}
             emphasis_1 {{BRIGHT_RGB}}
-            emphasis_2 {{BASE_RGB}}
+            emphasis_2 {{FG_RGB}}
             emphasis_3 {{BRIGHT_RGB}}
         }
         table_title {
-            base {{BASE_RGB}}
+            base {{FG_RGB}}
             background 0
-            emphasis_0 {{BASE_RGB}}
-            emphasis_1 {{BASE_RGB}}
-            emphasis_2 {{BASE_RGB}}
+            emphasis_0 {{FG_RGB}}
+            emphasis_1 {{FG_RGB}}
+            emphasis_2 {{FG_RGB}}
             emphasis_3 {{BRIGHT_RGB}}
         }
         table_cell_selected {
             base {{BRIGHT_RGB}}
-            background {{BLACK_RGB}}
-            emphasis_0 {{BASE_RGB}}
-            emphasis_1 {{BASE_RGB}}
-            emphasis_2 {{BASE_RGB}}
+            background {{BG_RGB}}
+            emphasis_0 {{FG_RGB}}
+            emphasis_1 {{FG_RGB}}
+            emphasis_2 {{FG_RGB}}
             emphasis_3 {{BRIGHT_RGB}}
         }
         table_cell_unselected {
             base {{BRIGHT_RGB}}
-            background {{BLACK_RGB}}
-            emphasis_0 {{BASE_RGB}}
-            emphasis_1 {{BASE_RGB}}
-            emphasis_2 {{BASE_RGB}}
+            background {{BG_RGB}}
+            emphasis_0 {{FG_RGB}}
+            emphasis_1 {{FG_RGB}}
+            emphasis_2 {{FG_RGB}}
             emphasis_3 {{BRIGHT_RGB}}
         }
         list_selected {
             base {{BRIGHT_RGB}}
-            background {{BLACK_RGB}}
-            emphasis_0 {{BASE_RGB}}
-            emphasis_1 {{BASE_RGB}}
-            emphasis_2 {{BASE_RGB}}
+            background {{BG_RGB}}
+            emphasis_0 {{FG_RGB}}
+            emphasis_1 {{FG_RGB}}
+            emphasis_2 {{FG_RGB}}
             emphasis_3 {{BRIGHT_RGB}}
         }
         list_unselected {
             base {{BRIGHT_RGB}}
-            background {{BLACK_RGB}}
-            emphasis_0 {{BASE_RGB}}
-            emphasis_1 {{BASE_RGB}}
-            emphasis_2 {{BASE_RGB}}
+            background {{BG_RGB}}
+            emphasis_0 {{FG_RGB}}
+            emphasis_1 {{FG_RGB}}
+            emphasis_2 {{FG_RGB}}
             emphasis_3 {{BRIGHT_RGB}}
         }
         frame_selected {
-            base {{BASE_RGB}}
-            background {{BLACK_RGB}}
-            emphasis_0 {{BASE_RGB}}
-            emphasis_1 {{BASE_RGB}}
-            emphasis_2 {{BASE_RGB}}
-            emphasis_3 {{BASE_RGB}}
+            base {{FG_RGB}}
+            background {{BG_RGB}}
+            emphasis_0 {{FG_RGB}}
+            emphasis_1 {{FG_RGB}}
+            emphasis_2 {{FG_RGB}}
+            emphasis_3 {{FG_RGB}}
         }
         frame_unselected {
-            base {{DIM_RGB}}
-            background {{BLACK_RGB}}
-            emphasis_0 {{DIM_RGB}}
-            emphasis_1 {{DIM_RGB}}
-            emphasis_2 {{DIM_RGB}}
-            emphasis_3 {{DIM_RGB}}
+            base {{MUTED_RGB}}
+            background {{BG_RGB}}
+            emphasis_0 {{MUTED_RGB}}
+            emphasis_1 {{MUTED_RGB}}
+            emphasis_2 {{MUTED_RGB}}
+            emphasis_3 {{MUTED_RGB}}
         }
         frame_highlight {
-            base {{BASE_RGB}}
-            background {{BLACK_RGB}}
-            emphasis_0 {{BASE_RGB}}
-            emphasis_1 {{BASE_RGB}}
-            emphasis_2 {{BASE_RGB}}
-            emphasis_3 {{BASE_RGB}}
+            base {{FG_RGB}}
+            background {{BG_RGB}}
+            emphasis_0 {{FG_RGB}}
+            emphasis_1 {{FG_RGB}}
+            emphasis_2 {{FG_RGB}}
+            emphasis_3 {{FG_RGB}}
         }
         exit_code_success {
-            base {{BASE_RGB}}
+            base {{FG_RGB}}
             background 0
-            emphasis_0 {{BASE_RGB}}
-            emphasis_1 {{BLACK_RGB}}
+            emphasis_0 {{FG_RGB}}
+            emphasis_1 {{BG_RGB}}
             emphasis_2 {{BRIGHT_RGB}}
-            emphasis_3 {{BASE_RGB}}
+            emphasis_3 {{FG_RGB}}
         }
         exit_code_error {
-            base {{RED_RGB}}
+            base {{ERROR_RGB}}
             background 0
             emphasis_0 {{BRIGHT_RGB}}
             emphasis_1 0
@@ -363,12 +363,12 @@ themes {
         }
         multiplayer_user_colors {
             player_1 {{BRIGHT_RGB}}
-            player_2 {{BASE_RGB}}
+            player_2 {{FG_RGB}}
             player_3 0
             player_4 {{BRIGHT_RGB}}
-            player_5 {{BASE_RGB}}
+            player_5 {{FG_RGB}}
             player_6 0
-            player_7 {{DIM_RGB}}
+            player_7 {{MUTED_RGB}}
             player_8 0
             player_9 0
             player_10 0

@@ -1,20 +1,27 @@
 {
-  # Base palette tokens (bare hex). *_RGB variants are derived automatically.
-  requiredTokens = [
-    "BASE"
+  # Semantic roles — what non-palette templates should reference.
+  semanticTokens = [
+    "FG"
+    "BG"
     "BRIGHT"
-    "DIM"
-    "BLACK"
+    "MUTED"
     "COMMENT"
+    "ERROR"
+    "SUCCESS"
+    "WARNING"
+    "INFO"
+  ];
+
+  # ANSI palette slots — ghostty 16-color block only.
+  paletteTokens = [
+    "BLACK"
     "RED"
     "GREEN"
     "YELLOW"
     "CYAN"
-  ];
-
-  # Optional tokens for colorful themes (monochrome may alias these to grays).
-  optionalTokens = [
     "BLUE"
     "MAGENTA"
+    "BASE"
+    "DIM"
   ];
 }

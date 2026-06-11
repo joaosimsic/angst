@@ -8,10 +8,10 @@ default_floating_border pixel 2
 hide_edge_borders smart
 
 # Theme colors: border, background, text, indicator, child_border
-client.focused          #{{CYAN}} #{{BLACK}} #{{BASE}} #{{CYAN}} #{{CYAN}}
-client.focused_inactive #{{DIM}} #{{BLACK}} #{{BASE}} #{{DIM}} #{{DIM}}
-client.unfocused        #{{BLACK}} #{{BLACK}} #{{DIM}} #{{BLACK}} #{{BLACK}}
-client.urgent           #{{RED}} #{{BLACK}} #{{RED}} #{{YELLOW}} #{{YELLOW}}
+client.focused          #{{INFO}} #{{BG}} #{{FG}} #{{INFO}} #{{INFO}}
+client.focused_inactive #{{MUTED}} #{{BG}} #{{FG}} #{{MUTED}} #{{MUTED}}
+client.unfocused        #{{BG}} #{{BG}} #{{MUTED}} #{{BG}} #{{BG}}
+client.urgent           #{{ERROR}} #{{BG}} #{{ERROR}} #{{WARNING}} #{{WARNING}}
 
 set $mod Mod4
 
@@ -82,13 +82,13 @@ bar {
     position top
     font pango:JetBrainsMono Nerd Font 10
     colors {
-        background #{{BLACK}}
-        statusline #{{BASE}}
-        separator  #{{DIM}}
-        focused_workspace  #{{BLACK}} #{{BLACK}} #{{BASE}}
-        active_workspace   #{{BLACK}} #{{BLACK}} #{{BRIGHT}}
-        inactive_workspace #{{BLACK}} #{{BLACK}} #{{DIM}}
-        urgent_workspace   #{{RED}} #{{BLACK}} #{{BASE}}
+        background #{{BG}}
+        statusline #{{FG}}
+        separator  #{{MUTED}}
+        focused_workspace  #{{BG}} #{{BG}} #{{FG}}
+        active_workspace   #{{BG}} #{{BG}} #{{BRIGHT}}
+        inactive_workspace #{{BG}} #{{BG}} #{{MUTED}}
+        urgent_workspace   #{{ERROR}} #{{BG}} #{{FG}}
     }
 }
 

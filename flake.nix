@@ -58,9 +58,17 @@
     lintDesktop = import ./lib/lintDesktop.nix {
       inherit lib pkgs themesLib renderTemplate domainsPath;
     };
+
+    lintShell = import ./lib/lintShell.nix {
+      inherit lib pkgs themesLib renderTemplate domainsPath;
+    };
+
+    themeRenderedChecks = import ./lib/themeRenderedChecks.nix {
+      inherit lib pkgs themesLib renderTemplateFor;
+    };
   in
   {
-    inherit themeLint lintDesktop renderTemplateFor;
+    inherit themeLint lintDesktop lintShell themeRenderedChecks renderTemplateFor;
 
     nixosConfigurations = nixpkgs.lib.genAttrs hosts mkHost;
 
@@ -84,17 +92,44 @@
 
       lint-desktop = lintDesktop;
 
+      lint-shell = lintShell;
+
+      theme-rendered = themeRenderedChecks;
+
       theme-override =
         let
-          theme = self.homeConfigurations.joao-theme-override-test.config.theme;
+          hm = self.homeConfigurations.joao-theme-override-test;
+          theme = hm.config.theme;
+          ghosttyColors = hm.config.xdg.configFile."ghostty/colors.conf".text;
         in
         if theme != "catppuccin-mocha" then
           throw "expected config.theme = catppuccin-mocha, got ${theme}"
+        else if !(lib.hasInfix "background           = 1e1e2e" ghosttyColors) then
+          throw "theme override did not reach rendered ghostty colors (expected catppuccin-mocha BG)"
         else
           pkgs.writeText "theme-override-check" "ok";
 
       home-catppuccin-mocha =
         self.homeConfigurations.joao-theme-override-test.activationPackage;
+
+      theme-semantic-distinct =
+        let
+          theme = themesLib.get "catppuccin-mocha";
+          roles = [
+            "ERROR"
+            "SUCCESS"
+            "WARNING"
+            "INFO"
+            "COMMENT"
+            "MUTED"
+          ];
+          values = map (role: theme.${role}) roles;
+          uniqueValues = lib.unique values;
+        in
+        if lib.length values != lib.length uniqueValues then
+          throw "catppuccin-mocha semantic roles must be distinct hues (got duplicates among ${lib.concatStringsSep ", " roles})"
+        else
+          pkgs.writeText "theme-semantic-distinct-check" "ok";
     };
 
     packages.${system} = {
@@ -116,6 +151,15 @@
           set -euo pipefail
           ${pkgs.nix}/bin/nix build ${self}#checks.${system}.lint-desktop --no-link --print-build-logs
           echo "All desktop config checks passed."
+        ''}";
+      };
+
+      lint-shell = {
+        type = "app";
+        program = "${pkgs.writeShellScript "lint-shell" ''
+          set -euo pipefail
+          ${pkgs.nix}/bin/nix build ${self}#checks.${system}.lint-shell --no-link --print-build-logs
+          echo "All shell config checks passed."
         ''}";
       };
 

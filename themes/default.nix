@@ -14,8 +14,9 @@ let
     ;
 
   schema = import ./schema.nix;
-  inherit (schema) requiredTokens optionalTokens;
-  allColorTokens = requiredTokens ++ optionalTokens;
+  inherit (schema) semanticTokens paletteTokens;
+  requiredTokens = semanticTokens ++ paletteTokens;
+  allColorTokens = lib.unique requiredTokens;
 
   hexToRgb = hex:
     let
@@ -94,7 +95,7 @@ let
       themeFiles;
 in
 {
-  inherit themes schema requiredTokens optionalTokens allColorTokens;
+  inherit themes schema semanticTokens paletteTokens requiredTokens allColorTokens;
 
   default = "monochrome";
 
