@@ -13,11 +13,8 @@ let
     name:
     let
       m = monitors.${name};
-      pos = lib.splitString "x" m.position;
-      x = builtins.elemAt pos 0;
-      y = builtins.elemAt pos 1;
     in
-    "output ${m.name} mode ${m.resolution} --refresh ${toString m.refreshRate} position ${x} ${y}";
+    "exec --no-startup-id xrandr --output ${m.name} --mode ${m.resolution} --rate ${toString m.refreshRate} --pos ${m.position}";
 
   monitorsConf =
     if monitors == { } then

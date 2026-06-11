@@ -54,9 +54,13 @@
     themeLint = import ./lib/lintThemes.nix {
       inherit lib themesLib domainsPath;
     };
+
+    lintDesktop = import ./lib/lintDesktop.nix {
+      inherit lib pkgs themesLib renderTemplate domainsPath;
+    };
   in
   {
-    inherit themeLint renderTemplateFor;
+    inherit themeLint lintDesktop renderTemplateFor;
 
     nixosConfigurations = nixpkgs.lib.genAttrs hosts mkHost;
 
@@ -77,6 +81,8 @@
 
     checks.${system} = {
       lint-themes = pkgs.writeText "lint-themes-check" themeLint;
+
+      lint-desktop = lintDesktop;
 
       theme-override =
         let
@@ -101,6 +107,15 @@
         program = "${pkgs.writeShellScript "lint-themes" ''
           set -euo pipefail
           ${pkgs.nix}/bin/nix eval ${self}#themeLint --raw
+        ''}";
+      };
+
+      lint-desktop = {
+        type = "app";
+        program = "${pkgs.writeShellScript "lint-desktop" ''
+          set -euo pipefail
+          ${pkgs.nix}/bin/nix build ${self}#checks.${system}.lint-desktop --no-link --print-build-logs
+          echo "All desktop config checks passed."
         ''}";
       };
 

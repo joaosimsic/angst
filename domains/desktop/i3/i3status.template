@@ -7,19 +7,19 @@ general {
     color_bad = "#{{RED}}"
 }
 
-order = "wireless ethernet cpu memory _disk_0 _tztime"
+order = "wireless _first_ ethernet _first_ cpu_usage memory disk / tztime local"
 
-wireless {
+wireless _first_ {
     format_up = " <span color='#{{CYAN}}'>W: %essid (%quality)</span> "
     format_down = " <span color='#{{DIM}}'>W: down</span> "
 }
 
-ethernet {
+ethernet _first_ {
     format_up = " <span color='#{{CYAN}}'>E: %ip</span> "
     format_down = " <span color='#{{DIM}}'>E: down</span> "
 }
 
-cpu {
+cpu_usage {
     format = " <span color='#{{BASE}}'>CPU %usage</span> "
     max_threshold = 90
 }

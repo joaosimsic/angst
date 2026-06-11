@@ -4,7 +4,9 @@
   virtualisation.vmVariant = {
     virtualisation.memorySize = 4096;
     virtualisation.cores = 4;
-    
+
+    home-manager.extraSpecialArgs.monitors = { };
+
     services.spice-vdagentd.enable = true;
     
     virtualisation.qemu.options = [
