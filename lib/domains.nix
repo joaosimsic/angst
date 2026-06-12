@@ -6,7 +6,7 @@ let
   renderTemplate = import ./renderTemplate.nix;
 
   mkXdgSymlinks =
-    { configDir, theme, xdgName ? null, xdgFile ? null }:
+    { configDir, tokens, xdgName ? null, xdgFile ? null }:
     let
       isTemplate = name: builtins.match ".*\\.template$" name != null;
 
@@ -47,7 +47,7 @@ let
                 text = renderTemplate {
                   inherit lib;
                   templatePath = fullPath;
-                  tokens = theme;
+                  inherit tokens;
                 };
                 force = true;
               };
@@ -74,7 +74,7 @@ let
             text = renderTemplate {
               inherit lib;
               inherit templatePath;
-              tokens = theme;
+              inherit tokens;
             };
             force = true;
           };
@@ -138,6 +138,8 @@ let
 
   mkDomainModule = entry: { config, lib, pkgs, themesLib, ... }:
   let
+    templateTokens = import ./templateTokens.nix;
+
     inherit (entry) category name meta path;
     modulePath = "${path}/module.nix";
     hasCustomModule = builtins.pathExists modulePath;
@@ -162,7 +164,11 @@ let
         // lib.optionalAttrs (!(meta.customXdg or false)) {
           xdg.configFile = mkXdgSymlinks {
             inherit configDir;
-            theme = themesLib.get config.theme;
+            tokens = templateTokens {
+              inherit themesLib;
+              theme = config.theme;
+              fontFamily = config.font.family;
+            };
             xdgName = meta.xdg or null;
             xdgFile = meta.xdgFile or null;
           };

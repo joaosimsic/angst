@@ -1,6 +1,6 @@
 config-file = colors.conf
 
-font-family = JetBrainsMono Nerd Font
+font-family = {{FONT_FAMILY}}
 font-size = 13
 
 cursor-style = block

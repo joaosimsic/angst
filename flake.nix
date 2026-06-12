@@ -26,6 +26,8 @@
     pkgs = nixpkgs.legacyPackages.${system};
     lib = pkgs.lib;
     themesLib = import ./themes/default.nix { inherit lib; };
+    fontsLib = import ./lib/fonts.nix;
+    templateTokens = import ./lib/templateTokens.nix;
     domainsPath = ./domains;
     renderTemplate = import ./lib/renderTemplate.nix;
 
@@ -48,7 +50,11 @@
       renderTemplate {
         inherit lib;
         templatePath = resolveTemplatePath templateRel;
-        tokens = themesLib.get themeName;
+        tokens = templateTokens {
+          inherit themesLib;
+          theme = themeName;
+          fontFamily = fontsLib.defaultFamily;
+        };
       };
 
     themeLint = import ./lib/lintThemes.nix {

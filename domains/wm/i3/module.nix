@@ -1,9 +1,13 @@
-{ config, lib, themesLib, renderTemplate, monitors, ... }:
+{ config, lib, themesLib, renderTemplate, monitors, templateTokens, ... }:
 
 let
   cfg = config.domains.wm.i3;
 
-  theme = themesLib.get config.theme;
+  tokens = templateTokens {
+    inherit themesLib;
+    theme = config.theme;
+    fontFamily = config.font.family;
+  };
 
   monitorOrder = lib.unique (
     lib.filter (n: lib.hasAttr n monitors) (
@@ -27,7 +31,7 @@ let
   body = renderTemplate {
     inherit lib;
     templatePath = ./config/config.template;
-    tokens = theme;
+    inherit tokens;
   };
 
   fragments = config.domains.wm._i3.configLines;

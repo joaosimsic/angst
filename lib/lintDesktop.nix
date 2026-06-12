@@ -1,12 +1,19 @@
 { lib, pkgs, themesLib, renderTemplate, domainsPath }:
 
 let
+  fontsLib = import ./fonts.nix;
+  templateTokens = import ./templateTokens.nix;
+
   themeNames = lib.attrNames themesLib.themes;
 
   renderForTheme =
     themeName:
     let
-      tokens = themesLib.get themeName;
+      tokens = templateTokens {
+        inherit themesLib;
+        theme = themeName;
+        fontFamily = fontsLib.defaultFamily;
+      };
 
       i3Body = renderTemplate {
         inherit lib;
@@ -28,7 +35,6 @@ let
         "exec_always --no-startup-id hsetroot -solid '#${tokens.BG}'"
         "exec --no-startup-id dbus-update-activation-environment --systemd --all"
         "exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY"
-        "exec --no-startup-id nm-applet"
       ];
     in
     {

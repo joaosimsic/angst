@@ -7,32 +7,7 @@ general {
     color_bad = "#{{ERROR}}"
 }
 
-order = "wireless _first_ ethernet _first_ cpu_usage memory disk / tztime local"
-
-wireless _first_ {
-    format_up = " <span color='#{{INFO}}'>W: %essid (%quality)</span> "
-    format_down = " <span color='#{{MUTED}}'>W: down</span> "
-}
-
-ethernet _first_ {
-    format_up = " <span color='#{{INFO}}'>E: %ip</span> "
-    format_down = " <span color='#{{MUTED}}'>E: down</span> "
-}
-
-cpu_usage {
-    format = " <span color='#{{FG}}'>CPU %usage</span> "
-    max_threshold = 90
-}
-
-memory {
-    format = " <span color='#{{FG}}'>RAM %used</span> "
-    threshold_degraded = "80%"
-    threshold_critical = "95%"
-}
-
-disk "/" {
-    format = " <span color='#{{MUTED}}'>DISK %avail</span> "
-}
+order = "tztime local"
 
 tztime "local" {
     format = " <span color='#{{BRIGHT}}'>%Y-%m-%d %H:%M</span> "

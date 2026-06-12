@@ -1,6 +1,9 @@
 { lib, themesLib, domainsPath }:
 
 let
+  fontsLib = import ./fonts.nix;
+  templateTokens = import ./templateTokens.nix;
+
   inherit (lib)
     attrNames
     concatLists
@@ -58,7 +61,11 @@ let
     let
       source = builtins.readFile fullPath;
       placeholders = extractPlaceholders source;
-      tokens = themesLib.get themeName;
+      tokens = templateTokens {
+        inherit themesLib;
+        theme = themeName;
+        fontFamily = fontsLib.defaultFamily;
+      };
       tokenKeys = attrNames tokens;
       missing = filter (p: !(elem p tokenKeys)) placeholders;
     in
@@ -74,7 +81,11 @@ let
   validateTemplateRenderForTheme =
     { fullPath, rel }: themeName:
     let
-      tokens = themesLib.get themeName;
+      tokens = templateTokens {
+        inherit themesLib;
+        theme = themeName;
+        fontFamily = fontsLib.defaultFamily;
+      };
       _ = renderTemplate {
         inherit lib;
         templatePath = fullPath;

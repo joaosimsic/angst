@@ -1,12 +1,19 @@
 { lib, pkgs, themesLib, renderTemplate, domainsPath }:
 
 let
+  fontsLib = import ./fonts.nix;
+  templateTokens = import ./templateTokens.nix;
+
   themeNames = lib.attrNames themesLib.themes;
 
   renderForTheme =
     themeName:
     let
-      tokens = themesLib.get themeName;
+      tokens = templateTokens {
+        inherit themesLib;
+        theme = themeName;
+        fontFamily = fontsLib.defaultFamily;
+      };
     in
     {
       inherit themeName;

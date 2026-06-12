@@ -1,6 +1,6 @@
 # i3 config — colors from angst theme tokens
 
-font pango:JetBrainsMono Nerd Font 10
+font pango:{{FONT_FAMILY}} 10
 
 # Window borders
 default_border pixel 2

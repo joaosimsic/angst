@@ -18,6 +18,7 @@ let
       domainsPath = ../domains;
       domainsLib = import ./domains.nix { inherit lib domainsPath; };
       renderTemplate = import ./renderTemplate.nix;
+      templateTokens = import ./templateTokens.nix;
 
       homeModules = map domainsLib.mkDomainModule domainsLib.homeEntries;
     in
@@ -25,7 +26,7 @@ let
       inherit pkgs;
 
       extraSpecialArgs = {
-        inherit inputs themesLib hostTheme renderTemplate;
+        inherit inputs themesLib hostTheme renderTemplate templateTokens;
 
         userConfig = hostConfig.user;
 

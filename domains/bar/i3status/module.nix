@@ -1,13 +1,18 @@
-{ config, lib, pkgs, themesLib, renderTemplate, ... }:
+{ config, lib, pkgs, themesLib, renderTemplate, templateTokens, ... }:
 
 let
   cfg = config.domains.bar.i3status;
-  theme = themesLib.get config.theme;
+
+  tokens = templateTokens {
+    inherit themesLib;
+    theme = config.theme;
+    fontFamily = config.font.family;
+  };
 
   barBlock = renderTemplate {
     inherit lib;
     templatePath = ./bar.template;
-    tokens = theme;
+    inherit tokens;
   };
 in
 {
