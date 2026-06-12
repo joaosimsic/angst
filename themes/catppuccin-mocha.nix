@@ -1,4 +1,3 @@
-# Catppuccin Mocha — https://github.com/catppuccin/catppuccin
 {
   FG = "cdd6f4";
   BG = "1e1e2e";
