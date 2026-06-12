@@ -15,11 +15,16 @@
     env = {
       inherit inputs;
 
+      flakeSelf = self;
+
       loadHost = hostname: import (./hosts + "/${hostname}");
     };
 
     homeLib = import ./lib/mkHome.nix env;
-    mkHost = import ./lib/mkHost.nix (env // { mkHomeProfile = homeLib.mkHomeProfile; });
+    mkHost = import ./lib/mkHost.nix (env // {
+      mkHomeProfile = homeLib.mkHomeProfile;
+      flakeSelf = self;
+    });
     inherit (homeLib) mkHome mkHomeWithExtraModules;
 
     system = "x86_64-linux";

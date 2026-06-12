@@ -1,4 +1,4 @@
-{ inputs, loadHost, mkHomeProfile, ... }:
+{ inputs, loadHost, mkHomeProfile, flakeSelf, ... }:
 
 hostname:
 let
@@ -16,7 +16,7 @@ inputs.nixpkgs.lib.nixosSystem {
   system = hostConfig.system;
 
   specialArgs = {
-    inherit inputs hostname capabilities;
+    inherit inputs hostname capabilities flakeSelf;
 
     userConfig = hostConfig.user;
 

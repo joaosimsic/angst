@@ -1,4 +1,4 @@
-{ inputs, loadHost, ... }:
+{ inputs, loadHost, flakeSelf, ... }:
 
 let
   mkHomeProfile = hostname:
@@ -26,7 +26,7 @@ let
       inherit pkgs;
 
       extraSpecialArgs = {
-        inherit inputs themesLib hostTheme renderTemplate templateTokens;
+        inherit inputs flakeSelf themesLib hostTheme renderTemplate templateTokens;
 
         userConfig = hostConfig.user;
 
