@@ -51,7 +51,7 @@
         inherit lib;
         templatePath = resolveTemplatePath templateRel;
         tokens = templateTokens {
-          inherit themesLib;
+          inherit lib themesLib;
           theme = themeName;
           fontFamily = fontsLib.defaultFamily;
         };

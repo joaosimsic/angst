@@ -4,7 +4,7 @@ let
   cfg = config.domains.bar.i3status;
 
   tokens = templateTokens {
-    inherit themesLib;
+    inherit lib themesLib;
     theme = config.theme;
     fontFamily = config.font.family;
   };

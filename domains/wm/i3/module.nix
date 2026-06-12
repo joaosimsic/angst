@@ -4,7 +4,7 @@ let
   cfg = config.domains.wm.i3;
 
   tokens = templateTokens {
-    inherit themesLib;
+    inherit lib themesLib;
     theme = config.theme;
     fontFamily = config.font.family;
   };

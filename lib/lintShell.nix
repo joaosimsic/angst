@@ -10,7 +10,7 @@ let
     themeName:
     let
       tokens = templateTokens {
-        inherit themesLib;
+        inherit lib themesLib;
         theme = themeName;
         fontFamily = fontsLib.defaultFamily;
       };

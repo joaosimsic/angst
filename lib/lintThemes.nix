@@ -62,7 +62,7 @@ let
       source = builtins.readFile fullPath;
       placeholders = extractPlaceholders source;
       tokens = templateTokens {
-        inherit themesLib;
+        inherit lib themesLib;
         theme = themeName;
         fontFamily = fontsLib.defaultFamily;
       };
@@ -82,7 +82,7 @@ let
     { fullPath, rel }: themeName:
     let
       tokens = templateTokens {
-        inherit themesLib;
+        inherit lib themesLib;
         theme = themeName;
         fontFamily = fontsLib.defaultFamily;
       };

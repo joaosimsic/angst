@@ -165,7 +165,7 @@ let
           xdg.configFile = mkXdgSymlinks {
             inherit configDir;
             tokens = templateTokens {
-              inherit themesLib;
+              inherit lib themesLib;
               theme = config.theme;
               fontFamily = config.font.family;
             };
