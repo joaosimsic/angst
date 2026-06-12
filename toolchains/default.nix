@@ -6,6 +6,7 @@
     ./c.nix
     ./csharp.nix
     ./docker.nix
+    ./editor.nix
     ./go.nix
     ./java.nix
     ./javascript.nix

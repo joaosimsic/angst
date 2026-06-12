@@ -39,15 +39,6 @@ in
       vimAlias = true;
       withRuby = false;
       withPython3 = false;
-
-      extraPackages = with pkgs; [
-        fd
-        kubectl
-        lazydocker
-        lazygit
-        ripgrep
-        stdenv.cc
-      ];
     };
 
     xdg.configFile."nvim/init.lua".enable = lib.mkForce false;

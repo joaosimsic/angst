@@ -24,5 +24,9 @@ in
     };
 
     users.users.${userConfig.username}.extraGroups = [ "docker" "podman" ];
+
+    environment.systemPackages = with pkgs; [
+      kubectl
+    ];
   };
 }

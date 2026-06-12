@@ -1,7 +1,6 @@
 return {
 	"nvim-treesitter/nvim-treesitter",
 	lazy = false,
-	build = ":TSUpdate",
 	config = function()
 		vim.treesitter.language.register("blade", "blade")
 
@@ -9,23 +8,6 @@ return {
 			pattern = {
 				[".*%.blade%.php"] = "blade",
 			},
-		})
-
-		require("nvim-treesitter").install({
-			"php",
-			"html",
-			"typescript",
-			"angular",
-			"java",
-			"go",
-			"css",
-			"lua",
-			"json",
-			"python",
-			"c_sharp",
-			"razor",
-			"markdown",
-			"markdown_inline",
 		})
 
 		vim.api.nvim_create_autocmd("FileType", {
