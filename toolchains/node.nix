@@ -3,7 +3,7 @@
 {
   home.packages = with pkgs; [
     nodejs
-    nodePackages.typescript-language-server
+    typescript-language-server
     prettierd
     eslint_d
   ];

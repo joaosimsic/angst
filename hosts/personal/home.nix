@@ -1,6 +1,7 @@
 { ... }:
 
 {
+  imports = [ ../../toolchains ];
   domains.wm.i3.enable = true;
   domains.bar.i3status.enable = true;
   domains.launcher.rofi.enable = true;
