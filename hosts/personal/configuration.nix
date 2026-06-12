@@ -27,7 +27,7 @@
   zramSwap.enable = true;
 
   capabilities.audio.enable = true;
-  capabilities.desktop.enable = true;
+  capabilities.graphical.enable = true;
   capabilities.network.enable = true;
   capabilities.container.enable = true;
   capabilities.git.enable = true;

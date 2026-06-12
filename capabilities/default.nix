@@ -3,7 +3,7 @@
 {
   audio = ./audio.nix;
   container = ./container.nix;
-  desktop = ./desktop.nix;
+  graphical = ./graphical.nix;
   network = ./network.nix;
   git = ./git.nix;
 }

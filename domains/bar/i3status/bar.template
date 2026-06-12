@@ -1,0 +1,14 @@
+bar {
+    status_command i3status -c ~/.config/i3status/config
+    position top
+    font pango:JetBrainsMono Nerd Font 10
+    colors {
+        background #{{BG}}
+        statusline #{{FG}}
+        separator  #{{MUTED}}
+        focused_workspace  #{{BG}} #{{BG}} #{{FG}}
+        active_workspace   #{{BG}} #{{BG}} #{{BRIGHT}}
+        inactive_workspace #{{BG}} #{{BG}} #{{MUTED}}
+        urgent_workspace   #{{ERROR}} #{{BG}} #{{FG}}
+    }
+}

@@ -5,6 +5,12 @@ let
   hostConfig = loadHost hostname;
   capabilities = import ../capabilities { };
   profile = mkHomeProfile hostname;
+
+  domainsLib = import ./domains.nix {
+    lib = inputs.nixpkgs.lib;
+    domainsPath = ../domains;
+  };
+  domainNixosModules = map domainsLib.mkNixosDomainModule domainsLib.nixosEntries;
 in
 inputs.nixpkgs.lib.nixosSystem {
   system = hostConfig.system;
@@ -38,5 +44,5 @@ inputs.nixpkgs.lib.nixosSystem {
         "serial-getty@.service"
       ];
     }
-  ] ++ builtins.attrValues capabilities;
+  ] ++ builtins.attrValues capabilities ++ domainNixosModules;
 }

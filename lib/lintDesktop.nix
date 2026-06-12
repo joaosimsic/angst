@@ -7,17 +7,36 @@ let
     themeName:
     let
       tokens = themesLib.get themeName;
+
+      i3Body = renderTemplate {
+        inherit lib;
+        templatePath = "${domainsPath}/wm/i3/config/config.template";
+        inherit tokens;
+      };
+
+      barBlock = renderTemplate {
+        inherit lib;
+        templatePath = "${domainsPath}/bar/i3status/bar.template";
+        inherit tokens;
+      };
+
+      fixtureFragments = [
+        "bindsym $mod+Return exec ghostty"
+        "bindsym $mod+Shift+Return exec ghostty"
+        "bindsym $mod+d exec rofi -show drun"
+        barBlock
+        "exec_always --no-startup-id hsetroot -solid '#${tokens.BG}'"
+        "exec --no-startup-id dbus-update-activation-environment --systemd --all"
+        "exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY"
+        "exec --no-startup-id nm-applet"
+      ];
     in
     {
       inherit themeName;
-      i3Config = renderTemplate {
-        inherit lib;
-        templatePath = "${domainsPath}/desktop/i3/config/config.template";
-        inherit tokens;
-      };
+      i3Config = i3Body + "\n" + lib.concatStringsSep "\n" fixtureFragments;
       i3statusConfig = renderTemplate {
         inherit lib;
-        templatePath = "${domainsPath}/desktop/i3/i3status.template";
+        templatePath = "${domainsPath}/bar/i3status/config/config.template";
         inherit tokens;
       };
     };

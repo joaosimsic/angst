@@ -122,8 +122,9 @@ including auto-generated domain modules. Custom domain modules can also accept
 | zellij | `domains/terminal/zellij/config/layouts/default.kdl.template` | `~/.config/zellij/layouts/default.kdl` |
 | nushell | `domains/shell/nushell/config/colors.nu.template` | `~/.config/nushell/colors.nu` |
 | starship | `domains/shell/starship/config/starship.toml.template` | `~/.config/starship/starship.toml` |
-| i3 | `domains/desktop/i3/config/config.template` | `~/.config/i3/config` |
-| i3status | `domains/desktop/i3/i3status.template` | `~/.config/i3status/config` |
+| i3 | `domains/wm/i3/config/config.template` (+ fragments) | `~/.config/i3/config` |
+| i3status | `domains/bar/i3status/config/config.template` | `~/.config/i3status/config` |
+| i3status bar | `domains/bar/i3status/bar.template` | i3 config fragment |
 
 Non-color configs (e.g. `ghostty/config`, `nushell/config.nu`, `nushell/env.nu`)
 are deployed as static files and are **not** theme-aware.
@@ -185,7 +186,7 @@ never define `*_RGB` manually in theme files.
 **zellij layout** (`layouts/default.kdl.template`) — uses semantic hex with `#`
 prefix in zjstatus format strings: `FG`, `BG`, `BRIGHT`.
 
-**i3** (`config/config.template`, `i3status.template`) — uses semantic tokens.
+**i3** (`config/config.template`) and **i3status** (`config/config.template`, `bar.template`) — use semantic tokens. Domains are decoupled by category (`wm`, `bar`, `launcher`, `session`, `terminal`, …): each contributes i3 config lines via `domains.wm._i3.configLines` when enabled, without referencing sibling domains.
 
 ---
 

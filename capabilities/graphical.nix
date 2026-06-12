@@ -1,14 +1,14 @@
 { config, lib, pkgs, theme, ... }:
 
 let
-  cfg = config.capabilities.desktop;
+  cfg = config.capabilities.graphical;
 
   themesLib = import ../themes/default.nix { inherit lib; };
   themeColors = themesLib.get theme;
 in
 {
-  options.capabilities.desktop = {
-    enable = lib.mkEnableOption "Graphical desktop with X11 and i3";
+  options.capabilities.graphical = {
+    enable = lib.mkEnableOption "Graphical desktop with X11";
   };
 
   config = lib.mkIf cfg.enable {
@@ -25,8 +25,6 @@ in
         '';
       };
     };
-
-    services.xserver.windowManager.i3.enable = true;
 
     services.dbus.enable = true;
 

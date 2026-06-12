@@ -35,6 +35,7 @@ let
       modules = [
         ../core/home.nix
         (import ../lib/themeModule.nix { inherit lib themesLib hostTheme; })
+        ../lib/i3Fragments.nix
         ../hosts/${hostname}/home.nix
       ] ++ homeModules;
     };

@@ -1,7 +1,7 @@
-{ config, lib, pkgs, themesLib, renderTemplate, monitors, ... }:
+{ config, lib, themesLib, renderTemplate, monitors, ... }:
 
 let
-  cfg = config.domains.desktop.i3;
+  cfg = config.domains.wm.i3;
 
   theme = themesLib.get config.theme;
 
@@ -21,31 +21,22 @@ let
       "# no monitor overrides configured"
     else
       lib.concatStringsSep "\n" (map monitorLine monitorOrder);
+
+  body = renderTemplate {
+    inherit lib;
+    templatePath = ./config/config.template;
+    tokens = theme;
+  };
+
+  fragments = config.domains.wm._i3.configLines;
+
+  i3Config = body + "\n" + lib.concatStringsSep "\n" fragments;
 in
 {
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      rofi
-      i3status
-      hsetroot
-      xclip
-      networkmanagerapplet
-    ];
-
     xdg.configFile = {
-      "i3/config".text = renderTemplate {
-        inherit lib;
-        templatePath = ./config/config.template;
-        tokens = theme;
-      };
-
+      "i3/config".text = i3Config;
       "i3/monitors.conf".text = monitorsConf;
-
-      "i3status/config".text = renderTemplate {
-        inherit lib;
-        templatePath = ./i3status.template;
-        tokens = theme;
-      };
     };
   };
 }
