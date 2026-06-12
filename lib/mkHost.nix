@@ -15,6 +15,8 @@ inputs.nixpkgs.lib.nixosSystem {
     userConfig = hostConfig.user;
 
     monitors = hostConfig.monitors or {};
+
+    theme = hostConfig.theme or "monochrome";
   };
 
   modules = [

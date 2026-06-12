@@ -27,6 +27,7 @@ in
     home.packages = with pkgs; [
       rofi
       i3status
+      hsetroot
       xclip
       networkmanagerapplet
     ];

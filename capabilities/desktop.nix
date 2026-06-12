@@ -1,7 +1,10 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, theme, ... }:
 
 let
   cfg = config.capabilities.desktop;
+
+  themesLib = import ../themes/default.nix { inherit lib; };
+  themeColors = themesLib.get theme;
 in
 {
   options.capabilities.desktop = {
@@ -14,7 +17,13 @@ in
 
     services.xserver.displayManager.lightdm = {
       enable = true;
-      greeters.gtk.enable = true;
+      background = "#${themeColors.BG}";
+      greeters.gtk = {
+        enable = true;
+        extraConfig = ''
+          user-background = false
+        '';
+      };
     };
 
     services.xserver.windowManager.i3.enable = true;
