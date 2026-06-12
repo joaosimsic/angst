@@ -94,9 +94,7 @@ let
       hasXdg = meta ? xdg;
       hasXdgFile = meta ? xdgFile;
     in
-    if !(meta ? package) then
-      builtins.throw "domains/${category}/${name}/meta.nix: missing required field 'package'"
-    else if hasXdg && hasXdgFile then
+    if hasXdg && hasXdgFile then
       builtins.throw "domains/${category}/${name}/meta.nix: 'xdg' and 'xdgFile' are mutually exclusive"
     else if !hasXdg && !hasXdgFile then
       builtins.throw "domains/${category}/${name}/meta.nix: must set either 'xdg' or 'xdgFile'"
@@ -149,14 +147,21 @@ let
         enable = lib.mkEnableOption "Enable ${meta.description or name}";
       };
 
-      config = lib.mkIf (config.domains.${category}.${name}.enable && !(meta.customXdg or false)) {
-        xdg.configFile = mkXdgSymlinks {
-          inherit configDir;
-          theme = themesLib.get config.theme;
-          xdgName = meta.xdg or null;
-          xdgFile = meta.xdgFile or null;
-        };
-      };
+      config = lib.mkIf config.domains.${category}.${name}.enable (
+        {
+          home.packages = lib.optionals (meta ? package) [
+            pkgs.${meta.package}
+          ];
+        }
+        // lib.optionalAttrs (!(meta.customXdg or false)) {
+          xdg.configFile = mkXdgSymlinks {
+            inherit configDir;
+            theme = themesLib.get config.theme;
+            xdgName = meta.xdg or null;
+            xdgFile = meta.xdgFile or null;
+          };
+        }
+      );
     };
 
     customModule = if hasCustomModule then import modulePath else {};
