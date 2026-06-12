@@ -3,7 +3,6 @@
 {
   imports = [
     ./hardware.nix
-    ./virtualisation.nix
   ];
 
   networking.hostName = hostname;

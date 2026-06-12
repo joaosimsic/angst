@@ -5,9 +5,11 @@ let
 
   theme = themesLib.get config.theme;
 
-  monitorOrder =
-    [ "primary" "secondary" ]
-    ++ lib.filter (n: n != "primary" && n != "secondary") (lib.attrNames monitors);
+  monitorOrder = lib.unique (
+    lib.filter (n: lib.hasAttr n monitors) (
+      [ "primary" "secondary" ] ++ lib.attrNames monitors
+    )
+  );
 
   monitorLine =
     name:
