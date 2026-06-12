@@ -3,7 +3,7 @@
 let
   inherit (lib) attrNames concatStringsSep foldl';
 
-  templatePlaceholders = import ./templatePlaceholders.nix { inherit lib; };
+  templatePlaceholders = import ./placeholders.nix { inherit lib; };
 
   template = builtins.readFile templatePath;
 

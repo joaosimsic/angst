@@ -12,13 +12,13 @@ let
 
       inherit (pkgs) lib;
 
-      themesLib = import ../themes/default.nix { inherit lib; };
+      themesLib = import ../../themes/default.nix { inherit lib; };
       hostTheme = hostConfig.theme or themesLib.default;
 
-      domainsPath = ../domains;
-      domainsLib = import ./domains.nix { inherit lib domainsPath; };
-      renderTemplate = import ./renderTemplate.nix;
-      templateTokens = import ./templateTokens.nix;
+      domainsPath = ../../domains;
+      domainsLib = import ../domains/default.nix { inherit lib domainsPath; };
+      templateLib = import ../template/default.nix { inherit lib themesLib; };
+      inherit (templateLib) renderTemplate mkTokens;
 
       homeModules = map domainsLib.mkDomainModule domainsLib.homeEntries;
     in
@@ -26,18 +26,17 @@ let
       inherit pkgs;
 
       extraSpecialArgs = {
-        inherit inputs flakeSelf themesLib hostTheme renderTemplate templateTokens;
-
+        inherit inputs flakeSelf themesLib hostTheme renderTemplate;
+        templateTokens = { theme, fontFamily, ... }: mkTokens { inherit theme fontFamily; };
         userConfig = hostConfig.user;
-
         monitors = hostConfig.monitors or {};
       };
 
       modules = [
-        ../core/home.nix
-        (import ../lib/themeModule.nix { inherit lib themesLib hostTheme; })
-        ../lib/i3Fragments.nix
-        ../hosts/${hostname}/home.nix
+        ../../core/home.nix
+        (import ../home/themeModule.nix { inherit lib themesLib hostTheme; })
+        ../home/i3Fragments.nix
+        ../../hosts/${hostname}/home.nix
       ] ++ homeModules;
     };
 in

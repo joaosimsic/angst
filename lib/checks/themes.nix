@@ -1,8 +1,11 @@
 { lib, themesLib, domainsPath }:
 
 let
-  fontsLib = import ./fonts.nix;
-  templateTokens = import ./templateTokens.nix;
+  templateLib = import ../template/default.nix {
+    inherit lib themesLib domainsPath;
+  };
+
+  inherit (templateLib) mkTokens renderTemplate extractPlaceholders findTemplates;
 
   inherit (lib)
     attrNames
@@ -10,40 +13,7 @@ let
     concatStringsSep
     elem
     filter
-    hasSuffix
-    mapAttrsToList
     ;
-
-  renderTemplate = import ./renderTemplate.nix;
-  templatePlaceholders = import ./templatePlaceholders.nix { inherit lib; };
-  inherit (templatePlaceholders) extractPlaceholders;
-
-  findTemplates =
-    dir: relPath:
-    let
-      entries = builtins.readDir dir;
-    in
-    concatLists (mapAttrsToList
-      (name: type:
-        let
-          fullPath = "${dir}/${name}";
-          rel =
-            if relPath == "" then
-              name
-            else
-              "${relPath}/${name}";
-        in
-        if type == "directory" then
-          findTemplates fullPath rel
-        else if hasSuffix ".template" name then
-          [ {
-            inherit fullPath;
-            rel = rel;
-          } ]
-        else
-          [ ]
-      )
-      entries);
 
   templates = findTemplates domainsPath "";
 
@@ -61,11 +31,7 @@ let
     let
       source = builtins.readFile fullPath;
       placeholders = extractPlaceholders source;
-      tokens = templateTokens {
-        inherit lib themesLib;
-        theme = themeName;
-        fontFamily = fontsLib.defaultFamily;
-      };
+      tokens = mkTokens { theme = themeName; };
       tokenKeys = attrNames tokens;
       missing = filter (p: !(elem p tokenKeys)) placeholders;
     in
@@ -81,11 +47,7 @@ let
   validateTemplateRenderForTheme =
     { fullPath, rel }: themeName:
     let
-      tokens = templateTokens {
-        inherit lib themesLib;
-        theme = themeName;
-        fontFamily = fontsLib.defaultFamily;
-      };
+      tokens = mkTokens { theme = themeName; };
       _ = renderTemplate {
         inherit lib;
         templatePath = fullPath;

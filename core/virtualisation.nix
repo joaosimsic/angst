@@ -4,7 +4,7 @@
   virtualisation.vmVariant = {
     virtualisation.memorySize = 4096;
     virtualisation.cores = 4;
-    virtualisation.diskSize = 16384; # MiB — default 1024 is too small for desktop + HM
+    virtualisation.diskSize = 16384; 
 
     home-manager.extraSpecialArgs.monitors = {
       primary = {

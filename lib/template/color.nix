@@ -1,8 +1,6 @@
-{ lib, themesLib, theme, fontFamily }:
+{ lib }:
 
 let
-  t = themesLib.get theme;
-
   hexValues = {
     "0" = 0;
     "1" = 1;
@@ -46,13 +44,6 @@ let
 
   brighten = color: lightenHex color 24;
 in
-t // {
-  FONT_FAMILY = fontFamily;
-  SURFACE = lightenHex t.BLACK 9;
-  GREEN_BRIGHT = brighten t.GREEN;
-  RED_BRIGHT = brighten t.RED;
-  YELLOW_BRIGHT = brighten t.YELLOW;
-  BLUE_BRIGHT = brighten t.BLUE;
-  MAGENTA_BRIGHT = brighten t.MAGENTA;
-  CYAN_BRIGHT = brighten t.CYAN;
+{
+  inherit lightenHex brighten;
 }

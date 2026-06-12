@@ -3,12 +3,12 @@
 hostname:
 let
   hostConfig = loadHost hostname;
-  capabilities = import ../capabilities { };
+  capabilities = import ../../capabilities { };
   profile = mkHomeProfile hostname;
 
-  domainsLib = import ./domains.nix {
+  domainsLib = import ../domains/default.nix {
     lib = inputs.nixpkgs.lib;
-    domainsPath = ../domains;
+    domainsPath = ../../domains;
   };
   domainNixosModules = map domainsLib.mkNixosDomainModule domainsLib.nixosEntries;
 in
@@ -26,8 +26,8 @@ inputs.nixpkgs.lib.nixosSystem {
   };
 
   modules = [
-    ../core
-    ../hosts/${hostname}/configuration.nix
+    ../../core
+    ../../hosts/${hostname}/configuration.nix
     inputs.home-manager.nixosModules.home-manager
     {
       home-manager.useGlobalPkgs = true;

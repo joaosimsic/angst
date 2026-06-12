@@ -61,18 +61,18 @@ hosts/<hostname>/default.nix
         │
         │  theme = "monochrome"
         ▼
-lib/mkHome.nix
+lib/build/mkHome.nix
         │
         │  themesLib.get name  →  theme attrset (+ *_RGB variants)
         ▼
 extraSpecialArgs.theme
         │
         ▼
-lib/domains.nix  →  mkDomainModule
+lib/domains/  →  mkDomainModule
         │
         │  mkXdgSymlinks { configDir = ".../config"; inherit theme; }
         ▼
-lib/renderTemplate.nix
+lib/template/render.nix
         │
         │  replace {{TOKEN}} placeholders in *.template files
         ▼
@@ -102,15 +102,20 @@ including auto-generated domain modules. Custom domain modules can also accept
 | `themes/schema.nix` | Required and optional token lists |
 | `themes/monochrome.nix` | Palette for the monochrome theme (bare hex, no `#`) |
 | `themes/catppuccin-mocha.nix` | Reference colorful palette (Catppuccin Mocha) |
-| `lib/renderTemplate.nix` | `{{TOKEN}}` string substitution with leftover detection |
-| `lib/templatePlaceholders.nix` | Extract `{{TOKEN}}` placeholders from template text |
-| `lib/lintThemes.nix` | Validate themes and templates (`nix run .#lint-themes`) |
-| `lib/lintDesktop.nix` | Parse-check rendered i3/i3status configs (`nix run .#lint-desktop`) |
-| `lib/lintShell.nix` | Parse-check rendered starship/nushell configs (`nix run .#lint-shell`) |
-| `lib/themeRenderedChecks.nix` | Assert catppuccin-mocha renders distinct hues per tool |
-| `lib/themeModule.nix` | Home Manager `options.theme` enum |
-| `lib/domains.nix` | `mkXdgSymlinks` — recursive template discovery and rendering |
-| `lib/mkHome.nix` | Loads theme from host config, injects into HM |
+| `lib/template/render.nix` | `{{TOKEN}}` string substitution with leftover detection |
+| `lib/template/placeholders.nix` | Extract `{{TOKEN}}` placeholders from template text |
+| `lib/template/tokens.nix` | Theme tokens + derived colors (`*_BRIGHT`, `SURFACE`, …) |
+| `lib/template/default.nix` | Template bundle: `mkTokens`, `renderTemplateFor`, `findTemplates` |
+| `lib/checks/themes.nix` | Validate themes and templates (`nix run .#lint-themes`) |
+| `lib/checks/desktop.nix` | Parse-check rendered i3/i3status configs (`nix run .#lint-desktop`) |
+| `lib/checks/shell.nix` | Parse-check rendered starship/nushell configs (`nix run .#lint-shell`) |
+| `lib/checks/theme/rendered.nix` | Assert host theme renders distinct hues per tool |
+| `lib/checks/theme/context.nix` | Host theme + alternate theme for override tests |
+| `lib/flake/default.nix` | Flake checks, apps, packages, and home config wiring |
+| `lib/home/themeModule.nix` | Home Manager `options.theme` enum |
+| `lib/domains/xdg.nix` | `mkXdgSymlinks` — recursive template discovery and rendering |
+| `lib/domains/default.nix` | Domain scan + module generation (public API) |
+| `lib/build/mkHome.nix` | Loads theme from host config, injects into HM |
 | `hosts/*/default.nix` | Per-host `theme` field |
 
 ### Templated configs (current)
@@ -807,9 +812,9 @@ Do this before adding a second theme.
 - [x] Register theme (manual or via auto-discovery)
 - [x] Update `ghostty/colors.conf.template` — use `BLUE` / `MAGENTA` in palette slots 5 and 13
 - [x] Add `BLUE` and `MAGENTA` to schema (`paletteTokens`)
-- [x] Set `theme = "<name>"` on a test host and build (via `homeConfigurations.joao-theme-override-test` + `checks.home-catppuccin-mocha`)
-- [x] Automated: `checks.theme-semantic-distinct` — catppuccin-mocha semantic roles are distinct hues
-- [x] Automated: `checks.theme-rendered` — ghostty palette slots, starship SUCCESS/ERROR, nushell ERROR/INFO, zellij FG/BRIGHT render distinct catppuccin-mocha hues
+- [x] Set `theme = "<name>"` on a test host and build (via `homeConfigurations.joao-theme-override-test` + `checks.home-theme-override-test`)
+- [x] Automated: `checks.theme-semantic-distinct` — host theme semantic roles are distinct hues
+- [x] Automated: `checks.theme-rendered` — ghostty palette slots, starship SUCCESS/ERROR, nushell ERROR/INFO, zellij FG/BRIGHT render distinct host-theme hues
 - [x] Automated: `checks.lint-shell` — rendered starship.toml and colors.nu parse cleanly (taplo + nu)
 - [x] Automated: `checks.lint-desktop` — rendered i3/i3status configs parse cleanly
 - [ ] Visual spot-check after `home-manager switch` (optional; automated checks cover parse + hue wiring)
@@ -843,7 +848,7 @@ Do this before adding a second theme.
 - [x] Add `nix run .#lint-themes` flake app
 - [x] Exit code 1 on any failure
 - [x] Runs in under a few seconds (no full HM eval)
-- [x] (Optional) Wire into CI or pre-commit (`nix flake check` runs `checks.lint-themes`, `checks.lint-desktop`, `checks.lint-shell`, `checks.theme-rendered`, `checks.theme-override`, `checks.theme-semantic-distinct`, and `checks.home-catppuccin-mocha`)
+- [x] (Optional) Wire into CI or pre-commit (`nix flake check` runs `checks.lint-themes`, `checks.lint-desktop`, `checks.lint-shell`, `checks.theme-rendered`, `checks.theme-override`, `checks.theme-semantic-distinct`, and `checks.home-theme-override-test`)
 
 ---
 
@@ -960,7 +965,7 @@ These are explicitly out of scope for the theme system:
 # Build home config (validates full eval including templates)
 nix build .#homeConfigurations.joao.activationPackage
 
-# Run all theme checks (lint, desktop/shell parse, rendered hues, override, catppuccin build)
+# Run all theme checks (lint, desktop/shell parse, rendered hues, override, override-test build)
 nix flake check
 
 # Switch theme (today)

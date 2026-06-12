@@ -1,7 +1,7 @@
 { nixpkgs, ... }:
 
 let
-  hostsPath = ../hosts;
+  hostsPath = ../../hosts;
   hostsContent = builtins.readDir hostsPath;
 in
 builtins.attrNames (
