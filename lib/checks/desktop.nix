@@ -26,7 +26,7 @@ let
       fixtureFragments = [
         "bindsym $mod+Return exec ghostty"
         "bindsym $mod+Shift+Return exec ghostty"
-        "bindsym $mod+d exec rofi -show drun"
+        "bindsym $mod+space exec rofi -show drun"
         barBlock
         "exec_always --no-startup-id hsetroot -solid '#${tokens.BG}'"
         "exec --no-startup-id dbus-update-activation-environment --systemd --all"
