@@ -27,7 +27,7 @@ inputbar {
     background-color: @bg;
     border:           1px;
     border-color:     @accent;
-    border-radius:    0px;
+    border-radius:    6px;
     padding:          8px 12px;
     margin:           0px 0px 4px 0px;
     children:         [ entry ];
@@ -44,7 +44,7 @@ listview {
     background-color: @bg;
     border:           1px;
     border-color:     @accent;
-    border-radius:    0px;
+    border-radius:    6px;
     padding:          4px 0px;
     margin:           0px;
     lines:            12;
