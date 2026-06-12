@@ -27,10 +27,11 @@ $env.config.color_config = {
     shape_bool:                  "#{{BRIGHT}}"
     shape_custom:                "#{{FG}}"
     shape_datetime:              "#{{BRIGHT}}"
-    shape_directory:             { fg: "#{{FG}}" attr: u }
-    shape_external:              "#{{FG}}"
+    shape_directory:             "#{{FG}}"
+    shape_external:              { fg: "#{{ERROR}}" }
+    shape_external_resolved:     { fg: "#{{SUCCESS}}" attr: b }
     shape_externalarg:           "#{{FG}}"
-    shape_filepath:              { fg: "#{{FG}}" attr: u }
+    shape_filepath:              "#{{FG}}"
     shape_flag:                  { fg: "#{{BRIGHT}}" attr: b }
     shape_float:                 "#{{FG}}"
     shape_garbage:               { fg: "#{{ERROR}}" attr: b }

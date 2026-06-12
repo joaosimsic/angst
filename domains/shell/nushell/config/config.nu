@@ -34,6 +34,8 @@ $env.config = {
 
     error_style: "fancy"
 
+    highlight_resolved_externals: true
+
     hooks: {
         pre_prompt: [
             { ||
