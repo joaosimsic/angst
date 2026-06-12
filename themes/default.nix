@@ -18,8 +18,15 @@ let
   requiredTokens = semanticTokens ++ paletteTokens;
   allColorTokens = lib.unique requiredTokens;
 
+  stripHash = hex:
+    if lib.hasPrefix "#" hex then
+      lib.removePrefix "#" hex
+    else
+      hex;
+
   hexToRgb = hex:
     let
+      h = stripHash hex;
       hexValues = {
         "0" = 0;
         "1" = 1;
@@ -40,14 +47,18 @@ let
       };
       hexByte = offset:
         let
-          hi = lib.toLower (lib.substring offset 1 hex);
-          lo = lib.toLower (lib.substring (offset + 1) 1 hex);
+          hi = lib.toLower (lib.substring offset 1 h);
+          lo = lib.toLower (lib.substring (offset + 1) 1 h);
         in
         hexValues.${hi} * 16 + hexValues.${lo};
     in
     "${toString (hexByte 0)} ${toString (hexByte 2)} ${toString (hexByte 4)}";
 
-  isValidHex = value: builtins.match "[0-9a-fA-F]{6}" value != null;
+  isValidHex = value: builtins.match "[0-9a-fA-F]{6}" (stripHash value) != null;
+
+  normalizeThemeColors =
+    theme:
+    lib.mapAttrs (k: v: if elem k allColorTokens then stripHash v else v) theme;
 
   validateTheme =
     name: theme:
@@ -102,7 +113,7 @@ in
   get =
     name:
     if themes ? ${name} then
-      withRgb (validateTheme name themes.${name})
+      withRgb (validateTheme name (normalizeThemeColors themes.${name}))
     else
       builtins.throw "Unknown theme: ${name}";
 }

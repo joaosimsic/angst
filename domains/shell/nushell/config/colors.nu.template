@@ -57,3 +57,42 @@ $env.config.color_config = {
     shape_vardecl:               "#{{BRIGHT}}"
     shape_raw_string:            "#{{COMMENT}}"
 }
+
+def ls-entry [selector: string, hex: string, --bold, --underline] {
+    let h = ($hex | str replace '#' '')
+    let r = ($h | str substring 0..<2 | into int -r 16)
+    let g = ($h | str substring 2..<4 | into int -r 16)
+    let b = ($h | str substring 4..<6 | into int -r 16)
+    let color = $"38;2;($r);($g);($b)"
+    let attrs = (if $bold { ["1"] } else { [] })
+        | append (if $underline { ["4"] } else { [] })
+    let style = if ($attrs | is-empty) {
+        $color
+    } else {
+        $"($attrs | str join ';');($color)"
+    }
+    $"($selector)=($style)"
+}
+
+let _fg = "#{{FG}}"
+let _bright = "#{{BRIGHT}}"
+let _muted = "#{{MUTED}}"
+let _comment = "#{{COMMENT}}"
+let _success = "#{{SUCCESS}}"
+let _warning = "#{{WARNING}}"
+let _error = "#{{ERROR}}"
+let _blue = "#{{BLUE}}"
+let _cyan = "#{{CYAN}}"
+let _magenta = "#{{MAGENTA}}"
+
+$env.LS_COLORS = [
+    "rs=0"
+    (ls-entry di $_bright --bold)
+    (ls-entry ln $_magenta)
+    (ls-entry ex $_success --bold)
+    (ls-entry or $_error)
+    (ls-entry fi $_fg)
+    (ls-entry "*.tar" $_warning)
+    (ls-entry "*.gz" $_warning)
+    (ls-entry "*.zip" $_warning)
+] | str join ':'
