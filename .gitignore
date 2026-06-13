@@ -1,6 +1,7 @@
 result/
 result*
 *.qcow2
+.opencode/
 
 # Rendered template outputs (written at activation time through symlink)
 # Keep in sync with .template files in domain config directories:

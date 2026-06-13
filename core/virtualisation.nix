@@ -18,7 +18,8 @@
     };
 
     services.spice-vdagentd.enable = true;
-    services.openssh.enable = true;
+    capabilities.ssh.server.enable = true;
+    capabilities.ssh.server.passwordAuthentication = true;
 
     virtualisation.qemu.options = [
       "-device virtio-vga,xres=1920,yres=1080"
