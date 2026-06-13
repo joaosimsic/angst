@@ -1,9 +1,10 @@
-{ lib, pkgs, themesLib, overrideTheme, homeConfiguration }:
+{ lib, pkgs, themesLib, overrideTheme, homeConfiguration, renderTemplateFor }:
 
 let
   theme = homeConfiguration.config.theme;
   expected = themesLib.get overrideTheme;
-  ghosttyColors = homeConfiguration.config.xdg.configFile."ghostty/colors.conf".text;
+  # Render template directly (xdg.configFile no longer set by activation-based deployment)
+  ghosttyColors = renderTemplateFor "terminal/ghostty/config/colors.conf" overrideTheme;
 in
 if theme != overrideTheme then
   throw "expected config.theme = ${overrideTheme}, got ${theme}"

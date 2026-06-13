@@ -8,6 +8,7 @@
   lintDesktop,
   lintShell,
   themeRenderedChecks,
+  renderTemplateFor,
 }:
 
 let
@@ -19,7 +20,7 @@ let
   };
 
   themeOverrideCheck = import ../checks/theme/override.nix {
-    inherit lib pkgs themesLib overrideTheme;
+    inherit lib pkgs themesLib overrideTheme renderTemplateFor;
     homeConfiguration = self.homeConfigurations.joao-theme-override-test;
   };
 in

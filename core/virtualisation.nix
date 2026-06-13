@@ -6,6 +6,8 @@
     virtualisation.cores = 4;
     virtualisation.diskSize = 16384; 
 
+    services.xserver.videoDrivers = lib.mkForce [ ];
+
     home-manager.extraSpecialArgs.monitors = {
       primary = {
         name = "Virtual-1";
@@ -16,6 +18,7 @@
     };
 
     services.spice-vdagentd.enable = true;
+    services.openssh.enable = true;
 
     virtualisation.qemu.options = [
       "-device virtio-vga,xres=1920,yres=1080"

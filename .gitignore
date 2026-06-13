@@ -1,3 +1,27 @@
 result/
 result*
 *.qcow2
+
+# Rendered template outputs (written at activation time through symlink)
+# Keep in sync with .template files in domain config directories:
+# bar/i3status
+domains/bar/i3status/config/config
+domains/bar/i3status/config/bar
+# editor/nvim
+domains/editor/nvim/config/lua/config/theme.lua
+# launcher/rofi
+domains/launcher/rofi/config/config.rasi
+domains/launcher/rofi/config/theme.rasi
+# shell/nushell
+domains/shell/nushell/config/colors.nu
+# shell/starship
+domains/shell/starship/config/starship.toml
+# terminal/ghostty
+domains/terminal/ghostty/config/config
+domains/terminal/ghostty/config/colors.conf
+# terminal/zellij
+domains/terminal/zellij/config/config.kdl
+domains/terminal/zellij/config/layouts/default.kdl
+# wm/i3
+domains/wm/i3/config/config
+domains/wm/i3/config/monitors.conf

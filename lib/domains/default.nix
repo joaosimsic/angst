@@ -2,10 +2,10 @@
 
 let
   scan = import ./scan.nix { inherit lib domainsPath; };
-  xdg = import ./xdg.nix { inherit lib; };
+  activation = import ./activation.nix { inherit lib; };
   module = import ./module.nix {
     inherit lib;
-    mkXdgSymlinks = xdg.mkXdgSymlinks;
+    mkDomainActivation = activation.mkDomainActivation;
   };
 in
 scan // module

@@ -1,9 +1,9 @@
-{ lib, mkXdgSymlinks }:
+{ lib, mkDomainActivation }:
 
 let
   mkTokens = import ../template/tokens.nix;
 
-  mkDomainModule = entry: { config, lib, pkgs, themesLib, ... }:
+  mkDomainModule = entry: { config, lib, pkgs, themesLib, renderTemplate, ... }:
   let
     inherit (entry) category name meta path;
     modulePath = "${path}/module.nix";
@@ -26,18 +26,18 @@ let
             pkgs.${meta.package}
           ];
         }
-        // lib.optionalAttrs (!(meta.customXdg or false)) {
-          xdg.configFile = mkXdgSymlinks {
-            inherit configDir;
+        // lib.optionalAttrs (!(meta.customXdg or false)) (
+          mkDomainActivation {
+            inherit configDir meta category name;
             tokens = mkTokens {
               inherit lib themesLib;
               theme = config.theme;
               fontFamily = config.font.family;
             };
-            xdgName = meta.xdg or null;
-            xdgFile = meta.xdgFile or null;
-          };
-        }
+            inherit (config.home) homeDirectory;
+            inherit lib pkgs renderTemplate;
+          }
+        )
       );
     };
 

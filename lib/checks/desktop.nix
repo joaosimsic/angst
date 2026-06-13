@@ -9,7 +9,9 @@ let
   renderForTheme =
     themeName:
     let
-      tokens = mkTokens { theme = themeName; };
+      tokens = mkTokens { theme = themeName; } // {
+        I3STATUS_PATH = "${pkgs.i3status}/bin/i3status";
+      };
 
       i3Body = renderTemplate {
         inherit lib;
@@ -24,13 +26,13 @@ let
       };
 
       fixtureFragments = [
-        "bindsym $mod+Return exec ghostty"
-        "bindsym $mod+Shift+Return exec ghostty"
-        "bindsym $mod+space exec rofi -show drun"
+        "bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ${pkgs.ghostty}/bin/ghostty"
+        "bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ${pkgs.ghostty}/bin/ghostty"
+        "bindsym $mod+space exec --no-startup-id ${pkgs.rofi}/bin/rofi -show drun"
         barBlock
-        "exec_always --no-startup-id hsetroot -solid '#${tokens.BG}'"
+        "exec_always --no-startup-id ${pkgs.hsetroot}/bin/hsetroot -solid '#${tokens.BG}'"
         "exec --no-startup-id dbus-update-activation-environment --systemd --all"
-        "exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY"
+        "exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY PATH XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS"
       ];
     in
     {

@@ -46,7 +46,7 @@ let
   };
 
   checks = import ./checks.nix {
-    inherit self pkgs lib themesLib themeContext themeLint lintDesktop lintShell themeRenderedChecks;
+    inherit self pkgs lib themesLib themeContext themeLint lintDesktop lintShell themeRenderedChecks renderTemplateFor;
   };
 in
 {

@@ -7,6 +7,8 @@ let
     inherit lib themesLib;
     theme = config.theme;
     fontFamily = config.font.family;
+  } // {
+    I3STATUS_PATH = "${pkgs.i3status}/bin/i3status";
   };
 
   barBlock = renderTemplate {
