@@ -1,7 +1,7 @@
 { config, pkgs, userConfig, ... }:
 
 {
-  imports = [ ./fontModule.nix ./domain-config.nix ];
+  imports = [ ./fontModule.nix ./domain-config.nix ./treesitter.nix ];
 
   programs.home-manager.enable = true;
 

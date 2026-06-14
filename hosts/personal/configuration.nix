@@ -30,5 +30,6 @@
   capabilities.network.enable = true;
   capabilities.container.enable = true;
   capabilities.git.enable = true;
+  capabilities.search.enable = true;
   capabilities.ssh.enable = true;
 }

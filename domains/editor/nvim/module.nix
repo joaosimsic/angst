@@ -2,7 +2,7 @@
 
 let
   cfg = config.domains.editor.nvim;
-  treesitter = pkgs.vimPlugins.nvim-treesitter.passthru;
+  treesitter = pkgs.tree-sitter.withPlugins (_: config.toolchains.treesitterGrammars);
 in
 {
   config = lib.mkIf cfg.enable {
@@ -13,24 +13,7 @@ in
       vimAlias = true;
       withRuby = false;
       withPython3 = false;
-      extraPackages = [
-        (treesitter.withPlugins [
-          treesitter.parsers.php
-          treesitter.parsers.html
-          treesitter.parsers.typescript
-          treesitter.parsers.angular
-          treesitter.parsers.java
-          treesitter.parsers.go
-          treesitter.parsers.css
-          treesitter.parsers.lua
-          treesitter.parsers.json
-          treesitter.parsers.python
-          treesitter.parsers.c_sharp
-          treesitter.parsers.razor
-          treesitter.parsers.markdown
-          treesitter.parsers.markdown_inline
-        ])
-      ];
+      extraPackages = [ treesitter ];
     };
 
     xdg.configFile."nvim/init.lua".enable = lib.mkForce false;
