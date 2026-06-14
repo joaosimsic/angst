@@ -5,10 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 SYSTEMD_DIR="$HOME/.config/systemd/user"
 
-echo "Building MCP server..."
+echo "Installing MCP server dependencies..."
 cd "$PROJECT_DIR/tools/vm-mcp"
-npm install
-npm run build
+bun install
 
 mkdir -p "$SYSTEMD_DIR"
 

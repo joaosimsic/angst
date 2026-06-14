@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
-{
-  home.packages = with pkgs; [
-    nil
-  ];
+let
+  lsp = with pkgs; [ nil ];
+in {
+  home.packages = lsp;
 }

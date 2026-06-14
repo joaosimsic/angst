@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
-{
-  home.packages = with pkgs; [
-    terraform-ls
-  ];
+let
+  lsp = with pkgs; [ terraform-ls ];
+in {
+  home.packages = lsp;
 }

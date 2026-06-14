@@ -34,7 +34,7 @@ function sshExec(command: string, timeout = 30000): Promise<{ stdout: string; st
           return;
         }
 
-        stream.on("close", (code) => {
+        stream.on("close", (code: number | null) => {
           clearTimeout(timer);
           conn.end();
           result.exitCode = code || 0;
@@ -139,7 +139,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+  const { name, arguments: args = {} } = request.params;
 
   try {
     switch (name) {

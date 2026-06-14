@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
-{
-  home.packages = with pkgs; [
-    bash-language-server
-  ];
+let
+  lsp = with pkgs; [ bash-language-server ];
+in {
+  home.packages = lsp;
 }

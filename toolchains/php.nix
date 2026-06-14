@@ -1,8 +1,8 @@
 { pkgs, ... }:
 
-{
-  home.packages = with pkgs; [
-    intelephense
-    blade-formatter
-  ];
+let
+  lsp = with pkgs; [ intelephense ];
+  formatter = with pkgs; [ blade-formatter ];
+in {
+  home.packages = lsp ++ formatter;
 }

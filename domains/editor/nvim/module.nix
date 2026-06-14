@@ -1,7 +1,8 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 
 let
   cfg = config.domains.editor.nvim;
+  treesitter = pkgs.vimPlugins.nvim-treesitter.passthru;
 in
 {
   config = lib.mkIf cfg.enable {
@@ -12,10 +13,26 @@ in
       vimAlias = true;
       withRuby = false;
       withPython3 = false;
+      extraPackages = [
+        (treesitter.withPlugins [
+          treesitter.parsers.php
+          treesitter.parsers.html
+          treesitter.parsers.typescript
+          treesitter.parsers.angular
+          treesitter.parsers.java
+          treesitter.parsers.go
+          treesitter.parsers.css
+          treesitter.parsers.lua
+          treesitter.parsers.json
+          treesitter.parsers.python
+          treesitter.parsers.c_sharp
+          treesitter.parsers.razor
+          treesitter.parsers.markdown
+          treesitter.parsers.markdown_inline
+        ])
+      ];
     };
 
-    # Prevent home-manager's neovim module from managing init.lua.
-    # Config deployment is handled by domain activation (symlink).
     xdg.configFile."nvim/init.lua".enable = lib.mkForce false;
   };
 }

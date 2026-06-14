@@ -12,7 +12,6 @@
     ./javascript.nix
     ./lua.nix
     ./nix.nix
-    ./node.nix
     ./php.nix
     ./python.nix
     ./rust.nix

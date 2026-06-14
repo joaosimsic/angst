@@ -1,9 +1,9 @@
 { pkgs, ... }:
 
-{
-  home.packages = with pkgs; [
-    jdk21
-    jdt-language-server
-    google-java-format
-  ];
+let
+  runtime = with pkgs; [ jdk21 ];
+  lsp = with pkgs; [ jdt-language-server ];
+  formatter = with pkgs; [ google-java-format ];
+in {
+  home.packages = runtime ++ lsp ++ formatter;
 }

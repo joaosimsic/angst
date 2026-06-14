@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
-{
-  home.packages = with pkgs; [
-    lemminx
-  ];
+let
+  lsp = with pkgs; [ lemminx ];
+in {
+  home.packages = lsp;
 }
