@@ -16,40 +16,40 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Start the VM
+    
     Start,
-    /// Stop the VM
+    
     Stop,
-    /// Restart the VM
+    
     Restart,
-    /// Check if the VM is running (SSH reachable)
+    
     Status,
-    /// Show VM journalctl logs
+    
     Logs {
         #[arg(short, long, default_value = "50")]
         lines: u32,
     },
-    /// SSH into the VM
+    
     Ssh {
         #[arg(last = true)]
         args: Vec<String>,
     },
-    /// Run a command inside the VM via SSH
+    
     Exec {
         #[arg(required = true, last = true)]
         command: Vec<String>,
     },
-    /// Copy file from host to VM
+    
     CopyTo {
         src: String,
         dest: Option<String>,
     },
-    /// Copy file from VM to host
+    
     CopyFrom {
         src: String,
         dest: Option<String>,
     },
-    /// MCP server management
+    
     Mcp {
         #[command(subcommand)]
         action: McpCommands,
@@ -58,15 +58,15 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum McpCommands {
-    /// Start the MCP server
+    
     Start,
-    /// Stop the MCP server
+    
     Stop,
-    /// Restart the MCP server
+    
     Restart,
-    /// Check MCP server status
+    
     Status,
-    /// Show MCP server logs
+    
     Logs {
         #[arg(short, long, default_value = "50")]
         lines: u32,

@@ -38,7 +38,7 @@ inputs.nixpkgs.lib.nixosSystem {
         imports = profile.modules;
       };
 
-      # Ensure domain configs are linked before login shells can start nushell.
+      
       systemd.services."home-manager-${hostConfig.user.username}".before = [
         "getty@.service"
         "serial-getty@.service"

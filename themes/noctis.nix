@@ -1,4 +1,4 @@
-# Noctis — dark teal terminal palette
+
 {
   FG = "#b2cacd";
   BG = "#03191b";

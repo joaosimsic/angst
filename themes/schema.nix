@@ -1,5 +1,5 @@
 {
-  # Semantic roles — what non-palette templates should reference.
+  
   semanticTokens = [
     "FG"
     "BG"
@@ -12,7 +12,7 @@
     "INFO"
   ];
 
-  # ANSI palette slots — ghostty 16-color block only.
+  
   paletteTokens = [
     "BLACK"
     "RED"

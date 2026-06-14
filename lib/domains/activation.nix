@@ -27,7 +27,7 @@ let
       hasXdgFile = (meta.xdgFile or null) != null;
       hasConfigDir = builtins.pathExists configDir;
 
-      # Recursively find .template files in configDir
+      
       findTemplates =
         dir: relPath:
         let
@@ -62,7 +62,7 @@ let
 
       templateFiles = if hasConfigDir then findTemplates configDir "" else [ ];
 
-      # Render each template at build time
+      
       renderedTemplates = map (tpl: {
         inherit (tpl) outputRel;
         storePath = pkgs.writeText
@@ -74,7 +74,7 @@ let
           });
       }) templateFiles;
 
-      # Combined derivation of all rendered templates
+      
       templateDerivation =
         if renderedTemplates != [ ] then
           pkgs.runCommand "domain-${category}-${name}-rendered" { } (
@@ -91,7 +91,7 @@ let
         else
           null;
 
-      # Activation script for xdg directory mode
+      
       mkXdgScript =
         xdgName:
         ''
@@ -124,7 +124,7 @@ let
           $DRY_RUN_CMD chmod -R u+w "$TARGET/"
         '';
 
-      # Activation script for xdgFile mode (single file symlink)
+      
       mkXdgFileScript =
         xdgFile:
         let

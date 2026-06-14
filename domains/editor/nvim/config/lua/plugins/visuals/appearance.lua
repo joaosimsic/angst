@@ -2,15 +2,15 @@ local shared_highlights = require("config.colors")
 require("config.theme")
 
 return {
-	-- {
-	-- 	"scottmckendry/cyberdream.nvim",
-	-- 	lazy = false,
-	-- 	priority = 1000,
-	-- 	config = function()
-	-- 		require("cyberdream").setup()
-	-- 		vim.cmd("colorscheme cyberdream")
-	-- 	end,
-	-- },
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	{
 		"nvim-lualine/lualine.nvim",
 		dependencies = { "nvim-tree/nvim-web-devicons" },

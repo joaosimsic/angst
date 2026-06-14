@@ -1,4 +1,4 @@
-# Kanagawa — dark warm Japanese-inspired palette
+
 {
   FG = "#c5c9c5";
   BG = "#181616";

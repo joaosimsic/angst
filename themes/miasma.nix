@@ -1,4 +1,4 @@
-# Miasma — muted earthy dark palette
+
 {
   FG = "#c2c2b0";
   BG = "#222222";

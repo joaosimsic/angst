@@ -27,7 +27,7 @@ return {
 			require("mini.indentscope").setup()
 			require("mini.notify").setup()
 
-			-- Set up keymaps after config
+			
 			vim.keymap.set("n", "<C-a>", function()
 				MiniFiles.open(vim.api.nvim_buf_get_name(0), true)
 			end, { desc = "Mini.files: Open current file" })
@@ -104,8 +104,8 @@ return {
 	{
 		"MeanderingProgrammer/render-markdown.nvim",
 		dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-mini/mini.nvim" },
-		---@module 'render-markdown'
-		---@type render.md.UserConfig
+		
+		
 		opts = {
 			enabled = true,
 			render_modes = { "n", "c", "i", "v" },

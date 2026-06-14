@@ -3,7 +3,7 @@
 let
   theme = homeConfiguration.config.theme;
   expected = themesLib.get overrideTheme;
-  # Render template directly (xdg.configFile no longer set by activation-based deployment)
+  
   ghosttyColors = renderTemplateFor "terminal/ghostty/config/colors.conf" overrideTheme;
 in
 if theme != overrideTheme then
