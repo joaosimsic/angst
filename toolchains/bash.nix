@@ -1,9 +1,9 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 let
+  inherit (import ../lib/toolchain.nix { inherit lib pkgs; }) mkToolchain;
+in
+mkToolchain {
   lsp = with pkgs; [ bash-language-server ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-bash ];
-in {
-  home.packages = lsp;
-  toolchains.treesitterGrammars = treesitter;
 }

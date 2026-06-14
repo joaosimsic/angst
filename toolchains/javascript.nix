@@ -1,6 +1,9 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 let
+  inherit (import ../lib/toolchain.nix { inherit lib pkgs; }) mkToolchain;
+in
+mkToolchain {
   runtime = with pkgs; [ nodejs bun ];
   lsp = with pkgs; [
     typescript-language-server
@@ -20,7 +23,4 @@ let
     tree-sitter-json
     tree-sitter-vue
   ];
-in {
-  home.packages = runtime ++ lsp ++ formatter ++ linter;
-  toolchains.treesitterGrammars = treesitter;
 }
