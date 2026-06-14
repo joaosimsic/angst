@@ -10,5 +10,5 @@
     description = "Tree-sitter grammar packages";
   };
 
-  home.packages = [ pkgs.tree-sitter ];
+  config.home.packages = [ pkgs.tree-sitter ];
 }

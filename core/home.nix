@@ -13,16 +13,19 @@
 
   programs.ssh = {
     enable = true;
-    addKeysToAgent = "yes";
+    enableDefaultConfig = false;
 
-    matchBlocks = {
+    settings = {
+      "*" = {
+        AddKeysToAgent = "yes";
+        IdentityFile = "~/.ssh/id_ed25519";
+      };
+
       "github.com" = {
-        host = "github.com";
-        user = "git";
-        identityFile = "~/.ssh/id_ed25519";
-        extraOptions = {
-          StrictHostKeyChecking = "accept-new";
-        };
+        Host = "github.com";
+        User = "git";
+        IdentityFile = "~/.ssh/id_ed25519";
+        StrictHostKeyChecking = "accept-new";
       };
     };
   };
