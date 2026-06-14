@@ -4,6 +4,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 SYSTEMD_DIR="$HOME/.config/systemd/user"
+VM_CLI="$PROJECT_DIR/tools/vm-cli/target/release/vm"
+
+echo "Building VM CLI..."
+cd "$PROJECT_DIR/tools/vm-cli"
+cargo build --release
 
 echo "Installing MCP server dependencies..."
 cd "$PROJECT_DIR/tools/vm-mcp"
@@ -20,17 +25,15 @@ sed -i "s|%h/proj/angst|$PROJECT_DIR|g" "$SYSTEMD_DIR/vm-mcp.service"
 
 systemctl --user daemon-reload
 
-echo "Enabling services..."
-systemctl --user enable vm.service
-systemctl --user enable vm-mcp.service
-
 echo ""
-echo "Setup complete!"
+echo "Setup complete! Services are installed but NOT enabled at startup."
 echo ""
-echo "To start the VM and MCP server:"
+echo "Use the VM CLI to manage the VM:"
+echo "  $VM_CLI start"
+echo "  $VM_CLI stop"
+echo "  $VM_CLI status"
+echo "  $VM_CLI ssh"
+echo ""
+echo "Or use systemctl directly:"
 echo "  systemctl --user start vm"
 echo "  systemctl --user start vm-mcp"
-echo ""
-echo "To enable on login:"
-echo "  systemctl --user enable vm"
-echo "  systemctl --user enable vm-mcp"
