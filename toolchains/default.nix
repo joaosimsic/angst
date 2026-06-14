@@ -1,20 +1,15 @@
-{ ... }:
+{ lib, ... }:
 
+let
+  toolchainsPath = ./.;
+  entries = builtins.readDir toolchainsPath;
+  
+  toolchainFiles = lib.filterAttrs
+    (name: type: type == "regular" && lib.hasSuffix ".nix" name && name != "default.nix")
+    entries;
+  
+  imports = map (name: ./${name}) (builtins.attrNames toolchainFiles);
+in
 {
-  imports = [
-    ./bash.nix
-    ./c.nix
-    ./csharp.nix
-    ./docker.nix
-    ./go.nix
-    ./java.nix
-    ./javascript.nix
-    ./lua.nix
-    ./nix.nix
-    ./php.nix
-    ./python.nix
-    ./rust.nix
-    ./terraform.nix
-    ./xml.nix
-  ];
+  inherit imports;
 }

@@ -18,9 +18,6 @@ mkToolchain {
     tree-sitter-javascript
     tree-sitter-typescript
     tree-sitter-tsx
-    tree-sitter-html
-    tree-sitter-css
-    tree-sitter-json
     tree-sitter-vue
   ];
 }
