@@ -7,6 +7,7 @@
   loadHost,
   mkHome,
   mkHomeWithExtraModules,
+  vm-cli,
 }:
 
 let
@@ -59,11 +60,13 @@ in
   packages = {
     ${system} = {
       default = self.homeConfigurations.joao.activationPackage;
+      vm-cli = vm-cli.packages.${system}.default;
     };
   };
 
   apps = {
     ${system} = {
+      vm = vm-cli.apps.${system}.default;
       lint-themes = {
         type = "app";
         program = "${pkgs.writeShellScript "lint-themes" ''

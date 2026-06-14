@@ -6,9 +6,14 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    vm-cli = {
+      url = "path:./tools/vm-cli";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, vm-cli, ... }@inputs:
   let
     hosts = import ./lib/build/scanHosts.nix inputs;
 
@@ -31,7 +36,7 @@
     pkgs = nixpkgs.legacyPackages.${system};
 
     flakeLib = import ./lib/flake/default.nix {
-      inherit self system pkgs hosts mkHome mkHomeWithExtraModules;
+      inherit self system pkgs hosts mkHome mkHomeWithExtraModules vm-cli;
       loadHost = env.loadHost;
       lib = pkgs.lib;
     };

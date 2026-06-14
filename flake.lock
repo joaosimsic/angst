@@ -39,8 +39,25 @@
     "root": {
       "inputs": {
         "home-manager": "home-manager",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "vm-cli": "vm-cli"
       }
+    },
+    "vm-cli": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "./tools/vm-cli",
+        "type": "path"
+      },
+      "original": {
+        "path": "./tools/vm-cli",
+        "type": "path"
+      },
+      "parent": []
     }
   },
   "root": "root",
