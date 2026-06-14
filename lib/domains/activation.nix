@@ -120,7 +120,8 @@ let
         ''
         + optionalString (templateDerivation != null) ''
           # Copy rendered templates into source dir (through symlink)
-          $DRY_RUN_CMD cp -rL ${templateDerivation}/* "$TARGET/"
+          $DRY_RUN_CMD cp -rfL ${templateDerivation}/* "$TARGET/"
+          $DRY_RUN_CMD chmod -R u+w "$TARGET/"
         '';
 
       # Activation script for xdgFile mode (single file symlink)
@@ -147,7 +148,8 @@ let
         ''
         + optionalString hasTemplate ''
           # Copy rendered template into source dir
-          $DRY_RUN_CMD cp ${renderedStorePath} "$DOMAIN_SRC/${xdgFile}"
+          $DRY_RUN_CMD cp -f ${renderedStorePath} "$DOMAIN_SRC/${xdgFile}"
+          $DRY_RUN_CMD chmod u+w "$DOMAIN_SRC/${xdgFile}"
         ''
         + ''
           if [ ! -f "$DOMAIN_SRC/${xdgFile}" ]; then

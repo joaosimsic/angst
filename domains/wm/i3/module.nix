@@ -69,8 +69,9 @@ in
       $DRY_RUN_CMD ln -sfn "$DOMAIN_SRC" "$TARGET"
 
       # Copy build-time merged config (template + fragments + monitors)
-      $DRY_RUN_CMD cp ${i3ConfigFile} "$TARGET/config"
-      $DRY_RUN_CMD cp ${monitorsConfFile} "$TARGET/monitors.conf"
+      $DRY_RUN_CMD cp -f ${i3ConfigFile} "$TARGET/config"
+      $DRY_RUN_CMD cp -f ${monitorsConfFile} "$TARGET/monitors.conf"
+      $DRY_RUN_CMD chmod u+w "$TARGET/config" "$TARGET/monitors.conf"
     '';
   };
 }
