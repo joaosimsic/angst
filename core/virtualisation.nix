@@ -19,7 +19,6 @@
 
     services.spice-vdagentd.enable = true;
     capabilities.ssh.server.enable = true;
-    capabilities.ssh.server.passwordAuthentication = true;
 
     users.users.joao.openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINOsmeoPJnZEE7AnCpSik4QsgjLr3cRy8W3Nmi0Ee5OF jpsimsic@hotmail.com"
