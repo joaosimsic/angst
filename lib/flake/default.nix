@@ -67,6 +67,15 @@ in
   apps = {
     ${system} = {
       vm = vm-cli.apps.${system}.default;
+
+      check = {
+        type = "app";
+        program = "${pkgs.writeShellScript "check" ''
+          set -euo pipefail
+          ${pkgs.nix}/bin/nix flake check --print-build-logs
+        ''}";
+      };
+
       lint-themes = {
         type = "app";
         program = "${pkgs.writeShellScript "lint-themes" ''

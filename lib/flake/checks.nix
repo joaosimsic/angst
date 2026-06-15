@@ -39,4 +39,10 @@ in
     self.homeConfigurations.joao-theme-override-test.activationPackage;
 
   theme-semantic-distinct = themeSemanticDistinct;
+
+  nixos-personal =
+    self.nixosConfigurations.personal.config.system.build.toplevel;
+
+  home-joao =
+    self.homeConfigurations.joao.activationPackage;
 }
