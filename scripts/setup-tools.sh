@@ -8,6 +8,11 @@ VM_SERVICE_DIR="$PROJECT_DIR/tools/vm-service"
 VM_CLI_LINK="$PROJECT_DIR/.vm-cli"
 VM_BIN="$VM_CLI_LINK/bin/vm"
 LOCAL_BIN="$HOME/.local/bin/vm"
+PERSONAL_NIX="$PROJECT_DIR/hosts/personal/default.nix"
+VM_SSH_PORT="${VM_SSH_PORT:-2222}"
+VM_SSH_USER="${VM_SSH_USER:-joao}"
+SSH_IDENTITY="$HOME/.ssh/id_ed25519"
+VM_SSH_KEYS_CHANGED=false
 
 SKIP_VM_BUILD=false
 SKIP_MCP=false
@@ -59,6 +64,7 @@ require_cmd() {
 echo "==> Checking prerequisites..."
 
 require_cmd nix "Install Nix with flakes enabled: https://nixos.org/download.html"
+require_cmd python3 "Install Python 3 (used to sync VM SSH authorized keys)"
 require_cmd ssh "Install OpenSSH client (ssh)"
 require_cmd scp "Install OpenSSH client (scp)"
 require_cmd systemctl "systemctl is required for VM service management"
@@ -83,15 +89,193 @@ run_bun() {
   fi
 }
 
+collect_ssh_pubkeys() {
+  local keyfile line
+  local -a pubkeys=()
+
+  shopt -s nullglob
+  for keyfile in "$HOME/.ssh"/*.pub; do
+    line=$(grep -E '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256) ' "$keyfile" | head -1 || true)
+    if [[ -n "$line" ]]; then
+      pubkeys+=("$line")
+    fi
+  done
+  shopt -u nullglob
+
+  if [[ ${#pubkeys[@]} -eq 0 ]]; then
+    echo "Error: No SSH public keys found in ~/.ssh/*.pub" >&2
+    echo "Generate one with: ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519" >&2
+    exit 1
+  fi
+
+  printf '%s\n' "${pubkeys[@]}"
+}
+
+pubkey_material() {
+  awk '{print $1 " " $2}'
+}
+
+config_authorized_key_material() {
+  grep -E '^\s+"ssh-' "$PERSONAL_NIX" | sed -E 's/^[[:space:]]+"([^"]+)".*/\1/' | pubkey_material | sort -u
+}
+
+host_authorized_key_material() {
+  collect_ssh_pubkeys | pubkey_material | sort -u
+}
+
+authorized_keys_match_config() {
+  local config_keys host_keys
+  config_keys=$(config_authorized_key_material)
+  host_keys=$(host_authorized_key_material)
+  [[ "$config_keys" == "$host_keys" ]]
+}
+
+update_authorized_keys_in_config() {
+  local -a pubkeys=()
+  local nix_file="$PERSONAL_NIX"
+  mapfile -t pubkeys < <(collect_ssh_pubkeys)
+
+  python3 - "$nix_file" "${pubkeys[@]}" <<'PY'
+import re
+import sys
+
+nix_file = sys.argv[1]
+keys = sys.argv[2:]
+content = open(nix_file, encoding="utf-8").read()
+keys_block = "authorizedKeys = [\n" + "\n".join(f'        "{key}"' for key in keys) + "\n      ];"
+updated, count = re.subn(
+    r"authorizedKeys = \[.*?\];",
+    keys_block,
+    content,
+    count=1,
+    flags=re.DOTALL,
+)
+if count != 1:
+    sys.exit("Could not update authorizedKeys in hosts/personal/default.nix")
+with open(nix_file, "w", encoding="utf-8") as handle:
+    handle.write(updated)
+PY
+  VM_SSH_KEYS_CHANGED=true
+}
+
+ensure_ssh_identity() {
+  if [[ -f "$SSH_IDENTITY" ]]; then
+    return
+  fi
+
+  local candidate
+  for candidate in personal_key id_rsa; do
+    if [[ -f "$HOME/.ssh/$candidate" ]]; then
+      echo "  Linking $SSH_IDENTITY -> $candidate"
+      ln -sf "$candidate" "$SSH_IDENTITY"
+      return
+    fi
+  done
+
+  echo "Error: No SSH private key found for VM access." >&2
+  echo "Expected $SSH_IDENTITY or ~/.ssh/{personal_key,id_rsa}." >&2
+  exit 1
+}
+
+clean_vm_known_host() {
+  local known_hosts="$HOME/.ssh/known_hosts"
+  mkdir -p "$HOME/.ssh"
+  chmod 700 "$HOME/.ssh"
+
+  if [[ -f "$known_hosts" ]] && ssh-keygen -F "[localhost]:${VM_SSH_PORT}" -f "$known_hosts" >/dev/null 2>&1; then
+    echo "  Removing stale [localhost]:${VM_SSH_PORT} host key from known_hosts"
+    ssh-keygen -f "$known_hosts" -R "[localhost]:${VM_SSH_PORT}" >/dev/null
+  fi
+}
+
+setup_vm_ssh() {
+  echo "==> Configuring SSH for VM access..."
+
+  ensure_ssh_identity
+  clean_vm_known_host
+
+  if authorized_keys_match_config; then
+    echo "  authorizedKeys already match ~/.ssh/*.pub"
+    return
+  fi
+
+  echo "  Syncing authorizedKeys in hosts/personal/default.nix from ~/.ssh/*.pub"
+  update_authorized_keys_in_config
+}
+
+ssh_vm_probe() {
+  ssh \
+    -o BatchMode=yes \
+    -o StrictHostKeyChecking=no \
+    -o UserKnownHostsFile=/dev/null \
+    -o IdentitiesOnly=yes \
+    -o ConnectTimeout=5 \
+    -i "$SSH_IDENTITY" \
+    -p "$VM_SSH_PORT" \
+    "${VM_SSH_USER}@localhost" \
+    true
+}
+
+verify_vm_ssh() {
+  if ! systemctl --user is-active --quiet vm 2>/dev/null; then
+    echo "==> Skipping SSH verification (VM not running)"
+    return
+  fi
+
+  echo "==> Verifying SSH to VM..."
+  if ssh_vm_probe; then
+    echo "  SSH OK (port ${VM_SSH_PORT})"
+    return
+  fi
+
+  echo "Error: VM is running but SSH authentication failed on port ${VM_SSH_PORT}." >&2
+  echo "Try: vm restart" >&2
+  exit 1
+}
+
+restart_vm_if_needed() {
+  if [[ "$VM_SSH_KEYS_CHANGED" != true ]]; then
+    return
+  fi
+
+  if ! systemctl --user is-active --quiet vm 2>/dev/null; then
+    return
+  fi
+
+  echo "==> Restarting VM (authorizedKeys changed)..."
+  systemctl --user restart vm
+  clean_vm_known_host
+
+  echo "==> Waiting for SSH after VM restart..."
+  local i
+  for i in $(seq 1 60); do
+    if ssh_vm_probe; then
+      echo "  VM is ready (SSH on port ${VM_SSH_PORT})"
+      return
+    fi
+    if (( i % 10 == 0 || i == 1 )); then
+      echo "  ${i}s..."
+    fi
+    sleep 1
+  done
+
+  echo "Error: VM restarted but SSH is not responding after 60s." >&2
+  exit 1
+}
+
 build_vm_image() {
   if [[ "$SKIP_VM_BUILD" == true ]]; then
     echo "==> Skipping VM image build (--skip-vm-build)"
     return
   fi
 
-  if [[ -x "$PROJECT_DIR/result/bin/run-personal-vm" ]]; then
+  if [[ -x "$PROJECT_DIR/result/bin/run-personal-vm" && "$VM_SSH_KEYS_CHANGED" != true ]]; then
     echo "==> VM image already built at result/bin/run-personal-vm"
     return
+  fi
+
+  if [[ "$VM_SSH_KEYS_CHANGED" == true ]]; then
+    echo "==> Rebuilding VM image (authorizedKeys changed)..."
   fi
 
   echo "==> Building NixOS VM image (this may take a while)..."
@@ -150,11 +334,14 @@ install_systemd_services() {
   systemctl --user daemon-reload
 }
 
+setup_vm_ssh
 build_vm_image
 build_vm_cli
 install_vm_on_path
 install_mcp_deps
 install_systemd_services
+
+restart_vm_if_needed
 
 echo ""
 echo "Host dev tooling setup complete! Services are installed but NOT enabled at startup."
@@ -177,4 +364,7 @@ if [[ "$DO_START" == true ]]; then
   echo ""
   echo "==> Starting VM..."
   "$LOCAL_BIN" start
+  verify_vm_ssh
+else
+  verify_vm_ssh
 fi

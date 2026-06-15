@@ -1,5 +1,7 @@
 use std::process::{self, Command};
 
+use crate::config::vm_ssh_identity;
+
 pub fn run(cmd: &str, args: &[&str]) -> Result<(), String> {
     let status = Command::new(cmd)
         .args(args)
@@ -29,14 +31,23 @@ pub fn run_capture(cmd: &str, args: &[&str]) -> Result<String, String> {
 }
 
 pub fn wait_for_ssh(port: &str, user: &str, timeout_secs: u64) -> Result<(), String> {
+    let identity = vm_ssh_identity();
     eprintln!("Waiting for SSH...");
     for i in 1..=timeout_secs {
         let status = Command::new("ssh")
             .args([
                 "-o",
+                "BatchMode=yes",
+                "-o",
                 "StrictHostKeyChecking=no",
                 "-o",
+                "UserKnownHostsFile=/dev/null",
+                "-o",
+                "IdentitiesOnly=yes",
+                "-o",
                 "ConnectTimeout=1",
+                "-i",
+                &identity,
                 "-p",
                 port,
                 &format!("{user}@localhost"),
