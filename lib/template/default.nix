@@ -11,6 +11,8 @@ let
       inherit lib themesLib theme fontFamily;
     };
 
+  themeTokenNames = lib.attrNames (mkTokens { theme = themesLib.default; });
+
   resolve =
     if domainsPath != null then
       import ./resolve.nix {
@@ -21,7 +23,7 @@ let
       { };
 in
 {
-  inherit renderTemplate mkTokens;
+  inherit renderTemplate mkTokens themeTokenNames;
   inherit (templatePlaceholders) extractPlaceholders;
   inherit (discover) findTemplates;
   inherit (resolve) resolveTemplatePath renderTemplateFor;
