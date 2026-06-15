@@ -4,16 +4,3 @@ result*
 .opencode/
 
 
-# === TEMPLATE OUTPUTS (auto-generated) ===
-domains/bar/i3status/bar
-domains/bar/i3status/config/config
-domains/editor/nvim/config/lua/config/theme.lua
-domains/launcher/rofi/config/config.rasi
-domains/launcher/rofi/config/theme.rasi
-domains/shell/nushell/config/colors.nu
-domains/shell/starship/config/starship.toml
-domains/terminal/ghostty/config/colors.conf
-domains/terminal/ghostty/config/config
-domains/terminal/zellij/config/config.kdl
-domains/terminal/zellij/config/layouts/default.kdl
-
