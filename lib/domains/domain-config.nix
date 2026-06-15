@@ -1,7 +1,20 @@
-{ config, lib, pkgs, flakeSelf, ... }:
+{ config, lib, flakeSelf, ... }:
 
 let
   cfg = config.domainConfig;
+
+  angstSrc = lib.cleanSourceWith {
+    src = flakeSelf;
+    filter =
+      path: type:
+      let
+        base = builtins.baseNameOf path;
+      in
+      base != ".git" && base != "result" && !(lib.hasSuffix ".qcow2" base);
+  };
+
+  hostSrc = "/host${config.home.homeDirectory}/proj/angst";
+  angstDst = cfg.sourceDir;
 in
 {
   options.domainConfig = {
@@ -14,24 +27,10 @@ in
 
   config = {
     home.activation.seedAngstRepo = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      HOST_SRC="/host${config.home.homeDirectory}/proj/angst"
-      ANGST_SRC=${lib.cleanSourceWith {
-        src = flakeSelf;
-        filter =
-          path: type:
-          let
-            base = builtins.baseNameOf path;
-          in
-          base != ".git" && base != "result" && !(lib.hasSuffix ".qcow2" base);
-      }}
-      ANGST_DST=${lib.escapeShellArg cfg.sourceDir}
-
-      # Skip if running in VM (host virtiofs available) or already seeded
-      if [ ! -d "$HOST_SRC" ] && [ ! -f "$ANGST_DST/flake.nix" ]; then
-        $DRY_RUN_CMD mkdir -p "$(dirname "$ANGST_DST")"
-        $DRY_RUN_CMD cp -a "$ANGST_SRC" "$ANGST_DST"
-        $DRY_RUN_CMD chmod -R u+w "$ANGST_DST"
-      fi
+      HOST_SRC=${lib.escapeShellArg hostSrc}
+      ANGST_SRC=${lib.escapeShellArg angstSrc}
+      ANGST_DST=${lib.escapeShellArg angstDst}
+      ${builtins.readFile ../../scripts/seed-angst-repo.sh}
     '';
   };
 }
