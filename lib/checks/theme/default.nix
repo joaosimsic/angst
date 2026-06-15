@@ -1,4 +1,4 @@
- lib, themesLib, domainsPath }:
+ { lib, themesLib, domainsPath }:
 
 let
   templateLib = import ../../template/default.nix {
