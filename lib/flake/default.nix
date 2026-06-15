@@ -25,7 +25,7 @@ let
     inherit loadHost themesLib lib;
   };
 
-  themeLint = import ../checks/themes.nix {
+  themeLint = import ../checks/theme {
     inherit lib themesLib domainsPath;
   };
 
