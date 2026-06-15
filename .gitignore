@@ -1,7 +1,7 @@
 result/
 result*
 .vm-cli
-.vm
+.virtiofsd
 *.qcow2
 .opencode/
 

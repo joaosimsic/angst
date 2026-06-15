@@ -1,10 +1,13 @@
 [Unit]
 Description=NixOS VM (angst)
 After=network.target
+Requires=virtiofsd.service
+After=virtiofsd.service
 
 [Service]
 Type=simple
 Environment=NIX_DISK_IMAGE=%h/proj/angst/personal.qcow2
+Environment=ANGST_REPO=%h/proj/angst
 Environment=QEMU_NET_OPTS=hostfwd=tcp::2222-:22
 ExecStart=%h/proj/angst/result/bin/run-personal-vm
 Restart=on-failure

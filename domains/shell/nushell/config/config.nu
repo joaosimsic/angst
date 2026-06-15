@@ -144,9 +144,21 @@ alias c = clear
 alias q = exit
 alias reload = exec nu
 
-alias nrs = sudo nixos-rebuild switch --flake .
-alias nrb = sudo nixos-rebuild boot --flake .
-alias nrt = sudo nixos-rebuild test --flake .
+alias nrs = if ($"/host/home/joao/proj/angst" | path exists) {
+  sudo nixos-rebuild switch --flake /host/home/joao/proj/angst --specialisation vm --impure
+} else {
+  sudo nixos-rebuild switch --flake .
+}
+alias nrb = if ($"/host/home/joao/proj/angst" | path exists) {
+  sudo nixos-rebuild boot --flake /host/home/joao/proj/angst --specialisation vm --impure
+} else {
+  sudo nixos-rebuild boot --flake .
+}
+alias nrt = if ($"/host/home/joao/proj/angst" | path exists) {
+  sudo nixos-rebuild test --flake /host/home/joao/proj/angst --specialisation vm --impure
+} else {
+  sudo nixos-rebuild test --flake .
+}
 
 def --env mkcd [dir: string] {
     mkdir $dir

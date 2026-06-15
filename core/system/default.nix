@@ -1,10 +1,7 @@
 { config, lib, pkgs, userConfig, ... }:
 
 {
-  imports = [
-    ./vm.nix
-    ./virtualisation.nix
-  ];
+  imports = [ ../virtualisation ];
   system.stateVersion = "25.11";
 
   console.keyMap = lib.mkDefault "br-abnt2";
