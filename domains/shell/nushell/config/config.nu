@@ -48,6 +48,13 @@ $env.config = {
 
     keybindings: [
         {
+            name: ctrl_c_to_normal
+            modifier: control
+            keycode: char_c
+            mode: [vi_insert]
+            event: { send: esc }
+        }
+        {
             name: clear_screen
             modifier: control
             keycode: char_l
@@ -106,7 +113,7 @@ $env.config = {
     ]
 }
 
-source colors.nu
+source $"($nu.default-config-dir)/colors.nu"
 
 alias .. = cd ..
 alias ... = cd ../..

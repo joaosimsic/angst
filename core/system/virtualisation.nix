@@ -2,6 +2,10 @@
 
 {
   virtualisation.vmVariant = {
+    boot.loader.systemd-boot.enable = lib.mkForce false;
+    boot.loader.efi.canTouchEfiVariables = lib.mkForce false;
+    boot.loader.grub.enable = lib.mkForce false;
+
     virtualisation.memorySize = 4096;
     virtualisation.cores = 4;
     virtualisation.diskSize = 16384;
@@ -30,5 +34,10 @@
       "-device virtio-serial-pci"
       "-device virtserialport,chardev=ch1,id=ch1,name=com.redhat.spice.0"
     ];
+
+    system.activationScripts.angstVmMarker = lib.stringAfter [ "users" ] ''
+      mkdir -p ${config.users.users.${userConfig.username}.home}/.config/angst
+      touch ${config.users.users.${userConfig.username}.home}/.config/angst/.vm
+    '';
   };
 }

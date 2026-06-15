@@ -1,4 +1,8 @@
-{ config, lib, pkgs, modulesPath, ... }:
+{ config, lib, pkgs, modulesPath, flakeSelf ? null, ... }:
+
+let
+  isQemuVm = import ../../lib/system/isQemuVm.nix { inherit lib flakeSelf; };
+in
 
 {
   imports = [
@@ -18,7 +22,7 @@
     fsType = "ext4";
   };
 
-  fileSystems."/boot" = {
+  fileSystems."/boot" = lib.mkIf (!isQemuVm) {
     device = "/dev/vda1";
     fsType = "vfat";
   };

@@ -1,6 +1,7 @@
 result/
 result*
 .vm-cli
+.vm
 *.qcow2
 .opencode/
 

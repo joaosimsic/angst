@@ -22,6 +22,7 @@ fn ssh_base_args() -> Vec<String> {
 
 pub fn ssh(args: &[String]) -> Result<(), String> {
     let mut ssh_args = ssh_base_args();
+    ssh_args.insert(0, "-tt".to_string());
     ssh_args.extend(args.iter().cloned());
     let err = Command::new("ssh").args(&ssh_args).exec();
     Err(format!("failed to exec ssh: {err}"))

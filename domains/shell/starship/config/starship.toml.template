@@ -31,6 +31,8 @@ staged = ">"
 renamed = "r"
 deleted = "x"
 
+# vimcmd_symbol is ignored when STARSHIP_SHELL=nu; Nushell handles vi mode via
+# PROMPT_INDICATOR_VI_INSERT / PROMPT_INDICATOR_VI_NORMAL in env.nu.
 [character]
 success_symbol = "[>](bold #{{SUCCESS}})"
 error_symbol = "[>](bold #{{ERROR}})"

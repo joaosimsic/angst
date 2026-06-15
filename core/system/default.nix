@@ -1,7 +1,10 @@
 { config, lib, pkgs, userConfig, ... }:
 
 {
-  imports = [ ./virtualisation.nix ];
+  imports = [
+    ./vm.nix
+    ./virtualisation.nix
+  ];
   system.stateVersion = "25.11";
 
   console.keyMap = lib.mkDefault "br-abnt2";
@@ -13,9 +16,6 @@
 
   time.timeZone = lib.mkDefault "America/Sao_Paulo";
   i18n.defaultLocale = lib.mkDefault "en_US.UTF-8";
-
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
 
   networking.networkmanager.enable = true;
 
