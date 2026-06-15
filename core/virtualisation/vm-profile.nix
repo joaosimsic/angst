@@ -15,15 +15,23 @@ in
 {
   config = lib.mkIf cfg {
     boot.initrd.kernelModules = lib.mkForce [ "virtiofs" ];
-    boot.kernelModules = lib.mkForce [ "virtiofs" ];
+    boot.kernelModules = lib.mkForce [ "virtiofs" "virtio_gpu" ];
     boot.kernelParams = lib.mkForce [ ];
 
-    services.xserver.videoDrivers = lib.mkForce [ "modesetting" ];
+    services.xserver = {
+      enable = lib.mkForce true;
+      videoDrivers = lib.mkForce [ "modesetting" ];
+    };
+
     services.fstrim.enable = lib.mkForce false;
-    services.spice-vdagentd.enable = true;
 
     hardware.cpu.amd.updateMicrocode = lib.mkForce false;
-    hardware.graphics.enable = lib.mkForce false;
+
+    hardware.graphics = {
+      enable = lib.mkForce true;
+      enable32Bit = lib.mkForce false;
+      extraPackages = lib.mkForce [ ];
+    };
 
     capabilities.ssh.server.enable = lib.mkForce true;
 
