@@ -30,7 +30,7 @@ Templates (`.template` files): rendered at Nix build time, copied **through syml
 
 ### Seed mechanism
 
-`core/domain-config.nix` (new): shared module. `home.activation.seedAngstRepo` copies clean flake source to `~/.config/angst` once. Skips if `/host/...` path exists (VM) or already seeded.
+`lib/domains/domain-config.nix` (new): shared module. `home.activation.seedAngstRepo` copies clean flake source to `~/.config/angst` once. Skips if `/host/...` path exists (VM) or already seeded.
 
 ### Domains with customXdg (nvim, i3, x11)
 
@@ -49,7 +49,7 @@ Single file symlink: `~/.config/starship.toml` → `$CFG_SRC/domains/shell/stars
 | File | Purpose |
 |------|---------|
 | `lib/domains/activation.nix` | `mkDomainActivation` engine — generates per-domain activation scripts (symlink + template render) |
-| `core/domain-config.nix` | Shared module: `seedAngstRepo` activation, `domainConfig.sourceDir` option |
+| `lib/domains/domain-config.nix` | Shared module: `seedAngstRepo` activation, `domainConfig.sourceDir` option |
 
 ### Modify
 
@@ -57,7 +57,7 @@ Single file symlink: `~/.config/starship.toml` → `$CFG_SRC/domains/shell/stars
 |------|--------|
 | `lib/domains/module.nix` | Replace `xdg.configFile = mkXdgSymlinks {...}` with `mkDomainActivation {...}`. Add `renderTemplate` to baseModule args. |
 | `lib/domains/default.nix` | Import `activation.nix` instead of `xdg.nix`. Pass `mkDomainActivation` to module.nix. |
-| `core/home.nix` | Add `./domain-config.nix` to imports |
+| `core/home/default.nix` | Add `./domain-config.nix` import via `../../lib/domains/domain-config.nix` |
 | `domains/editor/nvim/meta.nix` | Remove `customXdg = true` |
 | `domains/editor/nvim/module.nix` | Remove `seedAngstRepo` and `nvimConfig` activations, `themeLua`/`themeLuaFile`/`tokens` bindings. Keep `programs.neovim.*` and `xdg.configFile."nvim/init.lua".enable = mkForce false`. |
 | `domains/wm/i3/module.nix` | Replace `xdg.configFile` block with activation: symlink + copy merged config/monitors through symlink |
@@ -74,7 +74,7 @@ Single file symlink: `~/.config/starship.toml` → `$CFG_SRC/domains/shell/stars
 | File | Reason |
 |------|--------|
 | `lib/build/mkHome.nix` | `renderTemplate` already in extraSpecialArgs |
-| `core/virtualisation.nix` | VM detection is runtime, no compile-time flag needed |
+| `core/system/virtualisation.nix` | VM detection is runtime, no compile-time flag needed |
 | All other domains | No customXdg, no module.nix touching xdg.configFile — base module handles them |
 
 ## VM detection: runtime vs vmVariant

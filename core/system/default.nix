@@ -2,7 +2,7 @@
 
 {
   imports = [ ./virtualisation.nix ];
-  system.stateVersion = "25.11"; 
+  system.stateVersion = "25.11";
 
   console.keyMap = lib.mkDefault "br-abnt2";
 

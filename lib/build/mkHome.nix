@@ -33,7 +33,7 @@ let
       };
 
       modules = [
-        ../../core/home.nix
+        ../../core/home
         (import ../home/themeModule.nix { inherit lib themesLib hostTheme; })
         ../home/i3Fragments.nix
         ../../hosts/${hostname}/home.nix
