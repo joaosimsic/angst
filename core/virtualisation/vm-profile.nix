@@ -14,8 +14,8 @@ let
 in
 {
   config = lib.mkIf cfg {
-    boot.initrd.kernelModules = lib.mkForce [ "virtiofs" ];
-    boot.kernelModules = lib.mkForce [ "virtiofs" "virtio_gpu" ];
+    boot.initrd.kernelModules = lib.mkForce [ ];
+    boot.kernelModules = lib.mkForce [ "virtio_gpu" ];
     boot.kernelParams = lib.mkForce [ ];
 
     services.xserver = {
@@ -54,9 +54,9 @@ in
 
     fileSystems.${hostAngstPath} = {
       device = "angst";
-      fsType = "virtiofs";
+      fsType = "9p";
       neededForBoot = true;
-      options = [ "noatime" ];
+      options = p9Options ++ [ "noatime" ];
     };
 
     fileSystems."/nix/.ro-store" = {
