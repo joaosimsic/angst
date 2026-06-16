@@ -16,8 +16,8 @@ function Keybinder:_bind(mode, lhs, rhs, desc)
 		silent = true,
 	}
 
-	if desc and self.signture then
-		opts.desc = string.format("[%s] %s", self.signture:upper(), desc)
+	if desc and self.signature then
+		opts.desc = string.format("[%s] %s", self.signature:upper(), desc)
 	end
 
 	if self.bufnr then
