@@ -484,3 +484,172 @@ return {
 }
 
 ```
+
+---
+
+You're right to question that. My previous structure mostly separated **plugin names**, not **frontend concepts**. For a larger config, `frontend/` should probably have internal domains instead of just `statusline.lua`, `theme.lua`, etc.
+
+A more logical frontend split:
+
+```text
+lua/
+├── frontend/
+│   │
+│   ├── appearance/
+│   │   ├── colorscheme.lua
+│   │   ├── highlights.lua
+│   │   ├── fonts.lua
+│   │   └── transparency.lua
+│   │
+│   ├── navigation/
+│   │   ├── telescope.lua
+│   │   ├── neo-tree.lua
+│   │   └── harpoon.lua
+│   │
+│   ├── status/
+│   │   ├── statusline.lua
+│   │   ├── tabline.lua
+│   │   └── winbar.lua
+│   │
+│   ├── editing/
+│   │   ├── autopairs.lua
+│   │   ├── surround.lua
+│   │   ├── comments.lua
+│   │   └── snippets.lua
+│   │
+│   ├── feedback/
+│   │   ├── notifications.lua
+│   │   ├── diagnostics.lua
+│   │   └── messages.lua
+│   │
+│   ├── layout/
+│   │   ├── splits.lua
+│   │   ├── terminal.lua
+│   │   └── windows.lua
+│   │
+│   └── dashboard/
+│       └── init.lua
+```
+
+The idea:
+
+### `appearance/`
+
+"What does Neovim look like?"
+
+* colorscheme
+* highlights
+* icons
+* UI colors
+* transparency
+
+---
+
+### `navigation/`
+
+"How do I move around?"
+
+* file explorer
+* fuzzy finder
+* buffers
+* marks
+* jump tools
+
+Examples:
+
+* Telescope
+* Neo-tree
+* Harpoon
+
+---
+
+### `status/`
+
+"What information is displayed?"
+
+* statusline
+* tabline
+* winbar
+* breadcrumbs
+
+Examples:
+
+* lualine
+* heirline
+* navic
+
+---
+
+### `editing/`
+
+"How does typing feel?"
+
+* autopairs
+* surround
+* comment toggles
+* snippets
+* text objects
+
+Examples:
+
+* nvim-autopairs
+* mini.surround
+* Comment.nvim
+
+---
+
+### `feedback/`
+
+"How does Neovim communicate?"
+
+* notifications
+* diagnostics UI
+* command messages
+
+Examples:
+
+* noice.nvim
+* nvim-notify
+* trouble.nvim
+
+---
+
+### `layout/`
+
+"How are windows arranged?"
+
+* floating terminals
+* splits
+* side panels
+* scratch buffers
+
+---
+
+Then your whole config becomes:
+
+```text
+lua/
+├── core/
+│   ├── options.lua
+│   ├── keymaps.lua
+│   └── autocmds.lua
+│
+├── backend/
+│   ├── lsp/
+│   ├── treesitter/
+│   ├── lint/
+│   └── format/
+│
+├── frontend/
+│   ├── appearance/
+│   ├── navigation/
+│   ├── status/
+│   ├── editing/
+│   ├── feedback/
+│   └── layout/
+│
+└── plugins/
+```
+
+This is closer to how you would organize an IDE: **appearance, navigation, editing, feedback, layout** are user-facing concerns, while LSP/Treesitter are engine concerns.
+
