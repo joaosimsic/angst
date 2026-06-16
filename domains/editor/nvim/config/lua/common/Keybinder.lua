@@ -1,9 +1,12 @@
 local Keybinder = {}
 Keybinder.__index = Keybinder
 
-function Keybinder.new(bufnr)
+-- @param bufnr number|nil
+-- @param signature string|nil
+function Keybinder.new(bufnr, signature)
 	local self = setmetatable({}, Keybinder)
 	self.bufnr = bufnr
+	self.signature = signature
 	return self
 end
 
@@ -11,8 +14,11 @@ function Keybinder:_bind(mode, lhs, rhs, desc)
 	local opts = {
 		remap = false,
 		silent = true,
-		desc = desc,
 	}
+
+	if desc and self.signture then
+		opts.desc = string.format("[%s] %s", self.signture:upper(), desc)
+	end
 
 	if self.bufnr then
 		opts.buffer = self.bufnr
