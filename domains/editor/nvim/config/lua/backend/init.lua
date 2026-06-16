@@ -6,6 +6,7 @@ local specs = Spec.merge({
 	require("backend.engines.lsp"),
 	require("backend.engines.treesitter"),
 	require("backend.engines.linter"),
+	require("backend.engines.formatter"),
 })
 
 local adapter_plugins = scan_adapters.scan_plugins()
