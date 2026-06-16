@@ -4,7 +4,8 @@ return {
 	lsp = "gopls",
 	lsp_cmd = { "gopls" },
 	formatter = "goimports",
-	linter = "golangci-lint",
+	linter = "golangcilint",
+	linter_cmd = { "golangci-lint" },
 	treesitter = "go",
 	lsp_settings = {
 		gopls = { staticcheck = true },
