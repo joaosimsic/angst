@@ -44,8 +44,8 @@ function M.setup()
 		},
 
 		completion = {
-			menu = { border = "single" },
-			documentation = { window = { border = "single" } },
+			menu = { draw = { treesitter = { "lsp" } } },
+			ghost_text = { enabled = true },
 		},
 
 		signature = { window = { border = "single" } },
