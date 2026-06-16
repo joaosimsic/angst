@@ -1,4 +1,5 @@
 local Logger = require("common.Logger")
+local Spec = require("common.Spec")
 local logger = Logger.new("ADAPTER")
 
 local M = {}
@@ -16,10 +17,6 @@ local M = {}
 local adapters_cache
 local executable_cache = {}
 local plugin_specs_cache
-
-local function is_plugin_spec(spec)
-	return type(spec) == "table" and (type(spec[1]) == "string" or type(spec.dir) == "string")
-end
 
 local function get_adapters()
 	if adapters_cache then
@@ -156,15 +153,7 @@ function M.scan_plugins()
 			goto continue
 		end
 
-		if is_plugin_spec(plugin_spec) then
-			specs[#specs + 1] = plugin_spec
-		else
-			for _, plugin in ipairs(plugin_spec) do
-				if is_plugin_spec(plugin) then
-					specs[#specs + 1] = plugin
-				end
-			end
-		end
+		Spec.collect(plugin_spec, specs)
 
 		::continue::
 	end
