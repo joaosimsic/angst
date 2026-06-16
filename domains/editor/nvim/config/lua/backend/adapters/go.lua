@@ -1,6 +1,6 @@
 return {
   filetypes = { "go" },
-  lsp_server = "gopls",
+  lsp = "gopls",
   formatter = "goimports",
   linter = "golangci-lint",
   treesitter = "go",

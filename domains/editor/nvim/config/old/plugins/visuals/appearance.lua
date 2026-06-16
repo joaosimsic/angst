@@ -2,15 +2,7 @@ local shared_highlights = require("config.colors")
 require("config.theme")
 
 return {
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	{
 		"nvim-lualine/lualine.nvim",
 		dependencies = { "nvim-tree/nvim-web-devicons" },
