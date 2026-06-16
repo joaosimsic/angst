@@ -4,5 +4,6 @@ result*
 .virtiofsd
 *.qcow2
 .opencode/
+tools/vm-mcp/dist/
 
 

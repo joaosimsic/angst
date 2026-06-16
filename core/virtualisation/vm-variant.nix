@@ -1,8 +1,5 @@
 { lib, userConfig, ... }:
 
-let
-  virtiofsSocket = "${userConfig.homeDirectory}/.cache/angst/vhostqemu.sock";
-in
 {
   virtualisation.vmVariant = {
     angst.isQemuVm = lib.mkForce true;
@@ -14,8 +11,12 @@ in
     virtualisation.qemu.options = [
       "-device virtio-vga,xres=1920,yres=1080"
       "-display gtk,zoom-to-fit=on,grab-on-hover=on"
-      "-chardev socket,id=angst-fs,path=${virtiofsSocket}"
-      "-device vhost-user-fs-pci,queue-size=1024,chardev=angst-fs,tag=angst"
     ];
+
+    virtualisation.sharedDirectories.angst = {
+      source = "${userConfig.homeDirectory}/proj/angst";
+      target = "/host${userConfig.homeDirectory}/proj/angst";
+      securityModel = "none";
+    };
   };
 }

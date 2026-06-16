@@ -11,6 +11,7 @@ $env.config = {
         max_size: 10000
         sync_on_enter: true
         file_format: "sqlite"
+        path: ($env.XDG_DATA_HOME | path join "nushell/history.sqlite3")
     }
 
     completions: {

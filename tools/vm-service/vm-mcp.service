@@ -7,7 +7,8 @@ Type=simple
 Environment=VM_SSH_PORT=2222
 Environment=VM_SSH_USER=joao
 Environment=MCP_PORT=8765
-ExecStart=bun run %h/proj/angst/tools/vm-mcp/src/index.ts
+Environment=NODE_OPTIONS=--no-addons
+ExecStart=/usr/bin/env node %h/proj/angst/tools/vm-mcp/dist/index.js
 WorkingDirectory=%h/proj/angst/tools/vm-mcp
 Restart=on-failure
 RestartSec=5

@@ -321,35 +321,15 @@ install_mcp_deps() {
   )
 }
 
-ensure_virtiofsd() {
-  if [ -x "/run/current-system/sw/bin/virtiofsd" ]; then
-    echo "/run/current-system/sw/bin/virtiofsd"
-    return
-  fi
-
-  echo "==> virtiofsd not in current system profile; building fallback..." >&2
-  (
-    cd "$PROJECT_DIR"
-    nix build nixpkgs#virtiofsd --out-link .virtiofsd
-  )
-  echo "$PROJECT_DIR/.virtiofsd/bin/virtiofsd"
-}
-
 install_systemd_services() {
   echo "==> Installing systemd user services..."
   mkdir -p "$SYSTEMD_DIR"
 
   cp "$VM_SERVICE_DIR/vm.service" "$SYSTEMD_DIR/"
   cp "$VM_SERVICE_DIR/vm-mcp.service" "$SYSTEMD_DIR/"
-  cp "$VM_SERVICE_DIR/virtiofsd.service" "$SYSTEMD_DIR/"
 
   sed -i "s|%h/proj/angst|$PROJECT_DIR|g" "$SYSTEMD_DIR/vm.service"
   sed -i "s|%h/proj/angst|$PROJECT_DIR|g" "$SYSTEMD_DIR/vm-mcp.service"
-  sed -i "s|%h/proj/angst|$PROJECT_DIR|g" "$SYSTEMD_DIR/virtiofsd.service"
-
-  local virtiofsd_bin
-  virtiofsd_bin=$(ensure_virtiofsd)
-  sed -i "s|/run/current-system/sw/bin/virtiofsd|$virtiofsd_bin|g" "$SYSTEMD_DIR/virtiofsd.service"
 
   systemctl --user daemon-reload
 }

@@ -1,8 +1,6 @@
 [Unit]
 Description=NixOS VM (angst)
 After=network.target
-Requires=virtiofsd.service
-After=virtiofsd.service
 
 [Service]
 Type=simple
