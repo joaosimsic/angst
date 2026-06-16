@@ -1,0 +1,10 @@
+configuration {
+    modi: "drun,run";
+    show-icons: false;
+    font: "JetBrainsMono Nerd Font 11";
+    drun-display-format: "{name}";
+    kb-secondary-copy: "";
+    kb-cancel: "Escape,Control+c,Control+bracketleft";
+}
+
+@theme "~/.config/rofi/theme.rasi"

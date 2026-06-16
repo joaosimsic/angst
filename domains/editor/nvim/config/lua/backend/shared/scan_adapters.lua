@@ -6,6 +6,7 @@ return function(engine_name, default_cmds)
 	default_cmds = default_cmds or {}
 
 	local ok_idx, adapters = pcall(require, "backend.adapters")
+
 	if not ok_idx or type(adapters) ~= "table" then
 		return active_tools
 	end
@@ -16,6 +17,7 @@ return function(engine_name, default_cmds)
 		end
 
 		local tool_name = adapter[engine_name]
+
 		if type(tool_name) ~= "string" then
 			goto continue
 		end

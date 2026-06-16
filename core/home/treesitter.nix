@@ -1,5 +1,8 @@
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
+let
+  allGrammars = pkgs.tree-sitter.withPlugins (_: config.toolchains.treesitterGrammars);
+in
 {
   options.toolchains.treesitterGrammars = lib.mkOption {
     type = lib.types.listOf lib.types.package;
@@ -10,5 +13,9 @@
     description = "Tree-sitter grammar packages";
   };
 
-  config.home.packages = [ pkgs.tree-sitter ];
+  config = {
+    home.packages = [ pkgs.tree-sitter ];
+
+    xdg.configFile."nvim/parser".source = "${allGrammars}/parser";
+  }
 }
