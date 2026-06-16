@@ -20,9 +20,8 @@ return {
 					"--extensionLogDirectory=" .. vim.fs.dirname(vim.lsp.get_log_path()),
 					"--stdio",
 				},
-				capabilities = require("cmp_nvim_lsp").default_capabilities(),
+				capabilities = require("backend.engines.completion.config").capabilities(),
 			})
 		end,
 	},
 }
-

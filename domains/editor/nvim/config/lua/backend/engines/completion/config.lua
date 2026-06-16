@@ -1,61 +1,56 @@
+local logger = require("common.Logger")
+
 local M = {}
 
 function M.capabilities()
-	local ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
+	local ok, blink = pcall(require, "blink.cmp")
 	if not ok then
 		return vim.lsp.protocol.make_client_capabilities()
 	end
-	return cmp_nvim_lsp.default_capabilities()
+	return blink.get_lsp_capabilities()
 end
 
 function M.setup()
-	local cmp = require("cmp")
-	local luasnip = require("luasnip")
+	local ok, blink = pcall(require, "blink.cmp")
 
-	require("luasnip.loaders.from_vscode").lazy_load()
+	if not ok then
+		logger:error(function()
+			return "Failed to require blink-cmp."
+		end)
+		return
+	end
 
-	cmp.setup({
-		snippet = {
-			expand = function(args)
-				luasnip.lsp_expand(args.body)
-			end,
+	blink.setup({
+		keymap = {
+			preset = "none",
+			["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
+			["<C-e>"] = { "hide" },
+			["<CR>"] = { "accept", "fallback" },
+
+			["<Tab>"] = { "select_next", "snippet_forward", "fallback" },
+			["<S-Tab>"] = { "select_prev", "snippet_backward", "fallback" },
+
+			["<C-b>"] = { "scroll_documentation_up", "fallback" },
+			["<C-f>"] = { "scroll_documentation_down", "fallback" },
 		},
-		window = {
-			completion = cmp.config.window.bordered(),
-			documentation = cmp.config.window.bordered(),
+
+		appearance = {
+			use_nvim_cmp_as_default = true,
+			nerd_font_variant = "mono",
 		},
-		mapping = cmp.mapping.preset.insert({
-			["<Tab>"] = cmp.mapping(function(fallback)
-				if cmp.visible() then
-					cmp.select_next_item()
-				elseif luasnip.expand_or_jumpable() then
-					luasnip.expand_or_jump()
-				else
-					fallback()
-				end
-			end, { "i", "s" }),
-			["<S-Tab>"] = cmp.mapping(function(fallback)
-				if cmp.visible() then
-					cmp.select_prev_item()
-				elseif luasnip.jumpable(-1) then
-					luasnip.jump(-1)
-				else
-					fallback()
-				end
-			end, { "i", "s" }),
-			["<C-b>"] = cmp.mapping.scroll_docs(-4),
-			["<C-f>"] = cmp.mapping.scroll_docs(4),
-			["<C-Space>"] = cmp.mapping.complete(),
-			["<C-e>"] = cmp.mapping.abort(),
-			["<CR>"] = cmp.mapping.confirm({ select = false }),
-		}),
-		sources = cmp.config.sources({
-			{ name = "nvim_lsp" },
-			{ name = "luasnip" },
-		}, {
-			{ name = "buffer" },
-			{ name = "path" },
-		}),
+
+		sources = {
+			default = { "lsp", "path", "snippets", "buffer" },
+		},
+
+		completion = {
+			menu = { border = "single" },
+			documentation = { window = { border = "single" } },
+		},
+
+		signature = { window = { border = "single" } },
+
+		fuzzy = { implementation = "prefer_rust_with_warning" },
 	})
 end
 
