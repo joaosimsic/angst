@@ -33,3 +33,5 @@ end
 function Logger:log(level, msg)
 	vim.notify(string.format("[%s] %s", self.tag, msg), level_map[level])
 end
+
+return Logger
