@@ -1,3 +1,5 @@
+require("config.env")
+
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
 	local lazyrepo = "https://github.com/folke/lazy.nvim.git"
@@ -14,19 +16,13 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
-vim.g.mapleader = " "
-vim.g.maplocalleader = "\\"
-
 require("lazy").setup({
 	lockfile = vim.fn.stdpath("data") .. "/lazy-lock.json",
-	spec = {
-		{ import = "plugins.core" },
-		{ import = "plugins.tools" },
-		{ import = "plugins.visuals" },
-		{ import = "languages" },
+	defaults = {
+		lazy = true,
 	},
-
-	install = { colorscheme = { "habamax" } },
-
-	checker = { enabled = true },
+	spec = {
+		{ import = "backend" },
+		{ import = "frontend" },
+	},
 })

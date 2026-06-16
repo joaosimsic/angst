@@ -1,8 +1,12 @@
+---@class Keybinder
+---@field bufnr number|nil
+---@field signature string|nil
 local Keybinder = {}
 Keybinder.__index = Keybinder
 
--- @param bufnr number|nil
--- @param signature string|nil
+---@param bufnr number|nil
+---@param signature string|nil
+---@return Keybinder
 function Keybinder.new(bufnr, signature)
 	local self = setmetatable({}, Keybinder)
 	self.bufnr = bufnr
@@ -10,6 +14,10 @@ function Keybinder.new(bufnr, signature)
 	return self
 end
 
+---@param mode string|string[]
+---@param lhs string
+---@param rhs string|function
+---@param desc string|nil
 function Keybinder:_bind(mode, lhs, rhs, desc)
 	local opts = {
 		remap = false,

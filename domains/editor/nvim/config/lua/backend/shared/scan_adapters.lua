@@ -1,9 +1,13 @@
--- @param engine_name string
--- @param default_cmds table|nil
--- @return table
-return function(engine_name, default_cmds)
+---@class EngineOpts
+---@field check_executable? boolean 
+
+---@param engine_name string
+---@param opts? EngineOpts
+---@return table<string, table>
+return function(engine_name, opts)
 	local active_tools = {}
-	default_cmds = default_cmds or {}
+	opts = opts or {}
+	local check_executable = opts.check_executable ~= false
 
 	local ok_idx, adapters = pcall(require, "backend.adapters")
 
@@ -22,15 +26,14 @@ return function(engine_name, default_cmds)
 			goto continue
 		end
 
-		local cmd_opt = default_cmds[tool_name]
-		local binary = type(cmd_opt) == "table" and cmd_opt[1] or tool_name
-
-		if vim.fn.executable(binary) == 1 then
-			active_tools[tool_name] = {
-				settings = adapter.lsp_settings and adapter.lsp_settings[tool_name] or nil,
-				filetypes = adapter.filetypes,
-			}
+		if check_executable and vim.fn.executable(tool_name) ~= 1 then
+			goto continue
 		end
+
+		active_tools[tool_name] = {
+			settings = adapter.lsp_settings and adapter.lsp_settings[tool_name] or nil,
+			filetypes = adapter.filetypes,
+		}
 
 		::continue::
 	end

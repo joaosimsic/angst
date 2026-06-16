@@ -2,7 +2,7 @@ local Keybinder = require("common.Keybinder")
 
 local M = {}
 
--- @param bufnr number
+---@param bufnr number
 function M.setup(bufnr)
 	local binder = Keybinder.new(bufnr, "LSP")
 

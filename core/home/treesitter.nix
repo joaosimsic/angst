@@ -17,5 +17,5 @@ in
     home.packages = [ pkgs.tree-sitter ];
 
     xdg.configFile."nvim/parser".source = "${allGrammars}/parser";
-  }
+  };
 }

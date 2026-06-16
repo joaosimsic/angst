@@ -2,7 +2,6 @@
 
 let
   cfg = config.domains.editor.nvim;
-  treesitter = pkgs.tree-sitter.withPlugins (_: config.toolchains.treesitterGrammars);
 in
 {
   config = lib.mkIf cfg.enable {
@@ -13,7 +12,7 @@ in
       vimAlias = true;
       withRuby = false;
       withPython3 = false;
-      extraPackages = [ treesitter ];
+      extraPackages = [ ];
     };
 
     xdg.configFile."nvim/init.lua".enable = lib.mkForce false;

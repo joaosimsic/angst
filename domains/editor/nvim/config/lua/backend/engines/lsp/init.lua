@@ -11,7 +11,7 @@ return {
 		local lsp_keys = require("backend.engines.lsp.keys")
 		local scan_adapters = require("backend.shared.scan_adapters")
 
-		local active_servers = scan_adapters("lsp", {})
+		local active_servers = scan_adapters("lsp")
 
 		for server_name, server_opts in pairs(active_servers) do
 			local config = {
@@ -26,10 +26,6 @@ return {
 				config.settings = {
 					[server_name] = server_opts.settings,
 				}
-			end
-
-			if server_opts.cmd then
-				config.cmd = server_opts.cmd
 			end
 
 			lspconfig[server_name].setup(config)
