@@ -22,7 +22,7 @@ require("lazy").setup({
 		lazy = true,
 	},
 	spec = {
-		{ import = "backend.engines" },
-		{ import = "frontend" },
+		require("backend"),
+    require("frontend"),
 	},
 })

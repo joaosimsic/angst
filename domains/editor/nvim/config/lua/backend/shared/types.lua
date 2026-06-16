@@ -6,5 +6,6 @@
 ---@field treesitter? string|string[]
 ---@field formatter? string|string[]
 ---@field linter? string|string[]
+---@field plugins? table[]
 
 return {}
