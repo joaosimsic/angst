@@ -1,30 +1,31 @@
+vim.cmd("hi clear")
 if vim.fn.exists("syntax_on") then
   vim.cmd("syntax reset")
 end
-vim.g.colors_name = "angst_theme"
+vim.g.colors_name = "dynamic_theme"
 
 local hl = vim.api.nvim_set_hl
 
 local c = {
-  base = "#c5c9c5",
-  bright = "#c8c093",
-  dim = "#2d4f67",
-  surface = "#211f1f",
-  bg = "#181616",
-  black = "#181616",
-  comment = "#a292a3",
-  green = "#8a9a7b",
-  green_bright = "#a2b293",
-  red = "#c4746e",
-  red_bright = "#dc8c86",
-  yellow = "#c4b28a",
-  yellow_bright = "#dccaa2",
-  blue = "#8ba4b0",
-  blue_bright = "#a3bcc8",
-  magenta = "#a292a3",
-  magenta_bright = "#baaabb",
-  cyan = "#8ea4a2",
-  cyan_bright = "#a6bcba",
+  base = "#{{BASE}}",
+  bright = "#{{BRIGHT}}",
+  dim = "#{{DIM}}",
+  surface = "#{{SURFACE}}",
+  bg = "#{{BG}}",
+  black = "#{{BLACK}}",
+  comment = "#{{COMMENT}}",
+  green = "#{{GREEN}}",
+  green_bright = "#{{GREEN_BRIGHT}}",
+  red = "#{{RED}}",
+  red_bright = "#{{RED_BRIGHT}}",
+  yellow = "#{{YELLOW}}",
+  yellow_bright = "#{{YELLOW_BRIGHT}}",
+  blue = "#{{BLUE}}",
+  blue_bright = "#{{BLUE_BRIGHT}}",
+  magenta = "#{{MAGENTA}}",
+  magenta_bright = "#{{MAGENTA_BRIGHT}}",
+  cyan = "#{{CYAN}}",
+  cyan_bright = "#{{CYAN_BRIGHT}}",
 }
 
 hl(0, "Normal", { fg = c.base, bg = c.black })
