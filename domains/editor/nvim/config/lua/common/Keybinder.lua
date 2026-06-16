@@ -61,3 +61,5 @@ end
 function Keybinder:tmap(lhs, rhs, desc)
 	self:_bind("t", lhs, rhs, desc)
 end
+
+return Keybinder

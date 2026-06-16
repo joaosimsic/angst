@@ -1,5 +1,12 @@
+---@alias LspCmd string[]|fun():string[]|nil
+
+---@class AdapterLspInfo
+---@field cmd LspCmd
+---@field settings table|nil
+---@field filetypes string[]|nil
+
 ---@class EngineOpts
----@field check_executable? boolean 
+---@field check_executable? boolean
 
 ---@param engine_name string
 ---@param opts? EngineOpts
@@ -26,11 +33,26 @@ return function(engine_name, opts)
 			goto continue
 		end
 
-		if check_executable and vim.fn.executable(tool_name) ~= 1 then
-			goto continue
+		if check_executable then
+			local cmd_field = engine_name .. "_cmd"
+			local cmd = adapter[cmd_field]
+			local executable_name
+
+			if type(cmd) == "table" then
+				executable_name = cmd[1]
+			elseif type(cmd) == "function" then
+				executable_name = nil
+			else
+				executable_name = tool_name
+			end
+
+			if executable_name and vim.fn.executable(executable_name) ~= 1 then
+				goto continue
+			end
 		end
 
 		active_tools[tool_name] = {
+			cmd = adapter.lsp_cmd,
 			settings = adapter.lsp_settings and adapter.lsp_settings[tool_name] or nil,
 			filetypes = adapter.filetypes,
 		}
