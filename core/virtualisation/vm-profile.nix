@@ -14,6 +14,8 @@ let
 in
 {
   config = lib.mkIf cfg {
+    documentation.nixos.enable = lib.mkForce false;
+
     boot.initrd.kernelModules = lib.mkForce [ ];
     boot.kernelModules = lib.mkForce [ "virtio_gpu" ];
     boot.kernelParams = lib.mkForce [ ];
