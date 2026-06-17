@@ -2,16 +2,11 @@ return {
 	"nvim-treesitter/nvim-treesitter",
 	event = { "BufReadPre", "BufNewFile" },
 	config = function()
-		local scan_adapters = require("backend.shared.scan_adapters")
-
-		local grammars = scan_adapters("treesitter", { check_executable = true })
-		local ensure_installed = vim.tbl_keys(grammars)
+		vim.opt.runtimepath:prepend(vim.fn.expand("~/.local/share/tree-sitter"))
 
 		require("nvim-treesitter").setup({
-			ensure_installed = ensure_installed,
 			sync_install = false,
 			auto_install = false,
-			parser_install_dir = vim.fn.stdpath("data") .. "/treesitter-parsers",
 			highlight = {
 				enable = true,
 				additional_vim_regex_highlighting = false,

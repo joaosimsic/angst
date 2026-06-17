@@ -9,3 +9,6 @@
 # nu
 - [ ] set ":" to replace ">"
 - [ ] fix vim motions
+
+# nix
+- [ ] add package managers to toolchains

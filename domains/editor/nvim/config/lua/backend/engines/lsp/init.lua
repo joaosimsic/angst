@@ -28,17 +28,17 @@ return {
 				goto continue
 			end
 
-			local my_config = {
+			local config = {
 				cmd = cmd,
 				capabilities = capabilities,
 				filetypes = server_opts.filetypes or existing_config.filetypes,
 			}
 
 			if server_opts.settings then
-				my_config.settings = server_opts.settings
+				config.settings = server_opts.settings
 			end
 
-			local final_config = vim.tbl_deep_extend("force", existing_config, my_config)
+			local final_config = vim.tbl_deep_extend("force", existing_config, config)
 
 			vim.lsp.config(server_name, final_config)
 			vim.lsp.enable(server_name)

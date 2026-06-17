@@ -42,14 +42,24 @@ local function assert_parser_installed(adapter)
 		langs = { langs }
 	end
 
-	local parser_dir = vim.fn.stdpath("data") .. "/lazy/nvim-treesitter/parser"
-
 	for _, lang in ipairs(langs) do
-		local parser_file = parser_dir .. "/" .. lang .. ".so"
-		assert.is_true(
-			vim.fn.filereadable(parser_file) == 1,
-			string.format("Treesitter parser '%s' is not installed at %s", lang, parser_file)
-		)
+		local parsers = vim.api.nvim_get_runtime_file(("parser/%s.so"):format(lang), true)
+
+		assert.is_true(#parsers > 0, ("Treesitter parser '%s' binary was not found"):format(lang))
+
+		local buf = vim.api.nvim_create_buf(false, true)
+
+		local ok, err = pcall(function()
+			vim.api.nvim_set_option_value("filetype", lang, {
+				buf = buf,
+			})
+
+			vim.treesitter.start(buf, lang)
+		end)
+
+		vim.api.nvim_buf_delete(buf, { force = true })
+
+		assert.is_true(ok, ("Treesitter parser '%s' could not attach: %s"):format(lang, err))
 	end
 end
 
@@ -85,14 +95,8 @@ describe("Adapter Engine Validations", function()
 		assert.is.table(formatters, "Formatter engine failed to return a table.")
 
 		for name, opts in pairs(formatters) do
-			assert.is.table(
-				opts.filetypes,
-				string.format("Formatter '%s' must map to at least one filetype.", name)
-			)
-			assert.is_true(
-				#opts.filetypes > 0,
-				string.format("Formatter '%s' filetypes array cannot be empty.", name)
-			)
+			assert.is.table(opts.filetypes, string.format("Formatter '%s' must map to at least one filetype.", name))
+			assert.is_true(#opts.filetypes > 0, string.format("Formatter '%s' filetypes array cannot be empty.", name))
 		end
 
 		for _, adapter in pairs(all_adapters) do
@@ -105,14 +109,8 @@ describe("Adapter Engine Validations", function()
 		assert.is.table(linters, "Linter engine failed to return a table.")
 
 		for name, opts in pairs(linters) do
-			assert.is.table(
-				opts.filetypes,
-				string.format("Linter '%s' must map to at least one filetype.", name)
-			)
-			assert.is_true(
-				#opts.filetypes > 0,
-				string.format("Linter '%s' filetypes array cannot be empty.", name)
-			)
+			assert.is.table(opts.filetypes, string.format("Linter '%s' must map to at least one filetype.", name))
+			assert.is_true(#opts.filetypes > 0, string.format("Linter '%s' filetypes array cannot be empty.", name))
 		end
 
 		for _, adapter in pairs(all_adapters) do

@@ -79,9 +79,14 @@ local function scan_engine_tools(engine_name, opts)
 			goto continue
 		end
 
-		local tool_name = adapter[engine_name]
+		local raw_tool_names = adapter[engine_name]
 
-		if type(tool_name) ~= "string" then
+		local tool_names
+		if type(raw_tool_names) == "string" then
+			tool_names = { raw_tool_names }
+		elseif type(raw_tool_names) == "table" then
+			tool_names = raw_tool_names
+		else
 			goto continue
 		end
 
@@ -90,14 +95,15 @@ local function scan_engine_tools(engine_name, opts)
 			local resolved_cmd = resolve_cmd(raw_cmd)
 			local executable_name =
 				type(resolved_cmd) == "table" and resolved_cmd[1]
-				or type(raw_cmd) ~= "function" and tool_name
+				or type(raw_cmd) ~= "function" and raw_tool_names
 
 			if executable_name and not executable_exists(executable_name) then
 				logger:warn(function()
-					return "Tool '" .. tool_name
-						.. "' found but binary '"
-						.. executable_name
-						.. "' is unavailable."
+					return "Tool '" .. (
+						type(raw_tool_names) == "table"
+							and table.concat(raw_tool_names, ",")
+						or raw_tool_names
+					) .. "' found but binary '" .. executable_name .. "' is unavailable."
 				end)
 
 				goto continue
@@ -108,13 +114,15 @@ local function scan_engine_tools(engine_name, opts)
 			end
 		end
 
-		active_tools[tool_name] = {
-			cmd = adapter[cmd_field],
-			settings = adapter.lsp_settings
-				and adapter.lsp_settings[tool_name]
-				or nil,
-			filetypes = adapter.filetypes,
-		}
+		for _, tool_name in ipairs(tool_names) do
+			active_tools[tool_name] = {
+				cmd = adapter[cmd_field],
+				settings = adapter.lsp_settings
+					and adapter.lsp_settings[tool_name]
+					or nil,
+				filetypes = adapter.filetypes,
+			}
+		end
 
 		::continue::
 	end

@@ -12,7 +12,6 @@ local function find_plenary()
 		return candidate
 	end
 
-	-- Fallback: search sibling data directories (e.g. other NVIM_APPNAME values).
 	local share_dir = vim.fn.fnamemodify(data_dir, ":h")
 	local matches = vim.fn.glob(share_dir .. "/*/lazy/plenary.nvim", false, true)
 
@@ -30,8 +29,6 @@ local plenary_dir = find_plenary()
 vim.opt.rtp:append(plenary_dir)
 vim.cmd("runtime plugin/plenary.vim")
 
--- Plenary's harness spawns a sub-nvim whose '.' rtp entry is the cwd,
--- so make sure we run from the config root.
 vim.cmd("cd " .. vim.fn.fnameescape(config_root))
 
 require("plenary.test_harness").test_file(config_root .. "/tests/adapters/suite.lua")
