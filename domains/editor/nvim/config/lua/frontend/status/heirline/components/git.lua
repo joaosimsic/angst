@@ -34,7 +34,7 @@ local Git = {
 	{
 		provider = function(self)
 			local count = self.status_dict.added or 0
-			return count > 0 and ("+" .. count) or ""
+			return count > 0 and ("+" .. count .. " ") or ""
 		end,
 		hl = "HeirlineGitAdd",
 	},
@@ -42,7 +42,7 @@ local Git = {
 	{
 		provider = function(self)
 			local count = self.status_dict.changed or 0
-			return count > 0 and ("~" .. count) or ""
+			return count > 0 and ("~" .. count .. " ") or ""
 		end,
 		hl = "HeirlineGitChange",
 	},
