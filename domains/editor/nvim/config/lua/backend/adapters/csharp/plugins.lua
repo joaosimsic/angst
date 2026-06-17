@@ -2,7 +2,6 @@ return {
 	{
 		"GustavEikaas/easy-dotnet.nvim",
 		ft = { "cs" },
-		dependencies = { "nvim-lua/plenary.nvim", "nvim-telescope/telescope.nvim" },
 		config = true,
 		keys = {
 			{ "<leader>dr", "<cmd>Dotnet run<cr>", desc = "Dotnet Run" },

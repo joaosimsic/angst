@@ -22,7 +22,8 @@ require("lazy").setup({
 		lazy = true,
 	},
 	spec = {
+		require("infra"),
 		require("backend"),
-    require("frontend"),
+		require("frontend"),
 	},
 })
