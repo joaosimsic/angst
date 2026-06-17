@@ -1,7 +1,3 @@
-require("init")
-
-local runner = require("plenary.test_runner")
-
-print("Starting validation pipeline via Plenary Busted Runner...")
-
-runner.run_directory("adapters/suite.lua")
+local source = debug.getinfo(1, "S").source:sub(2)
+local bootstrap = vim.fn.fnamemodify(source, ":p:h:h") .. "/bootstrap.lua"
+dofile(bootstrap)

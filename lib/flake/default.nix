@@ -49,6 +49,12 @@ let
   checks = import ./checks.nix {
     inherit self pkgs lib themesLib themeContext themeLint lintDesktop lintShell themeRenderedChecks renderTemplateFor;
   };
+
+  devShells = {
+    nvim-test = pkgs.mkShell {
+      packages = [ pkgs.neovim pkgs.git ];
+    };
+  };
 in
 {
   inherit themeLint lintDesktop lintShell themeRenderedChecks renderTemplateFor homeConfigurations;
@@ -62,6 +68,10 @@ in
       default = self.homeConfigurations.joao.activationPackage;
       vm-cli = vm-cli.packages.${system}.default;
     };
+  };
+
+  devShells = {
+    ${system} = devShells;
   };
 
   apps = {

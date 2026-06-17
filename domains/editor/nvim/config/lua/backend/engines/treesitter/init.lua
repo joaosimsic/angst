@@ -4,7 +4,7 @@ return {
 	config = function()
 		local scan_adapters = require("backend.shared.scan_adapters")
 
-		local grammars = scan_adapters("treesitter", { check_executable = false })
+		local grammars = scan_adapters("treesitter", { check_executable = true })
 		local ensure_installed = vim.tbl_keys(grammars)
 
 		require("nvim-treesitter").setup({

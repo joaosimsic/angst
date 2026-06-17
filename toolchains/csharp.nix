@@ -5,5 +5,6 @@ let
 in
 mkToolchain {
   lsp = with pkgs; [ roslyn-ls ];
+  formatter = with pkgs; [ csharpier ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-c-sharp tree-sitter-razor ];
 }

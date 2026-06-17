@@ -18,6 +18,13 @@ local adapters_cache
 local executable_cache = {}
 local plugin_specs_cache
 
+local function resolve_cmd(cmd)
+	if type(cmd) == "function" then
+		return cmd()
+	end
+	return cmd
+end
+
 local function get_adapters()
 	if adapters_cache then
 		return adapters_cache
@@ -79,10 +86,11 @@ local function scan_engine_tools(engine_name, opts)
 		end
 
 		if check_executable then
-			local cmd = adapter[cmd_field]
+			local raw_cmd = adapter[cmd_field]
+			local resolved_cmd = resolve_cmd(raw_cmd)
 			local executable_name =
-				type(cmd) == "table" and cmd[1]
-				or type(cmd) ~= "function" and tool_name
+				type(resolved_cmd) == "table" and resolved_cmd[1]
+				or type(raw_cmd) ~= "function" and tool_name
 
 			if executable_name and not executable_exists(executable_name) then
 				logger:warn(function()
@@ -94,10 +102,14 @@ local function scan_engine_tools(engine_name, opts)
 
 				goto continue
 			end
+
+			if resolved_cmd == nil then
+				goto continue
+			end
 		end
 
 		active_tools[tool_name] = {
-			cmd = adapter.lsp_cmd,
+			cmd = adapter[cmd_field],
 			settings = adapter.lsp_settings
 				and adapter.lsp_settings[tool_name]
 				or nil,
