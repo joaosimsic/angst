@@ -1,5 +1,6 @@
 # nvim
-- [ ] vim modes still appear on command prompt
+- [x] vim modes still appear on command prompt
+- [ ] refac config
 
 # starship
 - [ ] show vim modes

@@ -32,3 +32,4 @@ vim.diagnostic.config({
 	update_in_insert = false,
 })
 
+vim.opt.showmode = false
