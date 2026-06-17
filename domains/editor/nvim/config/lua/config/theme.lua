@@ -1,7 +1,8 @@
+vim.cmd("hi clear")
 if vim.fn.exists("syntax_on") then
   vim.cmd("syntax reset")
 end
-vim.g.colors_name = "angst_theme"
+vim.g.colors_name = "dynamic_theme"
 
 local hl = vim.api.nvim_set_hl
 
