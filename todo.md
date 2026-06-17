@@ -9,4 +9,3 @@
 # nu
 - [ ] set ":" to replace ">"
 - [ ] fix vim motions
-
