@@ -1,7 +1,12 @@
 { config, lib, pkgs, ... }:
 
 let
-  allGrammars = pkgs.tree-sitter.withPlugins (_: config.toolchains.treesitterGrammars);
+  nvimParsers = pkgs.runCommand "nvim-treesitter-parsers" {} ''
+    mkdir -p $out
+    ${lib.concatMapStringsSep "\n" (grammar: ''
+      ln -s ${grammar}/parser $out/${lib.removePrefix "tree-sitter-" grammar.pname}.so
+    '') config.toolchains.treesitterGrammars}
+  '';
 in
 {
   options.toolchains.treesitterGrammars = lib.mkOption {
@@ -16,6 +21,6 @@ in
   config = {
     home.packages = [ pkgs.tree-sitter ];
 
-    xdg.configFile."nvim/parser".source = "${allGrammars}/parser";
+    xdg.configFile."nvim/parser".source = nvimParsers;
   };
 }
