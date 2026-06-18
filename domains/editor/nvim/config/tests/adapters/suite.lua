@@ -1,3 +1,5 @@
+vim.opt.runtimepath:prepend(vim.fn.expand("~/.local/share/tree-sitter"))
+
 local scan_adapters = require("backend.shared.scan_adapters")
 local all_adapters = require("backend.adapters")
 
@@ -44,6 +46,17 @@ local function assert_parser_installed(adapter)
 
 	for _, lang in ipairs(langs) do
 		local parsers = vim.api.nvim_get_runtime_file(("parser/%s.so"):format(lang), true)
+
+		if #parsers == 0 then
+			local hyphenated = lang:gsub("_", "-")
+			local alt_paths = vim.api.nvim_get_runtime_file(("parser/%s.so"):format(hyphenated), true)
+			if #alt_paths > 0 then
+				local ok = pcall(vim.treesitter.language.add, lang, { path = alt_paths[1] })
+				if ok then
+					parsers = { alt_paths[1] }
+				end
+			end
+		end
 
 		assert.is_true(#parsers > 0, ("Treesitter parser '%s' binary was not found"):format(lang))
 

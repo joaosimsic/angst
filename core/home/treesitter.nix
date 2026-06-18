@@ -3,8 +3,10 @@
 let
   treesitterParsers = pkgs.runCommand "treesitter-parsers" {} ''
     mkdir -p $out
-    ${lib.concatMapStringsSep "\n" (grammar: ''
-      ln -s ${grammar}/parser $out/${lib.removePrefix "tree-sitter-" grammar.pname}.so
+    ${lib.concatMapStringsSep "\n" (grammar: let
+      lang = lib.replaceStrings ["-"] ["_"] (lib.removePrefix "tree-sitter-" grammar.pname);
+    in ''
+      ln -s ${grammar}/parser $out/${lang}.so
     '') config.toolchains.treesitterGrammars}
   '';
 

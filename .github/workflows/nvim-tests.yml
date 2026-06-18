@@ -6,6 +6,8 @@ on:
 jobs:
   nvim-tests:
     runs-on: ubuntu-latest
+    env:
+      NIXPKGS_ALLOW_UNFREE: 1
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
@@ -26,9 +28,9 @@ jobs:
           ln -sfn "$PWD/domains/editor/nvim/config/lazy-lock.json" ~/.local/share/nvim/lazy-lock.json
       - name: Install Neovim plugins
         run: |
-          nix develop .#nvim-test --command bash -c \
+          nix develop --impure .#nvim-test --command bash -c \
             "cd domains/editor/nvim/config && nvim --headless '+Lazy! sync' +qa"
       - name: Run Neovim adapter tests
         run: |
-          nix develop .#nvim-test --command bash -c \
+          nix develop --impure .#nvim-test --command bash -c \
             "cd domains/editor/nvim/config && nvim --headless -u NONE -l tests/adapters/init.lua"

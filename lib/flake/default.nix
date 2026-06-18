@@ -50,9 +50,50 @@ let
     inherit self pkgs lib themesLib themeContext themeLint lintDesktop lintShell themeRenderedChecks renderTemplateFor;
   };
 
+  toolchainDir = ../../toolchains;
+  toolchainFiles = builtins.attrNames (lib.filterAttrs
+    (name: type: type == "regular" && lib.hasSuffix ".nix" name && name != "default.nix")
+    (builtins.readDir toolchainDir));
+
+  evaluatedToolchains = map (f: import (toolchainDir + "/${f}") { inherit lib pkgs; }) toolchainFiles;
+
+  allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or []) evaluatedToolchains);
+  allGrammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or []) evaluatedToolchains);
+
+  treesitterParsers = pkgs.runCommand "treesitter-parsers" {} ''
+    mkdir -p $out
+    ${lib.concatMapStringsSep "\n" (grammar: let
+      lang = lib.replaceStrings ["-"] ["_"] (lib.removePrefix "tree-sitter-" grammar.pname);
+    in ''
+      ln -s ${grammar}/parser $out/${lang}.so
+    '') allGrammars}
+  '';
+
+  treesitterQueries = pkgs.runCommand "treesitter-queries" {} ''
+    mkdir -p $out
+    ${lib.concatMapStringsSep "\n" (grammar: let
+      langBase = lib.removePrefix "tree-sitter-" grammar.pname;
+      lang = lib.replaceStrings ["-"] ["_"] langBase;
+    in ''
+      if [ -d "${grammar.src}/queries" ]; then
+        mkdir -p "$out/${lang}"
+        cp -r ${grammar.src}/queries/* "$out/${lang}/"
+      elif [ -d "${grammar}/queries" ]; then
+        mkdir -p "$out/${lang}"
+        cp -r ${grammar}/queries/* "$out/${lang}/"
+      fi
+    '') allGrammars}
+  '';
+
   devShells = {
     nvim-test = pkgs.mkShell {
-      packages = [ pkgs.neovim pkgs.git ];
+      packages = [ pkgs.neovim pkgs.git ] ++ allToolchainPackages;
+      shellHook = ''
+        mkdir -p ~/.local/share/tree-sitter
+        rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
+        ln -sf ${treesitterParsers} ~/.local/share/tree-sitter/parser
+        ln -sf ${treesitterQueries} ~/.local/share/tree-sitter/queries
+      '';
     };
   };
 in
