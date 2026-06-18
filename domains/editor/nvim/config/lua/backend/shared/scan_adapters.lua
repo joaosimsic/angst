@@ -93,17 +93,17 @@ local function scan_engine_tools(engine_name, opts)
 		if check_executable then
 			local raw_cmd = adapter[cmd_field]
 			local resolved_cmd = resolve_cmd(raw_cmd)
-			local executable_name =
-				type(resolved_cmd) == "table" and resolved_cmd[1]
+			local executable_name = type(resolved_cmd) == "table" and resolved_cmd[1]
 				or type(raw_cmd) ~= "function" and raw_tool_names
 
 			if executable_name and not executable_exists(executable_name) then
 				logger:warn(function()
-					return "Tool '" .. (
-						type(raw_tool_names) == "table"
-							and table.concat(raw_tool_names, ",")
-						or raw_tool_names
-					) .. "' found but binary '" .. executable_name .. "' is unavailable."
+					return engine_name
+						.. " "
+						.. (type(raw_tool_names) == "table" and table.concat(raw_tool_names, ",") or raw_tool_names)
+						.. "' found but binary '"
+						.. executable_name
+						.. "' is unavailable."
 				end)
 
 				goto continue
@@ -117,9 +117,7 @@ local function scan_engine_tools(engine_name, opts)
 		for _, tool_name in ipairs(tool_names) do
 			active_tools[tool_name] = {
 				cmd = adapter[cmd_field],
-				settings = adapter.lsp_settings
-					and adapter.lsp_settings[tool_name]
-					or nil,
+				settings = adapter.lsp_settings and adapter.lsp_settings[tool_name] or nil,
 				filetypes = adapter.filetypes,
 			}
 		end
@@ -156,8 +154,7 @@ function M.scan_plugins()
 	end
 
 	local specs = {}
-	local adapters_path = vim.fn.stdpath("config")
-		.. "/lua/backend/adapters"
+	local adapters_path = vim.fn.stdpath("config") .. "/lua/backend/adapters"
 
 	for _, file in ipairs(find_plugin_files(adapters_path)) do
 		local lang_name = vim.fn.fnamemodify(file, ":h:t")
