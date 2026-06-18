@@ -19,13 +19,37 @@ local function find_plenary()
 		return matches[1]
 	end
 
-	error("plenary.nvim not found in any live plugin directory. Run lazy sync first.")
+	return nil
+end
+
+local function ensure_plenary()
+	local plenary_dir = find_plenary()
+	if plenary_dir then
+		return plenary_dir
+	end
+
+	local data_dir = vim.fn.stdpath("data")
+	local target = data_dir .. "/lazy/plenary.nvim"
+	local repo = "https://github.com/nvim-lua/plenary.nvim.git"
+
+	vim.fn.mkdir(data_dir .. "/lazy", "p")
+	local out = vim.fn.system({ "git", "clone", "--depth=1", repo, target })
+
+	if vim.v.shell_error ~= 0 then
+		error("Failed to install plenary.nvim:\n" .. out)
+	end
+
+	plenary_dir = find_plenary()
+	if not plenary_dir then
+		error("plenary.nvim installation succeeded but could not be found")
+	end
+	return plenary_dir
 end
 
 local config_root = get_config_root()
 vim.opt.rtp:append(config_root)
 
-local plenary_dir = find_plenary()
+local plenary_dir = ensure_plenary()
 vim.opt.rtp:append(plenary_dir)
 vim.cmd("runtime plugin/plenary.vim")
 
