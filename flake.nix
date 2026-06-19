@@ -7,8 +7,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    vm-cli = {
-      url = "path:./tools/vm-cli";
+    vm = {
+      url = "path:./tools/vm";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
