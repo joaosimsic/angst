@@ -16,40 +16,42 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    
-    Start,
-    
+    Start {
+        #[(arg(long))]
+        headless: bool,
+    },
+
     Stop,
-    
+
     Restart,
-    
+
     Status,
-    
+
     Logs {
         #[arg(short, long, default_value = "50")]
         lines: u32,
     },
-    
+
     Ssh {
         #[arg(last = true)]
         args: Vec<String>,
     },
-    
+
     Exec {
         #[arg(required = true, last = true)]
         command: Vec<String>,
     },
-    
+
     CopyTo {
         src: String,
         dest: Option<String>,
     },
-    
+
     CopyFrom {
         src: String,
         dest: Option<String>,
     },
-    
+
     Mcp {
         #[command(subcommand)]
         action: McpCommands,
@@ -58,15 +60,14 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum McpCommands {
-    
     Start,
-    
+
     Stop,
-    
+
     Restart,
-    
+
     Status,
-    
+
     Logs {
         #[arg(short, long, default_value = "50")]
         lines: u32,
@@ -77,7 +78,7 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Start => commands::vm::start(),
+        Commands::Start { headless } => commands::vm::start(headless),
         Commands::Stop => commands::vm::stop(),
         Commands::Restart => commands::vm::restart(),
         Commands::Status => commands::vm::status(),

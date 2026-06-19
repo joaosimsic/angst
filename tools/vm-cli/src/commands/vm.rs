@@ -2,8 +2,8 @@ use crate::config::{vm_ssh_port, vm_ssh_user};
 use crate::ssh::wait_for_ssh;
 use crate::systemd;
 
-pub fn start() -> Result<(), String> {
-    eprintln!("Starting VM...");
+pub fn start(headless: bool) -> Result<(), String> {
+    eprintln!("Starting VM (headless: {headless})...");
     systemd::service_start("vm")?;
     wait_for_ssh(&vm_ssh_port(), &vm_ssh_user(), 60)
 }

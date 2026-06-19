@@ -1,0 +1,17 @@
+[package]
+name = "vm"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+members = [
+  "crates/vm-core",
+  "crates/vm-cli",
+  "crates/vm-mcp",
+]
+
+[workspace.dependencies]
+clap = "4.6.1"
+serde = "1.0.228"
+serde_json = "1.0.150"
+tokio = "1.52.3"
