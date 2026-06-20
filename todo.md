@@ -18,3 +18,4 @@
 - [x] dev shell vm bin doesnt get updated
 - [x] deprecating vm scripts to let rust tool handles it
 - [x] add a headless mode for launching the vm without gui
+- [ ] ci tests

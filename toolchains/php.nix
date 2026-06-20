@@ -4,7 +4,8 @@ let
   inherit (import ../lib/toolchain.nix { inherit lib pkgs; }) mkToolchain;
 
   phpPkgs = import pkgs.path {
-    inherit (pkgs) system;
+    system = pkgs.stdenv.hostPlatform.system;
+    
     config = {
       allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
         "intelephense"

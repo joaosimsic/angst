@@ -121,58 +121,65 @@ in
   };
 
   apps = {
-    ${system} = {
-      vm = {
-        type = "app";
-        program = "${vmOutputs.packages.${system}.default}/bin/vm";
-      }; 
+      ${system} = {
+        vm = {
+          type = "app";
+          program = "${vmOutputs.packages.${system}.default}/bin/vm";
+          meta.description = "Run a test virtual machine environment.";
+        }; 
 
-      check = {
-        type = "app";
-        program = "${pkgs.writeShellScript "check" ''
-          set -euo pipefail
-          ${pkgs.nix}/bin/nix flake check --print-build-logs
-        ''}";
-      };
+        check = {
+          type = "app";
+          program = "${pkgs.writeShellScript "check" ''
+            set -euo pipefail
+            ${pkgs.nix}/bin/nix flake check --print-build-logs
+          ''}";
+          meta.description = "Run all internal sanity checks and evaluation evaluations.";
+        };
 
-      lint-themes = {
-        type = "app";
-        program = "${pkgs.writeShellScript "lint-themes" ''
-          set -euo pipefail
-          ${pkgs.nix}/bin/nix eval ${self}#themeLint --raw
-        ''}";
-      };
+        lint-themes = {
+          type = "app";
+          program = "${pkgs.writeShellScript "lint-themes" ''
+            set -euo pipefail
+            ${pkgs.nix}/bin/nix eval ${self}#themeLint --raw
+          ''}";
+          meta.description = "Validate configuration template themes.";
+        };
 
-      lint-desktop = {
-        type = "app";
-        program = "${pkgs.writeShellScript "lint-desktop" ''
-          set -euo pipefail
-          ${pkgs.nix}/bin/nix build ${self}#checks.${system}.lint-desktop --no-link --print-build-logs
-          echo "All desktop config checks passed."
-        ''}";
-      };
+        lint-desktop = {
+          type = "app";
+          program = "${pkgs.writeShellScript "lint-desktop" ''
+            set -euo pipefail
+            ${pkgs.nix}/bin/nix build ${self}#checks.${system}.lint-desktop --no-link --print-build-logs
+            echo "All desktop config checks passed."
+          ''}";
+          meta.description = "Lint system window manager and desktop configurations.";
+        };
 
-      lint-shell = {
-        type = "app";
-        program = "${pkgs.writeShellScript "lint-shell" ''
-          set -euo pipefail
-          ${pkgs.nix}/bin/nix build ${self}#checks.${system}.lint-shell --no-link --print-build-logs
-          echo "All shell config checks passed."
-        ''}";
-      };
+        lint-shell = {
+          type = "app";
+          program = "${pkgs.writeShellScript "lint-shell" ''
+            set -euo pipefail
+            ${pkgs.nix}/bin/nix build ${self}#checks.${system}.lint-shell --no-link --print-build-logs
+            echo "All shell config checks passed."
+          ''}";
+          meta.description = "Lint shell script configuration profiles.";
+        };
 
-      render-template = {
-        type = "app";
-        program = "${pkgs.writeShellScript "render-template" ''
-          set -euo pipefail
-          if [ "$#" -lt 2 ]; then
-            echo "Usage: render-template <template-path> <theme>" >&2
-            echo "Example: render-template terminal/ghostty/config/colors.conf monochrome" >&2
-            exit 1
-          fi
-          ${pkgs.nix}/bin/nix eval ${self}#renderTemplateFor --apply "f: f \"$1\" \"$2\"" --raw
-        ''}";
+        render-template = {
+          type = "app";
+          program = "${pkgs.writeShellScript "render-template" ''
+            set -euo pipefail
+            if [ "$#" -lt 2 ]; then
+              echo "Usage: render-template <template-path> <theme>" >&2
+              echo "Example: render-template terminal/ghostty/config/colors.conf monochrome" >&2
+              exit 1
+            fi
+            ${pkgs.nix}/bin/nix eval ${self}#renderTemplateFor --apply "f: f \"$1\" \"$2\"" --raw
+          ''}";
+          meta.description = "Render structural environment templates with target configuration profiles.";
+        };
       };
     };
-  };
+    
 }

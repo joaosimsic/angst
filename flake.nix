@@ -27,7 +27,10 @@
 
     system = "x86_64-linux";
 
-    pkgs = nixpkgs.legacyPackages.${system};
+    pkgs = import nixpkgs {
+      inherit system;
+      config.allowUnfree = true; 
+    };
 
     vmOutputs = vm.mkOutputs self;
 
@@ -50,8 +53,6 @@
     };
   in
   {
-    inherit (flakeLib) themeLint lintDesktop lintShell themeRenderedChecks renderTemplateFor;
-
     nixosConfigurations = nixpkgs.lib.genAttrs hosts mkHost;
 
     inherit (flakeLib) homeConfigurations checks packages apps devShells;
