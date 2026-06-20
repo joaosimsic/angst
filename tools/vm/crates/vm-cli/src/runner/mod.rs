@@ -11,10 +11,10 @@ pub async fn run_cli() -> Result<(), String> {
 
     match cli.command {
         Commands::Start => vm::start(&ssh).await,
-        Commands::Stop => vm_core::SystemdController::stop("vm"),
-        Commands::Restart => vm_core::SystemdController::restart("vm"),
+        Commands::Stop => vm_core::VmProcessController::stop("vm"),
+        Commands::Restart => vm_core::VmProcessController::restart("vm"),
         Commands::Status => vm::status(),
-        Commands::Logs { lines } => vm_core::SystemdController::stream_logs("vm", lines),
+        Commands::Logs { lines } => vm_core::VmProcessController::stream_logs("vm", lines),
         Commands::Ssh { args } => vm::ssh(&ssh, args),
         Commands::Exec { command } => vm::exec(&ssh, command),
         Commands::CopyTo { src, dest } => ssh.copy_to(&src, &dest),

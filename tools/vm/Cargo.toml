@@ -18,11 +18,12 @@ members = [
 clap = { version = "4.6.1", features = ["derive"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
-tokio = { version = "1.52.3", features = ["full"] }
+tokio = { version = "1.52.3", features = ["process", "fs", "io-util", "rt-multi-thread"] }
 axum = "0.8.9"
 futures-util = "0.3.32"
 ssh2 = "0.9.5"
 tower-http = { version = "0.7.0", features = ["cors"] }
+dirs = "6.0.0"
 vm-core = { path = "crates/vm-core" }
 vm-mcp = { path = "crates/vm-mcp" }
 vm-cli = { path = "crates/vm-cli" }

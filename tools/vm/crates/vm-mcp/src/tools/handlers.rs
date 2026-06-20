@@ -1,5 +1,5 @@
 use serde_json::{json, Value};
-use vm_core::{SshEngine, SystemdController};
+use vm_core::{SshEngine, VmProcessController};
 
 pub(crate) fn run_vm_exec(ssh: &SshEngine, args: &Value) -> Value {
     let cmd = args.get("command").and_then(|v| v.as_str()).unwrap_or("");
@@ -19,7 +19,7 @@ pub(crate) fn run_vm_exec(ssh: &SshEngine, args: &Value) -> Value {
 }
 
 pub(crate) fn run_vm_status(ssh: &SshEngine) -> Value {
-    let state = SystemdController::is_active("vm").unwrap_or_else(|_| "inactive".to_string());
+    let state = VmProcessController::is_active("vm").unwrap_or_else(|_| "inactive".to_string());
     let is_active = state == "active";
 
     let text = if is_active {
@@ -35,7 +35,7 @@ pub(crate) fn run_vm_status(ssh: &SshEngine) -> Value {
 }
 
 pub(crate) fn run_vm_restart() -> Value {
-    match SystemdController::restart("vm") {
+    match VmProcessController::restart("vm") {
         Ok(_) => json!({ "content": [{ "type": "text", "text": "VM restarting" }] }),
         Err(e) => json!({
             "content": [{ "type": "text", "text": format!("Restart failed: {}", e) }],

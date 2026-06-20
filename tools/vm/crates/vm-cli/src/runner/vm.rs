@@ -1,9 +1,9 @@
 use std::time::Duration;
 use tokio::time;
-use vm_core::{SshEngine, SystemdController};
+use vm_core::{SshEngine, VmProcessController};
 
 pub async fn start(ssh: &SshEngine) -> Result<(), String> {
-    SystemdController::start("vm")?;
+    VmProcessController::start("vm")?;
     println!("VM Started! Validating connection status...");
 
     for _ in 0..30 {
@@ -19,7 +19,7 @@ pub async fn start(ssh: &SshEngine) -> Result<(), String> {
 }
 
 pub fn status() -> Result<(), String> {
-    match SystemdController::is_active("vm") {
+    match VmProcessController::is_active("vm") {
         Ok(state) => {
             if state == "active" {
                 println!("VM Status: Running");
