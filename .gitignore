@@ -5,5 +5,4 @@ result*
 *.qcow2
 .opencode/
 tools/vm-mcp/dist/
-
-
+a.out

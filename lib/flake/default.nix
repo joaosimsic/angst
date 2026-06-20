@@ -7,7 +7,7 @@
   loadHost,
   mkHome,
   mkHomeWithExtraModules,
-  vm-cli,
+  vmOutputs, 
 }:
 
 let
@@ -107,17 +107,22 @@ in
   packages = {
     ${system} = {
       default = self.homeConfigurations.joao.activationPackage;
-      vm-cli = vm-cli.packages.${system}.default;
+      
+      vm-cli = vmOutputs.packages.${system}.default;
+      vm     = vmOutputs.packages.${system}.vm;
+      vm-run = vmOutputs.packages.${system}.vm-run;
     };
   };
 
   devShells = {
-    ${system} = devShells;
+    ${system} = devShells // {
+      vm = vmOutputs.devShells.${system}.default;
+    };
   };
 
   apps = {
     ${system} = {
-      vm = vm-cli.apps.${system}.default;
+      vm = vmOutputs.packages.${system}.default; 
 
       check = {
         type = "app";

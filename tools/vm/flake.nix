@@ -6,21 +6,17 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-utils.url = "github:numtide/flake-utils";
-    
-    root-flake = {
-      url = "path:../../.";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = { self, nixpkgs, rust-overlay, flake-utils, root-flake }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, rust-overlay, flake-utils }: {
+    
+    mkOutputs = rootFlake: flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs { inherit system overlays; };
 
         rustToolchain = pkgs.rust-bin.stable.latest.default.override {
-          extensions = [ "rust-src" "rust-analyzer" ];
+          extensions = [ "rust-src" "rust-analyzer" "cargo" "rustc" ];
         };
 
         rustPlatform = pkgs.makeRustPlatform {
@@ -44,7 +40,7 @@
           toplevel = configExpr.config.specialisation.vm.configuration.system.build.toplevel;
           runner   = configExpr.config.specialisation.vm.configuration.system.build.vm;
           scriptName = "run-${hostname}-vm";
-        }) root-flake.nixosConfigurations;
+        }) rootFlake.nixosConfigurations; 
 
       in
       {
@@ -90,4 +86,5 @@
         };
       }
     );
+  };
 }

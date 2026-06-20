@@ -13,7 +13,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, vm-cli, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, vm, ... }@inputs:
   let
     hosts = import ./lib/build/scanHosts.nix inputs;
 
@@ -35,8 +35,11 @@
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
 
+    vmOutputs = vm.mkOutputs self;
+
     flakeLib = import ./lib/flake/default.nix {
-      inherit self system pkgs hosts mkHome mkHomeWithExtraModules vm-cli;
+      inherit self system pkgs hosts mkHome mkHomeWithExtraModules;
+      vmOutputs = vmOutputs; 
       loadHost = env.loadHost;
       lib = pkgs.lib;
     };
