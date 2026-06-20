@@ -19,4 +19,5 @@ axum = "0.8.9"
 futures-util = "0.3.32"
 ssh2 = "0.9.5"
 tower-http = { version = "0.7.0", features = ["cors"] }
+vm-core = { path = "crates/vm-core" }
 
