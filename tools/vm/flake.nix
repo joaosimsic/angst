@@ -80,6 +80,8 @@
             export NIX_DEFAULT_TARGET_HOST="${defaultHost}"
             export NIX_VM_HOSTS_MAP='${builtins.toJSON allHostVms}'
 
+            export PATH="$REPO_ROOT/target/debug:$PATH"
+
             echo "VM Workspace Tool Active"
             echo "Target Host Variable: \$NIX_DEFAULT_TARGET_HOST"
           '';

@@ -6,3 +6,4 @@ result*
 .opencode/
 tools/vm-mcp/dist/
 a.out
+target/

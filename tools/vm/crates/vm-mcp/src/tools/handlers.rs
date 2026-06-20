@@ -19,7 +19,8 @@ pub(crate) fn run_vm_exec(ssh: &SshEngine, args: &Value) -> Value {
 }
 
 pub(crate) fn run_vm_status(ssh: &SshEngine) -> Value {
-    let is_active = SystemdController::is_active("vm").unwrap_or(false);
+    let state = SystemdController::is_active("vm").unwrap_or_else(|_| "inactive".to_string());
+    let is_active = state == "active";
 
     let text = if is_active {
         match ssh.exec("echo ok") {

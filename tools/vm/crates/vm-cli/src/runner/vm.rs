@@ -19,11 +19,24 @@ pub async fn start(ssh: &SshEngine) -> Result<(), String> {
 }
 
 pub fn status() -> Result<(), String> {
-    let active = SystemdController::is_active("vm")?;
-
-    println!("VM service active status: {}", active);
-
-    Ok(())
+    match SystemdController::is_active("vm") {
+        Ok(state) => {
+            if state == "active" {
+                println!("VM Status: Running");
+            } else if state == "inactive" {
+                println!("VM Status: Stopped (No VM is currently running)");
+            } else {
+                println!("VM Status: {}", state);
+            }
+            Ok(())
+        }
+        Err(e) => {
+            if e.contains("not found") || e.contains("failed to load") {
+                return Err("VM service units are not installed. Run './scripts/setup-tools.sh --skip-vm-build' to install them.".to_string());
+            }
+            Err(format!("Failed to fetch VM status: {}", e))
+        }
+    }
 }
 
 pub fn ssh(ssh: &SshEngine, args: Vec<String>) -> Result<(), String> {

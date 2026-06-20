@@ -29,10 +29,24 @@ impl SystemdController {
         Self::run_ctl(&["restart", service]).map(|_| ())
     }
 
-    pub fn is_active(service: &str) -> Result<bool, String> {
-        let status = Self::run_ctl(&["is-active", service]).unwrap_or_default();
+    pub fn is_active(service: &str) -> Result<String, String> {
+        let output = Command::new("systemctl")
+            .args(["--user", "is-active", service])
+            .output()
+            .map_err(|e| format!("systemctl execution error: {}", e))?;
 
-        Ok(status.trim() == "active")
+        match output.status.code() {
+            Some(0) => Ok("active".to_string()),
+            Some(3) => Ok("inactive".to_string()),
+            _ => {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                if stderr.trim().is_empty() {
+                    Ok("inactive/unknown".to_string())
+                } else {
+                    Err(stderr.trim().to_string())
+                }
+            }
+        }
     }
 
     pub fn stream_logs(service: &str, lines: u32) -> Result<(), String> {
