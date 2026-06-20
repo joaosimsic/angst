@@ -3,6 +3,10 @@ name = "vm"
 version = "0.1.0"
 edition = "2024"
 
+[dependencies]
+tokio.workspace = true
+vm-cli.workspace = true
+
 [workspace]
 members = [
   "crates/vm-core",
@@ -21,4 +25,5 @@ ssh2 = "0.9.5"
 tower-http = { version = "0.7.0", features = ["cors"] }
 vm-core = { path = "crates/vm-core" }
 vm-mcp = { path = "crates/vm-mcp" }
+vm-cli = { path = "crates/vm-cli" }
 
