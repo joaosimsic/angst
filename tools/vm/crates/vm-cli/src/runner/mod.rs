@@ -1,0 +1,24 @@
+pub mod mcp;
+pub mod vm;
+
+use crate::commands::{Commands, CLI};
+use clap::Parser;
+use vm_core::SshEngine;
+
+pub async fn run_cli() -> Result<(), String> {
+    let cli = CLI::parse();
+    let ssh = SshEngine::new();
+
+    match cli.command {
+        Commands::Start => vm::start(&ssh).await,
+        Commands::Stop => vm_core::SystemdController::stop("vm"),
+        Commands::Restart => vm_core::SystemdController::restart("vm"),
+        Commands::Status => vm::status(),
+        Commands::Logs { lines } => vm_core::SystemdController::stream_logs("vm", lines),
+        Commands::Ssh { args } => vm::ssh(&ssh, args),
+        Commands::Exec { command } => vm::exec(&ssh, command),
+        Commands::CopyTo { src, dest } => ssh.copy_to(&src, &dest),
+        Commands::CopyFrom { src, dest } => ssh.copy_from(&src, &dest),
+        Commands::Mcp { action } => mcp::handle(action).await,
+    }
+}
