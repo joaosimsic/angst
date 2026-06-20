@@ -15,6 +15,6 @@
 
 # vm
 
-- [ ] dev shell vm bin doesnt get updated
+- [x] dev shell vm bin doesnt get updated
 - [x] deprecating vm scripts to let rust tool handles it
-- [ ] add a headless mode for launching the vm without gui
+- [x] add a headless mode for launching the vm without gui
