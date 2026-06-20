@@ -2,9 +2,31 @@
 
 let
   inherit (import ../lib/toolchain.nix { inherit lib pkgs; }) mkToolchain;
+
+  phpPkgs = import pkgs.path {
+    inherit (pkgs) system;
+    config = {
+      allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+        "intelephense"
+      ];
+    };
+  };
 in
 mkToolchain {
-  lsp = with pkgs; [ intelephense ];
-  formatter = with pkgs; [ blade-formatter ];
-  treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-php ];
+  runtime = with phpPkgs; [
+    php
+    phpPackages.composer
+  ];
+
+  lsp = with phpPkgs; [
+    intelephense
+  ];
+
+  formatter = with phpPkgs; [
+    blade-formatter
+  ];
+
+  treesitter = with pkgs.tree-sitter-grammars; [
+    tree-sitter-php
+  ];
 }

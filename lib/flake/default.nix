@@ -122,7 +122,10 @@ in
 
   apps = {
     ${system} = {
-      vm = vmOutputs.packages.${system}.default; 
+      vm = {
+        type = "app";
+        program = "${vmOutputs.packages.${system}.default}/bin/vm";
+      }; 
 
       check = {
         type = "app";
