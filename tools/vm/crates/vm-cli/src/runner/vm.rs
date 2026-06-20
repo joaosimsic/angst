@@ -1,9 +1,29 @@
-use std::time::Duration;
-use tokio::time;
+use std::{path::Path, time::Duration};
+use tokio::{process::Command, time};
 use vm_core::{SshEngine, VmProcessController};
 
 pub async fn start(ssh: &SshEngine) -> Result<(), String> {
+    let disk_exists = Path::new("result/bin/run-personal-vm").exists();
+
+    if !disk_exists {
+        println!("VM image not found. Building NixOS VM system image on host...");
+
+        let build_status = Command::new("nix")
+            .args([
+                "build",
+                ".#nixosConfigurations.personal.config.system.build.vm",
+            ])
+            .status()
+            .await
+            .map_err(|e| format!("Failed to run nix build: {}", e))?;
+
+        if !build_status.success() {
+            return Err("Nix compilation of the target VM profile failed.".to_string());
+        }
+    }
+
     VmProcessController::start("vm")?;
+
     println!("VM Started! Validating connection status...");
 
     for _ in 0..30 {

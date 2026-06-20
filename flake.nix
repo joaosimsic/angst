@@ -25,17 +25,22 @@
       loadHost = hostname: import (./hosts + "/${hostname}");
     };
 
-    homeLib = import ./lib/build/mkHome.nix env;
+    system = "x86_64-linux";
+
+    pkgs = nixpkgs.legacyPackages.${system};
+
+    vmOutputs = vm.mkOutputs self;
+
+    homeLib = import ./lib/build/mkHome.nix (env // {
+      vmTool = vmOutputs.packages.${system}.default;
+    });
+
     mkHost = import ./lib/build/mkHost.nix (env // {
       mkHomeProfile = homeLib.mkHomeProfile;
       flakeSelf = self;
     });
+
     inherit (homeLib) mkHome mkHomeWithExtraModules;
-
-    system = "x86_64-linux";
-    pkgs = nixpkgs.legacyPackages.${system};
-
-    vmOutputs = vm.mkOutputs self;
 
     flakeLib = import ./lib/flake/default.nix {
       inherit self system pkgs hosts mkHome mkHomeWithExtraModules;

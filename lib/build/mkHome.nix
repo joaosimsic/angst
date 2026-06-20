@@ -1,9 +1,11 @@
-{ inputs, loadHost, flakeSelf, ... }:
+{ inputs, loadHost, flakeSelf, vmTool, ... }:
 
 let
   mkHomeProfile = hostname:
     let
       hostConfig = loadHost hostname;
+
+      system = hostConfig.system;
 
       pkgs = import inputs.nixpkgs {
         system = hostConfig.system;
@@ -37,6 +39,10 @@ let
         (import ../home/themeModule.nix { inherit lib themesLib hostTheme; })
         ../home/i3Fragments.nix
         ../../hosts/${hostname}/home.nix
+
+        ({ pkgs, ...}: {
+          home.packages = [ vmTool ];
+        })
       ] ++ homeModules;
     };
 in

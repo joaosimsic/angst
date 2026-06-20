@@ -8,7 +8,7 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, rust-overlay, flake-utils }: {
+outputs = { self, nixpkgs, rust-overlay, flake-utils }: {
     
     mkOutputs = rootFlake: flake-utils.lib.eachDefaultSystem (system:
       let
@@ -24,17 +24,24 @@
           rustc = rustToolchain;
         };
 
+        defaultHost = "personal";
+
         vm-package = rustPlatform.buildRustPackage {
           pname = "vm";
           version = "0.1.0";
           src = ./.;
           cargoLock = { lockFile = ./Cargo.lock; };
-          nativeBuildInputs = with pkgs; [ pkg-config ];
+          
+          nativeBuildInputs = with pkgs; [ pkg-config makeWrapper ];
           buildInputs = with pkgs; [ openssl ];
+
+          postInstall = ''
+            wrapProgram $out/bin/vm \
+              --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.nix pkgs.qemu pkgs.openssh ]}
+          '';
+
           meta = with pkgs.lib; { mainProgram = "vm"; };
         };
-
-        defaultHost = "personal";
 
         allHostVms = builtins.mapAttrs (hostname: configExpr: {
           toplevel = configExpr.config.specialisation.vm.configuration.system.build.toplevel;
@@ -42,29 +49,42 @@
           scriptName = "run-${hostname}-vm";
         }) rootFlake.nixosConfigurations; 
 
+        vm-run-script = pkgs.writeShellScriptBin "vm-run" ''
+          TARGET_HOST="''${NIX_TARGET_HOST:-${defaultHost}}"
+          
+          case "$TARGET_HOST" in
+            ${pkgs.lib.concatStringsSep "\n" (pkgs.lib.mapAttrsToList (hostname: paths: ''
+              "${hostname}")
+                export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
+                export NIX_DISK_IMAGE="''${NIX_DISK_IMAGE:-$PWD/$TARGET_HOST.qcow2}"
+                exec ${paths.runner}/bin/${paths.scriptName}
+                ;;
+            '') allHostVms)}
+            *)
+              echo "Error: Host profile '$TARGET_HOST' not found in your NixOS configurations."
+              exit 1
+              ;;
+          esac
+        '';
+
+        vm-wrapped = pkgs.symlinkJoin {
+          name = "vm-wrapped";
+          paths = [ vm-package ];
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          postBuild = ''
+            wrapProgram $out/bin/vm \
+              --prefix PATH : ${pkgs.lib.makeBinPath [ vm-run-script ]}
+          '';
+        };
+
       in
       {
         packages = {
           default = vm-package;
           vm = vm-package;
-
-          vm-run = pkgs.writeShellScriptBin "vm-run" ''
-            TARGET_HOST="''${NIX_TARGET_HOST:-${defaultHost}}"
-            
-            case "$TARGET_HOST" in
-              ${pkgs.lib.concatStringsSep "\n" (pkgs.lib.mapAttrsToList (hostname: paths: ''
-                "${hostname}")
-                  export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
-                  export NIX_DISK_IMAGE="''${NIX_DISK_IMAGE:-$PWD/$TARGET_HOST.qcow2}"
-                  exec ${paths.runner}/bin/${paths.scriptName}
-                  ;;
-              '') allHostVms)}
-              *)
-                echo "Error: Host profile '$TARGET_HOST' not found in your NixOS configurations."
-                exit 1
-                ;;
-            esac
-          '';
+          
+          wrapped = vm-wrapped;
+          vm-run = vm-run-script;
         };
 
         devShells.default = pkgs.mkShell {
@@ -80,7 +100,7 @@
             export NIX_DEFAULT_TARGET_HOST="${defaultHost}"
             export NIX_VM_HOSTS_MAP='${builtins.toJSON allHostVms}'
 
-            export PATH="$REPO_ROOT/target/debug:$PATH"
+            export PATH="$PWD/target/debug:${vm-run-script}/bin:$PATH"
 
             echo "VM Workspace Tool Active"
             echo "Target Host Variable: \$NIX_DEFAULT_TARGET_HOST"
@@ -88,5 +108,4 @@
         };
       }
     );
-  };
-}
+  };}
