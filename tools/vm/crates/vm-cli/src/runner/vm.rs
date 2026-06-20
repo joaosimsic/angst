@@ -2,7 +2,7 @@ use std::{path::Path, time::Duration};
 use tokio::{process::Command, time};
 use vm_core::{SshEngine, VmProcessController};
 
-pub async fn start(ssh: &SshEngine) -> Result<(), String> {
+pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
     let disk_exists = Path::new("result/bin/run-personal-vm").exists();
 
     if !disk_exists {
@@ -22,7 +22,7 @@ pub async fn start(ssh: &SshEngine) -> Result<(), String> {
         }
     }
 
-    VmProcessController::start("vm")?;
+    VmProcessController::start("vm", headless)?;
 
     println!("VM Started! Validating connection status...");
 

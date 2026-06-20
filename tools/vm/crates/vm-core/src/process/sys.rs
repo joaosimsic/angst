@@ -25,10 +25,21 @@ impl Sys {
         Ok(())
     }
 
-    pub fn spawn_background_runner(log_file: File, err_file: File) -> Result<u32, String> {
-        let child = Command::new("vm-run")
-            .stdout(Stdio::from(log_file))
-            .stderr(Stdio::from(err_file))
+    pub fn spawn_background_runner(
+        log_file: File,
+        err_file: File,
+        headless: bool,
+    ) -> Result<u32, String> {
+        let mut cmd = Command::new("vm-run");
+
+        cmd.stdout(Stdio::from(log_file))
+            .stderr(Stdio::from(err_file));
+
+        if headless {
+            cmd.arg("--headless");
+        }
+
+        let child = cmd
             .spawn()
             .map_err(|e| format!("Failed to spawn VM background process: {}", e))?;
 

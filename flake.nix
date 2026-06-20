@@ -8,7 +8,7 @@
     };
 
     vm = {
-      url = "path:./tools/vm";
+      url = "./tools/vm";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

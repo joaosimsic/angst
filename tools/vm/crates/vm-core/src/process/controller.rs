@@ -4,7 +4,7 @@ use std::fs::{self, File};
 pub struct VmProcessController;
 
 impl VmProcessController {
-    pub fn start(service: &str) -> Result<(), String> {
+    pub fn start(service: &str, headless: bool) -> Result<(), String> {
         if let Some(state) = StateManager::read(service) && Sys::is_pid_alive(state.pid) {
             return Err(format!("VM service '{}' is already running (PID: {}).", service, state.pid));
         }
@@ -23,7 +23,7 @@ impl VmProcessController {
 
         println!("Spawning background VM process via nix run target...");
 
-        let pid = Sys::spawn_background_runner(log_file, err_file)?;
+        let pid = Sys::spawn_background_runner(log_file, err_file, headless)?;
 
         let state = VmState {
             pid,
@@ -62,9 +62,9 @@ impl VmProcessController {
         }
     }
 
-    pub fn restart(service: &str) -> Result<(), String> {
+    pub fn restart(service: &str, headless: bool) -> Result<(), String> {
         let _ = Self::stop(service);
-        Self::start(service)
+        Self::start(service, headless)
     }
 
     pub fn is_active(service: &str) -> Result<String, String> {

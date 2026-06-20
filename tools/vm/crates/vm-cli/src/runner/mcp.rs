@@ -4,9 +4,9 @@ use vm_mcp::run_server;
 
 pub async fn handle(action: McpCommands) -> Result<(), String> {
     match action {
-        McpCommands::Start => VmProcessController::start("vm-mcp"),
+        McpCommands::Start => VmProcessController::start("vm-mcp", true),
         McpCommands::Stop => VmProcessController::stop("vm-mcp"),
-        McpCommands::Restart => VmProcessController::restart("vm-mcp"),
+        McpCommands::Restart => VmProcessController::restart("vm-mcp", true),
         McpCommands::Status => {
             println!(
                 "MCP Server active state: {}",

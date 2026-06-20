@@ -23,7 +23,19 @@ pub(crate) fn get_tools_list() -> Value {
         "tools": [
             { "name": "vm_exec", "description": "Execute a command inside the NixOS VM via SSH" },
             { "name": "vm_status", "description": "Check if the VM is running and accessible" },
-            { "name": "vm_restart", "description": "Trigger local VM systemd restart action" }
+            {
+                "name": "vm_restart",
+                "description": "Trigger local VM systemd restart action",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "headless": {
+                            "type": "boolean",
+                            "description": "Whether to start the VM without a graphical display window. Set to true if running tasks programmatically without a desktop UI environment."
+                        }
+                    }
+                }
+            }
         ]
     })
 }

@@ -89,6 +89,7 @@ outputs = { self, nixpkgs, rust-overlay, flake-utils }: {
 
         devShells.default = pkgs.mkShell {
           name = "vm-shell";
+          packages = [ vm-package ];
           nativeBuildInputs = [ rustToolchain ];
           buildInputs = with pkgs; [ openssh pkg-config openssl qemu ];
 
@@ -100,7 +101,7 @@ outputs = { self, nixpkgs, rust-overlay, flake-utils }: {
             export NIX_DEFAULT_TARGET_HOST="${defaultHost}"
             export NIX_VM_HOSTS_MAP='${builtins.toJSON allHostVms}'
 
-            export PATH="$PWD/target/debug:${vm-run-script}/bin:$PATH"
+            export PATH="${vm-run-script}/bin:$PATH"
 
             echo "VM Workspace Tool Active"
             echo "Target Host Variable: \$NIX_DEFAULT_TARGET_HOST"

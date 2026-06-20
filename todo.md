@@ -15,6 +15,6 @@
 
 # vm
 
-- [ ] fix the status when there is no vm running. it needs to be clearer than a simple systemctl exit code
-- [ ] either replace the vm control from systemctl or implement the vm service into the dev shell without relying on the setup tools script
+- [ ] dev shell vm bin doesnt get updated
+- [x] deprecating vm scripts to let rust tool handles it
 - [ ] add a headless mode for launching the vm without gui

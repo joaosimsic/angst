@@ -9,9 +9,15 @@ pub struct CLI {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    Start,
+    Start {
+        #[arg(short = 'l', long = "headless")]
+        headless: bool,
+    },
     Stop,
-    Restart,
+    Restart {
+        #[arg(short = 'l', long = "headless")]
+        headless: bool,
+    },
     Status,
     Logs {
         #[arg(short, long, default_value = "50")]

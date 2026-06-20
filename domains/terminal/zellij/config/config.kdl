@@ -134,17 +134,27 @@ keybinds clear-defaults=true {
         }
     }
     shared_except "locked" {
-        bind "Ctrl h" { MoveFocusOrTab "left"; }
-        bind "Ctrl j" { MoveFocus "down"; }
-        bind "Ctrl k" { MoveFocus "up"; }
-        bind "Ctrl l" { MoveFocusOrTab "right"; }
+        bind "Alt left" { MoveFocusOrTab "left"; }
+        bind "Alt down" { MoveFocus "down"; }
+        bind "Alt up" { MoveFocus "up"; }
+        bind "Alt right" { MoveFocusOrTab "right"; }
         bind "Alt +" { Resize "Increase"; }
         bind "Alt -" { Resize "Decrease"; }
         bind "Alt =" { Resize "Increase"; }
         bind "Alt [" { PreviousSwapLayout; }
         bind "Alt ]" { NextSwapLayout; }
         bind "Alt f" { ToggleFloatingPanes; }
-        bind "Ctrl g" { SwitchToMode "locked"; }
+        bind "Ctrl l" { SwitchToMode "locked"; }
+        bind "Ctrl g" {
+            Run "amber" "grave" "switch" {
+                floating true
+                close_on_exit true
+                name "Grave"
+                borderless true
+                width "70%"
+                height "75%"
+            }
+        }
         bind "Alt i" { MoveTab "left"; }
         bind "Alt n" { NewPane; }
         bind "Alt o" { MoveTab "right"; }

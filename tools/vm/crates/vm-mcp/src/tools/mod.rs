@@ -26,7 +26,6 @@ pub fn handle_tool_execution(payload: McpRequest) -> McpResponse {
                 .unwrap_or("");
 
             let default_args = json!({});
-
             let args = params.and_then(|p| p.get("args")).unwrap_or(&default_args);
 
             let ssh = SshEngine::new();
@@ -34,7 +33,14 @@ pub fn handle_tool_execution(payload: McpRequest) -> McpResponse {
             response.result = match Tool::from(tool_name) {
                 Tool::VmExec => Some(handlers::run_vm_exec(&ssh, args)),
                 Tool::VmStatus => Some(handlers::run_vm_status(&ssh)),
-                Tool::VmRestart => Some(handlers::run_vm_restart()),
+                Tool::VmRestart => {
+                    let is_headless = args
+                        .get("headless")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(true);
+
+                    Some(handlers::run_vm_restart(is_headless))
+                }
                 Tool::Unknown(name) => {
                     Some(json!({ "error": format!("Tool '{}' not found", name) }))
                 }

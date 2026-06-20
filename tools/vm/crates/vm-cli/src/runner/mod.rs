@@ -10,9 +10,9 @@ pub async fn run_cli() -> Result<(), String> {
     let ssh = SshEngine::new();
 
     match cli.command {
-        Commands::Start => vm::start(&ssh).await,
+        Commands::Start { headless } => vm::start(&ssh, headless).await,
         Commands::Stop => vm_core::VmProcessController::stop("vm"),
-        Commands::Restart => vm_core::VmProcessController::restart("vm"),
+        Commands::Restart { headless } => vm_core::VmProcessController::restart("vm", headless),
         Commands::Status => vm::status(),
         Commands::Logs { lines } => vm_core::VmProcessController::stream_logs("vm", lines),
         Commands::Ssh { args } => vm::ssh(&ssh, args),

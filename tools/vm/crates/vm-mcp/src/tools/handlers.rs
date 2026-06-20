@@ -34,8 +34,8 @@ pub(crate) fn run_vm_status(ssh: &SshEngine) -> Value {
     json!({ "content": [{ "type": "text", "text": text}] })
 }
 
-pub(crate) fn run_vm_restart() -> Value {
-    match VmProcessController::restart("vm") {
+pub(crate) fn run_vm_restart(headless: bool) -> Value {
+    match VmProcessController::restart("vm", headless) {
         Ok(_) => json!({ "content": [{ "type": "text", "text": "VM restarting" }] }),
         Err(e) => json!({
             "content": [{ "type": "text", "text": format!("Restart failed: {}", e) }],
