@@ -8,7 +8,7 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-outputs = { self, nixpkgs, rust-overlay, flake-utils }: {
+  outputs = { self, nixpkgs, rust-overlay, flake-utils }: {
     
     mkOutputs = rootFlake: flake-utils.lib.eachDefaultSystem (system:
       let
@@ -52,12 +52,22 @@ outputs = { self, nixpkgs, rust-overlay, flake-utils }: {
         vm-run-script = pkgs.writeShellScriptBin "vm-run" ''
           TARGET_HOST="''${NIX_TARGET_HOST:-${defaultHost}}"
           
+          NEW_ARGS=()
+          for arg in "$@"; do
+            if [ "$arg" = "--headless" ]; then
+              export QEMU_OPTS="''${QEMU_OPTS:-} -display none -vga none"
+            else
+              NEW_ARGS+=("$arg")
+            fi
+          done
+          
           case "$TARGET_HOST" in
             ${pkgs.lib.concatStringsSep "\n" (pkgs.lib.mapAttrsToList (hostname: paths: ''
               "${hostname}")
                 export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
                 export NIX_DISK_IMAGE="''${NIX_DISK_IMAGE:-$PWD/$TARGET_HOST.qcow2}"
-                exec ${paths.runner}/bin/${paths.scriptName}
+                
+                exec ${paths.runner}/bin/${paths.scriptName} "''${NEW_ARGS[@]}"
                 ;;
             '') allHostVms)}
             *)
@@ -103,10 +113,23 @@ outputs = { self, nixpkgs, rust-overlay, flake-utils }: {
 
             export PATH="${vm-run-script}/bin:$PATH"
 
+            if [ -z "$SSH_AUTH_SOCK" ]; then
+              echo "Initializing local shell-bound SSH Agent..."
+              eval $(ssh-agent -s) > /dev/null
+              trap "ssh-agent -k > /dev/null" EXIT
+            fi
+
+            if [ -f "$HOME/.ssh/id_ed25519" ]; then
+              ssh-add "$HOME/.ssh/id_ed25519" 2>/dev/null
+            elif [ -f "$HOME/.ssh/id_rsa" ]; then
+              ssh-add "$HOME/.ssh/id_rsa" 2>/dev/null
+            fi
+
             echo "VM Workspace Tool Active"
             echo "Target Host Variable: \$NIX_DEFAULT_TARGET_HOST"
           '';
         };
       }
     );
-  };}
+  };
+}

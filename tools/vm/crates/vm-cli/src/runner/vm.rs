@@ -1,6 +1,6 @@
 use std::{path::Path, time::Duration};
 use tokio::{process::Command, time};
-use vm_core::{SshEngine, VmProcessController};
+use vm_core::{SshEngine, VmConfig, VmProcessController};
 
 pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
     let disk_exists = Path::new("result/bin/run-personal-vm").exists();
@@ -59,17 +59,32 @@ pub fn status() -> Result<(), String> {
     }
 }
 
-pub fn ssh(ssh: &SshEngine, args: Vec<String>) -> Result<(), String> {
-    let full_cmd = if args.is_empty() {
-        "bash".to_string()
-    } else {
-        args.join(" ")
-    };
+pub fn ssh(args: Vec<String>) -> Result<(), String> {
+    use std::process::Command;
 
-    let (_, stdout, stderr) = ssh.exec(&full_cmd)?;
+    let config = VmConfig::load();
 
-    print!("{}", stdout);
-    eprint!("{}", stderr);
+    let mut cmd = Command::new("ssh");
+
+    cmd.arg("-p")
+        .arg(&config.ssh_port)
+        .arg("-o")
+        .arg("StrictHostKeyChecking=no")
+        .arg("-o")
+        .arg("UserKnownHostsFile=/dev/null")
+        .arg("-o")
+        .arg("LogLevel=ERROR")
+        .arg(format!("{}@127.0.0.1", config.ssh_user));
+
+    if !args.is_empty() {
+        cmd.args(args);
+    }
+
+    let status = cmd.status().map_err(|e| e.to_string())?;
+
+    if !status.success() {
+        return Err("Interactive SSH session closed with error status".to_string());
+    }
 
     Ok(())
 }

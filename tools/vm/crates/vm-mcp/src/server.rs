@@ -17,9 +17,26 @@ async fn mcp_endpoint(Json(payload): Json<McpRequest>) -> Json<McpResponse> {
 
 async fn health_endpoint() -> Json<Value> {
     let ssh = SshEngine::new();
-    let reachable = ssh.exec("echo ok").is_ok();
 
-    Json(json!({ "status": "ok", "VmReachable": reachable }))
+    let (reachable, error_message) = match ssh.exec("echo ok") {
+        Ok((exit_code, _, _)) => {
+            if !exit_code == 0 {
+                (
+                    false,
+                    Some(format!("Command exited with status code: {}", exit_code)),
+                )
+            } else {
+                (true, None)
+            }
+        }
+        Err(err) => (false, Some(err)),
+    };
+
+    Json(json!({
+        "status": "ok",
+        "VmReachable": reachable,
+        "details": error_message.unwrap_or_else(|| "Connection healthy and fully authenticated".to_string())
+    }))
 }
 
 pub async fn run_server(port: u16) {

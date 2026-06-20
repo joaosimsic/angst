@@ -15,7 +15,7 @@ pub async fn run_cli() -> Result<(), String> {
         Commands::Restart { headless } => vm_core::VmProcessController::restart("vm", headless),
         Commands::Status => vm::status(),
         Commands::Logs { lines } => vm_core::VmProcessController::stream_logs("vm", lines),
-        Commands::Ssh { args } => vm::ssh(&ssh, args),
+        Commands::Ssh { args } => vm::ssh(args),
         Commands::Exec { command } => vm::exec(&ssh, command),
         Commands::CopyTo { src, dest } => ssh.copy_to(&src, &dest),
         Commands::CopyFrom { src, dest } => ssh.copy_from(&src, &dest),

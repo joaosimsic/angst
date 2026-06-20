@@ -36,7 +36,12 @@ impl Sys {
             .stderr(Stdio::from(err_file));
 
         if headless {
-            cmd.arg("--headless");
+            cmd.env("QEMU_NETOPTS", "none");
+            cmd.arg("-nographic");
+
+            cmd.stdin(Stdio::null());
+            cmd.stdout(Stdio::null());
+            cmd.stderr(Stdio::null());
         }
 
         let child = cmd
