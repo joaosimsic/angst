@@ -7,13 +7,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    vm-cli = {
-      url = "path:./tools/vm-cli";
+    vm = {
+      url = "./tools/vm";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, vm-cli, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, vm, ... }@inputs:
   let
     hosts = import ./lib/build/scanHosts.nix inputs;
 
@@ -25,25 +25,34 @@
       loadHost = hostname: import (./hosts + "/${hostname}");
     };
 
-    homeLib = import ./lib/build/mkHome.nix env;
+    system = "x86_64-linux";
+
+    pkgs = import nixpkgs {
+      inherit system;
+      config.allowUnfree = true; 
+    };
+
+    vmOutputs = vm.mkOutputs self;
+
+    homeLib = import ./lib/build/mkHome.nix (env // {
+      vmTool = vmOutputs.packages.${system}.default;
+    });
+
     mkHost = import ./lib/build/mkHost.nix (env // {
       mkHomeProfile = homeLib.mkHomeProfile;
       flakeSelf = self;
     });
+
     inherit (homeLib) mkHome mkHomeWithExtraModules;
 
-    system = "x86_64-linux";
-    pkgs = nixpkgs.legacyPackages.${system};
-
     flakeLib = import ./lib/flake/default.nix {
-      inherit self system pkgs hosts mkHome mkHomeWithExtraModules vm-cli;
+      inherit self system pkgs hosts mkHome mkHomeWithExtraModules;
+      vmOutputs = vmOutputs; 
       loadHost = env.loadHost;
       lib = pkgs.lib;
     };
   in
   {
-    inherit (flakeLib) themeLint lintDesktop lintShell themeRenderedChecks renderTemplateFor;
-
     nixosConfigurations = nixpkgs.lib.genAttrs hosts mkHost;
 
     inherit (flakeLib) homeConfigurations checks packages apps devShells;

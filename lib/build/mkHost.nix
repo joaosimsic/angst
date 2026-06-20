@@ -13,8 +13,6 @@ let
   domainNixosModules = map domainsLib.mkNixosDomainModule domainsLib.nixosEntries;
 in
 inputs.nixpkgs.lib.nixosSystem {
-  system = hostConfig.system;
-
   specialArgs = {
     inherit inputs hostname capabilities flakeSelf;
 
@@ -26,6 +24,7 @@ inputs.nixpkgs.lib.nixosSystem {
   };
 
   modules = [
+    { nixpkgs.hostPlatform = hostConfig.system; }
     ../../core/system
     ../../hosts/${hostname}/configuration.nix
     inputs.home-manager.nixosModules.home-manager

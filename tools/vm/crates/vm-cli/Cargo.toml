@@ -1,0 +1,10 @@
+[package]
+name = "vm-cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap.workspace = true
+tokio.workspace = true
+vm-core.workspace = true
+vm-mcp.workspace = true

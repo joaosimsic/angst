@@ -1,7 +1,8 @@
 name: nvim-tests
 on:
   push:
-    branches: [main]
+    branches: 
+      - '**'
   pull_request:
 jobs:
   nvim-tests:
