@@ -1,6 +1,6 @@
 return {
-  dir = vim.fn.stdpath("config"),
-	name = "lsp-engine",
+	"lsp-engine",
+  virtual = true,
 	event = { "BufReadPre", "BufNewFile" },
 	config = function()
 		vim.api.nvim_create_autocmd("LspAttach", {

@@ -1,5 +1,6 @@
 ---@class Logger
 ---@field tag string
+---@field threshold Level|nil
 local Logger = {}
 Logger.__index = Logger
 
@@ -16,21 +17,33 @@ local level_map = {
 local GLOBAL_THRESHOLD = "warn"
 
 ---@param tag string
+---@param threshold Level|nil
 ---@return Logger
-function Logger.new(tag)
+function Logger.new(tag, threshold)
 	---@type Logger
 	local self = setmetatable({}, Logger)
 	self.tag = tag
+	self.threshold = threshold
 	return self
+end
+
+---@param level Level|nil
+function Logger:set_threshold(level)
+	self.threshold = level
 end
 
 ---@param level Level
 ---@param msg LogMessage
 function Logger:log(level, msg)
 	local current = level_map[level]
-	local threshold = level_map[GLOBAL_THRESHOLD]
+	if not current then
+		return
+	end
 
-	if not current or current[2] < threshold[2] then
+	local threshold_level = self.threshold or GLOBAL_THRESHOLD
+	local threshold = level_map[threshold_level]
+
+	if current[2] < threshold[2] then
 		return
 	end
 

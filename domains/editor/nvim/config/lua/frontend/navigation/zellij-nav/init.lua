@@ -1,6 +1,6 @@
 return {
-	dir = vim.fn.stdpath("config"),
-	name = "zellij-navigation",
+	"zellij-navigation",
+  virtual = true,
 	event = "VeryLazy",
 	cond = function()
 		return vim.fn.executable("zellij") == 1 and vim.env.ZELLIJ ~= nil
