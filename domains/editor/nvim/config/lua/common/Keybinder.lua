@@ -5,12 +5,8 @@ local Logger = require("common.Logger")
 ---@field signature string|nil
 ---@field debug boolean
 ---@field logger Logger
----@field bound_keys table<string, boolean>
 local Keybinder = {}
 Keybinder.__index = Keybinder
-
-local active_listener_id = nil
-local active_instances = {}
 
 ---@param bufnr number|nil
 ---@param signature string|nil
@@ -20,7 +16,6 @@ function Keybinder.new(bufnr, signature)
 	self.bufnr = bufnr
 	self.signature = signature
 	self.debug = false
-	self.bound_keys = {}
 
 	local tag = "KEYBINDER" .. (signature and (":" .. signature:upper()) or "")
 	self.logger = Logger.new(tag)
@@ -36,67 +31,12 @@ function Keybinder:set_debug(enabled)
 
 	self.debug = enabled
 
-	if not enabled then
+	if enabled then
+		self.logger:set_threshold("debug")
+		self.logger:info("Key logging debug mode ENABLED")
+	else
 		self.logger:set_threshold(nil)
-		active_instances[self] = nil
-
-		if vim.tbl_isempty(active_instances) and active_listener_id then
-			vim.on_key(nil, active_listener_id)
-			active_listener_id = nil
-			self.logger:info("Global key logging DISABLED")
-		end
-
-		return
 	end
-
-	self.logger:set_threshold("debug")
-	active_instances[self] = true
-
-	if active_listener_id then
-		return
-	end
-
-	local key_buffer = ""
-	local reset_timer = nil
-
-	active_listener_id = vim.on_key(function(key)
-		if key == "" then
-			return
-		end
-
-		key_buffer = key_buffer .. key
-
-		if reset_timer then
-			reset_timer:stop()
-		end
-		reset_timer = vim.defer_fn(function()
-			key_buffer = ""
-		end, 500)
-
-		local matched = false
-
-		for instance in pairs(active_instances) do
-			if instance.bound_keys[key] then
-				matched = true
-				instance.logger:debug(function()
-					return string.format("Pressed: %s (raw: %s)", vim.fn.keytrans(key), key)
-				end)
-			elseif instance.bound_keys[key_buffer] then
-				matched = true
-				local readable = vim.fn.keytrans(key_buffer)
-				local raw = key_buffer
-				instance.logger:debug(function()
-					return string.format("Pressed: %s (raw: %s)", readable, raw)
-				end)
-			end
-		end
-
-		if matched then
-			key_buffer = ""
-		end
-	end)
-
-	self.logger:info("Global key logging ENABLED")
 end
 
 ---@param mode string|string[]
@@ -109,8 +49,12 @@ function Keybinder:_bind(mode, lhs, rhs, desc)
 		silent = true,
 	}
 
+	local action_desc = desc or (type(rhs) == "string" and rhs or "anonymous function")
+
 	if desc and self.signature then
 		opts.desc = string.format("[%s] %s", self.signature:upper(), desc)
+	elseif desc then
+		opts.desc = desc
 	end
 
 	if self.bufnr then
@@ -122,7 +66,7 @@ function Keybinder:_bind(mode, lhs, rhs, desc)
 		final_rhs = function(...)
 			if self.debug then
 				self.logger:debug(function()
-					return string.format("Pressed: %s (via Function Hook)", lhs)
+					return string.format("Pressed: %s -> Executing: %s", lhs, action_desc)
 				end)
 			end
 			return rhs(...)
@@ -131,23 +75,20 @@ function Keybinder:_bind(mode, lhs, rhs, desc)
 		final_rhs = function()
 			if self.debug then
 				self.logger:debug(function()
-					return string.format("Pressed: %s (via String Hook: %s)", lhs, rhs)
+					if desc then
+						return string.format("Pressed: %s -> %s (Command: %s)", lhs, desc, rhs)
+					else
+						return string.format("Pressed: %s -> Command: %s", lhs, rhs)
+					end
 				end)
 			end
 			vim.cmd(rhs)
 		end
 	end
 
-	local standardized_lhs = lhs
-	local leader = vim.g.mapleader or " "
-	standardized_lhs = standardized_lhs:gsub("<[lL]eader>", leader)
-
-	local raw_lhs = vim.api.nvim_replace_termcodes(standardized_lhs, true, true, true)
-	self.bound_keys[raw_lhs] = true
-
 	self.logger:debug(function()
 		local modes = type(mode) == "table" and table.concat(mode, ", ") or mode
-		return string.format("Mapping %s -> %s", lhs, modes)
+		return string.format("Mapping %s -> %s [%s]", lhs, modes, action_desc)
 	end)
 
 	if type(mode) == "table" then
@@ -159,7 +100,6 @@ function Keybinder:_bind(mode, lhs, rhs, desc)
 
 	vim.keymap.set(mode, lhs, final_rhs, opts)
 end
-
 function Keybinder:map(mode, lhs, rhs, desc)
 	self:_bind(mode, lhs, rhs, desc)
 end
@@ -174,19 +114,6 @@ end
 
 function Keybinder:vmap(lhs, rhs, desc)
 	self:_bind("v", lhs, rhs, desc)
-end
-
--- Add this temporarily to the bottom of Keybinder.lua
-function Keybinder.debug_print_bounds()
-	print("--- ACTIVE KEYBINDER INSTANCES ---")
-	for instance in pairs(active_instances) do
-		print(
-			string.format("Instance Signature: %s (Bufnr: %s)", instance.signature or "Global", instance.bufnr or "All")
-		)
-		for raw_key, _ in pairs(instance.bound_keys) do
-			print(string.format("  -> Bound string: %s (Raw length: %d)", vim.fn.keytrans(raw_key), #raw_key))
-		end
-	end
 end
 
 return Keybinder
