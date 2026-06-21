@@ -19,3 +19,7 @@
 - [x] deprecating vm scripts to let rust tool handles it
 - [x] add a headless mode for launching the vm without gui
 - [ ] ci tests
+
+# zellij
+
+- [ ] screen freeze when exit or close last pane

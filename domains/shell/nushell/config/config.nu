@@ -37,16 +37,6 @@ $env.config = {
 
     highlight_resolved_externals: true
 
-    hooks: {
-        pre_prompt: [
-            { ||
-                do -i { ^amber grave reattach }
-            }
-        ]
-        pre_execution: []
-        env_change: {}
-    }
-
     keybindings: [
         {
             name: ctrl_c_to_normal
@@ -54,13 +44,6 @@ $env.config = {
             keycode: char_c
             mode: [vi_insert]
             event: { send: esc }
-        }
-        {
-            name: clear_screen
-            modifier: control
-            keycode: char_l
-            mode: [emacs, vi_normal, vi_insert]
-            event: { send: clearscreen }
         }
         {
             name: history_search
@@ -75,41 +58,6 @@ $env.config = {
             keycode: char_f
             mode: [emacs, vi_normal, vi_insert]
             event: { send: historyhintcomplete }
-        }
-        {
-            name: zellij_nav_left
-            modifier: alt
-            keycode: char_h
-            mode: [emacs, vi_normal, vi_insert]
-            event: { send: executehostcommand, cmd: "zellij action move-focus left" }
-        }
-        {
-            name: zellij_nav_down
-            modifier: alt
-            keycode: char_j
-            mode: [emacs, vi_normal, vi_insert]
-            event: { send: executehostcommand, cmd: "zellij action move-focus down" }
-        }
-        {
-            name: zellij_nav_up
-            modifier: alt
-            keycode: char_k
-            mode: [emacs, vi_normal, vi_insert]
-            event: { send: executehostcommand, cmd: "zellij action move-focus up" }
-        }
-        {
-            name: zellij_nav_right
-            modifier: alt
-            keycode: char_l
-            mode: [emacs, vi_normal, vi_insert]
-            event: { send: executehostcommand, cmd: "zellij action move-focus right" }
-        }
-        {
-            name: grave_session_selector
-            modifier: control
-            keycode: char_g
-            mode: [emacs, vi_normal, vi_insert]
-            event: { send: executehostcommand, cmd: "amber grave" }
         }
     ]
 }
@@ -144,36 +92,3 @@ alias z = zellij
 alias c = clear
 alias q = exit
 alias reload = exec nu
-
-alias nrs = if ($"/host/home/joao/proj/angst" | path exists) {
-  sudo nixos-rebuild switch --flake /host/home/joao/proj/angst --specialisation vm --impure
-} else {
-  sudo nixos-rebuild switch --flake .
-}
-alias nrb = if ($"/host/home/joao/proj/angst" | path exists) {
-  sudo nixos-rebuild boot --flake /host/home/joao/proj/angst --specialisation vm --impure
-} else {
-  sudo nixos-rebuild boot --flake .
-}
-alias nrt = if ($"/host/home/joao/proj/angst" | path exists) {
-  sudo nixos-rebuild test --flake /host/home/joao/proj/angst --specialisation vm --impure
-} else {
-  sudo nixos-rebuild test --flake .
-}
-
-def --env mkcd [dir: string] {
-    mkdir $dir
-    cd $dir
-}
-
-def ff [pattern: string] {
-    glob $"**/*($pattern)*"
-}
-
-def rg-files [pattern: string, --ext: string = ""] {
-    if $ext == "" {
-        ^rg -l $pattern
-    } else {
-        ^rg -l --glob $"*.($ext)" $pattern
-    }
-}
