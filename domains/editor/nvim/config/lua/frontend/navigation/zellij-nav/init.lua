@@ -1,6 +1,6 @@
 return {
 	"zellij-navigation",
-  virtual = true,
+	virtual = true,
 	event = "VeryLazy",
 	cond = function()
 		return vim.fn.executable("zellij") == 1 and vim.env.ZELLIJ ~= nil

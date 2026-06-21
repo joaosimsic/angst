@@ -1,43 +1,97 @@
+plugins {
+    vim-navigator location="https://github.com/hiasr/vim-zellij-navigator/releases/download/0.3.0/vim-zellij-navigator.wasm"
+}
+
 keybinds clear-defaults=true {
     locked {
         bind "Ctrl g" { SwitchToMode "normal"; }
     }
 
     normal {
-        unbind "Alt h" "Alt j" "Alt k" "Alt l"
-
         bind "Ctrl g" { SwitchToMode "locked"; }
         bind "Ctrl p" { SwitchToMode "pane"; }
         bind "Ctrl t" { SwitchToMode "tab"; }
-
-        bind "Ctrl h" { MoveFocus "left"; }
-        bind "Ctrl j" { MoveFocus "down"; }
-        bind "Ctrl k" { MoveFocus "up"; }
-        bind "Ctrl l" { MoveFocus "right"; }
     }
 
     pane {
         bind "n" { NewPane "Right"; }
+        bind "x" { CloseFocus; } 
         bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
-
-        bind "Ctrl h" { MoveFocus "left"; }
-        bind "Ctrl j" { MoveFocus "down"; }
-        bind "Ctrl k" { MoveFocus "up"; }
-        bind "Ctrl l" { MoveFocus "right"; }
     }
 
     tab {
         bind "n" { NewTab; }
+        bind "x" { CloseTab; }   
         bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
     }
 
     shared_except "locked" {
-        unbind "Alt h" "Alt j" "Alt k" "Alt l"
+        bind "Ctrl h" {
+            MessagePlugin "vim-navigator" {
+                name "move_focus_or_tab";
+                payload "left";
+                move_mod "ctrl";
+                use_arrow_keys "false";
+            };
+        }
 
-        bind "Ctrl h" { MoveFocusOrTab "Left"; }
-        bind "Ctrl j" { MoveFocus "Down"; }
-        bind "Ctrl k" { MoveFocus "Up"; }
-        bind "Ctrl l" { MoveFocusOrTab "Right"; }
+        bind "Ctrl j" {
+            MessagePlugin "vim-navigator" {
+                name "move_focus";
+                payload "down";
+                move_mod "ctrl";
+                use_arrow_keys "false";
+            };
+        }
 
+        bind "Ctrl k" {
+            MessagePlugin "vim-navigator" {
+                name "move_focus";
+                payload "up";
+                move_mod "ctrl";
+                use_arrow_keys "false";
+            };
+        }
+
+        bind "Ctrl l" {
+            MessagePlugin "vim-navigator" {
+                name "move_focus_or_tab";
+                payload "right";
+                move_mod "ctrl";
+                use_arrow_keys "false";
+            };
+        }
+
+        bind "Alt h" {
+            MessagePlugin "vim-navigator" {
+                name "resize";
+                payload "left";
+                resize_mod "alt"; 
+            };
+        }
+
+        bind "Alt j" {
+            MessagePlugin "vim-navigator" {
+                name "resize";
+                payload "down";
+                resize_mod "alt";
+            };
+        }
+
+        bind "Alt k" {
+            MessagePlugin "vim-navigator" {
+                name "resize";
+                payload "up";
+                resize_mod "alt";
+            };
+        }
+
+        bind "Alt l" {
+            MessagePlugin "vim-navigator" {
+                name "resize";
+                payload "right";
+                resize_mod "alt";
+            };
+        }
     }
 }
