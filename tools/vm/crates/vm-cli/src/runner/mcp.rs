@@ -7,7 +7,7 @@ pub async fn handle(action: McpCommands) -> Result<(), String> {
         McpCommands::Stop => service::stop(),
         McpCommands::Restart => service::restart(),
         McpCommands::Status => {
-            println!("MCP Server active state: {}", service::status()?);
+            println!("MCP Server status: {}", service::status()?);
             Ok(())
         }
         McpCommands::Logs { lines } => service::logs(lines),
