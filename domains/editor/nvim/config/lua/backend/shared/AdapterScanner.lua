@@ -166,6 +166,26 @@ function AdapterScanner:by_filetype(engine_name, opts)
 end
 
 ---@param engine_name string
+---@param filetype string|nil
+---@param opts? AdapterScannerOpts
+---@return string[]
+function AdapterScanner:tools_for_filetype(engine_name, filetype, opts)
+	if not filetype or filetype == "" then
+		return {}
+	end
+
+	return self:by_filetype(engine_name, opts)[filetype] or {}
+end
+
+---@param engine_name string
+---@param filetype string|nil
+---@param opts? AdapterScannerOpts
+---@return boolean
+function AdapterScanner:supports_filetype(engine_name, filetype, opts)
+	return #self:tools_for_filetype(engine_name, filetype, opts) > 0
+end
+
+---@param engine_name string
 ---@param opts? AdapterScannerOpts
 ---@return string[]
 function AdapterScanner:supported_filetypes(engine_name, opts)

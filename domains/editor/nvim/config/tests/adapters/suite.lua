@@ -85,6 +85,19 @@ describe("Adapter Engine Validations", function()
 		assert.are.same(AdapterLoader.load("backend.adapters"), all_adapters)
 	end)
 
+	it("should expose adapter-backed filetype support queries", function()
+		local opts = { check_executable = false }
+		local lua_tools = AdapterScanner:tools_for_filetype("treesitter", "lua", opts)
+
+		assert(type(lua_tools) == "table", "Scanner should return a table of tools for a filetype.")
+		assert(#lua_tools > 0, "Lua should have at least one configured treesitter parser.")
+		assert(AdapterScanner:supports_filetype("treesitter", "lua", opts), "Lua should be supported by treesitter.")
+		assert(
+			not AdapterScanner:supports_filetype("treesitter", "definitely-not-a-filetype", opts),
+			"Unknown filetypes should not be reported as supported."
+		)
+	end)
+
 	it("should validate LSP Engine Mappings", function()
 		local lsp_servers = AdapterScanner:by_tool("lsp")
 		assert(type(lsp_servers) == "table", "LSP engine failed to return a table.")

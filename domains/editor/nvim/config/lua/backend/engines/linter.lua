@@ -18,6 +18,10 @@ return {
 					return
 				end
 
+				if not AdapterScanner:supports_filetype("linter", vim.bo.filetype, linter_opts) then
+					return
+				end
+
 				lint.try_lint(nil, {
 					ignore_errors = true,
 				})
