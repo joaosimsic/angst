@@ -3,6 +3,7 @@ return {
 	event = "VeryLazy",
 	config = function()
 		local fzf = require("fzf-lua")
+		local fzf_keys = require("frontend.navigation.fzf.keys")
 
 		fzf.setup({
 			fzf_colors = true,
@@ -13,10 +14,17 @@ return {
 					hidden = "hidden",
 					horizontal = "right:50%",
 				},
+				on_create = function()
+					fzf_keys.on_picker_create()
+				end,
 			},
 			keymap = {
 				builtin = {
 					["<Tab>"] = "toggle-preview",
+				},
+				fzf = {
+					["ctrl-j"] = "down",
+					["ctrl-k"] = "up",
 				},
 			},
 			grep = {
@@ -35,6 +43,6 @@ return {
 
 		fzf.register_ui_select()
 
-		require("frontend.navigation.fzf.keys").setup()
+    fzf_keys.setup()
 	end,
 }
