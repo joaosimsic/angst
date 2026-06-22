@@ -23,7 +23,7 @@ return {
 			comp.LspActive,
 			comp.LspInactive,
 			comp.Space,
-      comp.FileIcon,
+			comp.FileIcon,
 			comp.FileType,
 			comp.FileFormat,
 			comp.Space,
@@ -50,8 +50,13 @@ return {
 			},
 		})
 
+		local group = vim.api.nvim_create_augroup("HeirlineHighlights", { clear = true })
+
 		vim.api.nvim_create_autocmd("ColorScheme", {
-			callback = hls.setup_highlights,
+			group = group,
+			callback = function()
+				hls.setup_highlights()
+			end,
 		})
 	end,
 }

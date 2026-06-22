@@ -6,8 +6,6 @@ local M = {}
 function M.setup(bufnr)
 	local binder = Keybinder.new(bufnr, "LSP")
 
-  binder:set_debug(true)
-
 	binder:nmap("gd", vim.lsp.buf.definition, "Go to definition")
 	binder:nmap("K", vim.lsp.buf.hover, "Hover documentation")
 	binder:map({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, "Code action")

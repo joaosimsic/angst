@@ -13,8 +13,11 @@ pub struct McpRequest {
 #[derive(Serialize)]
 pub struct McpResponse {
     pub jsonrpc: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<Value>,
 }
 

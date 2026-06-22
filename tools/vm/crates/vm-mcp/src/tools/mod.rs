@@ -140,6 +140,23 @@ mod tests {
     }
 
     #[test]
+    fn success_response_omits_error_field() {
+        let reply = handle_tool_execution(McpRequest {
+            method: "initialize".to_string(),
+            params: Some(json!({})),
+            id: Some(json!(1)),
+        });
+
+        let response = match reply {
+            McpReply::Response(response) => serde_json::to_value(response).unwrap(),
+            McpReply::Accepted => panic!("expected JSON-RPC response"),
+        };
+
+        assert!(response.get("result").is_some());
+        assert!(response.get("error").is_none());
+    }
+
+    #[test]
     fn unknown_methods_and_tools_return_json_rpc_errors() {
         let method_error = response_error(handle_tool_execution(McpRequest {
             method: "missing/method".to_string(),

@@ -7,3 +7,4 @@ result*
 tools/vm-mcp/dist/
 a.out
 target/
+debug-*

@@ -1,10 +1,12 @@
 return {
 	"lsp-engine",
-  virtual = true,
+	virtual = true,
 	event = { "BufReadPre", "BufNewFile" },
 	config = function()
+		local group = vim.api.nvim_create_augroup("LspAttach", { clear = true })
+
 		vim.api.nvim_create_autocmd("LspAttach", {
-			desc = "LSP actions and keymaps",
+			group = group,
 			callback = function(event)
 				local lsp_keys = require("backend.engines.lsp.keys")
 				lsp_keys.setup(event.buf)

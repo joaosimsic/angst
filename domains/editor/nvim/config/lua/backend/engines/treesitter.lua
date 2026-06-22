@@ -16,7 +16,10 @@ return {
 			vim.treesitter.language.register(grammar, filetype)
 		end
 
+    local group = vim.api.nvim_create_augroup("TreesitterInit", { clear = true })
+
 		vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
+      group = group,
 			pattern = "*",
 			callback = function()
 				local ok, _ = pcall(vim.treesitter.start)
@@ -24,6 +27,7 @@ return {
 				if ok then
 					vim.wo.foldmethod = "expr"
 					vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+          vim.wo.foldlevel = 99
 				end
 			end,
 		})

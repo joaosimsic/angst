@@ -17,9 +17,7 @@ return {
 
 		lint.linters_by_ft = linters_by_ft
 
-		local group = vim.api.nvim_create_augroup("nvim-lint", {
-			clear = true,
-		})
+		local group = vim.api.nvim_create_augroup("LinterWatch", { clear = true })
 
 		vim.api.nvim_create_autocmd({ "BufWritePost", "BufEnter", "InsertLeave" }, {
 			group = group,
