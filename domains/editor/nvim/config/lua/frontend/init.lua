@@ -1,8 +1,5 @@
-local Spec = require("common.Spec")
+local PluginLoader = require("common.PluginLoader")
 
-local specs = Spec.merge({
-	require("frontend.navigation"),
-	require("frontend.status"),
-})
+local specs = PluginLoader.load("frontend")
 
 return specs

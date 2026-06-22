@@ -1,3 +1,3 @@
-return {
-	require("frontend.status.heirline"),
-}
+local PluginLoader = require("common.PluginLoader")
+
+return PluginLoader.load("frontend.status")

@@ -15,8 +15,8 @@ return {
 
 		local capabilities = require("backend.engines.completion.config").capabilities()
 
-		local scan_adapters = require("backend.shared.scan_adapters")
-		local active_servers = scan_adapters("lsp")
+		local AdapterScanner = require("backend.shared.AdapterScanner")
+		local active_servers = AdapterScanner:by_tool("lsp")
 
 		for server_name, server_opts in pairs(active_servers) do
 			local existing_config = vim.lsp.config[server_name] or {}
