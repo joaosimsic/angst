@@ -6,8 +6,6 @@ function M.setup()
 	local move = require("frontend.navigation.zellij-nav.move")
 	local binder = Keybinder.new(nil, "ZELLIJ_NAV")
 
-  binder:set_debug(true)
-
 	binder:nmap("<C-h>", function()
 		move.left()
 	end, "Navigate left")
