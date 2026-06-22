@@ -1,6 +1,6 @@
 return {
-  "treesitter",
-  virtual = true,
+	"treesitter",
+	virtual = true,
 	event = { "BufReadPre", "BufNewFile" },
 	config = function()
 		vim.opt.runtimepath:prepend(vim.fn.expand("~/.local/share/tree-sitter"))
@@ -13,7 +13,7 @@ return {
 		}
 
 		for filetype, grammar in pairs(grammar_mappings) do
-			vim.treesitter.language.add(filetype, { lang = grammar })
+			vim.treesitter.language.register(grammar, filetype)
 		end
 
 		vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
@@ -22,7 +22,8 @@ return {
 				local ok, _ = pcall(vim.treesitter.start)
 
 				if ok then
-					vim.bo.indentexpr = "v:lua.vim.treesitter.foldexpr()"
+					vim.wo.foldmethod = "expr"
+					vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 				end
 			end,
 		})
