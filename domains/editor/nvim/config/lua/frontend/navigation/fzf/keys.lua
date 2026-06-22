@@ -21,21 +21,26 @@ function M.on_picker_create()
 		vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, true, true), "n", false)
 	end, "Exit terminal mode")
 
-	binder:map("n", "j", function()
-		vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("i<C-j><C-\\><C-n>", true, true, true), "m", false)
-	end, "Move down")
+	local motions = {
+		["j"] = "i<C-j><C-\\><C-n>",
+		["k"] = "i<C-k><C-\\><C-n>",
+		["<C-d>"] = "i<C-d><C-\\><C-n>",
+		["<C-u>"] = "i<C-u><C-\\><C-n>",
+	}
 
-	binder:map("n", "k", function()
-		vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("i<C-k><C-\\><C-n>", true, true, true), "m", false)
-	end, "Move up")
+	for key, macro in pairs(motions) do
+		binder:map("n", key, function()
+			vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(macro, true, true, true), "m", false)
+		end, "Motion " .. key)
+	end
 
 	binder:map("n", "i", function()
 		vim.cmd("startinsert")
-	end, "Enter insert mode")
+	end, "Insert mode")
 
 	binder:map("n", "a", function()
 		vim.cmd("startinsert")
-	end, "Append focus")
+	end, "Append mode")
 end
 
 return M

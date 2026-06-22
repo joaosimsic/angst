@@ -2,6 +2,7 @@
 - [x] vim modes still appear on command prompt
 - [ ] refac config
 - [x] test lsp, treesitter, etc...
+- [-] fzf vim motions
 
 # starship
 - [ ] show vim modes

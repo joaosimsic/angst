@@ -14,6 +14,7 @@ return {
 					hidden = "hidden",
 					horizontal = "right:50%",
 				},
+
 				on_create = function()
 					fzf_keys.on_picker_create()
 				end,
@@ -25,6 +26,9 @@ return {
 				fzf = {
 					["ctrl-j"] = "down",
 					["ctrl-k"] = "up",
+					["ctrl-d"] = "half-page-down",
+					["ctrl-u"] = "half-page-up",
+          ["ctrl-c"] = "unix-line-discard+abort",
 				},
 			},
 			grep = {
@@ -32,17 +36,11 @@ return {
 				rg_glob = true,
 				glob_flag = "--glob",
 				glob_separator = "%s",
-
-				file_ignore_patterns = {
-					"node_modules/",
-					"dist/",
-					"%.lock$",
-				},
+				file_ignore_patterns = { "node_modules/", "dist/", "%.lock$" },
 			},
 		})
 
 		fzf.register_ui_select()
-
-    fzf_keys.setup()
+		fzf_keys.setup()
 	end,
 }
