@@ -1,5 +1,6 @@
 use crate::process::io::StateManager;
 use std::{
+    ffi::OsStr,
     fs::File,
     process::{Command, Stdio},
 };
@@ -43,6 +44,27 @@ impl Sys {
         let child = cmd
             .spawn()
             .map_err(|e| format!("Failed to spawn VM background process: {}", e))?;
+
+        Ok(child.id())
+    }
+
+    pub fn spawn_background_command<I, S>(
+        program: &str,
+        args: I,
+        log_file: File,
+        err_file: File,
+    ) -> Result<u32, String>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        let child = Command::new(program)
+            .args(args)
+            .stdout(Stdio::from(log_file))
+            .stderr(Stdio::from(err_file))
+            .stdin(Stdio::null())
+            .spawn()
+            .map_err(|e| format!("Failed to spawn background process '{}': {}", program, e))?;
 
         Ok(child.id())
     }

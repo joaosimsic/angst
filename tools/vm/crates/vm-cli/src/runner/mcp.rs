@@ -1,20 +1,16 @@
 use crate::commands::McpCommands;
-use vm_core::VmProcessController;
-use vm_mcp::run_server;
+use vm_mcp::{run_server, service};
 
 pub async fn handle(action: McpCommands) -> Result<(), String> {
     match action {
-        McpCommands::Start => VmProcessController::start("vm-mcp", true),
-        McpCommands::Stop => VmProcessController::stop("vm-mcp"),
-        McpCommands::Restart => VmProcessController::restart("vm-mcp", true),
+        McpCommands::Start => service::start(),
+        McpCommands::Stop => service::stop(),
+        McpCommands::Restart => service::restart(),
         McpCommands::Status => {
-            println!(
-                "MCP Server active state: {}",
-                VmProcessController::is_active("vm-mcp")?
-            );
+            println!("MCP Server active state: {}", service::status()?);
             Ok(())
         }
-        McpCommands::Logs { lines } => VmProcessController::stream_logs("vm-mcp", lines),
+        McpCommands::Logs { lines } => service::logs(lines),
         McpCommands::RunServer { port } => {
             run_server(port).await;
             Ok(())

@@ -1,7 +1,7 @@
 pub mod config;
-pub mod ssh;
 pub mod process;
+pub mod ssh;
 
 pub use config::VmConfig;
-pub use ssh::SshEngine;
 pub use process::VmProcessController;
+pub use ssh::SshEngine;

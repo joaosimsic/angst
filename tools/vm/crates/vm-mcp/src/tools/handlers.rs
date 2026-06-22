@@ -1,4 +1,4 @@
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use vm_core::{SshEngine, VmProcessController};
 
 pub(crate) fn run_vm_exec(ssh: &SshEngine, args: &Value) -> Value {
