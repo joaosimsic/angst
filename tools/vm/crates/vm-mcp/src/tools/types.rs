@@ -1,4 +1,4 @@
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 pub(crate) enum Tool {
     VmExec,
@@ -21,8 +21,28 @@ impl From<&str> for Tool {
 pub(crate) fn get_tools_list() -> Value {
     json!({
         "tools": [
-            { "name": "vm_exec", "description": "Execute a command inside the NixOS VM via SSH" },
-            { "name": "vm_status", "description": "Check if the VM is running and accessible" },
+            {
+                "name": "vm_exec",
+                "description": "Execute a command inside the NixOS VM via SSH",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "Shell command to execute inside the VM"
+                        }
+                    },
+                    "required": ["command"]
+                }
+            },
+            {
+                "name": "vm_status",
+                "description": "Check if the VM is running and accessible",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {}
+                }
+            },
             {
                 "name": "vm_restart",
                 "description": "Trigger local VM systemd restart action",

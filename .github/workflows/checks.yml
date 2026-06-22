@@ -12,3 +12,13 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: nix flake check --print-build-logs
+  vm-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Run VM Rust tests
+        run: |
+          nix develop .#vm --command bash -lc \
+            'cd tools/vm && cargo fmt --check && cargo test --workspace --locked'

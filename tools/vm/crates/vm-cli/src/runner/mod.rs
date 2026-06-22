@@ -1,7 +1,7 @@
 pub mod mcp;
 pub mod vm;
 
-use crate::commands::{Commands, CLI};
+use crate::commands::{CLI, Commands};
 use clap::Parser;
 use vm_core::SshEngine;
 

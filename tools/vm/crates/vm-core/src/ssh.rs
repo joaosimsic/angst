@@ -1,7 +1,7 @@
 use crate::config::VmConfig;
 use ssh2::Session;
 use std::{
-    fs::{metadata, File},
+    fs::{File, metadata},
     io::{Read, Write},
     net::TcpStream,
     path::Path,

@@ -60,3 +60,53 @@ pub enum McpCommands {
         port: u16,
     },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{CLI, Commands, McpCommands};
+    use clap::Parser;
+
+    #[test]
+    fn parses_headless_restart() {
+        let cli = CLI::parse_from(["vm", "restart", "--headless"]);
+
+        match cli.command {
+            Commands::Restart { headless } => assert!(headless),
+            _ => panic!("expected restart command"),
+        }
+    }
+
+    #[test]
+    fn parses_exec_command_after_separator() {
+        let cli = CLI::parse_from(["vm", "exec", "--", "echo", "hello"]);
+
+        match cli.command {
+            Commands::Exec { command } => assert_eq!(command, ["echo", "hello"]),
+            _ => panic!("expected exec command"),
+        }
+    }
+
+    #[test]
+    fn parses_mcp_logs_default_lines() {
+        let cli = CLI::parse_from(["vm", "mcp", "logs"]);
+
+        match cli.command {
+            Commands::Mcp {
+                action: McpCommands::Logs { lines },
+            } => assert_eq!(lines, 50),
+            _ => panic!("expected mcp logs command"),
+        }
+    }
+
+    #[test]
+    fn parses_mcp_run_server_default_port() {
+        let cli = CLI::parse_from(["vm", "mcp", "run-server"]);
+
+        match cli.command {
+            Commands::Mcp {
+                action: McpCommands::RunServer { port },
+            } => assert_eq!(port, 8765),
+            _ => panic!("expected mcp run-server command"),
+        }
+    }
+}

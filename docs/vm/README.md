@@ -25,7 +25,7 @@ Re-run after pulling changes without rebuilding the VM image:
 - **QEMU** — runs the VM (bundled in the NixOS VM build output)
 - **Bun** — JavaScript runtime for the MCP server (optional; `nix run nixpkgs#bun` is used as fallback)
 - **OpenSSH client** (`ssh`, `scp`) — used by CLI and MCP tools for file transfer and commands
-- **SSH agent** running (`SSH_AUTH_SOCK` set) — used by the MCP server to authenticate to the VM
+- **SSH agent** running (`SSH_AUTH_SOCK` set) or readable `~/.ssh/*.pub` keys — used to provision VM access
 - **Rust** — optional; only needed if developing vm-cli locally (`cargo build --release`)
 
 ## Build the CLI manually
@@ -49,6 +49,11 @@ vm status         # Check if VM is running (SSH reachable)
 vm logs           # Tail VM journalctl logs (default 50 lines)
 vm logs -l 200    # Tail 200 lines
 ```
+
+On start, the VM launcher writes a deduplicated `authorized_keys` file from
+`ssh-add -L` and readable `~/.ssh/*.pub` files into the VM shared directory.
+The VM installs those keys before `sshd` starts, so `vm ssh` follows the keys
+already available on the host.
 
 ## SSH & File Transfer
 

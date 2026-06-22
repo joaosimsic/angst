@@ -6,4 +6,3 @@ pub struct VmState {
     pub service_name: String,
     pub log_path: String,
 }
-

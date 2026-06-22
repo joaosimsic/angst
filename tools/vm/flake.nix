@@ -51,6 +51,8 @@
 
         vm-run-script = pkgs.writeShellScriptBin "vm-run" ''
           TARGET_HOST="''${NIX_TARGET_HOST:-${defaultHost}}"
+          KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
+          KEY_FILE="$KEY_DIR/authorized_keys"
           
           NEW_ARGS=()
           for arg in "$@"; do
@@ -60,12 +62,37 @@
               NEW_ARGS+=("$arg")
             fi
           done
+
+          mkdir -p "$KEY_DIR"
+
+          TMP_KEYS="$(mktemp)"
+          trap 'rm -f "$TMP_KEYS"' EXIT
+
+          if ssh-add -L > /dev/null 2>&1; then
+            ssh-add -L >> "$TMP_KEYS"
+          fi
+
+          for pubkey in "$HOME"/.ssh/*.pub; do
+            if [ -r "$pubkey" ]; then
+              cat "$pubkey" >> "$TMP_KEYS"
+            fi
+          done
+
+          awk '/^(ssh-rsa|ssh-ed25519|ecdsa-sha2-|sk-ssh-|sk-ecdsa-)/ { print }' "$TMP_KEYS" | sort -u > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+
+          if [ ! -s "$KEY_FILE" ]; then
+            echo "Error: no SSH public keys found in ssh-agent or ~/.ssh/*.pub for VM access."
+            echo "Run ssh-add ~/.ssh/id_ed25519 or create a public key file before starting the VM."
+            exit 1
+          fi
           
           case "$TARGET_HOST" in
             ${pkgs.lib.concatStringsSep "\n" (pkgs.lib.mapAttrsToList (hostname: paths: ''
               "${hostname}")
                 export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
                 export NIX_DISK_IMAGE="''${NIX_DISK_IMAGE:-$PWD/$TARGET_HOST.qcow2}"
+                export SHARED_DIR="$KEY_DIR"
                 
                 exec ${paths.runner}/bin/${paths.scriptName} "''${NEW_ARGS[@]}"
                 ;;
