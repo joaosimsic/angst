@@ -35,6 +35,6 @@ return {
 
 		fzf.register_ui_select()
 
-		require("frontend.navigation.fzf.keys")
+		require("frontend.navigation.fzf.keys").setup()
 	end,
 }
