@@ -146,3 +146,105 @@ impl VmProcessController {
         Sys::tail_logs(service, lines)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::VmProcessController;
+    use crate::process::{
+        io::{StateManager, with_temp_state_dir},
+        state::VmState,
+    };
+    use std::fs;
+
+    #[test]
+    fn reports_inactive_when_state_is_missing_or_stale() {
+        with_temp_state_dir(|_| {
+            assert_eq!(VmProcessController::is_active("vm").unwrap(), "inactive");
+
+            StateManager::write(
+                "vm",
+                &VmState {
+                    pid: 999_999,
+                    service_name: "vm".to_string(),
+                    log_path: "/tmp/missing.log".to_string(),
+                },
+            )
+            .unwrap();
+
+            assert_eq!(VmProcessController::is_active("vm").unwrap(), "inactive");
+        });
+    }
+
+    #[test]
+    fn reports_active_for_live_pid_state() {
+        with_temp_state_dir(|_| {
+            StateManager::write(
+                "vm",
+                &VmState {
+                    pid: std::process::id(),
+                    service_name: "vm".to_string(),
+                    log_path: "/tmp/current.log".to_string(),
+                },
+            )
+            .unwrap();
+
+            assert_eq!(VmProcessController::is_active("vm").unwrap(), "active");
+        });
+    }
+
+    #[test]
+    fn logs_already_running_service() {
+        with_temp_state_dir(|dir| {
+            StateManager::write(
+                "vm-mcp",
+                &VmState {
+                    pid: std::process::id(),
+                    service_name: "vm-mcp".to_string(),
+                    log_path: dir
+                        .join("logs")
+                        .join("vm-mcp.log")
+                        .to_string_lossy()
+                        .to_string(),
+                },
+            )
+            .unwrap();
+
+            let err = VmProcessController::start_command(
+                "vm-mcp",
+                "/bin/true",
+                std::iter::empty::<&str>(),
+            )
+            .unwrap_err();
+
+            assert!(err.contains("already running"));
+            let log = fs::read_to_string(dir.join("logs").join("vm-mcp.log")).unwrap();
+            assert!(log.contains("Service 'vm-mcp' is already running"));
+        });
+    }
+
+    #[test]
+    fn logs_spawned_background_command() {
+        with_temp_state_dir(|dir| {
+            VmProcessController::start_command("vm-mcp", "/bin/true", std::iter::empty::<&str>())
+                .unwrap();
+
+            let log = fs::read_to_string(dir.join("logs").join("vm-mcp.log")).unwrap();
+            assert!(log.contains("Starting service 'vm-mcp' via /bin/true"));
+            assert!(log.contains("Service 'vm-mcp' spawned with PID"));
+        });
+    }
+
+    #[test]
+    fn returns_spawn_error_without_launching_vm() {
+        with_temp_state_dir(|_| {
+            let err = VmProcessController::start_command(
+                "vm-mcp",
+                "/definitely/missing/vm-command",
+                std::iter::empty::<&str>(),
+            )
+            .unwrap_err();
+
+            assert!(err.contains("Failed to spawn background process"));
+        });
+    }
+}

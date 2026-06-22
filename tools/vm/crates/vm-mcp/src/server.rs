@@ -89,3 +89,88 @@ pub async fn run_server(port: u16) {
         eprintln!("VM MCP Server stopped with error: {}", err);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{mcp_endpoint, mcp_stream_endpoint};
+    use axum::{
+        Json,
+        body::to_bytes,
+        http::{HeaderMap, HeaderValue, StatusCode, header},
+    };
+    use serde_json::{Value, json};
+
+    async fn response_body_json(response: axum::response::Response) -> Value {
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        serde_json::from_slice(&bytes).unwrap()
+    }
+
+    #[tokio::test]
+    async fn post_initialize_returns_json_response() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::ACCEPT,
+            HeaderValue::from_static("application/json, text/event-stream"),
+        );
+
+        let response = mcp_endpoint(
+            headers,
+            Json(crate::protocol::McpRequest {
+                method: "initialize".to_string(),
+                params: Some(json!({})),
+                id: Some(json!(1)),
+            }),
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = response_body_json(response).await;
+        assert_eq!(body["result"]["serverInfo"]["name"], "vm-mcp");
+    }
+
+    #[tokio::test]
+    async fn notification_returns_accepted_without_body() {
+        let response = mcp_endpoint(
+            HeaderMap::new(),
+            Json(crate::protocol::McpRequest {
+                method: "notifications/initialized".to_string(),
+                params: None,
+                id: None,
+            }),
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::ACCEPTED);
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        assert!(bytes.is_empty());
+    }
+
+    #[tokio::test]
+    async fn rejects_clients_that_do_not_accept_json() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::ACCEPT, HeaderValue::from_static("text/plain"));
+
+        let response = mcp_endpoint(
+            headers,
+            Json(crate::protocol::McpRequest {
+                method: "tools/list".to_string(),
+                params: None,
+                id: Some(json!(2)),
+            }),
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::NOT_ACCEPTABLE);
+    }
+
+    #[tokio::test]
+    async fn get_stream_endpoint_is_sse_compatible() {
+        let response = mcp_stream_endpoint().await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get(header::CONTENT_TYPE).unwrap(),
+            "text/event-stream"
+        );
+    }
+}

@@ -38,17 +38,16 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
     Err("VM started but SSH connection timed out.".to_string())
 }
 
-pub fn status() -> Result<(), String> {
+pub fn status_message() -> Result<String, String> {
     match VmProcessController::is_active("vm") {
         Ok(state) => {
             if state == "active" {
-                println!("VM Status: Running");
+                Ok("VM Status: Running".to_string())
             } else if state == "inactive" {
-                println!("VM Status: Stopped (No VM is currently running)");
+                Ok("VM Status: Stopped (No VM is currently running)".to_string())
             } else {
-                println!("VM Status: {}", state);
+                Ok(format!("VM Status: {}", state))
             }
-            Ok(())
         }
         Err(e) => {
             if e.contains("not found") || e.contains("failed to load") {
@@ -57,6 +56,11 @@ pub fn status() -> Result<(), String> {
             Err(format!("Failed to fetch VM status: {}", e))
         }
     }
+}
+
+pub fn status() -> Result<(), String> {
+    println!("{}", status_message()?);
+    Ok(())
 }
 
 pub fn ssh(args: Vec<String>) -> Result<(), String> {
@@ -101,5 +105,69 @@ pub fn exec(ssh: &SshEngine, command: Vec<String>) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!("Exited with code: {}", code))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::status_message;
+    use std::{
+        fs,
+        sync::{Mutex, OnceLock},
+        time::{SystemTime, UNIX_EPOCH},
+    };
+    use vm_core::{VmProcessController, process::io::StateManager, process::state::VmState};
+
+    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+    fn with_temp_state_dir(test: impl FnOnce(&std::path::Path)) {
+        let _guard = ENV_LOCK.get_or_init(|| Mutex::new(())).lock().unwrap();
+        let dir = std::env::temp_dir().join(format!(
+            "vm-cli-test-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+
+        unsafe {
+            std::env::set_var("VM_STATE_DIR", &dir);
+        }
+
+        test(&dir);
+
+        unsafe {
+            std::env::remove_var("VM_STATE_DIR");
+        }
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn status_message_reports_stopped_without_real_vm() {
+        with_temp_state_dir(|_| {
+            assert_eq!(
+                status_message().unwrap(),
+                "VM Status: Stopped (No VM is currently running)"
+            );
+        });
+    }
+
+    #[test]
+    fn status_message_reports_running_for_live_pid_state() {
+        with_temp_state_dir(|_| {
+            StateManager::write(
+                "vm",
+                &VmState {
+                    pid: std::process::id(),
+                    service_name: "vm".to_string(),
+                    log_path: "/tmp/vm.log".to_string(),
+                },
+            )
+            .unwrap();
+
+            assert_eq!(VmProcessController::is_active("vm").unwrap(), "active");
+            assert_eq!(status_message().unwrap(), "VM Status: Running");
+        });
     }
 }
