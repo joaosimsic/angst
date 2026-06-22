@@ -66,7 +66,9 @@ pub fn ssh(args: Vec<String>) -> Result<(), String> {
 
     let mut cmd = Command::new("ssh");
 
-    cmd.arg("-p")
+    cmd.arg("-F")
+        .arg("/dev/null")
+        .arg("-p")
         .arg(&config.ssh_port)
         .arg("-o")
         .arg("StrictHostKeyChecking=no")

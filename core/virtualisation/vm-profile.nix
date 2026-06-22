@@ -40,6 +40,31 @@ in
     users.users.${userConfig.username}.openssh.authorizedKeys.keys =
       userConfig.ssh.authorizedKeys or [ ];
 
+    systemd.services.vm-authorized-keys = {
+      description = "Install runtime SSH authorized_keys for VM access";
+      wantedBy = [ "multi-user.target" ];
+      before = [ "sshd.service" ];
+      requires = [ "tmp-shared.mount" ];
+      after = [ "tmp-shared.mount" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+
+      script = ''
+        key_file=/tmp/shared/authorized_keys
+
+        if [ ! -s "$key_file" ]; then
+          echo "No runtime VM SSH keys found at $key_file; keeping declarative authorized_keys fallback."
+          exit 0
+        fi
+
+        install -d -m 700 -o ${userConfig.username} -g users ${userConfig.homeDirectory}/.ssh
+        install -m 600 -o ${userConfig.username} -g users "$key_file" ${userConfig.homeDirectory}/.ssh/authorized_keys
+      '';
+    };
+
     home-manager.extraSpecialArgs.monitors = {
       primary = {
         name = "Virtual-1";
