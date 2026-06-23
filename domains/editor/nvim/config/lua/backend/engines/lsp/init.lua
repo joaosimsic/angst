@@ -10,6 +10,12 @@ return {
 			callback = function(event)
 				local lsp_keys = require("backend.engines.lsp.keys")
 				lsp_keys.setup(event.buf)
+
+				local client = vim.lsp.get_client_by_id(event.data.client_id)
+
+				if client and client:supports_method("textDocument/inlayHint") then
+					vim.lsp.inlay_hint.enable(true, { bufnr = event.buf })
+				end
 			end,
 		})
 
