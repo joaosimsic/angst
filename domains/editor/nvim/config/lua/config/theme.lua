@@ -225,7 +225,7 @@ hl(0, "LspReferenceWrite", { bg = c.surface })
 hl(0, "LspSignatureActiveParameter", { fg = c.yellow, bold = true })
 hl(0, "LspCodeLens", { fg = c.comment })
 hl(0, "LspCodeLensSeparator", { fg = c.dim })
-hl(0, "LspInlayHint", { fg = c.comment, bg = c.surface, italic = true })
+hl(0, "LspInlayHint", { link = "Comment" })
 
 hl(0, "DiffAdd", { fg = c.green, bg = c.surface })
 hl(0, "DiffChange", { fg = c.yellow, bg = c.surface })

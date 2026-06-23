@@ -115,9 +115,14 @@ local function scan_engine_tools(engine_name, opts)
 		end
 
 		for _, tool_name in ipairs(tool_names) do
+			local settings = adapter.lsp_settings
+			if type(raw_tool_names) == "table" and settings then
+				settings = settings[tool_name]
+			end
+
 			active_tools[tool_name] = {
 				cmd = adapter[cmd_field],
-				settings = adapter.lsp_settings and adapter.lsp_settings[tool_name] or nil,
+				settings = settings,
 				filetypes = adapter.filetypes,
 			}
 		end
