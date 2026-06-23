@@ -1,3 +1,3 @@
 local PluginLoader = require("common.PluginLoader")
 
-return PluginLoader.load("frontend.navigation")
+return PluginLoader.load("backend.engines")

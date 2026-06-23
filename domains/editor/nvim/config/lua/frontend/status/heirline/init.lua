@@ -1,9 +1,5 @@
 return {
 	"rebelot/heirline.nvim",
-	dependencies = {
-		"nvim-tree/nvim-web-devicons",
-		"lewis6991/gitsigns.nvim",
-	},
 	event = "VeryLazy",
 	config = function()
 		local hls = require("frontend.status.heirline.hls")

@@ -1,7 +1,10 @@
+local AdapterScanner = require("backend.shared.AdapterScanner")
+local treesitter_opts = { check_executable = false }
+
 return {
 	"treesitter",
 	virtual = true,
-	event = { "BufReadPre", "BufNewFile" },
+	ft = AdapterScanner:supported_filetypes("treesitter", treesitter_opts),
 	config = function()
 		vim.opt.runtimepath:prepend(vim.fn.expand("~/.local/share/tree-sitter"))
 
@@ -16,18 +19,28 @@ return {
 			vim.treesitter.language.register(grammar, filetype)
 		end
 
-    local group = vim.api.nvim_create_augroup("TreesitterInit", { clear = true })
+		local group = vim.api.nvim_create_augroup("TreesitterInit", { clear = true })
 
 		vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
-      group = group,
+			group = group,
 			pattern = "*",
-			callback = function()
-				local ok, _ = pcall(vim.treesitter.start)
+			callback = function(event)
+				local filetype = vim.bo[event.buf].filetype
+
+				if vim.bo[event.buf].buftype ~= "" then
+					return
+				end
+
+				if not AdapterScanner:supports_filetype("treesitter", filetype, treesitter_opts) then
+					return
+				end
+
+				local ok, _ = pcall(vim.treesitter.start, event.buf)
 
 				if ok then
 					vim.wo.foldmethod = "expr"
 					vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
-          vim.wo.foldlevel = 99
+					vim.wo.foldlevel = 99
 				end
 			end,
 		})
