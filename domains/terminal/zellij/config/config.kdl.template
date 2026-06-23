@@ -2,6 +2,9 @@ plugins {
     vim-navigator location="https://github.com/hiasr/vim-zellij-navigator/releases/download/0.3.0/vim-zellij-navigator.wasm"
 }
 
+copy_command "xclip -selection clipboard"
+copy_clipboard "system"
+
 keybinds clear-defaults=true {
     locked {
         bind "Ctrl g" { SwitchToMode "normal"; }

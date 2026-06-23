@@ -55,6 +55,16 @@ On start, the VM launcher writes a deduplicated `authorized_keys` file from
 The VM installs those keys before `sshd` starts, so `vm ssh` follows the keys
 already available on the host.
 
+### Shared Clipboard
+
+Graphical VM sessions share text clipboard contents with the host through
+QEMU's vdagent channel and the guest `spice-vdagent` service. Rebuild the VM
+profile after updating this configuration, then restart the VM and log in to
+the X11/i3 session.
+
+Clipboard sharing requires the graphical QEMU window and does not apply to
+`vm start --headless`.
+
 ## SSH & File Transfer
 
 ```bash

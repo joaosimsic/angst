@@ -32,4 +32,5 @@
   capabilities.git.enable = true;
   capabilities.search.enable = true;
   capabilities.ssh.enable = true;
+  capabilities.clipboard.enable = true;
 }
