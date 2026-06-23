@@ -2,7 +2,10 @@
 ---@field filetypes string[]
 ---@field lsp? string
 ---@field lsp_cmd? string[]|fun():string[]
----@field lsp_settings? table<string, table>
+---@field lsp_settings? table
+---@field lsp_init_options? table
+---@field lsp_root_markers? string[]
+---@field lsp_root_dir? function
 ---@field treesitter? string|string[]
 ---@field formatter? string|string[]
 ---@field linter? string|string[]

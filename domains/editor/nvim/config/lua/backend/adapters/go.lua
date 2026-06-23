@@ -8,6 +8,18 @@ return {
 	linter_cmd = { "golangci-lint" },
 	treesitter = "go",
 	lsp_settings = {
-		gopls = { staticcheck = true },
+		gopls = {
+			hints = {
+				assignVariableTypes = true,
+				compositeLiteralFields = true,
+				compositeLiteralTypes = true,
+				constantValues = true,
+				functionTypeParameters = true,
+				ignoredError = true,
+				parameterNames = true,
+				rangeVariableTypes = true,
+			},
+			staticcheck = true,
+		},
 	},
 }

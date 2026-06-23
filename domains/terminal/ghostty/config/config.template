@@ -22,4 +22,6 @@ font-feature = +dlig
 
 scrollback-limit = 10000
 
+clipboard-write = allow
+
 keybind = ctrl+q=text:\x11

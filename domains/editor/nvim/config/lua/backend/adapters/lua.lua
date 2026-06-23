@@ -13,6 +13,15 @@ return {
 				checkThirdParty = false,
 			},
 			telemetry = { enable = false },
+			hint = {
+				enable = true,
+				paramName = "All",
+				paramType = true,
+				setType = true,
+				arrayIndex = "Auto",
+				await = true,
+				semicolon = "All",
+			},
 		},
 	},
 }

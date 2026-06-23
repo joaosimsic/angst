@@ -10,6 +10,12 @@ return {
 			callback = function(event)
 				local lsp_keys = require("backend.engines.lsp.keys")
 				lsp_keys.setup(event.buf)
+
+				local client = vim.lsp.get_client_by_id(event.data.client_id)
+
+				if client and client:supports_method("textDocument/inlayHint") then
+					vim.lsp.inlay_hint.enable(true, { bufnr = event.buf })
+				end
 			end,
 		})
 
@@ -38,6 +44,22 @@ return {
 
 			if server_opts.settings then
 				config.settings = server_opts.settings
+			end
+
+			if server_opts.init_options then
+				config.init_options = server_opts.init_options
+			end
+
+			if server_opts.handlers then
+				config.handlers = server_opts.handlers
+			end
+
+			if server_opts.root_markers then
+				config.root_markers = server_opts.root_markers
+			end
+
+			if server_opts.root_dir then
+				config.root_dir = server_opts.root_dir
 			end
 
 			local final_config = vim.tbl_deep_extend("force", existing_config, config)

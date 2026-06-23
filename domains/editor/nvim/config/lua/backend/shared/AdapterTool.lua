@@ -5,6 +5,10 @@ local M = {}
 ---@class AdapterToolInfo
 ---@field cmd AdapterCmd
 ---@field settings table|nil
+---@field init_options table|nil
+---@field root_markers string[]|nil
+---@field root_dir function|nil
+---@field handlers function|nil
 ---@field filetypes string[]|nil
 
 ---@param cmd AdapterCmd
@@ -61,11 +65,29 @@ end
 ---@param adapter Adapter
 ---@param engine_name string
 ---@param tool_name string
+---@param field_name string
+---@return table|nil
+local function server_field(adapter, engine_name, tool_name, field_name)
+	local value = adapter[field_name]
+	if type(adapter[engine_name]) == "table" and value then
+		value = value[tool_name]
+	end
+
+	return value
+end
+
+---@param adapter Adapter
+---@param engine_name string
+---@param tool_name string
 ---@return AdapterToolInfo
 function M.info(adapter, engine_name, tool_name)
 	return {
 		cmd = M.cmd(adapter, engine_name),
-		settings = adapter.lsp_settings and adapter.lsp_settings[tool_name] or nil,
+		settings = server_field(adapter, engine_name, tool_name, "lsp_settings"),
+		init_options = server_field(adapter, engine_name, tool_name, "lsp_init_options"),
+		root_markers = server_field(adapter, engine_name, tool_name, "lsp_root_markers"),
+		root_dir = server_field(adapter, engine_name, tool_name, "lsp_root_dir"),
+		handlers = server_field(adapter, engine_name, tool_name, "lsp_handlers"),
 		filetypes = adapter.filetypes,
 	}
 end

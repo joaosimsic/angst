@@ -1,4 +1,4 @@
-{ config, lib, userConfig, ... }:
+{ config, lib, pkgs, userConfig, ... }:
 
 let
   cfg = config.angst.isQemuVm;
@@ -37,8 +37,29 @@ in
 
     capabilities.ssh.server.enable = lib.mkForce true;
 
+    services.spice-vdagentd.enable = true;
+
+    environment.systemPackages = [
+      pkgs.spice-vdagent
+    ];
+
     users.users.${userConfig.username}.openssh.authorizedKeys.keys =
       userConfig.ssh.authorizedKeys or [ ];
+
+    systemd.user.services.spice-vdagent = {
+      description = "SPICE vdagent session agent";
+      wantedBy = [ "graphical-session.target" ];
+      after = [ "graphical-session.target" ];
+
+      unitConfig = {
+        ConditionPathExists = "/run/spice-vdagentd/spice-vdagent-sock";
+      };
+
+      serviceConfig = {
+        ExecStart = "${pkgs.spice-vdagent}/bin/spice-vdagent -x";
+        Restart = "on-failure";
+      };
+    };
 
     systemd.services.vm-authorized-keys = {
       description = "Install runtime SSH authorized_keys for VM access";

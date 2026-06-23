@@ -6,6 +6,7 @@ in
 mkToolchain {
   runtime = with pkgs; [ cargo rustc ];
   lsp = with pkgs; [ rust-analyzer ];
+  linter = with pkgs; [ clippy ];
   formatter = with pkgs; [ rustfmt ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-rust ];
 }

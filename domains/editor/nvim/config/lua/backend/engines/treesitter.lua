@@ -1,5 +1,8 @@
 local AdapterScanner = require("backend.shared.AdapterScanner")
 local treesitter_opts = { check_executable = false }
+local fold_disabled_filetypes = {
+	php = true,
+}
 
 return {
 	"treesitter",
@@ -26,18 +29,19 @@ return {
 			pattern = "*",
 			callback = function(event)
 				local filetype = vim.bo[event.buf].filetype
+				local supported = AdapterScanner:supports_filetype("treesitter", filetype, treesitter_opts)
 
 				if vim.bo[event.buf].buftype ~= "" then
 					return
 				end
 
-				if not AdapterScanner:supports_filetype("treesitter", filetype, treesitter_opts) then
+				if not supported then
 					return
 				end
 
-				local ok, _ = pcall(vim.treesitter.start, event.buf)
+				local ok = pcall(vim.treesitter.start, event.buf)
 
-				if ok then
+				if ok and not fold_disabled_filetypes[filetype] then
 					vim.wo.foldmethod = "expr"
 					vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 					vim.wo.foldlevel = 99
