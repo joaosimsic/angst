@@ -63,9 +63,14 @@ end
 ---@param tool_name string
 ---@return AdapterToolInfo
 function M.info(adapter, engine_name, tool_name)
+	local settings = adapter.lsp_settings
+	if type(adapter[engine_name]) == "table" and settings then
+		settings = settings[tool_name]
+	end
+
 	return {
 		cmd = M.cmd(adapter, engine_name),
-		settings = adapter.lsp_settings and adapter.lsp_settings[tool_name] or nil,
+		settings = settings,
 		filetypes = adapter.filetypes,
 	}
 end
