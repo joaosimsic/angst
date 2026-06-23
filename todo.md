@@ -3,6 +3,7 @@
 - [ ] refac config
 - [x] test lsp, treesitter, etc...
 - [-] fzf vim motions
+- [ ] dependency class that ensures plugins exists, if not, it crashes
 
 # starship
 - [ ] show vim modes
