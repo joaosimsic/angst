@@ -11,14 +11,16 @@ return {
 
 		local group = vim.api.nvim_create_augroup("LinterWatch", { clear = true })
 
-		vim.api.nvim_create_autocmd({ "BufWritePost", "BufEnter", "InsertLeave" }, {
+		vim.api.nvim_create_autocmd({ "BufWritePost", "BufEnter" }, {
 			group = group,
-			callback = function()
-				if vim.bo.filetype == "" or vim.bo.buftype ~= "" then
+			callback = function(event)
+				local filetype = vim.bo[event.buf].filetype
+
+				if filetype == "" or vim.bo[event.buf].buftype ~= "" then
 					return
 				end
 
-				if not AdapterScanner:supports_filetype("linter", vim.bo.filetype, linter_opts) then
+				if not AdapterScanner:supports_filetype("linter", filetype, linter_opts) then
 					return
 				end
 

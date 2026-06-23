@@ -46,6 +46,18 @@ return {
 				config.settings = server_opts.settings
 			end
 
+			if server_opts.init_options then
+				config.init_options = server_opts.init_options
+			end
+
+			if server_opts.root_markers then
+				config.root_markers = server_opts.root_markers
+			end
+
+			if server_opts.root_dir then
+				config.root_dir = server_opts.root_dir
+			end
+
 			local final_config = vim.tbl_deep_extend("force", existing_config, config)
 
 			vim.lsp.config(server_name, final_config)

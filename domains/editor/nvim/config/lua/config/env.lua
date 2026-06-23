@@ -24,7 +24,10 @@ vim.opt.colorcolumn = "100,101"
 vim.o.guicursor = "n-v-c:block"
 
 vim.diagnostic.config({
-	virtual_text = true,
+	virtual_text = false,
+	virtual_lines = {
+		only_current_line = true,
+	},
 	severity_sort = true,
 	float = { border = "none" },
 	update_in_insert = false,
