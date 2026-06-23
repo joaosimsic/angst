@@ -5,7 +5,7 @@ return {
 	lsp_cmd = function()
 		local ngserver = vim.fn.exepath("ngserver")
 		if ngserver == "" then
-			return nil
+			return {}
 		end
 		local probe_locations = vim.fs.dirname(ngserver)
 		return {
