@@ -50,6 +50,10 @@ return {
 				config.init_options = server_opts.init_options
 			end
 
+			if server_opts.handlers then
+				config.handlers = server_opts.handlers
+			end
+
 			if server_opts.root_markers then
 				config.root_markers = server_opts.root_markers
 			end

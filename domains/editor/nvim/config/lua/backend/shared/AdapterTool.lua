@@ -8,6 +8,7 @@ local M = {}
 ---@field init_options table|nil
 ---@field root_markers string[]|nil
 ---@field root_dir function|nil
+---@field handlers function|nil
 ---@field filetypes string[]|nil
 
 ---@param cmd AdapterCmd
@@ -86,6 +87,7 @@ function M.info(adapter, engine_name, tool_name)
 		init_options = server_field(adapter, engine_name, tool_name, "lsp_init_options"),
 		root_markers = server_field(adapter, engine_name, tool_name, "lsp_root_markers"),
 		root_dir = server_field(adapter, engine_name, tool_name, "lsp_root_dir"),
+		handlers = server_field(adapter, engine_name, tool_name, "lsp_handlers"),
 		filetypes = adapter.filetypes,
 	}
 end

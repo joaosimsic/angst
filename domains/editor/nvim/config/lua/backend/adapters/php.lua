@@ -1,13 +1,6 @@
+local LspTool = require("backend.shared.LspTool")
+
 local root_markers = { "composer.json", ".phpactor.json", ".phpactor.yml", ".git" }
-
-local function root_dir(bufnr, on_dir)
-	local path = vim.api.nvim_buf_get_name(bufnr)
-	if path == "" then
-		return
-	end
-
-	on_dir(vim.fs.root(path, root_markers) or vim.fs.dirname(path))
-end
 
 ---@type Adapter
 return {
@@ -15,7 +8,7 @@ return {
 	lsp = "phpactor",
 	lsp_cmd = { "phpactor", "language-server" },
 	lsp_root_markers = root_markers,
-	lsp_root_dir = root_dir,
+	lsp_root_dir = LspTool.make_root_dir_finder(root_markers),
 	formatter = "php_cs_fixer",
 	formatter_cmd = {
 		"php-cs-fixer",
