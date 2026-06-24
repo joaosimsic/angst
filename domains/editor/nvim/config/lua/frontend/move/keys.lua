@@ -6,8 +6,6 @@ function M.setup()
 	local move = require("frontend.move.move")
 	local binder = Keybinder.new(nil, "MOVE")
 
-  binder:set_debug(true)
-
 	binder:vmap("<A-j>", function()
 		move.move_text_vertical("j")
 	end, "Move text down")

@@ -4,6 +4,6 @@ return {
 	virtual = true,
 	event = "VeryLazy",
 	config = function()
-    require("frontend.move.keys").setup()
+		require("frontend.move.keys").setup()
 	end,
 }
