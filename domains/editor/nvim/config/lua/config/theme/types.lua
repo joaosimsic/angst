@@ -21,15 +21,7 @@
 ---@field cyan string
 ---@field cyan_bright string
 
----@class HighlightStyle
----@field fg? string
----@field bg? string
----@field sp? string
----@field bold? boolean
----@field italic? boolean
----@field underline? boolean
----@field undercurl? boolean
----@field reverse? boolean
+---@alias HighlightStyle vim.api.keyset.highlight
 
 ---@alias HighlightGroups table<string, HighlightStyle>
 
