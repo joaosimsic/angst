@@ -12,7 +12,8 @@ local pallete = require("config.theme.palette").get()
 ---@field name string
 ---@field enter string
 ---@field heads HydraHead[]
----@field color ThemePaletteKey
+---@field fg_color ThemePaletteKey
+---@field bg_color ThemePaletteKey
 ---@field exit_keys? string[]
 ---@field global? boolean
 ---@field bufnr? number
@@ -21,12 +22,14 @@ local pallete = require("config.theme.palette").get()
 
 ---@class ActiveHydraState
 ---@field name string
----@field color string
+---@field fg_color string
+---@field bg_color string
 
 ---@class Hydra
 ---@field name string
 ---@field enter string
----@field color_hex string
+---@field fg_color_hex string
+---@field bg_color_hex string
 ---@field heads HydraHead[]
 ---@field exit_keys string[]
 ---@field global boolean
@@ -47,8 +50,11 @@ function Hydra.new(cfg, bufnr)
 	self.name = cfg.name
 	self.enter = cfg.enter
 
-	local color_key = cfg.color or "bright"
-	self.color_hex = pallete[color_key]
+	local fg_color_key = cfg.fg_color or "fg"
+	local bg_color_key = cfg.bg_color or "bg"
+
+	self.fg_color_hex = pallete[fg_color_key]
+	self.bg_color_hex = pallete[bg_color_key]
 
 	self.heads = cfg.heads
 	self.exit_keys = cfg.exit_keys or { "<Esc>", "<C-c>" }
@@ -112,7 +118,7 @@ function Hydra:activate()
 		end, "Exit Hydra")
 	end
 
-	vim.g.active_hydra = { name = self.name, color = self.color_hex }
+	vim.g.active_hydra = { name = self.name, fg_color = self.fg_color_hex, bg_color = self.bg_color_hex }
 	vim.cmd("redrawstatus")
 end
 

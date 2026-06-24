@@ -1,6 +1,3 @@
----@type ThemePalette
-local p = require("config.theme.palette").get()
-
 ---@type HeirlineComponent
 local HydraComponent = {
 	condition = function()
@@ -8,6 +5,7 @@ local HydraComponent = {
 	end,
 
 	init = function(self)
+		---@type ActiveHydraState
 		self.hydra = vim.g.active_hydra
 	end,
 
@@ -16,7 +14,11 @@ local HydraComponent = {
 			return string.format(" %s ", self.hydra.name:upper())
 		end,
 		hl = function(self)
-			return { bg = self.hydra.color, fg = p.bg, bold = true }
+			return {
+				fg = self.hydra.fg_color,
+				bg = self.hydra.bg_color,
+				bold = true,
+			}
 		end,
 	},
 }
