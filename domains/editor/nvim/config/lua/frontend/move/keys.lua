@@ -2,7 +2,7 @@ local Keybinder = require("common.Keybinder")
 
 local M = {}
 
-function M.setup()
+M.setup = function()
 	local move = require("frontend.move.move")
 	local binder = Keybinder.new(nil, "MOVE")
 
