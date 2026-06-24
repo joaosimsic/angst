@@ -6,7 +6,7 @@ local M = {}
 ---@return Hydra
 function M.create_diagnostics(bufnr)
 	return Hydra.new({
-		name = "Diagnostics",
+		name = "Diagnostic",
 		enter = "<leader>d",
 		heads = {
 			{

@@ -17,6 +17,8 @@ return {
 		vim.opt.colorcolumn = "100,101"
 		vim.o.guicursor = "n-v-c:block"
 		vim.opt.showmode = false
-    vim.opt.scrolloff = 999
+		vim.opt.scrolloff = 999
+		vim.opt.timeoutlen = 300
+		vim.opt.ttimeoutlen = 10
 	end,
 }
