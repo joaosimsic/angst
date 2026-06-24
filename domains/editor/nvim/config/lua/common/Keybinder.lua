@@ -1,10 +1,13 @@
 local Logger = require("common.Logger")
 
+---@alias Registry { modes: string[], lhs: string }
+
 ---@class Keybinder
 ---@field bufnr number|nil
 ---@field signature string|nil
 ---@field debug boolean
 ---@field logger Logger
+---@field history Registry[]
 local Keybinder = {}
 Keybinder.__index = Keybinder
 
@@ -16,6 +19,7 @@ function Keybinder.new(bufnr, signature)
 	self.bufnr = bufnr
 	self.signature = signature
 	self.debug = false
+	self.history = {}
 
 	local tag = "KEYBINDER" .. (signature and (":" .. signature:upper()) or "")
 	self.logger = Logger.new(tag)
@@ -91,6 +95,11 @@ function Keybinder:_bind(mode, lhs, rhs, desc)
 		return string.format("Mapping %s -> %s [%s]", lhs, modes, action_desc)
 	end)
 
+	table.insert(self.history, {
+		modes = type(mode) == "table" and mode or { mode },
+		lhs = lhs,
+	})
+
 	if type(mode) == "table" then
 		for _, m in ipairs(mode) do
 			vim.keymap.set(m, lhs, final_rhs, opts)
@@ -100,6 +109,24 @@ function Keybinder:_bind(mode, lhs, rhs, desc)
 
 	vim.keymap.set(mode, lhs, final_rhs, opts)
 end
+
+function Keybinder:purge()
+	local opts = {}
+	if self.bufnr then
+		opts.buffer = self.bufnr
+	end
+
+	self.logger:debug("Purging all managed keybinds")
+
+	for _, record in ipairs(self.history) do
+		for _, m in ipairs(record.modes) do
+			pcall(vim.keymap.del, m, record.lhs, opts)
+		end
+	end
+
+	self.history = {}
+end
+
 function Keybinder:map(mode, lhs, rhs, desc)
 	self:_bind(mode, lhs, rhs, desc)
 end

@@ -22,6 +22,7 @@ require("lazy").setup({
 	defaults = {
 		lazy = true,
 	},
+	clean = true,
 	spec = {
 		require("config"),
 		require("infra"),
