@@ -3,6 +3,7 @@ local utils = require("frontend.status.heirline.utils")
 
 local provider = utils.to_small_caps(" lsp ")
 
+---@type HeirlineComponent
 local LspActive = {
 	condition = conditions.lsp_attached,
 	update = { "LspAttach", "LspDetach" },
@@ -10,6 +11,7 @@ local LspActive = {
 	hl = "HeirlineLspActive",
 }
 
+---@type HeirlineComponent
 local LspInactive = {
 	condition = function()
 		return not conditions.lsp_attached()

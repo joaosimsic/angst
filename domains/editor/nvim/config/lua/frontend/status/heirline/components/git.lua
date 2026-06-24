@@ -1,6 +1,8 @@
+---@type ThemePalette
 local p = require("config.theme.palette").get()
 local conditions = require("heirline.conditions")
 
+---@type HeirlineComponent
 local Git = {
 	condition = function()
 		return conditions.is_git_repo() and vim.b.gitsigns_status_dict ~= nil

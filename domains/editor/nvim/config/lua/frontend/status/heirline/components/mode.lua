@@ -1,5 +1,6 @@
 local modes = require("frontend.status.heirline.modes")
 
+---@type HeirlineComponent
 local Mode = {
 	init = function(self)
 		self.mode = modes.get_mode_data()

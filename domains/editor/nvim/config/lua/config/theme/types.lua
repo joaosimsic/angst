@@ -27,3 +27,24 @@
 
 ---@class HighlightModule
 ---@field get fun(p: ThemePalette): HighlightGroups
+
+---@alias ThemePaletteKey
+---| "base"
+---| "bright"
+---| "dim"
+---| "surface"
+---| "bg"
+---| "black"
+---| "comment"
+---| "green"
+---| "green_bright"
+---| "red"
+---| "red_bright"
+---| "yellow"
+---| "yellow_bright"
+---| "blue"
+---| "blue_bright"
+---| "magenta"
+---| "magenta_bright"
+---| "cyan"
+---| "cyan_bright"
