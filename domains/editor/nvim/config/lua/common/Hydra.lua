@@ -14,6 +14,7 @@ local pallete = require("config.theme.palette").get()
 ---@field heads HydraHead[]
 ---@field fg_color ThemePaletteKey
 ---@field bg_color ThemePaletteKey
+---@field debug_level? Level
 ---@field exit_keys? string[]
 ---@field global? boolean
 ---@field bufnr? number
@@ -30,6 +31,7 @@ local pallete = require("config.theme.palette").get()
 ---@field enter string
 ---@field fg_color_hex string
 ---@field bg_color_hex string
+---@field debug_level? Level
 ---@field heads HydraHead[]
 ---@field exit_keys string[]
 ---@field global boolean
@@ -62,7 +64,8 @@ function Hydra.new(cfg, bufnr)
 	self.bufnr = bufnr
 	self.binder = nil
 
-	self.logger = Logger.new("Hydra:" .. self.name)
+	self.debug_level = cfg.debug_level
+	self.logger = Logger.new("HYDRA:" .. self.name:upper(), self.debug_level)
 
 	self.init_binder = Keybinder.new(bufnr, "HYDRA-INIT:" .. self.name:upper())
 
@@ -71,6 +74,15 @@ function Hydra.new(cfg, bufnr)
 	end, "Enter " .. self.name)
 
 	return self
+end
+
+function Hydra:set_debug_level(level)
+	self.debug_level = level
+	self.logger:set_threshold(level)
+
+	if self.binder and type(self.binder.set_debug) == "function" then
+		self.binder:set_debug(level == "debug")
+	end
 end
 
 function Hydra:activate()
@@ -86,6 +98,10 @@ function Hydra:activate()
 	local target_scope = self.global and nil or vim.api.nvim_get_current_buf()
 
 	self.binder = Keybinder.new(target_scope, "HYDRA:" .. self.name:upper())
+
+	if self.debug_level == "debug" and type(self.binder.set_debug) == "function" then
+		self.binder:set_debug(true)
+	end
 
 	for _, head in ipairs(self.heads) do
 		local lhs, rhs, desc = head[1], head[2], head[3]
