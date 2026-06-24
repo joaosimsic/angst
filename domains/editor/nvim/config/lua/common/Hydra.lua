@@ -1,4 +1,5 @@
 local Keybinder = require("common.Keybinder")
+local Logger = require("common.Logger")
 
 ---@class HydraHead
 ---@field [1] string
@@ -12,10 +13,12 @@ local Keybinder = require("common.Keybinder")
 ---@field heads HydraHead[]
 ---@field exit_keys? string[]
 ---@field global? boolean
+---@field bufnr? number
+---@field init_binder Keybinder
+---@field logger Logger
 
 ---@class ActiveHydraState
 ---@field name string
----@field hints string
 
 ---@class Hydra
 ---@field name string
@@ -23,7 +26,9 @@ local Keybinder = require("common.Keybinder")
 ---@field heads HydraHead[]
 ---@field exit_keys string[]
 ---@field global boolean
+---@field bufnr? number
 ---@field binder? Keybinder
+---@field logger Logger
 local Hydra = {}
 Hydra.__index = Hydra
 
@@ -31,19 +36,23 @@ Hydra.__index = Hydra
 vim.g.active_hydra = nil
 
 ---@param cfg HydraConfig
+---@param bufnr number|nil
 ---@return Hydra
-function Hydra.new(cfg)
+function Hydra.new(cfg, bufnr)
 	local self = setmetatable({}, Hydra)
 	self.name = cfg.name
 	self.enter = cfg.enter
 	self.heads = cfg.heads
 	self.exit_keys = cfg.exit_keys or { "<Esc>", "<C-c>" }
 	self.global = cfg.global or false
+	self.bufnr = bufnr
 	self.binder = nil
 
-	local init_binder = Keybinder.new(nil, "HYDRA-INIT")
+	self.logger = Logger.new("Hydra:" .. self.name)
 
-	init_binder:nmap(self.enter, function()
+	self.init_binder = Keybinder.new(bufnr, "HYDRA-INIT:" .. self.name:upper())
+
+	self.init_binder:nmap(self.enter, function()
 		self:activate()
 	end, "Enter " .. self.name)
 
@@ -51,21 +60,27 @@ function Hydra.new(cfg)
 end
 
 function Hydra:activate()
+	self.logger:info(function()
+		return "Activating " .. self.name
+	end)
+
 	if vim.g.active_hydra then
+		self.logger:debug("Deactivating previous hydra silently")
 		vim.api.nvim_exec_autocmds("User", { pattern = "HydraDeactivateSilently" })
 	end
 
 	local target_scope = self.global and nil or vim.api.nvim_get_current_buf()
-	self.binder = Keybinder.new(target_scope, "HYDRA:" .. self.name:upper())
 
-	---@type string[]
-	local hints = {}
+	self.binder = Keybinder.new(target_scope, "HYDRA:" .. self.name:upper())
 
 	for _, head in ipairs(self.heads) do
 		local lhs, rhs, desc = head[1], head[2], head[3]
-		table.insert(hints, string.format("[%s] %s", lhs, desc or ""))
 
 		self.binder:nmap(lhs, function()
+			self.logger:debug(function()
+				return "Executing head: " .. lhs
+			end)
+
 			if type(rhs) == "function" then
 				rhs()
 			elseif type(rhs) == "string" then
@@ -74,6 +89,7 @@ function Hydra:activate()
 			end
 
 			if head.exit then
+				self.logger:debug("Head triggered exit")
 				self:deactivate()
 			else
 				self:refresh_statusline()
@@ -83,16 +99,29 @@ function Hydra:activate()
 
 	for _, key in ipairs(self.exit_keys) do
 		self.binder:nmap(key, function()
+			self.logger:info("Manual exit triggered")
 			self:deactivate()
 		end, "Exit Hydra")
 	end
 
-	vim.g.active_hydra = { name = self.name, hints = table.concat(hints, " • ") }
+	vim.g.active_hydra = { name = self.name }
 	vim.cmd("redrawstatus")
+end
+
+function Hydra:purge()
+	if self.init_binder then
+		self.init_binder:purge()
+		self.init_binder = nil
+	end
+
+	if vim.g.active_hydra and vim.g.active_hydra == self.name then
+		self:deactivate()
+	end
 end
 
 function Hydra:deactivate()
 	if self.binder then
+    self.logger:info("Deactivating")
 		self.binder:purge()
 		self.binder = nil
 

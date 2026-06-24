@@ -1,3 +1,4 @@
+---@type ThemePalette
 local p = require("config.theme.palette").get()
 local icons = require("common.icons")
 local conditions = require("heirline.conditions")
@@ -8,6 +9,7 @@ local space_out = function(icon)
 	return string.format(" %s ", icon)
 end
 
+---@type HeirlineComponent
 local Diagnostics = {
 	condition = conditions.has_diagnostics,
 

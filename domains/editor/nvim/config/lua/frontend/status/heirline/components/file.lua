@@ -1,5 +1,7 @@
+---@type ThemePalette
 local p = require("config.theme.palette").get()
 
+---@type HeirlineComponent
 local FileIcon = {
 	init = function(self)
 		local filename = vim.api.nvim_buf_get_name(0)
@@ -19,6 +21,7 @@ local FileIcon = {
 	end,
 }
 
+---@type HeirlineComponent
 local FileName = {
 	provider = function()
 		local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":t")
@@ -28,6 +31,7 @@ local FileName = {
 	hl = { fg = p.base, bg = p.surface, bold = true },
 }
 
+---@type HeirlineComponent
 local FileType = {
 	provider = function()
 		local ft = vim.bo.filetype
@@ -37,6 +41,7 @@ local FileType = {
 	hl = "HeirlineSurfaceBold",
 }
 
+---@type HeirlineComponent
 local FileFormat = {
 	provider = function()
 		local fmt = vim.bo.fileformat

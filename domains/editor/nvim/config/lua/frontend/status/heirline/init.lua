@@ -6,12 +6,22 @@ return {
 		local hls = require("frontend.status.heirline.hls")
 		local comp = require("frontend.status.heirline.components")
 		local conditions = require("heirline.conditions")
+
+		---@type ThemePalette
 		local p = require("config.theme.palette").get()
 
 		hls.setup_highlights()
 
-		local StatusLine = {
+		---@type HeirlineComponent
+		local LeftSideMode = {
+			fallthrough = false,
+			comp.Hydra,
 			comp.Mode,
+		}
+
+		---@type HeirlineComponent
+		local StatusLine = {
+			LeftSideMode,
 			comp.Space,
 			comp.FileName,
 			comp.Git,
@@ -27,6 +37,7 @@ return {
 			comp.Ruler,
 		}
 
+		---@type HeirlineComponent
 		local InactiveStatusLine = {
 			condition = function()
 				return not conditions.is_active()
