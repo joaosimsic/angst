@@ -2,28 +2,6 @@ vim.g.colors_name = "angst"
 
 local hl = vim.api.nvim_set_hl
 
-local c = {
-  base = "#{{BASE}}",
-  bright = "#{{BRIGHT}}",
-  dim = "#{{DIM}}",
-  surface = "#{{SURFACE}}",
-  bg = "#{{BG}}",
-  black = "#{{BLACK}}",
-  comment = "#{{COMMENT}}",
-  green = "#{{GREEN}}",
-  green_bright = "#{{GREEN_BRIGHT}}",
-  red = "#{{RED}}",
-  red_bright = "#{{RED_BRIGHT}}",
-  yellow = "#{{YELLOW}}",
-  yellow_bright = "#{{YELLOW_BRIGHT}}",
-  blue = "#{{BLUE}}",
-  blue_bright = "#{{BLUE_BRIGHT}}",
-  magenta = "#{{MAGENTA}}",
-  magenta_bright = "#{{MAGENTA_BRIGHT}}",
-  cyan = "#{{CYAN}}",
-  cyan_bright = "#{{CYAN_BRIGHT}}",
-}
-
 hl(0, "Normal", { fg = c.base, bg = c.black })
 hl(0, "NormalNC", { fg = c.base, bg = c.black })
 hl(0, "NormalFloat", { fg = c.base, bg = c.black })

@@ -1,7 +1,5 @@
 require("config.theme")
 
-vim.g.mapleader = " "
-vim.g.maplocalleader = " "
 
 local function configure_clipboard()
 	local is_remote = vim.env.SSH_TTY ~= nil or vim.env.SSH_CONNECTION ~= nil
