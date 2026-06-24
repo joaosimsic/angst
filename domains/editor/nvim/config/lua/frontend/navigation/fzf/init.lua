@@ -37,7 +37,7 @@ return {
 				rg_glob = true,
 				glob_flag = "--glob",
 				glob_separator = "%s",
-				file_ignore_patterns = { "node_modules/", "dist/", "%.lock$" },
+				file_ignore_patterns = { "node_modules/", "dist/", "%.lock$", "target/", "vendor/" },
 			},
 		})
 

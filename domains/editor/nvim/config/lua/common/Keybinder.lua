@@ -66,28 +66,21 @@ function Keybinder:_bind(mode, lhs, rhs, desc)
 	end
 
 	local final_rhs = rhs
-	if type(rhs) == "function" then
-		final_rhs = function(...)
-			if self.debug then
-				self.logger:debug(function()
-					return string.format("Pressed: %s -> Executing: %s", lhs, action_desc)
-				end)
-			end
-			return rhs(...)
+
+	if type(rhs) ~= "function" then
+		self.logger:error(function()
+			return string.format("Invalid RHS to keymap %s. Expected function but found '%s'.", lhs, type(rhs))
+		end)
+		return
+	end
+
+	final_rhs = function(...)
+		if self.debug then
+			self.logger:debug(function()
+				return string.format("Pressed: %s -> Executing: %s", lhs, action_desc)
+			end)
 		end
-	elseif type(rhs) == "string" then
-		final_rhs = function()
-			if self.debug then
-				self.logger:debug(function()
-					if desc then
-						return string.format("Pressed: %s -> %s (Command: %s)", lhs, desc, rhs)
-					else
-						return string.format("Pressed: %s -> Command: %s", lhs, rhs)
-					end
-				end)
-			end
-			vim.cmd(rhs)
-		end
+		return rhs(...)
 	end
 
 	self.logger:debug(function()
@@ -127,18 +120,31 @@ function Keybinder:purge()
 	self.history = {}
 end
 
+---@param mode NvimMode[]
+---@param lhs string
+---@param rhs fun(...: any): any
+---@param desc string
 function Keybinder:map(mode, lhs, rhs, desc)
 	self:_bind(mode, lhs, rhs, desc)
 end
 
+---@param lhs string
+---@param rhs fun(...: any): any
+---@param desc string
 function Keybinder:nmap(lhs, rhs, desc)
 	self:_bind("n", lhs, rhs, desc)
 end
 
+---@param lhs string
+---@param rhs fun(...: any): any
+---@param desc string
 function Keybinder:imap(lhs, rhs, desc)
 	self:_bind("i", lhs, rhs, desc)
 end
 
+---@param lhs string
+---@param rhs fun(...: any): any
+---@param desc string
 function Keybinder:vmap(lhs, rhs, desc)
 	self:_bind("v", lhs, rhs, desc)
 end
