@@ -29,11 +29,11 @@ M.get = function(p)
 		DiagnosticFloatingHint = { fg = p.cyan },
 		DiagnosticFloatingOk = { fg = p.green },
 
-		DiagnosticUnderlineError = { sp = p.red, undercurl = true },
-		DiagnosticUnderlineWarn = { sp = p.yellow, undercurl = true },
-		DiagnosticUnderlineInfo = { sp = p.blue, undercurl = true },
-		DiagnosticUnderlineHint = { sp = p.cyan, undercurl = true },
-		DiagnosticUnderlineOk = { sp = p.green, undercurl = true },
+		DiagnosticUnderlineError = { sp = p.red, underline = true },
+		DiagnosticUnderlineWarn = { sp = p.yellow, underline = true },
+		DiagnosticUnderlineInfo = { sp = p.blue, underline = true },
+		DiagnosticUnderlineHint = { sp = p.cyan, underline = true },
+		DiagnosticUnderlineOk = { sp = p.green, underline = true },
 		DiagnosticUnnecessary = { fg = p.comment, italic = true },
 		DiagnosticDeprecated = { strikethrough = true },
 

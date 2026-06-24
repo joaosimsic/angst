@@ -9,6 +9,14 @@ function M.setup(bufnr)
 	binder:nmap("gd", vim.lsp.buf.definition, "Go to definition")
 	binder:nmap("K", vim.lsp.buf.hover, "Hover documentation")
 	binder:map({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, "Code action")
+
+	binder:nmap("<leader>dn", function()
+		vim.diagnostic.jump({ count = 1, wrap = false })
+	end, "Go to next diagnostic")
+
+	binder:nmap("<leader>dp", function()
+		vim.diagnostic.jump({ count = -1, wrap = false })
+	end, "Go to previous diagnostic")
 end
 
 return M

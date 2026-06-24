@@ -3,6 +3,8 @@ config-file = colors.conf
 font-family = {{FONT_FAMILY}}
 font-size = 13
 
+adjust-underline-thickness = 100%
+
 cursor-style = block
 cursor-style-blink = false
 
