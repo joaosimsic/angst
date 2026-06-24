@@ -1,3 +1,5 @@
+-- WHAT A MESS
+
 local Keybinder = require("common.Keybinder")
 
 local M = {}
@@ -32,6 +34,8 @@ function M.on_picker_create()
 		["<C-d>"] = "i<C-d><C-\\><C-n>",
 		["<C-u>"] = "i<C-u><C-\\><C-n>",
 		["<CR>"] = "i<CR><C-\\><C-n>",
+    ["<Tab>"] = "i<Tab><C-\\><C-n>",
+    ["q"] = "i<Esc>",
 	}
 
 	for key, macro in pairs(motions) do
