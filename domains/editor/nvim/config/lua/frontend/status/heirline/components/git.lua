@@ -1,4 +1,4 @@
-local c = require("config.theme").colors
+local p = require("config.theme.palette").get()
 local conditions = require("heirline.conditions")
 
 local Git = {
@@ -13,9 +13,9 @@ local Git = {
 			or (self.status_dict.changed or 0) ~= 0
 	end,
 
-	hl = { bg = c.surface },
+	hl = { bg = p.surface },
 
-	{ provider = " ", hl = { bg = c.surface } },
+	{ provider = " ", hl = { bg = p.surface } },
 
 	{
 		provider = function(self)
@@ -55,7 +55,7 @@ local Git = {
 		hl = "HeirlineGitDelete",
 	},
 
-	{ provider = " ", hl = { bg = c.surface } },
+	{ provider = " ", hl = { bg = p.surface } },
 }
 
 return { Git = Git }

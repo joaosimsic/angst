@@ -1,3 +1,4 @@
+---@type Plugin
 return {
 	"lsp-engine",
 	virtual = true,

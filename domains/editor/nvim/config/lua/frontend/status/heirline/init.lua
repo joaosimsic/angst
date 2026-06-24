@@ -1,3 +1,4 @@
+---@type Plugin
 return {
 	"rebelot/heirline.nvim",
 	event = "VeryLazy",
@@ -5,7 +6,7 @@ return {
 		local hls = require("frontend.status.heirline.hls")
 		local comp = require("frontend.status.heirline.components")
 		local conditions = require("heirline.conditions")
-		local c = require("config.theme").colors
+		local p = require("config.theme.palette").get()
 
 		hls.setup_highlights()
 
@@ -30,7 +31,7 @@ return {
 			condition = function()
 				return not conditions.is_active()
 			end,
-			{ provider = "%<%F", hl = { fg = c.comment, bg = c.black } },
+			{ provider = "%<%F", hl = { fg = p.comment, bg = p.black } },
 			comp.Align,
 		}
 

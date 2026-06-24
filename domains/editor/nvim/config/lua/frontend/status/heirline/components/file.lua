@@ -1,4 +1,4 @@
-local c = require("config.theme").colors
+local p = require("config.theme.palette").get()
 
 local FileIcon = {
 	init = function(self)
@@ -11,7 +11,7 @@ local FileIcon = {
 	end,
 
 	hl = function(self)
-		return { fg = self.icon_color, bg = c.surface }
+		return { fg = self.icon_color, bg = p.surface }
 	end,
 
 	provider = function(self)
@@ -25,7 +25,7 @@ local FileName = {
 		return name == "" and "[No Name]" or string.format(" %s ", name)
 	end,
 
-	hl = { fg = c.base, bg = c.surface, bold = true },
+	hl = { fg = p.base, bg = p.surface, bold = true },
 }
 
 local FileType = {

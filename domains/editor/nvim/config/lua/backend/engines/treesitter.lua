@@ -4,6 +4,7 @@ local fold_disabled_filetypes = {
 	php = true,
 }
 
+---@type Plugin
 return {
 	"treesitter",
 	virtual = true,

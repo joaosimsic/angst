@@ -1,4 +1,4 @@
-local c = require("config.theme").colors
+local p = require("config.theme.palette").get()
 
 ---@param name string
 ---@param opts vim.api.keyset.highlight
@@ -9,32 +9,32 @@ end
 local M = {}
 
 M.setup_highlights = function()
-	hl("HeirlineModeNormal", { fg = c.black, bg = c.base, bold = true })
-	hl("HeirlineModeInsert", { fg = c.black, bg = c.bright, bold = true })
-	hl("HeirlineModeVisual", { fg = c.black, bg = c.green_bright, bold = true })
-	hl("HeirlineModeReplace", { fg = c.black, bg = c.yellow_bright, bold = true })
-	hl("HeirlineModeCommand", { fg = c.black, bg = c.red_bright, bold = true })
-	hl("HeirlineModeTerminal", { fg = c.black, bg = c.magenta_bright, bold = true })
+	hl("HeirlineModeNormal", { fg = p.black, bg = p.base, bold = true })
+	hl("HeirlineModeInsert", { fg = p.black, bg = p.bright, bold = true })
+	hl("HeirlineModeVisual", { fg = p.black, bg = p.green_bright, bold = true })
+	hl("HeirlineModeReplace", { fg = p.black, bg = p.yellow_bright, bold = true })
+	hl("HeirlineModeCommand", { fg = p.black, bg = p.red_bright, bold = true })
+	hl("HeirlineModeTerminal", { fg = p.black, bg = p.magenta_bright, bold = true })
 
-	hl("HeirlineSurface", { fg = c.base, bg = c.surface })
-	hl("HeirlineSurfaceBold", { fg = c.bright, bg = c.surface, bold = true })
-	hl("HeirlineBlack", { fg = c.base, bg = c.black })
-	hl("HeirlineBlackBright", { fg = c.bright, bg = c.black })
+	hl("HeirlineSurface", { fg = p.base, bg = p.surface })
+	hl("HeirlineSurfaceBold", { fg = p.bright, bg = p.surface, bold = true })
+	hl("HeirlineBlack", { fg = p.base, bg = p.black })
+	hl("HeirlineBlackBright", { fg = p.bright, bg = p.black })
 
-	hl("HeirlineGit", { fg = c.bright, bg = c.surface })
-	hl("HeirlineGitAdd", { fg = c.green, bg = c.surface })
-	hl("HeirlineGitChange", { fg = c.yellow, bg = c.surface })
-	hl("HeirlineGitDelete", { fg = c.red, bg = c.surface })
+	hl("HeirlineGit", { fg = p.bright, bg = p.surface })
+	hl("HeirlineGitAdd", { fg = p.green, bg = p.surface })
+	hl("HeirlineGitChange", { fg = p.yellow, bg = p.surface })
+	hl("HeirlineGitDelete", { fg = p.red, bg = p.surface })
 
-	hl("HeirlineDiagnosticError", { fg = c.red, bg = c.surface })
-	hl("HeirlineDiagnosticWarn", { fg = c.yellow, bg = c.surface })
-	hl("HeirlineDiagnosticInfo", { fg = c.blue, bg = c.surface })
-	hl("HeirlineDiagnosticHint", { fg = c.cyan, bg = c.surface })
+	hl("HeirlineDiagnosticError", { fg = p.red, bg = p.surface })
+	hl("HeirlineDiagnosticWarn", { fg = p.yellow, bg = p.surface })
+	hl("HeirlineDiagnosticInfo", { fg = p.blue, bg = p.surface })
+	hl("HeirlineDiagnosticHint", { fg = p.cyan, bg = p.surface })
 
-	hl("HeirlineLspActive", { fg = c.bright, bg = c.surface })
-	hl("HeirlineLspInactive", { fg = c.dim, bg = c.surface })
+	hl("HeirlineLspActive", { fg = p.bright, bg = p.surface })
+	hl("HeirlineLspInactive", { fg = p.dim, bg = p.surface })
 
-	hl("HeirlinePosition", { fg = c.black, bg = c.magenta_bright, bold = true })
+	hl("HeirlinePosition", { fg = p.black, bg = p.magenta_bright, bold = true })
 end
 
 return M

@@ -1,14 +1,21 @@
-local c = require("config.theme").colors
+local p = require("config.theme.palette").get()
+local icons = require("common.icons")
 local conditions = require("heirline.conditions")
+
+---@param icon string
+---@return string
+local space_out = function(icon)
+	return string.format(" %s ", icon)
+end
 
 local Diagnostics = {
 	condition = conditions.has_diagnostics,
 
 	static = {
-		error_icon = " 󰅚 ",
-		warn_icon = " 󰀪 ",
-		info_icon = " 󰋽 ",
-		hint_icon = " 󰌶 ",
+		error_icon = space_out(icons.diagnostics.error),
+		warn_icon = space_out(icons.diagnostics.warn),
+		info_icon = space_out(icons.diagnostics.info),
+		hint_icon = space_out(icons.diagnostics.hint),
 	},
 
 	init = function(self)
@@ -20,9 +27,9 @@ local Diagnostics = {
 
 	update = { "DiagnosticChanged", "BufEnter" },
 
-	hl = { bg = c.surface },
+	hl = { bg = p.surface },
 
-	{ provider = " ", hl = { bg = c.surface } },
+	{ provider = " ", hl = { bg = p.surface } },
 
 	{
 		provider = function(self)
@@ -52,7 +59,7 @@ local Diagnostics = {
 		hl = "HeirlineDiagnosticHint",
 	},
 
-	{ provider = " ", hl = { bg = c.surface } },
+	{ provider = " ", hl = { bg = p.surface } },
 }
 
 return {
