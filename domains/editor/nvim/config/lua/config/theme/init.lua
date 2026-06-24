@@ -1,3 +1,4 @@
+---@type Plugin
 return {
 	"theme",
 	virtual = true,

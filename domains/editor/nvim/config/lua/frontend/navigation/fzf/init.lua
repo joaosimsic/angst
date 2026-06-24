@@ -1,3 +1,4 @@
+---@type Plugin
 return {
 	"ibhagwan/fzf-lua",
 	event = "VeryLazy",

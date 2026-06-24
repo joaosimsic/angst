@@ -1,6 +1,7 @@
 local AdapterScanner = require("backend.shared.AdapterScanner")
 local formatter_opts = { check_executable = true }
 
+---@type Plugin
 return {
 	"stevearc/conform.nvim",
 	ft = AdapterScanner:supported_filetypes("formatter", formatter_opts),

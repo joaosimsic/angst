@@ -1,3 +1,4 @@
+---@type Plugin[]
 return {
 	{
 		"nvim-lua/plenary.nvim",

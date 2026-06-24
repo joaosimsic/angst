@@ -1,6 +1,7 @@
 local AdapterScanner = require("backend.shared.AdapterScanner")
 local linter_opts = { check_executable = true }
 
+---@type Plugin
 return {
 	"mfussenegger/nvim-lint",
 	ft = AdapterScanner:supported_filetypes("linter", linter_opts),

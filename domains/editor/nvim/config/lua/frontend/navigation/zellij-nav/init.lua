@@ -1,3 +1,4 @@
+---@type Plugin
 return {
 	"zellij-navigation",
 	virtual = true,

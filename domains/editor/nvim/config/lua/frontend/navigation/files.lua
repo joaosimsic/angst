@@ -1,3 +1,4 @@
+---@type Plugin
 return {
 	"files",
 	virtual = true,
