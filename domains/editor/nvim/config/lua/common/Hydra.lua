@@ -1,5 +1,6 @@
 local Keybinder = require("common.Keybinder")
 local Logger = require("common.Logger")
+local pallete = require("config.theme.palette").get()
 
 ---@class HydraHead
 ---@field [1] string
@@ -11,6 +12,7 @@ local Logger = require("common.Logger")
 ---@field name string
 ---@field enter string
 ---@field heads HydraHead[]
+---@field color ThemePaletteKey
 ---@field exit_keys? string[]
 ---@field global? boolean
 ---@field bufnr? number
@@ -19,10 +21,12 @@ local Logger = require("common.Logger")
 
 ---@class ActiveHydraState
 ---@field name string
+---@field color string
 
 ---@class Hydra
 ---@field name string
 ---@field enter string
+---@field color_hex string
 ---@field heads HydraHead[]
 ---@field exit_keys string[]
 ---@field global boolean
@@ -42,6 +46,10 @@ function Hydra.new(cfg, bufnr)
 	local self = setmetatable({}, Hydra)
 	self.name = cfg.name
 	self.enter = cfg.enter
+
+	local color_key = cfg.color or "bright"
+	self.color_hex = pallete[color_key]
+
 	self.heads = cfg.heads
 	self.exit_keys = cfg.exit_keys or { "<Esc>", "<C-c>" }
 	self.global = cfg.global or false
@@ -104,7 +112,7 @@ function Hydra:activate()
 		end, "Exit Hydra")
 	end
 
-	vim.g.active_hydra = { name = self.name }
+	vim.g.active_hydra = { name = self.name, color = self.color_hex }
 	vim.cmd("redrawstatus")
 end
 
@@ -121,7 +129,7 @@ end
 
 function Hydra:deactivate()
 	if self.binder then
-    self.logger:info("Deactivating")
+		self.logger:info("Deactivating")
 		self.binder:purge()
 		self.binder = nil
 

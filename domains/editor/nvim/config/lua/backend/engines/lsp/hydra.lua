@@ -7,6 +7,8 @@ local M = {}
 function M.create_diagnostics(bufnr)
 	return Hydra.new({
 		name = "Diagnostic",
+    ---@type ThemePaletteKey
+    color = "red",
 		enter = "<leader>d",
 		heads = {
 			{

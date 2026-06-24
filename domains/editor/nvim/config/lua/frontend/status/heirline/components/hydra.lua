@@ -11,13 +11,13 @@ local HydraComponent = {
 		self.hydra = vim.g.active_hydra
 	end,
 
-	hl = { fg = p.surface, bold = true },
-
 	{
 		provider = function(self)
 			return string.format(" %s ", self.hydra.name:upper())
 		end,
-		hl = { bg = p.blue_bright, fg = p.bg, bold = true },
+		hl = function(self)
+			return { bg = self.hydra.color, fg = p.bg, bold = true }
+		end,
 	},
 }
 
