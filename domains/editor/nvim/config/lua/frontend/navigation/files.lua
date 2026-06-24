@@ -1,6 +1,6 @@
 ---@type Plugin
 return {
-	"files",
+	"nav-files",
 	virtual = true,
 	event = "VeryLazy",
 	config = function()
