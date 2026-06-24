@@ -4,6 +4,7 @@
 - [x] test lsp, treesitter, etc...
 - [-] fzf vim motions
 - [ ] dependency class that ensures plugins exists, if not, it crashes
+- [ ] autocmd for lspdetach
 
 # starship
 - [ ] show vim modes
