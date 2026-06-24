@@ -1,7 +1,6 @@
 ---@class ZellijNav
 local M = {}
 
----@alias NvimDirection "h" | "j" | "k" | "l"
 ---@alias ZellijDirection "Left" | "Down" | "Up" | "Right"
 
 ---@param direction NvimDirection
