@@ -1,4 +1,4 @@
-local c = require("config.theme").colors
+local p = require("config.theme.palette").get()
 
 ---@meta
 
@@ -11,25 +11,25 @@ local M = {}
 
 ---@type table<string, ModeConfig>
 M.mode_colors = {
-	n = { fg = c.black, bg = c.base, label = "NORMAL" },
-	o = { fg = c.black, bg = c.base, label = "OP-PENDING" },
-	i = { fg = c.black, bg = c.bright, label = "INSERT" },
-	v = { fg = c.black, bg = c.green_bright, label = "VISUAL" },
-	V = { fg = c.black, bg = c.green_bright, label = "V-LINE" },
-	["\22"] = { fg = c.black, bg = c.green_bright, label = "V-BLOCK" },
-	s = { fg = c.black, bg = c.blue_bright, label = "SELECT" },
-	S = { fg = c.black, bg = c.blue_bright, label = "S-LINE" },
-	["\19"] = { fg = c.black, bg = c.blue_bright, label = "S-BLOCK" },
-	r = { fg = c.black, bg = c.yellow_bright, label = "REPLACE" },
-	R = { fg = c.black, bg = c.yellow_bright, label = "REPLACE" },
-	c = { fg = c.black, bg = c.red_bright, label = "COMMAND" },
-	t = { fg = c.black, bg = c.magenta_bright, label = "TERMINAL" },
+	n = { fg = p.black, bg = p.base, label = "NORMAL" },
+	o = { fg = p.black, bg = p.base, label = "OP-PENDING" },
+	i = { fg = p.black, bg = p.bright, label = "INSERT" },
+	v = { fg = p.black, bg = p.green_bright, label = "VISUAL" },
+	V = { fg = p.black, bg = p.green_bright, label = "V-LINE" },
+	["\22"] = { fg = p.black, bg = p.green_bright, label = "V-BLOCK" },
+	s = { fg = p.black, bg = p.blue_bright, label = "SELECT" },
+	S = { fg = p.black, bg = p.blue_bright, label = "S-LINE" },
+	["\19"] = { fg = p.black, bg = p.blue_bright, label = "S-BLOCK" },
+	r = { fg = p.black, bg = p.yellow_bright, label = "REPLACE" },
+	R = { fg = p.black, bg = p.yellow_bright, label = "REPLACE" },
+	c = { fg = p.black, bg = p.red_bright, label = "COMMAND" },
+	t = { fg = p.black, bg = p.magenta_bright, label = "TERMINAL" },
 }
 
 ---@type ModeConfig
 M.mode_fallback = {
-	fg = c.base,
-	bg = c.surface,
+	fg = p.base,
+	bg = p.surface,
 	label = "UNKNOWN",
 }
 

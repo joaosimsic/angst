@@ -1,4 +1,4 @@
-local c = require("config.theme").colors
+local p = require("config.theme.palette").get()
 local conditions = require("heirline.conditions")
 
 local Diagnostics = {
@@ -20,9 +20,9 @@ local Diagnostics = {
 
 	update = { "DiagnosticChanged", "BufEnter" },
 
-	hl = { bg = c.surface },
+	hl = { bg = p.surface },
 
-	{ provider = " ", hl = { bg = c.surface } },
+	{ provider = " ", hl = { bg = p.surface } },
 
 	{
 		provider = function(self)
@@ -52,7 +52,7 @@ local Diagnostics = {
 		hl = "HeirlineDiagnosticHint",
 	},
 
-	{ provider = " ", hl = { bg = c.surface } },
+	{ provider = " ", hl = { bg = p.surface } },
 }
 
 return {
