@@ -12,6 +12,23 @@ return {
 
 		hls.setup_highlights()
 
+		local function apply_dark_filter(hex, factor)
+			hex = hex:gsub("#", "")
+			if #hex ~= 6 then
+				return "#000000"
+			end
+
+			local r = tonumber(hex:sub(1, 2), 16)
+			local g = tonumber(hex:sub(3, 4), 16)
+			local b = tonumber(hex:sub(5, 6), 16)
+
+			r = math.floor(r * factor)
+			g = math.floor(g * factor)
+			b = math.floor(b * factor)
+
+			return string.format("#%02x%02x%02x", r, g, b)
+		end
+
 		---@type HeirlineComponent
 		local LeftSideMode = {
 			fallthrough = false,
@@ -21,6 +38,20 @@ return {
 
 		---@type HeirlineComponent
 		local StatusLine = {
+			init = function(self)
+				if conditions.is_active() then
+					self.bg = p.surface
+					self.fg = p.base
+				else
+					self.bg = apply_dark_filter(p.surface, 0.65)
+					self.fg = p.comment
+				end
+			end,
+
+			hl = function(self)
+				return { fg = self.fg, bg = self.bg }
+			end,
+
 			LeftSideMode,
 			comp.Space,
 			comp.FileName,
@@ -37,17 +68,8 @@ return {
 			comp.Ruler,
 		}
 
-		---@type HeirlineComponent
-		local InactiveStatusLine = {
-			condition = function()
-				return not conditions.is_active()
-			end,
-			{ provider = "%<%F", hl = { fg = p.comment, bg = p.black } },
-			comp.Align,
-		}
-
 		require("heirline").setup({
-			statusline = { StatusLine, InactiveStatusLine },
+			statusline = StatusLine,
 			opts = {
 				disable_winbar_cb = function(args)
 					return conditions.buffer_matches({

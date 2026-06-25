@@ -4,7 +4,8 @@ local p = require("config.theme.palette").get()
 ---@type HeirlineComponent
 local FileIcon = {
 	init = function(self)
-		local filename = vim.api.nvim_buf_get_name(0)
+    local bufnr = self.bufnr or 0
+		local filename = vim.api.nvim_buf_get_name(bufnr)
 		local extension = vim.fn.fnamemodify(filename, ":e")
 		local icon, color = require("nvim-web-devicons").get_icon_color(filename, extension, { default = false })
 
@@ -23,8 +24,9 @@ local FileIcon = {
 
 ---@type HeirlineComponent
 local FileName = {
-	provider = function()
-		local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":t")
+	provider = function(self)
+    local bufnr = self.bufnr or 0
+		local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":t")
 		return name == "" and "[No Name]" or string.format(" %s ", name)
 	end,
 
@@ -33,8 +35,9 @@ local FileName = {
 
 ---@type HeirlineComponent
 local FileType = {
-	provider = function()
-		local ft = vim.bo.filetype
+	provider = function(self)
+    local bufnr = self.bufnr or 0
+		local ft = vim.bo[bufnr].filetype
 		return ft ~= "" and string.format(" %s ", ft) or ""
 	end,
 
@@ -43,8 +46,9 @@ local FileType = {
 
 ---@type HeirlineComponent
 local FileFormat = {
-	provider = function()
-		local fmt = vim.bo.fileformat
+	provider = function(self)
+    local bufnr = self.bufnr or 0
+		local fmt = vim.bo[bufnr].fileformat
 		return string.format(" %s ", fmt)
 	end,
 
