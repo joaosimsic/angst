@@ -34,6 +34,7 @@ return {
 			},
 			actions = {
 				files = {
+          ["default"] = fzf.actions.file_edit,
 					["ctrl-v"] = fzf.actions.file_vsplit,
 					["ctrl-z"] = fzf.actions.file_split,
 				},

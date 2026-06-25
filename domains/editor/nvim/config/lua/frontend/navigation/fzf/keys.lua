@@ -17,7 +17,9 @@ end
 
 function M.on_picker_create()
 	local current_buf = vim.api.nvim_get_current_buf()
+  ---@type Keybinder
 	local binder = Keybinder.new(current_buf, "FZF-MODAL")
+  binder:set_debug(true)
 
 	local function send_macro(keys)
 		local clean_keys = vim.api.nvim_replace_termcodes(keys, true, false, true)
