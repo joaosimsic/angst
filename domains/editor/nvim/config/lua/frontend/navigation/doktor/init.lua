@@ -17,22 +17,27 @@ return {
 		vim.api.nvim_create_autocmd("DiagnosticChanged", {
 			group = vim.api.nvim_create_augroup("DoktorBackgroundScanner", { clear = true }),
 			callback = function()
-				pipeline.trigger_async_diagnostic_pipeline(function(_) end)
+				pipeline.trigger_async_diagnostic_pipeline(function(_)
+					if State.current_bufnr and vim.api.nvim_buf_is_valid(State.current_bufnr) then
+						vim.schedule(function()
+							window.update_buffer_contents(State.current_bufnr)
+						end)
+					end
+				end)
 			end,
 		})
 
 		function M.toggle()
+			if State.current_win_id and vim.api.nvim_win_is_valid(State.current_win_id) then
+				vim.api.nvim_win_close(State.current_win_id, true)
+				return
+			end
+
 			local clients = vim.lsp.get_clients()
 			if not clients or #clients == 0 then
 				logger:warn(function()
 					return "No LSPs attached"
 				end)
-				return
-			end
-
-			local items = State.items
-			if not items or #items == 0 then
-				vim.notify("No diagnostics found!", vim.log.levels.INFO, { title = "Doktor" })
 				return
 			end
 

@@ -22,6 +22,8 @@
 ---@field target_extensions table<string, boolean>
 ---@field is_scanning boolean
 ---@field row_map table<integer, DoktorDiagnosticItem>
+---@field current_bufnr integer
+---@field current_win_id integer
 
 ---@class DoktorGroupedFile
 ---@field path string
