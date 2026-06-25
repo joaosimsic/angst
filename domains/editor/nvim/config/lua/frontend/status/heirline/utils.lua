@@ -40,11 +40,17 @@ M.is_active = function(self)
 	end
 
 	local ok, conditions = pcall(require, "heirline.conditions")
-	if not ok then
-		return true
+	if ok then
+		return conditions.is_active()
 	end
 
-	return conditions.is_active()
+	local win = vim.api.nvim_get_current_win()
+
+	if self.winnr then
+		return win == self.winnr
+	end
+
+	return true
 end
 
 ---@param self table
