@@ -5,6 +5,7 @@
 - [-] fzf vim motions
 - [ ] dependency class that ensures plugins exists, if not, it crashes
 - [ ] autocmd for lspdetach
+- [ ] Doktor at root
 
 # starship
 - [ ] show vim modes

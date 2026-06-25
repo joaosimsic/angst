@@ -66,7 +66,7 @@ local function get_status_footer()
 		table.insert(footer_chunks, { "No issues", "FloatFooter" })
 	end
 
-	local status_loaded = State.is_scanning and " │ [BUSY] Scanning... " or " │ [IDLE] "
+	local status_loaded = State.is_scanning and " │ [LSP] Fetching... " or " │ [LSP] Done. "
 	table.insert(footer_chunks, { status_loaded, "FloatFooter" })
 
 	return footer_chunks

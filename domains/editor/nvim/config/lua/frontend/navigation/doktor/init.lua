@@ -27,6 +27,25 @@ return {
 			end,
 		})
 
+		vim.api.nvim_create_autocmd("LspProgress", {
+			group = vim.api.nvim_create_augroup("DoktorLSPStatusTracker", { clear = true }),
+			callback = function(ev)
+				local value = ev.data.params.value
+
+				if value.kind == "begin" then
+					State.is_scanning = true
+				elseif value.kind == "end" then
+					State.is_scanning = false
+				end
+
+				if State.current_bufnr and vim.api.nvim_buf_is_valid(State.current_bufnr) then
+					vim.schedule(function()
+						window.update_buffer_contents(State.current_bufnr)
+					end)
+				end
+			end,
+		})
+
 		function M.toggle()
 			if State.current_win_id and vim.api.nvim_win_is_valid(State.current_win_id) then
 				vim.api.nvim_win_close(State.current_win_id, true)
