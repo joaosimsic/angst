@@ -2,6 +2,15 @@
 local p = require("config.theme.palette").get()
 local icons = require("common.icons")
 local conditions = require("heirline.conditions")
+local utils = require("frontend.status.heirline.utils")
+
+---@param color string
+---@return fun(self: table): vim.api.keyset.highlight
+local function diagnostic_hl(color)
+	return function(self)
+		return { fg = utils.status_color(self, color), bg = utils.status_bg(self, p.surface) }
+	end
+end
 
 ---@param icon string
 ---@return string
@@ -29,39 +38,51 @@ local Diagnostics = {
 
 	update = { "DiagnosticChanged", "BufEnter" },
 
-	hl = { bg = p.surface },
+	hl = function(self)
+		return { bg = utils.status_bg(self, p.surface) }
+	end,
 
-	{ provider = " ", hl = { bg = p.surface } },
+	{
+		provider = " ",
+		hl = function(self)
+			return { bg = utils.status_bg(self, p.surface) }
+		end,
+	},
 
 	{
 		provider = function(self)
 			return self.errors > 0 and (self.error_icon .. self.errors) or ""
 		end,
-		hl = "HeirlineDiagnosticError",
+		hl = diagnostic_hl(p.red),
 	},
 
 	{
 		provider = function(self)
 			return self.warnings > 0 and (self.warn_icon .. self.warnings) or ""
 		end,
-		hl = "HeirlineDiagnosticWarn",
+		hl = diagnostic_hl(p.yellow),
 	},
 
 	{
 		provider = function(self)
 			return self.info > 0 and (self.info_icon .. self.info) or ""
 		end,
-		hl = "HeirlineDiagnosticInfo",
+		hl = diagnostic_hl(p.blue),
 	},
 
 	{
 		provider = function(self)
 			return self.hints > 0 and (self.hint_icon .. self.hints) or ""
 		end,
-		hl = "HeirlineDiagnosticHint",
+		hl = diagnostic_hl(p.cyan),
 	},
 
-	{ provider = " ", hl = { bg = p.surface } },
+	{
+		provider = " ",
+		hl = function(self)
+			return { bg = utils.status_bg(self, p.surface) }
+		end,
+	},
 }
 
 return {

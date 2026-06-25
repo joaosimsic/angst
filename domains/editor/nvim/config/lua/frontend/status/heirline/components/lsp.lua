@@ -1,6 +1,8 @@
 local conditions = require("heirline.conditions")
 local utils = require("frontend.status.heirline.utils")
 
+---@type ThemePalette
+local p = require("config.theme.palette").get()
 local provider = utils.to_small_caps(" lsp ")
 
 ---@type HeirlineComponent
@@ -8,7 +10,9 @@ local LspActive = {
 	condition = conditions.lsp_attached,
 	update = { "LspAttach", "LspDetach" },
 	provider = provider,
-	hl = "HeirlineLspActive",
+	hl = function(self)
+		return { fg = utils.status_color(self, p.bright), bg = utils.status_bg(self, p.surface) }
+	end,
 }
 
 ---@type HeirlineComponent
@@ -17,7 +21,9 @@ local LspInactive = {
 		return not conditions.lsp_attached()
 	end,
 	provider = provider,
-	hl = "HeirlineLspInactive",
+	hl = function(self)
+		return { fg = utils.status_color(self, p.dim), bg = utils.status_bg(self, p.surface) }
+	end,
 }
 
 return {

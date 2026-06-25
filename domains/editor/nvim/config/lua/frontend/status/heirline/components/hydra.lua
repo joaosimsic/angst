@@ -1,3 +1,5 @@
+local utils = require("frontend.status.heirline.utils")
+
 ---@type HeirlineComponent
 local HydraComponent = {
 	condition = function()
@@ -15,8 +17,8 @@ local HydraComponent = {
 		end,
 		hl = function(self)
 			return {
-				fg = self.hydra.fg_color,
-				bg = self.hydra.bg_color,
+				fg = utils.status_color(self, self.hydra.fg_color),
+				bg = utils.status_color(self, self.hydra.bg_color),
 				bold = true,
 			}
 		end,

@@ -1,10 +1,11 @@
 ---@type ThemePalette
 local p = require("config.theme.palette").get()
+local utils = require("frontend.status.heirline.utils")
 
 ---@type HeirlineComponent
 local FileIcon = {
 	init = function(self)
-    local bufnr = self.bufnr or 0
+		local bufnr = self.bufnr or 0
 		local filename = vim.api.nvim_buf_get_name(bufnr)
 		local extension = vim.fn.fnamemodify(filename, ":e")
 		local icon, color = require("nvim-web-devicons").get_icon_color(filename, extension, { default = false })
@@ -14,7 +15,7 @@ local FileIcon = {
 	end,
 
 	hl = function(self)
-		return { fg = self.icon_color, bg = p.surface }
+		return { fg = utils.status_color(self, self.icon_color), bg = utils.status_bg(self, p.surface) }
 	end,
 
 	provider = function(self)
@@ -25,34 +26,40 @@ local FileIcon = {
 ---@type HeirlineComponent
 local FileName = {
 	provider = function(self)
-    local bufnr = self.bufnr or 0
+		local bufnr = self.bufnr or 0
 		local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":t")
 		return name == "" and "[No Name]" or string.format(" %s ", name)
 	end,
 
-	hl = { fg = p.base, bg = p.surface, bold = true },
+	hl = function(self)
+		return { fg = utils.status_color(self, p.base), bg = utils.status_bg(self, p.surface), bold = true }
+	end,
 }
 
 ---@type HeirlineComponent
 local FileType = {
 	provider = function(self)
-    local bufnr = self.bufnr or 0
+		local bufnr = self.bufnr or 0
 		local ft = vim.bo[bufnr].filetype
 		return ft ~= "" and string.format(" %s ", ft) or ""
 	end,
 
-	hl = "HeirlineSurfaceBold",
+	hl = function(self)
+		return { fg = utils.status_color(self, p.bright), bg = utils.status_bg(self, p.surface), bold = true }
+	end,
 }
 
 ---@type HeirlineComponent
 local FileFormat = {
 	provider = function(self)
-    local bufnr = self.bufnr or 0
+		local bufnr = self.bufnr or 0
 		local fmt = vim.bo[bufnr].fileformat
 		return string.format(" %s ", fmt)
 	end,
 
-	hl = "HeirlineSurface",
+	hl = function(self)
+		return { fg = utils.status_color(self, p.base), bg = utils.status_bg(self, p.surface) }
+	end,
 }
 
 return {

@@ -1,6 +1,15 @@
 ---@type ThemePalette
 local p = require("config.theme.palette").get()
 local conditions = require("heirline.conditions")
+local utils = require("frontend.status.heirline.utils")
+
+---@param color string
+---@return fun(self: table): vim.api.keyset.highlight
+local function git_hl(color)
+	return function(self)
+		return { fg = utils.status_color(self, color), bg = utils.status_bg(self, p.surface) }
+	end
+end
 
 ---@type HeirlineComponent
 local Git = {
@@ -15,15 +24,22 @@ local Git = {
 			or (self.status_dict.changed or 0) ~= 0
 	end,
 
-	hl = { bg = p.surface },
+	hl = function(self)
+		return { bg = utils.status_bg(self, p.surface) }
+	end,
 
-	{ provider = " ", hl = { bg = p.surface } },
+	{
+		provider = " ",
+		hl = function(self)
+			return { bg = utils.status_bg(self, p.surface) }
+		end,
+	},
 
 	{
 		provider = function(self)
 			return "* " .. self.status_dict.head
 		end,
-		hl = "HeirlineGit",
+		hl = git_hl(p.bright),
 	},
 
 	{
@@ -38,7 +54,7 @@ local Git = {
 			local count = self.status_dict.added or 0
 			return count > 0 and ("+" .. count .. " ") or ""
 		end,
-		hl = "HeirlineGitAdd",
+		hl = git_hl(p.green),
 	},
 
 	{
@@ -46,7 +62,7 @@ local Git = {
 			local count = self.status_dict.changed or 0
 			return count > 0 and ("~" .. count .. " ") or ""
 		end,
-		hl = "HeirlineGitChange",
+		hl = git_hl(p.yellow),
 	},
 
 	{
@@ -54,10 +70,15 @@ local Git = {
 			local count = self.status_dict.removed or 0
 			return count > 0 and ("-" .. count) or ""
 		end,
-		hl = "HeirlineGitDelete",
+		hl = git_hl(p.red),
 	},
 
-	{ provider = " ", hl = { bg = p.surface } },
+	{
+		provider = " ",
+		hl = function(self)
+			return { bg = utils.status_bg(self, p.surface) }
+		end,
+	},
 }
 
 return { Git = Git }
