@@ -1,30 +1,38 @@
 local Keybinder = require("common.Keybinder")
 
+---@class DoktorKeybinderModule
 local M = {}
 
-function M.bind_float_keys(buf, win, targets)
-	---@type Keybinder
-	local binder = Keybinder.new(buf, "DOKTOR_WIN")
+---@param bufnr integer
+---@param win_id integer
+---@param items DoktorDiagnosticItem[]
+function M.setup_navigation_keys(bufnr, win_id, items)
+	local binder = Keybinder.new(bufnr, "DOKTOR-NAVIGATOR")
 
 	binder:nmap("<CR>", function()
-		local cursor_row = vim.api.nvim_win_get_cursor(win)[1]
-		local target = targets[cursor_row]
+		local cursor_pos = vim.api.nvim_win_get_cursor(win_id)
+		local targeted_row = cursor_pos[1]
+		local selected_diagnostic = items[targeted_row]
 
-		if target then
-			vim.api.nvim_win_close(win, true)
-			vim.api.nvim_set_current_buf(target.bufnr)
-			vim.api.nvim_win_set_cursor(0, { target.lnum + 1, target.col })
+		if not selected_diagnostic then
+			return
 		end
-	end, "Jump to workspace diagnostic location")
 
-	local function close_float()
-		if vim.api.nvim_win_is_valid(win) then
-			vim.api.nvim_win_close(win, true)
-		end
+		vim.api.nvim_win_close(win_id, true)
+
+		vim.cmd("edit " .. vim.fn.fnameescape(selected_diagnostic.filename))
+
+		vim.api.nvim_win_set_cursor(0, { selected_diagnostic.lnum + 1, selected_diagnostic.col })
+	end, "Snap viewport focus to targeted inline diagnostic item")
+
+	local teardown_keys = { "q", "<Esc>" }
+	for _, key in ipairs(teardown_keys) do
+		binder:nmap(key, function()
+			if vim.api.nvim_win_is_valid(win_id) then
+				vim.api.nvim_win_close(win_id, true)
+			end
+		end, "Close and purge active Doktor navigator buffer layer")
 	end
-
-	binder:nmap("q", close_float, "Close panel")
-	binder:nmap("<Esc>", close_float, "Close panel")
 end
 
 return M

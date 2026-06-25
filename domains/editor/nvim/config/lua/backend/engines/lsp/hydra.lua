@@ -54,7 +54,13 @@ function M.create_diagnostics(bufnr)
 				end,
 				"Prev Diagnostic",
 			},
-			{ "l", vim.diagnostic.open_float, "Line Diagnostics" },
+			{
+				"l",
+				function()
+					require("doktor").open_diagnostics_navigator()
+				end,
+				"Line Diagnostics",
+			},
 		},
 	}, bufnr)
 end

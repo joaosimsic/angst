@@ -1,73 +1,146 @@
----@class TargetBufferDiag
----@field bufnr integer
----@field lnum integer
----@field col integer
+local async = require("plenary.async")
+---@type AdapterScanner
+local Scanner = require("backend.shared.AdapterScanner")
 
+---@class DoktorConfigEngine
+---@field state DoktorCacheState
 local M = {}
 
----@param bind_callback fun(buf: integer, win: integer, target: TargetBufferDiag[])?
-function M.open_panel(bind_callback)
-	---@type Icons
-	local icons = require("common.icons")
+M.state = {
+	items = {},
+	target_extensions = {},
+	is_scanning = false,
+}
 
-	local diagnostics = vim.diagnostic.get(nil)
+---@param severity_id vim.diagnostic.Severity
+---@return DoktorDiagnosticSeverity
+local function normalize_severity(severity_id)
+	local severities = {
+		[vim.diagnostic.severity.ERROR] = "Error",
+		[vim.diagnostic.severity.WARN] = "Warning",
+		[vim.diagnostic.severity.INFO] = "Information",
+		[vim.diagnostic.severity.HINT] = "Hint",
+	}
 
-	if #diagnostics == 0 then
-		print("No workspace diagnostics found!")
+	return severities[severity_id] or "Hint"
+end
+
+---@param bufnr integer
+---@return DoktorDiagnosticItem[]
+function M.fetch_inline_diagnostics(bufnr)
+	local file_path = vim.api.nvim_buf_get_name(bufnr)
+
+	if file_path == "" then
+		return {}
+	end
+
+	local raw_diagnostics = vim.diagnostic.get(bufnr)
+
+	---@type DoktorDiagnosticItem[]
+	local collected = {}
+
+	for _, diag in ipairs(raw_diagnostics) do
+		table.insert(collected, {
+			filename = vim.fn.fnamemodify(file_path, ":."),
+			lnum = diag.lnum,
+			col = diag.col,
+			message = diag.message,
+			severity = normalize_severity(diag.severity),
+			source = diag.source,
+		})
+	end
+
+	return collected
+end
+
+---@param callback fun(items: DoktorDiagnosticItem[])
+function M.trigger_async_diagnostic_pipeline(callback)
+	if M.state.is_scanning then
 		return
 	end
 
-	local buf = vim.api.nvim_create_buf(false, true)
+	M.state.is_scanning = true
 
-	local lines = {}
+	for _, ft in ipairs(Scanner:supported_filetypes("lsp", {})) do
+		M.state.target_extensions[ft] = true
+	end
 
-	---@type TargetBufferDiag[]
-	local targets = {}
+	async.run(function()
+		---@type DoktorDiagnosticItem[]
+		local aggregated_items = {}
 
-	for _, d in ipairs(diagnostics) do
-		if d.severity == vim.diagnostic.severity.ERROR or d.severity == vim.diagnostic.severity.WARN then
-			local filename = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(d.bufnr), ":.")
-			if filename == "" then
-				filename = "Unknown File"
+		local active_buffers = vim.api.nvim_list_bufs()
+
+		for _, bufnr in ipairs(active_buffers) do
+			if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].buftype == "" then
+				local inline_items = M.fetch_inline_diagnostics(bufnr)
+
+				for _, item in ipairs(inline_items) do
+					table.insert(aggregated_items, item)
+				end
 			end
-
-			local sev_icon = d.severity == vim.diagnostic.severity.ERROR and (icons.diagnostics.error or "[E]")
-				or (icons.diagnostics.warn or "[W]")
-
-			local line_text = string.format(" %s %s:%d:%d - %s", sev_icon, filename, d.lnum + 1, d.col + 1, d.message)
-
-			table.insert(lines, line_text)
-			table.insert(targets, { bufnr = d.bufnr, lnum = d.lnum, col = d.col })
 		end
+
+		async.util.sleep(10)
+
+		M.state.items = aggregated_items
+		M.state.is_scanning = false
+
+		async.util.scheduler()
+
+		return aggregated_items
+	end, function(aggregated_items)
+		callback(aggregated_items)
+	end)
+end
+
+---@param items DoktorDiagnosticItem[]
+---@return integer bufnr, integer win_id
+function M.create_floating_navigator(items)
+	local bufnr = vim.api.nvim_create_buf(false, true)
+
+	vim.bo[bufnr].bufhidden = "wipe"
+	vim.bo[bufnr].filetype = "doktor"
+
+	---@type string[]
+	local render_lines = {}
+
+	for _, item in ipairs(items) do
+		local format_string = string.format(
+			"[%s] %s:%d:%d -> %s (%s)",
+			item.severity:upper(),
+			item.filename,
+			item.lnum + 1,
+			item.col + 1,
+			item.message,
+			item.source or "Linter"
+		)
+
+		table.insert(render_lines, format_string)
 	end
 
-	if #lines == 0 then
-		print("No errors or warnings found!")
-		return
-	end
+	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, render_lines)
 
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-
-	local width = math.floor(vim.o.columns * 0.85)
-	local height = math.floor(vim.o.lines * 0.6)
+	local screen_width = vim.o.columns
+	local screen_height = vim.o.lines
+	local win_width = math.ceil(screen_width * 0.8)
+	local win_height = math.ceil(screen_height * 0.7)
 
 	local win_opts = {
 		relative = "editor",
-		width = width,
-		height = height,
-		row = math.floor((vim.o.lines - height) / 2),
-		col = math.floor((vim.o.columns - width) / 2),
+		width = win_width,
+		height = win_height,
+		col = math.ceil((screen_width - win_width) / 2),
+		row = math.ceil((screen_height - win_height) / 2),
 		style = "minimal",
 		border = "rounded",
-		title = " Doktor Panel ",
+		title = " Asynchronous Doktor Diagnostic Navigator ",
 		title_pos = "center",
 	}
 
-	local win = vim.api.nvim_open_win(buf, true, win_opts)
+	local win_id = vim.api.nvim_open_win(bufnr, true, win_opts)
 
-	if bind_callback then
-		bind_callback(buf, win, targets)
-	end
+	return bufnr, win_id
 end
 
 return M
