@@ -46,6 +46,7 @@ function M.trigger_async_diagnostic_pipeline(callback)
 	if State.state.is_scanning then
 		return
 	end
+
 	State.state.is_scanning = true
 
 	for _, ft in ipairs(Scanner:supported_filetypes("lsp", {})) do

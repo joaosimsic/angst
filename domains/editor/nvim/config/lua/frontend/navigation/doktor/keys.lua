@@ -1,18 +1,21 @@
 ---@type Keybinder
 local Keybinder = require("common.Keybinder")
 
+---@type DoktorCacheState
+local State = require("frontend.navigation.doktor.state")
+
 local M = {}
 
 ---@param bufnr integer
 ---@param win_id integer
----@param items DoktorDiagnosticItem[]
-function M.setup_navigation_keys(bufnr, win_id, items)
+function M.setup_navigation_keys(bufnr, win_id)
 	local binder = Keybinder.new(bufnr, "DOKTOR-NAVIGATOR")
 
 	binder:nmap("<CR>", function()
 		local cursor_pos = vim.api.nvim_win_get_cursor(win_id)
 		local targeted_row = cursor_pos[1]
-		local selected_diagnostic = items[targeted_row]
+
+		local selected_diagnostic = State.row_map[targeted_row]
 
 		if not selected_diagnostic then
 			return

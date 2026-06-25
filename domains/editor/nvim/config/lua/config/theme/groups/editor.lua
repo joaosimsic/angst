@@ -8,7 +8,7 @@ M.get = function(p)
 		Normal = { fg = p.base, bg = p.black },
 		NormalNC = { fg = p.base, bg = p.black },
 		NormalFloat = { fg = p.base, bg = p.black },
-		FloatBorder = { fg = p.dim, bg = p.black },
+		FloatBorder = { fg = p.bright, bg = p.black },
 		FloatTitle = { fg = p.bright, bg = p.black, bold = true },
 		FloatFooter = { fg = p.comment, bg = p.black },
 		ColorColumn = { bg = p.surface },
