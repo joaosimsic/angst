@@ -10,7 +10,7 @@ M.get = function(p)
 		NormalFloat = { fg = p.base, bg = p.black },
 		FloatBorder = { fg = p.bright, bg = p.black },
 		FloatTitle = { fg = p.bright, bg = p.black, bold = true },
-		FloatFooter = { fg = p.comment, bg = p.black },
+		FloatFooter = { fg = p.base, bg = p.black },
 		ColorColumn = { bg = p.surface },
 		Conceal = { fg = p.dim },
 		Cursor = { fg = p.black, bg = p.base },

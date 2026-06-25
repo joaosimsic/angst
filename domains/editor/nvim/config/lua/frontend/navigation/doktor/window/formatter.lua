@@ -23,7 +23,7 @@ local function get_file_icon(filename)
 end
 
 function M.build_tree_view(data_list)
-	local lines = { vim.fn.getcwd() }
+	local lines = { "." }
 	local highlights = {}
 
 	State.row_map = {}
@@ -111,4 +111,5 @@ function M.build_tree_view(data_list)
 
 	return lines, highlights
 end
+
 return M
