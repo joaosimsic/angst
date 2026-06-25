@@ -4,7 +4,15 @@ local utils = require("frontend.status.heirline.utils")
 ---@type HeirlineComponent
 local Mode = {
 	init = function(self)
-		self.mode = modes.get_mode_data()
+		if utils.is_active(self) then
+			self.mode = modes.get_mode_data()
+		else
+			self.mode = {
+				fg = require("config.theme.palette").get().dim,
+				bg = require("config.theme.palette").get().surface,
+				label = "INACTIVE",
+			}
+		end
 	end,
 
 	hl = function(self)
