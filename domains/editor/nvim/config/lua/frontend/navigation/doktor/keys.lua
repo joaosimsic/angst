@@ -27,7 +27,7 @@ function M.setup_navigation_keys(bufnr, win_id, items)
 		vim.api.nvim_win_set_cursor(0, { selected_diagnostic.lnum + 1, selected_diagnostic.col })
 	end, "Snap viewport focus to targeted inline diagnostic item")
 
-	local teardown_keys = { "q", "<Esc>" }
+	local teardown_keys = { "q", "<Esc>", "<C-c>" }
 	for _, key in ipairs(teardown_keys) do
 		binder:nmap(key, function()
 			if vim.api.nvim_win_is_valid(win_id) then

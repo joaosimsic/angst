@@ -35,11 +35,12 @@ function M.create_floating_navigator(items)
 		row = math.ceil((screen_height - win_height) / 2),
 		style = "minimal",
 		border = "rounded",
-		title = " Asynchronous Doktor Diagnostic Navigator ",
+		title = " Doktor's Diagnostics ",
 		title_pos = "center",
 	}
 
 	local win_id = vim.api.nvim_open_win(bufnr, true, win_opts)
+
 	return bufnr, win_id
 end
 
