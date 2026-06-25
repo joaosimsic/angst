@@ -29,7 +29,7 @@ function M.setup()
 		keymap = {
 			preset = "none",
 			["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
-			["<C-e>"] = { "hide" },
+			["Q"] = { "hide" },
 			["<CR>"] = { "accept", "fallback" },
 
 			["<Tab>"] = { "select_next", "snippet_forward", "fallback" },
