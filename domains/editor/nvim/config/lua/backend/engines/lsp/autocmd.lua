@@ -3,6 +3,19 @@ local M = {}
 M.setup = function()
 	local group = vim.api.nvim_create_augroup("LspLifecycle", { clear = true })
 
+	vim.api.nvim_create_autocmd("BufReadPost", {
+		group = group,
+		callback = function(event)
+			local AdapterScanner = require("backend.shared.AdapterScanner")
+			local filetype = vim.bo[event.buf].filetype
+
+			if AdapterScanner:supports_filetype("lsp", filetype) then
+				local LspHydra = require("backend.engines.lsp.hydra")
+				LspHydra.create_diagnostics(event.buf)
+			end
+		end,
+	})
+
 	vim.api.nvim_create_autocmd("LspAttach", {
 		group = group,
 		callback = function(event)
@@ -20,10 +33,17 @@ M.setup = function()
 	vim.api.nvim_create_autocmd("LspDetach", {
 		group = group,
 		callback = function(event)
-			vim.lsp.inlay_hint.enable(false, { bufnr = event.buf })
+			pcall(vim.lsp.inlay_hint.enable, false, { bufnr = event.buf })
 
 			local lsp_keys = require("backend.engines.lsp.keys")
 			lsp_keys.purge(event.buf)
+
+			local hydra_instance = vim.b[event.buf].diagnostic_hydra
+
+			if hydra_instance then
+				hydra_instance:purge()
+				vim.b[event.buf].diagnostic_hydra = nil
+			end
 		end,
 	})
 end

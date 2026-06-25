@@ -1,5 +1,4 @@
 local Keybinder = require("common.Keybinder")
-local LspHydra = require("backend.engines.lsp.hydra")
 
 local M = {}
 local instances = {}
@@ -8,12 +7,8 @@ local instances = {}
 function M.setup(bufnr)
 	local binder = Keybinder.new(bufnr, "LSP")
 
-	---@type Hydra
-	local diag_hydra = LspHydra.create_diagnostics(bufnr)
-
 	instances[bufnr] = {
 		binder = binder,
-		hydra = diag_hydra,
 	}
 
 	binder:nmap("gd", vim.lsp.buf.definition, "Go to definition")
@@ -28,10 +23,6 @@ function M.purge(bufnr)
 	end
 
 	inst.binder:purge()
-
-	if inst.hydra then
-		inst.hydra:deactivate()
-	end
 
 	instances[bufnr] = nil
 end
