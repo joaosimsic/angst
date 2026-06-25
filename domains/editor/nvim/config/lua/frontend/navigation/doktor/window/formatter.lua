@@ -22,16 +22,6 @@ local function get_file_icon(filename)
 	return "📄", "Normal"
 end
 
-local function find_flat_item(path, lnum, col)
-	local items = State.items or {}
-	for _, item in ipairs(items) do
-		if item.filename == path and item.lnum == lnum and item.col == col then
-			return item
-		end
-	end
-	return nil
-end
-
 function M.build_tree_view(data_list)
 	local lines = { vim.fn.getcwd() }
 	local highlights = {}
@@ -60,6 +50,14 @@ function M.build_tree_view(data_list)
 			local pos_str = string.format("[%d, %d]", line_data.lnum + 1, line_data.col + 1)
 			table.insert(lines, string.format("%s%s%s", file_trunk, position_branch, pos_str))
 
+			State.row_map[#lines] = {
+				filename = data.path,
+				lnum = line_data.lnum,
+				col = line_data.col,
+				message = line_data.diags.message,
+				severity = line_data.diags.severity,
+			}
+
 			local diagnostic_trunk = file_trunk .. (is_last_line_group and "     " or "│    ")
 
 			for k, diag in ipairs(line_data.diags) do
@@ -76,10 +74,13 @@ function M.build_tree_view(data_list)
 						)
 
 						local current_line_idx = #lines
-						local flat_item = find_flat_item(data.path, line_data.lnum, line_data.col)
-						if flat_item then
-							State.row_map[current_line_idx] = flat_item
-						end
+						State.row_map[current_line_idx] = {
+							filename = data.path,
+							lnum = line_data.lnum,
+							col = line_data.col,
+							message = diag.message or "",
+							severity = diag.severity,
+						}
 
 						table.insert(highlights, {
 							hl = sev.hl,
@@ -90,6 +91,14 @@ function M.build_tree_view(data_list)
 					else
 						local extra_trunk = is_last_diag and "    " or "│   "
 						table.insert(lines, string.format("%s%s   %s", diagnostic_trunk, extra_trunk, msg_line))
+
+						State.row_map[#lines] = {
+							filename = data.path,
+							lnum = line_data.lnum,
+							col = line_data.col,
+							message = diag.message or "",
+							severity = diag.severity,
+						}
 					end
 				end
 			end
@@ -102,5 +111,4 @@ function M.build_tree_view(data_list)
 
 	return lines, highlights
 end
-
 return M
