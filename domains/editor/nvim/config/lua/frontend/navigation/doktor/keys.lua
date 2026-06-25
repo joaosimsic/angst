@@ -1,6 +1,6 @@
+---@type Keybinder
 local Keybinder = require("common.Keybinder")
 
----@class DoktorKeybinderModule
 local M = {}
 
 ---@param bufnr integer
@@ -18,10 +18,12 @@ function M.setup_navigation_keys(bufnr, win_id, items)
 			return
 		end
 
-		vim.api.nvim_win_close(win_id, true)
+		if vim.api.nvim_win_is_valid(win_id) then
+			vim.api.nvim_win_close(win_id, true)
+		end
 
-		vim.cmd("edit " .. vim.fn.fnameescape(selected_diagnostic.filename))
-
+		local target_buf = vim.fn.bufnr(selected_diagnostic.filename, true)
+		vim.api.nvim_set_current_buf(target_buf)
 		vim.api.nvim_win_set_cursor(0, { selected_diagnostic.lnum + 1, selected_diagnostic.col })
 	end, "Snap viewport focus to targeted inline diagnostic item")
 
