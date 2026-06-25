@@ -2,12 +2,12 @@
 return {
 	"doktor",
 	virtual = true,
-	lazy = false,
+	event = "VeryLazy",
 	config = function()
 		---@class DoktorModule
 		local M = {}
 
-		function M.open_diagnostics_navigator()
+		function M.toggle()
 			local config = require("frontend.navigation.doktor.config")
 			local keys = require("frontend.navigation.doktor.keys")
 

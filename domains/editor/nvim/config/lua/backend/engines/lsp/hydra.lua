@@ -57,7 +57,7 @@ function M.create_diagnostics(bufnr)
 			{
 				"l",
 				function()
-					require("doktor").open_diagnostics_navigator()
+					require("doktor").toggle()
 				end,
 				"Line Diagnostics",
 			},
