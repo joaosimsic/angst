@@ -18,7 +18,7 @@ return {
 					return
 				end
 
-				local bufnr, win_id = window.create_floating_navigator(items)
+				local bufnr, win_id = window.render_diagnostics_window(items)
 				keys.setup_navigation_keys(bufnr, win_id, items)
 			end)
 		end
