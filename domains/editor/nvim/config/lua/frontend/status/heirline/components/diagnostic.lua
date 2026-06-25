@@ -4,17 +4,18 @@ local icons = require("common.icons")
 local conditions = require("heirline.conditions")
 local utils = require("frontend.status.heirline.utils")
 
----@param color string
----@return fun(self: table): vim.api.keyset.highlight
-local function diagnostic_hl(color)
+---@param active_hl_name string
+---@param fallback_color string
+local function diagnostic_hl(active_hl_name, fallback_color)
 	return function(self)
-		return { fg = utils.status_color(self, color), bg = utils.status_bg(self, p.surface) }
+		if utils.is_active(self) then
+			return active_hl_name
+		end
+		return { fg = utils.apply_dark_filter(fallback_color, 0.65), bg = utils.status_bg(self, p.surface) }
 	end
 end
 
----@param icon string
----@return string
-local space_out = function(icon)
+local function space_out(icon)
 	return string.format(" %s ", icon)
 end
 
@@ -39,49 +40,38 @@ local Diagnostics = {
 	update = { "DiagnosticChanged", "BufEnter" },
 
 	hl = function(self)
-		return { bg = utils.status_bg(self, p.surface) }
+		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, p.surface) }
 	end,
 
 	{
 		provider = " ",
-		hl = function(self)
-			return { bg = utils.status_bg(self, p.surface) }
-		end,
 	},
-
 	{
 		provider = function(self)
 			return self.errors > 0 and (self.error_icon .. self.errors) or ""
 		end,
-		hl = diagnostic_hl(p.red),
+		hl = diagnostic_hl("HeirlineDiagnosticError", p.red),
 	},
-
 	{
 		provider = function(self)
 			return self.warnings > 0 and (self.warn_icon .. self.warnings) or ""
 		end,
-		hl = diagnostic_hl(p.yellow),
+		hl = diagnostic_hl("HeirlineDiagnosticWarn", p.yellow),
 	},
-
 	{
 		provider = function(self)
 			return self.info > 0 and (self.info_icon .. self.info) or ""
 		end,
-		hl = diagnostic_hl(p.blue),
+		hl = diagnostic_hl("HeirlineDiagnosticInfo", p.blue),
 	},
-
 	{
 		provider = function(self)
 			return self.hints > 0 and (self.hint_icon .. self.hints) or ""
 		end,
-		hl = diagnostic_hl(p.cyan),
+		hl = diagnostic_hl("HeirlineDiagnosticHint", p.cyan),
 	},
-
 	{
 		provider = " ",
-		hl = function(self)
-			return { bg = utils.status_bg(self, p.surface) }
-		end,
 	},
 }
 

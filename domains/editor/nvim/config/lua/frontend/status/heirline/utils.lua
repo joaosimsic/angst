@@ -34,23 +34,7 @@ M.is_active = function(self)
 	if self.is_active ~= nil then
 		return self.is_active
 	end
-
-	if vim.g.heirline_statusline_is_active ~= nil then
-		return vim.g.heirline_statusline_is_active
-	end
-
-	local ok, conditions = pcall(require, "heirline.conditions")
-	if ok then
-		return conditions.is_active()
-	end
-
-	local win = vim.api.nvim_get_current_win()
-
-	if self.winnr then
-		return win == self.winnr
-	end
-
-	return true
+	return vim.api.nvim_get_current_win() == vim.g.statusline_winid
 end
 
 ---@param self table

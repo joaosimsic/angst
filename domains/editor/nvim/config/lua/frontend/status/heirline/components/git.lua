@@ -3,11 +3,14 @@ local p = require("config.theme.palette").get()
 local conditions = require("heirline.conditions")
 local utils = require("frontend.status.heirline.utils")
 
----@param color string
----@return fun(self: table): vim.api.keyset.highlight
-local function git_hl(color)
+---@param active_hl_name string
+---@param fallback_color string
+local function git_hl(active_hl_name, fallback_color)
 	return function(self)
-		return { fg = utils.status_color(self, color), bg = utils.status_bg(self, p.surface) }
+		if utils.is_active(self) then
+			return active_hl_name
+		end
+		return { fg = utils.apply_dark_filter(fallback_color, 0.65), bg = utils.status_bg(self, p.surface) }
 	end
 end
 
@@ -24,22 +27,21 @@ local Git = {
 			or (self.status_dict.changed or 0) ~= 0
 	end,
 
+	update = { "User", "BufEnter" },
+
 	hl = function(self)
-		return { bg = utils.status_bg(self, p.surface) }
+		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, p.surface) }
 	end,
 
 	{
 		provider = " ",
-		hl = function(self)
-			return { bg = utils.status_bg(self, p.surface) }
-		end,
 	},
 
 	{
 		provider = function(self)
 			return "* " .. self.status_dict.head
 		end,
-		hl = git_hl(p.bright),
+		hl = git_hl("HeirlineGit", p.bright),
 	},
 
 	{
@@ -54,7 +56,7 @@ local Git = {
 			local count = self.status_dict.added or 0
 			return count > 0 and ("+" .. count .. " ") or ""
 		end,
-		hl = git_hl(p.green),
+		hl = git_hl("HeirlineGitAdd", p.green),
 	},
 
 	{
@@ -62,7 +64,7 @@ local Git = {
 			local count = self.status_dict.changed or 0
 			return count > 0 and ("~" .. count .. " ") or ""
 		end,
-		hl = git_hl(p.yellow),
+		hl = git_hl("HeirlineGitChange", p.yellow),
 	},
 
 	{
@@ -70,14 +72,11 @@ local Git = {
 			local count = self.status_dict.removed or 0
 			return count > 0 and ("-" .. count) or ""
 		end,
-		hl = git_hl(p.red),
+		hl = git_hl("HeirlineGitDelete", p.red),
 	},
 
 	{
 		provider = " ",
-		hl = function(self)
-			return { bg = utils.status_bg(self, p.surface) }
-		end,
 	},
 }
 

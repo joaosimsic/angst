@@ -4,14 +4,21 @@ local utils = require("frontend.status.heirline.utils")
 
 ---@type HeirlineComponent
 local FileIcon = {
+	update = { "BufEnter", "BufWinEnter" },
 	init = function(self)
 		local bufnr = self.bufnr or 0
 		local filename = vim.api.nvim_buf_get_name(bufnr)
 		local extension = vim.fn.fnamemodify(filename, ":e")
-		local icon, color = require("nvim-web-devicons").get_icon_color(filename, extension, { default = false })
 
-		self.icon = icon
-		self.icon_color = color
+		local has_devicons, devicons = pcall(require, "nvim-web-devicons")
+		if has_devicons then
+			local icon, color = devicons.get_icon_color(filename, extension, { default = false })
+			self.icon = icon
+			self.icon_color = color
+		else
+			self.icon = ""
+			self.icon_color = p.bright
+		end
 	end,
 
 	hl = function(self)
@@ -25,6 +32,7 @@ local FileIcon = {
 
 ---@type HeirlineComponent
 local FileName = {
+	update = { "BufEnter", "BufWinEnter", "BufWritePost" },
 	provider = function(self)
 		local bufnr = self.bufnr or 0
 		local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":t")
@@ -32,12 +40,14 @@ local FileName = {
 	end,
 
 	hl = function(self)
-		return { fg = utils.status_color(self, p.base), bg = utils.status_bg(self, p.surface), bold = true }
+		return utils.is_active(self) and "HeirlineSurfaceBold"
+			or { fg = utils.status_color(self, p.base), bg = utils.status_bg(self, p.surface), bold = true }
 	end,
 }
 
 ---@type HeirlineComponent
 local FileType = {
+	update = { "BufEnter", "FileType" },
 	provider = function(self)
 		local bufnr = self.bufnr or 0
 		local ft = vim.bo[bufnr].filetype
@@ -51,6 +61,7 @@ local FileType = {
 
 ---@type HeirlineComponent
 local FileFormat = {
+	update = { "BufEnter" },
 	provider = function(self)
 		local bufnr = self.bufnr or 0
 		local fmt = vim.bo[bufnr].fileformat
