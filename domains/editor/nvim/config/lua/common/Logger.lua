@@ -54,7 +54,7 @@ function Logger:log(level, msg)
 	local text = string.format("[%s] %s: %s", self.tag, level:upper(), msg)
 
 	vim.schedule(function()
-		vim.notify(text, current[level])
+		vim.notify(text, current[1])
 	end)
 end
 

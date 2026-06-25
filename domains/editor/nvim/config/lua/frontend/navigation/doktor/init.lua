@@ -9,28 +9,28 @@ return {
 		local pipeline = require("frontend.navigation.doktor.pipeline")
 		local window = require("frontend.navigation.doktor.window")
 		local keys = require("frontend.navigation.doktor.keys")
+		---@type DoktorCacheState
 		local State = require("frontend.navigation.doktor.state")
+		---@type Logger
 		local logger = require("frontend.navigation.doktor.logger")
 
 		vim.api.nvim_create_autocmd("DiagnosticChanged", {
 			group = vim.api.nvim_create_augroup("DoktorBackgroundScanner", { clear = true }),
 			callback = function()
-				pipeline.trigger_async_diagnostic_pipeline(function(_)
-				end)
+				pipeline.trigger_async_diagnostic_pipeline(function(_) end)
 			end,
 		})
 
 		function M.toggle()
 			local clients = vim.lsp.get_clients()
 			if not clients or #clients == 0 then
-				logger:error(function()
+				logger:warn(function()
 					return "No LSPs attached"
 				end)
-				vim.notify("No LSPs attached!", vim.log.levels.WARN, { title = "Doktor" })
 				return
 			end
 
-			local items = State.state.items
+			local items = State.items
 			if not items or #items == 0 then
 				vim.notify("No diagnostics found!", vim.log.levels.INFO, { title = "Doktor" })
 				return

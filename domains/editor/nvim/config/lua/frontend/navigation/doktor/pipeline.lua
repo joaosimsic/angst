@@ -43,14 +43,14 @@ end
 
 ---@param callback fun(items: DoktorDiagnosticItem[])
 function M.trigger_async_diagnostic_pipeline(callback)
-	if State.state.is_scanning then
+	if State.is_scanning then
 		return
 	end
 
-	State.state.is_scanning = true
+	State.is_scanning = true
 
 	for _, ft in ipairs(Scanner:supported_filetypes("lsp", {})) do
-		State.state.target_extensions[ft] = true
+		State.target_extensions[ft] = true
 	end
 
 	async.run(function()
@@ -67,8 +67,8 @@ function M.trigger_async_diagnostic_pipeline(callback)
 		end
 
 		async.util.sleep(10)
-		State.state.items = aggregated_items
-		State.state.is_scanning = false
+		State.items = aggregated_items
+		State.is_scanning = false
 
 		async.util.scheduler()
 		return aggregated_items

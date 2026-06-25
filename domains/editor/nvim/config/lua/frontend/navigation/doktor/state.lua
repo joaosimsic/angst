@@ -2,7 +2,7 @@
 local M = {}
 
 ---@type DoktorCacheState
-M.state = {
+M = {
 	items = {},
 	target_extensions = {},
 	is_scanning = false,
