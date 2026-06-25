@@ -45,7 +45,6 @@ local function is_inlay_hint_key(key)
 		or key == "inlayHint"
 		or key == "inlayHints"
 		or key == "inlay_hints"
-		or key == "csharp|inlay_hints"
 		or key:find("inlay_hints", 1, true) ~= nil
 end
 
@@ -123,17 +122,6 @@ local expected_inlay_hint_settings = {
 		["Lua.hint.paramType"] = bool_value,
 		["Lua.hint.semicolon"] = enum_value({ "All", "Disable", "SameLine" }),
 		["Lua.hint.setType"] = bool_value,
-	},
-	roslyn = {
-		["csharp|inlay_hints.csharp_enable_inlay_hints_for_implicit_object_creation"] = bool_value,
-		["csharp|inlay_hints.csharp_enable_inlay_hints_for_implicit_variable_types"] = bool_value,
-		["csharp|inlay_hints.csharp_enable_inlay_hints_for_lambda_parameter_types"] = bool_value,
-		["csharp|inlay_hints.csharp_enable_inlay_hints_for_types"] = bool_value,
-		["csharp|inlay_hints.dotnet_enable_inlay_hints_for_indexer_parameters"] = bool_value,
-		["csharp|inlay_hints.dotnet_enable_inlay_hints_for_literal_parameters"] = bool_value,
-		["csharp|inlay_hints.dotnet_enable_inlay_hints_for_object_creation_parameters"] = bool_value,
-		["csharp|inlay_hints.dotnet_enable_inlay_hints_for_other_parameters"] = bool_value,
-		["csharp|inlay_hints.dotnet_enable_inlay_hints_for_parameters"] = bool_value,
 	},
 	rust_analyzer = {
 		["rust-analyzer.inlayHints.chainingHints.enable"] = bool_value,
