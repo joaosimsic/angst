@@ -34,8 +34,10 @@ function M.on_picker_create()
 		["<C-d>"] = "i<C-d><C-\\><C-n>",
 		["<C-u>"] = "i<C-u><C-\\><C-n>",
 		["<CR>"] = "i<CR><C-\\><C-n>",
-    ["<Tab>"] = "i<Tab><C-\\><C-n>",
-    ["q"] = "i<Esc>",
+		["<Tab>"] = "i<Tab><C-\\><C-n>",
+		["q"] = "i<Esc>",
+		["v"] = "i<C-v><C-\\><C-n>",
+		["h"] = "i<C-z><C-\\><C-n>",
 	}
 
 	for key, macro in pairs(motions) do

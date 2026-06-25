@@ -29,7 +29,13 @@ return {
 					["ctrl-k"] = "up",
 					["ctrl-d"] = "half-page-down",
 					["ctrl-u"] = "half-page-up",
-          ["ctrl-c"] = "unix-line-discard+abort",
+					["ctrl-c"] = "unix-line-discard+abort",
+				},
+			},
+			actions = {
+				files = {
+					["ctrl-v"] = fzf.actions.file_vsplit,
+					["ctrl-z"] = fzf.actions.file_split,
 				},
 			},
 			grep = {
