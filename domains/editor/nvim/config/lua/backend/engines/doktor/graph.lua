@@ -1,3 +1,5 @@
+local path_util = require("backend.engines.doktor.path_util")
+
 local M = {}
 
 ---@class DependencyData
@@ -31,7 +33,7 @@ end
 ---@param path string
 ---@return string
 local function normalize_path(path)
-	return vim.uv.fs_realpath(path) or vim.fn.fnamemodify(path, ":p")
+	return path_util.normalize(path)
 end
 
 ---@return Graph
@@ -75,10 +77,7 @@ function Graph:upsert(path, filetype)
 		node.filetype = filetype
 	end
 
-	local stat = vim.uv.fs_stat(real_path)
-	if stat and stat.mtime then
-		node.mtime = stat.mtime.sec
-	end
+	node.mtime = path_util.mtime_sec(real_path)
 
 	return node
 end

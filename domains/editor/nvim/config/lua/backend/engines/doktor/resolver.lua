@@ -1,4 +1,5 @@
 local AdapterScanner = require("backend.shared.AdapterScanner")
+local path_util = require("backend.engines.doktor.path_util")
 
 local M = {}
 
@@ -34,10 +35,7 @@ end
 ---@param path string
 ---@return string|nil
 local function existing_file(path)
-	local stat = vim.uv.fs_stat(path)
-	if stat and stat.type == "file" then
-		return vim.uv.fs_realpath(path) or path
-	end
+	return path_util.existing_file(path)
 end
 
 ---@param token string
@@ -76,7 +74,7 @@ function ResolverRegistry:resolve(token, context_buf)
 		return default
 	end
 
-	return vim.uv.fs_realpath(resolved) or resolved
+	return path_util.realpath(resolved)
 end
 
 ---@param data DependencyData

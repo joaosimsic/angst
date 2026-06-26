@@ -1,4 +1,5 @@
 local a = require("plenary.async")
+local scandir = require("plenary.scandir")
 local cache = require("backend.engines.doktor.cache")
 local logging = require("backend.engines.doktor.logging")
 
@@ -28,6 +29,17 @@ local SKIP_DIRS = {
 	["dist"] = true,
 	["build"] = true,
 }
+
+---@param entry string
+---@return boolean
+local function skip_scan_path(entry)
+	for component in entry:gmatch("[^/]+") do
+		if SKIP_DIRS[component] then
+			return false
+		end
+	end
+	return true
+end
 
 ---@param opts { config: DoktorConfig, graph: Graph, provider: ProviderRegistry, resolver: ResolverRegistry, scheduler: Scheduler }
 ---@return DoktorWatcher
@@ -119,6 +131,9 @@ local function debounce_buffer(self, bufnr)
 	end
 
 	local timer = vim.uv.new_timer()
+	if not timer then
+		return
+	end
 	self._timers[bufnr] = timer
 	timer:start(self._config.debounce_ms, 0, function()
 		vim.schedule(function()
@@ -144,6 +159,9 @@ local function debounce_fs_path(self, path)
 	end
 
 	local timer = vim.uv.new_timer()
+	if not timer then
+		return
+	end
 	self._fs_timers[path] = timer
 	timer:start(self._config.debounce_ms, 0, function()
 		vim.schedule(function()
@@ -183,34 +201,6 @@ local function watch_directory(self, dir)
 end
 
 ---@param self DoktorWatcher
----@param dir string
----@param stack string[]
-local function collect_dirs(self, dir, stack)
-	if SKIP_DIRS[vim.fn.fnamemodify(dir, ":t")] then
-		return
-	end
-
-	stack[#stack + 1] = dir
-	watch_directory(self, dir)
-
-	local scanner = vim.uv.fs_scandir(dir)
-	if not scanner then
-		return
-	end
-
-	while true do
-		local name, kind = vim.uv.fs_scandir_next(scanner)
-		if not name then
-			break
-		end
-
-		if kind == "directory" and not SKIP_DIRS[name] then
-			collect_dirs(self, dir .. "/" .. name, stack)
-		end
-	end
-end
-
----@param self DoktorWatcher
 ---@param root string
 local function setup_fs_watchers(self, root)
 	local recursive_ok, recursive_handle = pcall(vim.uv.new_fs_event, root, function(_, filename)
@@ -227,8 +217,14 @@ local function setup_fs_watchers(self, root)
 		return
 	end
 
-	local dirs = {}
-	collect_dirs(self, root, dirs)
+	local dirs = scandir.scan_dir(root, {
+		add_dirs = true,
+		silent = true,
+		search_pattern = skip_scan_path,
+	})
+	for _, dir in ipairs(dirs) do
+		watch_directory(self, dir)
+	end
 end
 
 function DoktorWatcher:bootstrap()
@@ -243,8 +239,8 @@ function DoktorWatcher:bootstrap()
 		local root = vim.fn.getcwd()
 		setup_fs_watchers(self, root)
 
-		local stack = { root }
 		local batch = {}
+		local scanned = 0
 
 		local function flush_batch()
 			for _, entry in ipairs(batch) do
@@ -255,33 +251,28 @@ function DoktorWatcher:bootstrap()
 			a.util.scheduler()
 		end
 
-		while #stack > 0 do
-			local dir = table.remove(stack)
-			local scanner = vim.uv.fs_scandir(dir)
-			if scanner then
-				while true do
-					local name, kind = vim.uv.fs_scandir_next(scanner)
-					if not name then
-						break
-					end
+		scandir.scan_dir(root, {
+			silent = true,
+			search_pattern = skip_scan_path,
+			on_insert = function(path, typ)
+				if typ ~= "file" then
+					return
+				end
 
-					local path = dir .. "/" .. name
-					if kind == "directory" and not SKIP_DIRS[name] then
-						stack[#stack + 1] = path
-					elseif kind == "file" then
-						local filetype = vim.filetype.match({ filename = path }) or ""
-						if self._provider:get(filetype) then
-							batch[#batch + 1] = { path = path, filetype = filetype }
-							if #batch >= self._config.bootstrap.max_files_per_tick then
-								flush_batch()
-							end
-						end
+				scanned = scanned + 1
+				if scanned % self._config.bootstrap.max_files_per_tick == 0 then
+					a.util.scheduler()
+				end
+
+				local filetype = vim.filetype.match({ filename = path }) or ""
+				if self._provider:get(filetype) then
+					batch[#batch + 1] = { path = path, filetype = filetype }
+					if #batch >= self._config.bootstrap.max_files_per_tick then
+						flush_batch()
 					end
 				end
-			end
-
-			a.util.scheduler()
-		end
+			end,
+		})
 
 		if #batch > 0 then
 			flush_batch()
