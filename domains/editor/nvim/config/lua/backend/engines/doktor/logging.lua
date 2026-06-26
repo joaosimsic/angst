@@ -33,6 +33,7 @@ function M.for_module(module_name)
 	end
 
 	logger = Logger.new(TAGS[key] or ("DOKTOR:" .. key:upper()), M._threshold)
+	M._loggers[key] = logger
 
 	return logger
 end

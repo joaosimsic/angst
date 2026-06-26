@@ -1,5 +1,6 @@
 local a = require("plenary.async")
 local uv = a.uv
+local buffer_pool = require("backend.engines.doktor.buffer_pool")
 local logging = require("backend.engines.doktor.logging")
 
 local M = {}
@@ -64,14 +65,6 @@ local function buffer_for_path(path, token)
 	return bufnr, created
 end
 
----@param bufnr integer
----@param created boolean
-local function delete_buffer(bufnr, created)
-	if created and vim.api.nvim_buf_is_valid(bufnr) then
-		pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
-	end
-end
-
 ---@async
 ---@param path string
 ---@param linter_name string
@@ -91,7 +84,7 @@ function M.lint(path, linter_name, namespace, token)
 
 	local bufnr, created = buffer_for_path(path, token)
 	if token and token.cancelled then
-		delete_buffer(bufnr, created)
+		buffer_pool.discard(bufnr, created)
 		return nil
 	end
 
@@ -141,7 +134,7 @@ function M.lint(path, linter_name, namespace, token)
 	a.util.scheduler()
 
 	if token and token.cancelled then
-		delete_buffer(bufnr, created)
+		buffer_pool.discard(bufnr, created)
 		return nil
 	end
 
@@ -149,12 +142,12 @@ function M.lint(path, linter_name, namespace, token)
 		log:debug(function()
 			return string.format("lint failed linter=%s path=%s", linter_name, path)
 		end)
-		delete_buffer(bufnr, created)
+		buffer_pool.discard(bufnr, created)
 		return nil
 	end
 
 	vim.diagnostic.set(namespace, bufnr, diagnostics)
-	delete_buffer(bufnr, created)
+	buffer_pool.retain(bufnr)
 
 	return {
 		path = path,

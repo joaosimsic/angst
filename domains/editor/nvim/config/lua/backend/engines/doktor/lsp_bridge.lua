@@ -1,5 +1,6 @@
 local a = require("plenary.async")
 local uv = a.uv
+local buffer_pool = require("backend.engines.doktor.buffer_pool")
 local logging = require("backend.engines.doktor.logging")
 
 local M = {}
@@ -65,13 +66,14 @@ end
 ---@param path string
 ---@param filetype string
 ---@param token? CancellationToken
----@return integer, boolean
+---@return integer, boolean, boolean
 local function create_hidden_buffer(path, filetype, token)
 	if token and token.cancelled then
-		return -1, false
+		return -1, false, false
 	end
 
 	local existing = vim.fn.bufnr(path)
+	local is_user_buffer = existing ~= -1 and vim.api.nvim_buf_is_loaded(existing)
 	local bufnr = existing ~= -1 and existing or vim.api.nvim_create_buf(false, true)
 	local created = existing == -1
 
@@ -80,19 +82,20 @@ local function create_hidden_buffer(path, filetype, token)
 		vim.b[bufnr].doktor_managed = true
 	end
 
-	vim.bo[bufnr].bufhidden = "hide"
-	vim.bo[bufnr].buftype = ""
-	vim.bo[bufnr].swapfile = false
-	vim.bo[bufnr].filetype = filetype
+	if not is_user_buffer then
+		vim.bo[bufnr].bufhidden = "hide"
+		vim.bo[bufnr].buftype = ""
+		vim.bo[bufnr].swapfile = false
+		vim.bo[bufnr].filetype = filetype
+	end
 
 	if not created then
-		vim.bo[bufnr].modified = false
-		return bufnr, created
+		return bufnr, created, is_user_buffer
 	end
 
 	a.util.scheduler()
 	if token and token.cancelled then
-		return bufnr, created
+		return bufnr, created, is_user_buffer
 	end
 
 	local lines = read_lines(path)
@@ -100,17 +103,23 @@ local function create_hidden_buffer(path, filetype, token)
 		vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
 	end
 
-	vim.bo[bufnr].modified = false
-
-	return bufnr, created
+	return bufnr, created, is_user_buffer
 end
 
 ---@param bufnr integer
 ---@param created boolean
 ---@param attached_ids integer[]
-local function cleanup_buffer(bufnr, created, attached_ids)
-	if created and vim.api.nvim_buf_is_valid(bufnr) then
-		pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+---@param keep_buffer boolean
+---@param is_user_buffer boolean
+local function cleanup_buffer(bufnr, created, attached_ids, keep_buffer, is_user_buffer)
+	if is_user_buffer then
+		return
+	end
+
+	if keep_buffer then
+		buffer_pool.retain(bufnr)
+	elseif created then
+		buffer_pool.discard(bufnr, created)
 	end
 
 	for _, client_id in ipairs(attached_ids) do
@@ -140,7 +149,7 @@ function M.fetch(path, filetype, timeout_ms, namespace, token)
 
 	local bufnr, created = create_hidden_buffer(path, filetype, token)
 	if token and token.cancelled then
-		cleanup_buffer(bufnr, created, {})
+		cleanup_buffer(bufnr, created, {}, false)
 		return nil
 	end
 
@@ -154,14 +163,15 @@ function M.fetch(path, filetype, timeout_ms, namespace, token)
 
 	a.util.scheduler()
 	if token and token.cancelled then
-		cleanup_buffer(bufnr, created, attached_ids)
+		cleanup_buffer(bufnr, created, attached_ids, false)
 		return nil
 	end
 
 	---@type LspDiagnosticsResult|nil
 	local result = a.wrap(function(cb)
 		local completed = false
-		local autocmd
+		local lsp_notify_autocmd
+		local buffer_autocmd
 		local timer
 
 		local function finish(diagnostics)
@@ -170,8 +180,11 @@ function M.fetch(path, filetype, timeout_ms, namespace, token)
 			end
 			completed = true
 
-			if autocmd then
-				pcall(vim.api.nvim_del_autocmd, autocmd)
+			if lsp_notify_autocmd then
+				pcall(vim.api.nvim_del_autocmd, lsp_notify_autocmd)
+			end
+			if buffer_autocmd then
+				pcall(vim.api.nvim_del_autocmd, buffer_autocmd)
 			end
 			if timer then
 				timer:stop()
@@ -182,26 +195,35 @@ function M.fetch(path, filetype, timeout_ms, namespace, token)
 				vim.diagnostic.set(namespace, bufnr, diagnostics)
 			end
 
-			cleanup_buffer(bufnr, created, attached_ids)
+			cleanup_buffer(bufnr, created, attached_ids, diagnostics ~= nil)
 			cb(diagnostics and {
 				uri = uri,
 				diagnostics = diagnostics,
 			} or nil)
 		end
 
-		autocmd = vim.api.nvim_create_autocmd({ "LspNotify", "DiagnosticChanged", "LspDetach" }, {
+		lsp_notify_autocmd = vim.api.nvim_create_autocmd("LspNotify", {
+			callback = function(args)
+				local data = args.data or {}
+				if data.method ~= "textDocument/publishDiagnostics" then
+					return
+				end
+				if data.params and data.params.uri ~= uri then
+					return
+				end
+
+				vim.schedule(function()
+					finish(vim.diagnostic.get(bufnr))
+				end)
+			end,
+		})
+
+		buffer_autocmd = vim.api.nvim_create_autocmd({ "DiagnosticChanged", "LspDetach" }, {
 			buffer = bufnr,
 			callback = function(args)
 				if args.event == "LspDetach" then
 					finish(nil)
 					return true
-				end
-
-				if args.event == "LspNotify" then
-					local data = args.data or {}
-					if data.method ~= "textDocument/publishDiagnostics" then
-						return
-					end
 				end
 
 				finish(vim.diagnostic.get(bufnr))

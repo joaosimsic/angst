@@ -199,7 +199,9 @@ function Scheduler:drain()
 				return string.format("pop priority=%d path=%s source=%s", task.priority, task.path, task.source)
 			end)
 
-			run_task(self, task)
+			a.void(function()
+				run_task(self, task)
+			end)()
 
 			if task.priority >= 2 then
 				a.util.sleep(self._config.idle_ms)

@@ -5,7 +5,7 @@ local M = {}
 ---@class DependencyProvider
 ---@field filetypes string[]
 ---@field query string
----@field lang? string
+---@field lang? string|table<string, string>
 ---@field extract? fun(match: table<string, TSNode>, bufnr: integer): DependencyData
 
 ---@class ProviderRegistry
@@ -37,14 +37,16 @@ end
 ---@param provider DependencyProvider
 ---@return string
 local function language_for(filetype, provider)
-	if type(provider.lang) == "table" then
+	local lang_cfg = provider.lang --
+
+	if type(lang_cfg) == "table" then
 		---@type string|nil
-		local lang = provider.lang[filetype]
+		local lang = lang_cfg[filetype]
 		return lang or filetype
 	end
 
-	if type(provider.lang) == "string" then
-		return provider.lang
+	if type(lang_cfg) == "string" then
+		return lang_cfg
 	end
 
 	return filetype
