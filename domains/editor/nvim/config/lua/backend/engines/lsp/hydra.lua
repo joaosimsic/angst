@@ -54,7 +54,13 @@ function M.create_diagnostics(bufnr)
 				end,
 				"Prev Diagnostic",
 			},
-			{ "l", vim.diagnostic.open_float, "Line Diagnostics" },
+			{
+				"l",
+				function()
+					require("backend.engines.doktor").toggle()
+				end,
+				"Line Diagnostics",
+			},
 		},
 	}, bufnr)
 end

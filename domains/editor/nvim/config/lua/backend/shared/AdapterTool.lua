@@ -10,6 +10,7 @@ local M = {}
 ---@field root_dir function|nil
 ---@field handlers function|nil
 ---@field filetypes string[]|nil
+---@field compiler string|nil
 
 ---@param cmd AdapterCmd
 ---@return string[]|nil
@@ -81,7 +82,8 @@ end
 ---@param tool_name string
 ---@return AdapterToolInfo
 function M.info(adapter, engine_name, tool_name)
-	return {
+	---@type AdapterToolInfo
+	local info = {
 		cmd = M.cmd(adapter, engine_name),
 		settings = server_field(adapter, engine_name, tool_name, "lsp_settings"),
 		init_options = server_field(adapter, engine_name, tool_name, "lsp_init_options"),
@@ -90,6 +92,8 @@ function M.info(adapter, engine_name, tool_name)
 		handlers = server_field(adapter, engine_name, tool_name, "lsp_handlers"),
 		filetypes = adapter.filetypes,
 	}
+
+	return info
 end
 
 return M

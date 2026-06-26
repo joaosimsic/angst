@@ -1,7 +1,11 @@
 ---@meta
 
----@alias Plugin LazySpec
+---@alias Plugin LazyPluginSpec
 
 ---@alias NvimDirection "h" | "j" | "k" | "l"
 
----@alias NvimMode "n"|"v"|"V"|"i"|"c"|"t"|"s"|"R"
+---@alias NvimMode "n"|"v"|"V"|"i"|"c"|"t"|"s"|"R"|"t"|"T"
+
+--- libuv handle stubs (full definitions in lua-language-server luv meta)
+---@class uv.uv_timer_t
+---@class uv.uv_fs_event_t

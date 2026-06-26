@@ -15,6 +15,12 @@ local Mode = {
 		end
 	end,
 
+	update = {
+		"ModeChanged",
+		"BufEnter",
+		"WinEnter",
+	},
+
 	hl = function(self)
 		return {
 			fg = utils.status_color(self, self.mode.fg),
