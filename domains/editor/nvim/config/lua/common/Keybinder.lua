@@ -46,47 +46,40 @@ end
 ---@param mode string|string[]
 ---@param lhs string
 ---@param rhs string|function
----@param desc string|nil
-function Keybinder:_bind(mode, lhs, rhs, desc)
-	local opts = {
-		remap = false,
-		silent = true,
+---@param opts table|nil
+function Keybinder:_bind(mode, lhs, rhs, opts)
+	opts = opts or {}
+
+	local final_opts = {
+		remap = opts.remap or false,
+		silent = opts.silent ~= false,
+		expr = opts.expr or false,
+		replace_keycodes = opts.replace_keycodes or false,
 	}
 
-	local action_desc = desc or (type(rhs) == "string" and rhs or "anonymous function")
+	local desc = opts.desc or (type(rhs) == "string" and rhs or "anonymous function")
 
 	if desc and self.signature then
-		opts.desc = string.format("[%s] %s", self.signature:upper(), desc)
+		final_opts.desc = string.format("[%s] %s", self.signature:upper(), desc)
 	elseif desc then
-		opts.desc = desc
+		final_opts.desc = desc
 	end
 
 	if self.bufnr then
-		opts.buffer = self.bufnr
+		final_opts.buffer = self.bufnr
 	end
 
-	local final_rhs = rhs
-
 	if type(rhs) ~= "function" then
-		self.logger:error(function()
-			return string.format("Invalid RHS to keymap %s. Expected function but found '%s'.", lhs, type(rhs))
-		end)
+		self.logger:error(string.format("Invalid RHS to keymap %s.", lhs))
 		return
 	end
 
-	final_rhs = function(...)
+	local final_rhs = function(...)
 		if self.debug then
-			self.logger:debug(function()
-				return string.format("Pressed: %s -> Executing: %s", lhs, action_desc)
-			end)
+			self.logger:debug(string.format("Pressed: %s -> Executing: %s", lhs, desc))
 		end
 		return rhs(...)
 	end
-
-	self.logger:debug(function()
-		local modes = type(mode) == "table" and table.concat(mode, ", ") or mode
-		return string.format("Mapping %s -> %s [%s]", lhs, modes, action_desc)
-	end)
 
 	table.insert(self.history, {
 		modes = type(mode) == "table" and mode or { mode },
@@ -95,12 +88,12 @@ function Keybinder:_bind(mode, lhs, rhs, desc)
 
 	if type(mode) == "table" then
 		for _, m in ipairs(mode) do
-			vim.keymap.set(m, lhs, final_rhs, opts)
+			vim.keymap.set(m, lhs, final_rhs, final_opts)
 		end
 		return
 	end
 
-	vim.keymap.set(mode, lhs, final_rhs, opts)
+	vim.keymap.set(mode, lhs, final_rhs, final_opts)
 end
 
 function Keybinder:purge()
@@ -123,30 +116,30 @@ end
 ---@param mode NvimMode[]
 ---@param lhs string
 ---@param rhs fun(...: any): any
----@param desc string
-function Keybinder:map(mode, lhs, rhs, desc)
-	self:_bind(mode, lhs, rhs, desc)
+---@param opts? table
+function Keybinder:map(mode, lhs, rhs, opts)
+	self:_bind(mode, lhs, rhs, opts)
 end
 
 ---@param lhs string
 ---@param rhs fun(...: any): any
----@param desc string
-function Keybinder:nmap(lhs, rhs, desc)
-	self:_bind("n", lhs, rhs, desc)
+---@param opts? table
+function Keybinder:nmap(lhs, rhs, opts)
+	self:_bind("n", lhs, rhs, opts)
 end
 
 ---@param lhs string
 ---@param rhs fun(...: any): any
----@param desc string
-function Keybinder:imap(lhs, rhs, desc)
-	self:_bind("i", lhs, rhs, desc)
+---@param opts? table
+function Keybinder:imap(lhs, rhs, opts)
+	self:_bind("i", lhs, rhs, opts)
 end
 
 ---@param lhs string
 ---@param rhs fun(...: any): any
----@param desc string
-function Keybinder:vmap(lhs, rhs, desc)
-	self:_bind("v", lhs, rhs, desc)
+---@param opts? table
+function Keybinder:vmap(lhs, rhs, opts)
+	self:_bind("v", lhs, rhs, opts)
 end
 
 return Keybinder

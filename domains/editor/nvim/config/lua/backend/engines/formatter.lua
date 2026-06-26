@@ -27,6 +27,6 @@ return {
 				async = true,
 				lsp_format = "fallback",
 			})
-		end, "Format buffer")
+		end, { desc = "Format buffer" })
 	end,
 }

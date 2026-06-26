@@ -10,6 +10,6 @@ return {
 
 		binder:nmap("<leader>fl", function()
 			vim.cmd("buffer #")
-		end, "Last visited file")
+		end, { desc = "Last visited file" })
 	end,
 }

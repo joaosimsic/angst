@@ -8,19 +8,19 @@ M.setup = function()
 
 	binder:vmap("<A-j>", function()
 		move.move_text_vertical("j")
-	end, "Move text down")
+	end, { desc = "Move text down" })
 
 	binder:vmap("<A-k>", function()
 		move.move_text_vertical("k")
-	end, "Move text up")
+	end, { desc = "Move text up" })
 
 	binder:vmap("<A-h>", function()
 		move.move_text_horizontal("h")
-	end, "Move text to the left")
+	end, { desc = "Move text to the left" })
 
 	binder:vmap("<A-l>", function()
 		move.move_text_horizontal("l")
-	end, "Move text to the right")
+	end, { desc = "Move text to the right" })
 end
 
 return M

@@ -71,7 +71,7 @@ function Hydra.new(cfg, bufnr)
 
 	self.init_binder:nmap(self.enter, function()
 		self:activate()
-	end, "Enter " .. self.name)
+	end, { desc = "Enter " .. self.name })
 
 	return self
 end
@@ -124,14 +124,14 @@ function Hydra:activate()
 			else
 				self:refresh_statusline()
 			end
-		end, desc)
+		end, { desc = desc })
 	end
 
 	for _, key in ipairs(self.exit_keys) do
 		self.binder:nmap(key, function()
 			self.logger:info("Manual exit triggered")
 			self:deactivate()
-		end, "Exit Hydra")
+		end, { desc = "Exit Hydra" })
 	end
 
 	vim.g.active_hydra = { name = self.name, fg_color = self.fg_color_hex, bg_color = self.bg_color_hex }

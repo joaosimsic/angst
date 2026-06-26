@@ -8,11 +8,11 @@ function M.setup()
 	local fzf = require("fzf-lua")
 	local binder = Keybinder.new(nil, "FZF")
 
-	binder:nmap("<leader>ff", fzf.files, "Find files")
-	binder:nmap("<leader>fg", fzf.live_grep, "Live grep")
-	binder:nmap("<leader>fb", fzf.buffers, "Buffers")
-	binder:nmap("<leader>fo", fzf.oldfiles, "Recent files")
-	binder:nmap("<leader>fh", fzf.help_tags, "Help tags")
+	binder:nmap("<leader>ff", fzf.files, { desc = "Find files" })
+	binder:nmap("<leader>fg", fzf.live_grep, { desc = "Live grep" })
+	binder:nmap("<leader>fb", fzf.buffers, { desc = "Buffers" })
+	binder:nmap("<leader>fo", fzf.oldfiles, { desc = "Recent files" })
+	binder:nmap("<leader>fh", fzf.help_tags, { desc = "Help tags" })
 end
 
 function M.on_picker_create()
@@ -27,7 +27,7 @@ function M.on_picker_create()
 
 	binder:map("t", "<C-c>", function()
 		send_macro([[<C-\><C-n>]])
-	end, "Exit terminal mode")
+	end, { desc = "Exit terminal mode" })
 
 	local motions = {
 		["j"] = "i<C-j><C-\\><C-n>",
@@ -44,16 +44,16 @@ function M.on_picker_create()
 	for key, macro in pairs(motions) do
 		binder:map("n", key, function()
 			send_macro(macro)
-		end, "Motion " .. key)
+		end, { desc = "Motion " .. key })
 	end
 
 	binder:map("n", "i", function()
 		vim.cmd("startinsert")
-	end, "Insert mode")
+	end, { desc = "Insert mode" })
 
 	binder:map("n", "a", function()
 		vim.cmd("startinsert")
-	end, "Append mode")
+	end, { desc = "Append mode" })
 end
 
 return M

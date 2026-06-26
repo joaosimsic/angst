@@ -11,9 +11,9 @@ function M.setup(bufnr)
 		binder = binder,
 	}
 
-	binder:nmap("gd", vim.lsp.buf.definition, "Go to definition")
-	binder:nmap("K", vim.lsp.buf.hover, "Hover documentation")
-	binder:map({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, "Code action")
+	binder:nmap("gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+	binder:nmap("K", vim.lsp.buf.hover, { desc = "Hover documentation" })
+	binder:map({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, { desc = "Code action" })
 end
 
 function M.purge(bufnr)

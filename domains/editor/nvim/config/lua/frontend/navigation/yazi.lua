@@ -20,6 +20,6 @@ return {
 
 		binder:nmap("<C-a>", function()
 			require("yazi").toggle()
-		end, "Toggle yazi")
+		end, { desc = "Toggle yazi" })
 	end,
 }
