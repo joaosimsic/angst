@@ -55,12 +55,12 @@ return {
 			local before = line:sub(col, col)
 			local after = line:sub(col + 1, col + 1)
 
-			if
-				(before == "{" and after == "}")
-				or (before == "(" and after == ")")
-				or (before == "[" and after == "]")
-			then
-				return "<CR><Esc>O"
+			if (before == "{" and after == "}") or (before == "[" and after == "]") then
+				return "<CR><C-o>O"
+			end
+
+			if before == "(" and after == ")" then
+				return "<CR><CR><Up><Tab>"
 			end
 
 			return "<CR>"
