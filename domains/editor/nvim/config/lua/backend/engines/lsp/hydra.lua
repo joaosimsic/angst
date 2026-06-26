@@ -57,7 +57,7 @@ function M.create_diagnostics(bufnr)
 			{
 				"l",
 				function()
-					require("doktor").toggle()
+					require("backend.engines.doktor").toggle()
 				end,
 				"Line Diagnostics",
 			},

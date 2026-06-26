@@ -93,10 +93,6 @@ function M.info(adapter, engine_name, tool_name)
 		filetypes = adapter.filetypes,
 	}
 
-	if engine_name == "doktor" then
-		info.compiler = adapter.doktor_compiler
-	end
-
 	return info
 end
 

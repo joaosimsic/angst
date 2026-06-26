@@ -12,9 +12,6 @@ return {
 	linter_cmd = { "cargo-clippy" },
 	formatter = "rustfmt",
 	treesitter = "rust",
-	doktor = "cargo",
-	doktor_cmd = { "cargo", "check" },
-	doktor_compiler = "rustc",
 	lsp_settings = {
 		["rust-analyzer"] = {
 			check = { command = "clippy" },

@@ -19,6 +19,10 @@ M.setup = function()
 	vim.api.nvim_create_autocmd("LspAttach", {
 		group = group,
 		callback = function(event)
+			if vim.b[event.buf].doktor_managed then
+				return
+			end
+
 			local lsp_keys = require("backend.engines.lsp.keys")
 			lsp_keys.setup(event.buf)
 
@@ -27,6 +31,16 @@ M.setup = function()
 			if client and client:supports_method("textDocument/inlayHint") then
 				vim.lsp.inlay_hint.enable(true, { bufnr = event.buf })
 			end
+
+			vim.api.nvim_exec_autocmds("User", {
+				pattern = "DoktorLspReady",
+				data = {
+					bufnr = event.buf,
+					client_id = event.data.client_id,
+					filetype = vim.bo[event.buf].filetype,
+					root_dir = client and client.config and client.config.root_dir or nil,
+				},
+			})
 		end,
 	})
 

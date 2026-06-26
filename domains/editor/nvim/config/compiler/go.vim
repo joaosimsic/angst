@@ -1,3 +1,0 @@
-" Go compiler (go vet)
-CompilerSet makeprg=go\ vet\ ./...
-CompilerSet errorformat=%f:%l:%c:\ %m,%f:%l:\ %m

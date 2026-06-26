@@ -6,12 +6,31 @@ return {
 	formatter = "prettierd",
 	linter = "eslint_d",
 	treesitter = { "javascript", "typescript", "tsx" },
-	doktor = "tsc",
-	doktor_cmd = { "npx", "tsc", "--noEmit", "--incremental" },
-	doktor_compiler = "tsc",
 	doktor_linter = "eslint",
-	doktor_linter_cmd = { "npx", "eslint", "." },
-	doktor_linter_compiler = "eslint",
+	doktor_provider = {
+		filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+		lang = {
+			javascript = "javascript",
+			javascriptreact = "javascript",
+			typescript = "typescript",
+			typescriptreact = "tsx",
+		},
+		query = [[
+			(import_statement
+			  source: (string (string_fragment) @import))
+
+			(export_statement) @export
+
+			(call_expression
+			  function: (identifier) @_require
+			  arguments: (arguments (string (string_fragment) @import))
+			  (#eq? @_require "require"))
+
+			(call_expression
+			  function: (import)
+			  arguments: (arguments (_) @dynamic_import))
+		]],
+	},
 	lsp_settings = {
 		javascript = {
 			inlayHints = {

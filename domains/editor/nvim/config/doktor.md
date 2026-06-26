@@ -112,6 +112,169 @@ flowchart TD
 
 ---
 
+## Custom Event Protocol
+
+`doktor` intentionally **does not** listen to the global `LspAttach`
+autocmd. Doing so forces the engine to react to every buffer the user
+opens, and — worse — when `lsp_bridge.lua` calls
+`vim.lsp.buf_attach_client` on a hidden buffer, the resulting `LspAttach`
+ricochets through every third-party autocmd in the user's config.
+
+Instead, the engine in [lua/backend/engines/lsp/](lua/backend/engines/lsp/)
+emits a typed `User` autocmd that `doktor` consumes:
+
+| Event                 | Pattern    | `event.data`                                                                  | Emitter                        |
+| --------------------- | ---------- | ----------------------------------------------------------------------------- | ------------------------------ |
+| `User DoktorLspReady` | `filetype` | `{ bufnr: integer, client_id: integer, filetype: string, root_dir: string? }` | `backend/engines/lsp/` (only). |
+
+### Contract
+
+- `User DoktorLspReady` fires **once per `(bufnr, client_id)` pair** from
+  the user-facing LSP engine's own `LspAttach` handler, after the client
+  is attached and the buffer is fully open in the editor.
+- The `pattern` is the filetype, so listeners scope cheaply via
+  `vim.api.nvim_create_autocmd("User", { pattern = "lua", ... })`. The
+  filetype is duplicated into `event.data` for callbacks that registered
+  against multiple patterns.
+- The event is **never** fired from `lsp_bridge.lua`. Hidden-buffer
+  attaches are private to `doktor`.
+
+### Hidden buffers are marked
+
+Before `lsp_bridge.lua` calls `vim.lsp.buf_attach_client`, it sets:
+
+```lua
+vim.b[bufnr].doktor_managed = true
+```
+
+External `LspAttach` autocmds — including the user-facing LSP engine's
+own handler that emits `User DoktorLspReady` — MUST early-return when
+this buffer-local is truthy. A single source of truth keeps doktor's
+hidden-buffer churn out of every other listener's callback budget.
+
+### Consumers
+
+- `watcher.lua` listens to `User DoktorLspReady` with `pattern = "*"` to
+  drive ownership transfer (clear the `doktor.lsp` namespace for the
+  attached path) and to drain `pending_lsp[filetype]` via
+  `Scheduler:drain_pending_lsp(filetype)`.
+- The watcher registers **no** `LspAttach` autocmd of its own.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant Buf as real buffer
+    participant LspE as engines/lsp/<br/>LspAttach handler
+    participant Doc as User DoktorLspReady<br/>(pattern = filetype)
+    participant W as watcher.lua
+    participant S as scheduler.lua
+
+    U->>Buf: :edit foo.lua
+    Buf->>LspE: LspAttach (bufnr, client_id)
+    LspE->>LspE: vim.b[bufnr].doktor_managed? -> skip if true
+    LspE->>Doc: nvim_exec_autocmds("User",<br/>{pattern="lua", data=…})
+    Doc->>W: callback (pattern="lua")
+    W->>S: reset doktor.lsp ns for path
+    W->>S: drain_pending_lsp("lua")
+```
+
+---
+
+## Logging
+
+Every `doktor` module is wired with a tagged
+[`Logger`](lua/common/Logger.lua), following the convention established
+by [`Keybinder.lua`](lua/common/Keybinder.lua), so the engine's own
+behavior is observable without collapsing into `vim.notify` spam.
+
+### Per-module tags
+
+A small registry in `logging.lua` hands out one logger per module name
+and keeps a back-reference for the `:DoktorDebug` command:
+
+| Module              | Logger tag             |
+| ------------------- | ---------------------- |
+| `init.lua`          | `DOKTOR`               |
+| `config.lua`        | `DOKTOR:CONFIG`        |
+| `graph.lua`         | `DOKTOR:GRAPH`         |
+| `provider.lua`      | `DOKTOR:PROVIDER`      |
+| `resolver.lua`      | `DOKTOR:RESOLVER`      |
+| `scheduler.lua`     | `DOKTOR:SCHEDULER`     |
+| `pool.lua`          | `DOKTOR:POOL`          |
+| `lsp_bridge.lua`    | `DOKTOR:LSP_BRIDGE`    |
+| `linter_bridge.lua` | `DOKTOR:LINTER_BRIDGE` |
+| `watcher.lua`       | `DOKTOR:WATCHER`       |
+| `cache.lua`         | `DOKTOR:CACHE`         |
+| `commands.lua`      | `DOKTOR:COMMANDS`      |
+
+### Threshold
+
+- `setup()` reads `config.log_level` and applies it to every registered
+  logger via `logging.set_threshold_all(config.log_level)`.
+- Default is `"warn"`, matching `Logger`'s global threshold.
+- Bridge failures that previously called `vim.notify` directly (e.g.
+  `notify_failure` in `scheduler.lua`) now route through the relevant
+  module logger at `warn`, so they obey the same threshold and share the
+  single notification path. `config.notify_on_error = false` is honored
+  by short-circuiting **before** the logger call, so toggling
+  notifications off does not silently rob users of `:messages` history.
+
+### Hot-path discipline
+
+Hot loops (scheduler step, every queue pop, every bridge yield) use the
+**closure form** so message construction is skipped when below
+threshold:
+
+```lua
+self.logger:debug(function()
+  return string.format(
+    "pop priority=%d path=%s source=%s",
+    task.priority, task.path, task.source
+  )
+end)
+```
+
+This matches `Keybinder:_bind` and avoids paying a `string.format` cost
+when debug logging is off.
+
+### Runtime toggle
+
+`commands.lua` registers `:DoktorDebug [on|off|toggle]`:
+
+- `on` — `logging.set_threshold_all("debug")`.
+- `off` — `logging.set_threshold_all(config.log_level)` (reverts to the
+  configured default).
+- `toggle` (default) — flips between the two states based on the current
+  threshold of `DOKTOR:SCHEDULER`, treated as the canonical state.
+
+The command emits one `INFO`-level log on transition so the state change
+itself is visible, mirroring `Keybinder:set_debug`.
+
+### `logging.lua` API
+
+```lua
+---@meta
+
+---@class DoktorLoggerRegistry
+---@field private _loggers table<string, Logger>
+local LoggerRegistry = {}
+
+---@param module_name string  Short name without the DOKTOR prefix, e.g. "scheduler".
+---@return Logger
+---@nodiscard
+function LoggerRegistry.for_module(module_name) end
+
+---@param level Level|nil  Pass nil to fall back to the global Logger threshold.
+function LoggerRegistry.set_threshold_all(level) end
+
+---@return table<string, Logger>
+---@nodiscard
+function LoggerRegistry.all() end
+```
+
+---
+
 ## Module Layout
 
 `doktor` lives under [lua/backend/engines/doktor/](lua/backend/engines/doktor/),
@@ -130,13 +293,23 @@ mirroring the folder layout used by [lua/backend/engines/lsp/](lua/backend/engin
 - `scheduler.lua` — four-priority queue, plenary.async coroutine driver.
 - `pool.lua` — bounded worker pool with backpressure.
 - `lsp_bridge.lua` — hidden buffer + LSP attach + `publishDiagnostics` await.
+  Marks every hidden buffer with `vim.b[bufnr].doktor_managed = true`
+  before attaching a client so third-party `LspAttach` consumers can
+  early-return.
 - `linter_bridge.lua` — drive `nvim-lint` against transient hidden buffers
   for closed paths.
-- `watcher.lua` — autocmds (`BufWritePost`, `TextChanged`) plus
-  `vim.uv.new_fs_event` for external changes.
+- `watcher.lua` — `BufWritePost` / `TextChanged` debouncer plus
+  `vim.uv.new_fs_event` for external changes, and a `User DoktorLspReady`
+  listener (scoped by filetype pattern) for LSP ownership transfer and
+  pending-task drain. Never registers a global `LspAttach` autocmd.
 - `cache.lua` — persist the dependency graph to
   `vim.fn.stdpath("cache") .. "/doktor/<workspace-hash>.json"`.
-- `commands.lua` — `:Doktor`, `:DoktorRescan`, `:DoktorStatus`.
+- `commands.lua` — `:Doktor`, `:DoktorRescan`, `:DoktorStatus`,
+  `:DoktorDebug`.
+- `logging.lua` — module-logger registry built on top of
+  [lua/common/Logger.lua](lua/common/Logger.lua); exposes
+  `for_module(name)` and `set_threshold_all(level)` for `:DoktorDebug` and
+  the `config.log_level` wiring.
 
 ---
 
@@ -384,7 +557,7 @@ function Graph:transitive_dependents_of(path) end
 ---@class Scheduler
 ---@field private _queues table<DoktorPriority, DoktorTask[]>
 ---@field private _pools table<"lsp"|"lint", WorkerPool>
----@field private _pending_lsp table<string, DoktorTask[]> Keyed by filetype; drained on LspAttach.
+---@field private _pending_lsp table<string, DoktorTask[]> Keyed by filetype; drained on User DoktorLspReady.
 local Scheduler = {}
 
 ---@param task DoktorTask
@@ -511,8 +684,8 @@ function load() end
 ---@field idle_ms integer                   Default: 2000.
 ---@field max_hidden_buffers integer        Default: 16.
 ---@field cache_path string                 Always under vim.fn.stdpath("cache").."/doktor/<workspace-hash>.json".
----@field notify_on_error boolean           Default: true. Surfaces bridge errors via vim.notify (see No-LSP Behavior).
----@field log_level "trace"|"debug"|"info"|"warn"|"error"
+---@field notify_on_error boolean           Default: true. Surfaces bridge errors via the module logger (see Logging).
+---@field log_level "trace"|"debug"|"info"|"warn"|"error"   Applied via logging.set_threshold_all at setup.
 ```
 
 Concurrency contract:
@@ -537,6 +710,7 @@ require("backend.engines.doktor").setup({
   },
   bootstrap = { on_vim_enter = true, max_files_per_tick = 32 },
   notify_on_error = true,
+  log_level = "warn",
 })
 ```
 
@@ -618,19 +792,25 @@ Because the LSP spec doesn't support forcing diagnostics on arbitrary paths,
 
 1. **Acquire buffer** — `vim.api.nvim_create_buf(false, true)` for the target
    file (unlisted, scratch).
-2. **Attach LSP** — manually attach the filetype's configured client. Reuse
+2. **Mark managed** — set `vim.b[bufnr].doktor_managed = true` before
+   any LSP wiring. External `LspAttach` consumers — including the
+   user-facing LSP engine that emits `User DoktorLspReady` — early-return
+   on this flag, so the bridge's attach never ricochets through them.
+3. **Attach LSP** — manually attach the filetype's configured client. Reuse
    the existing client from
    [lua/backend/engines/lsp/](lua/backend/engines/lsp/) rather than spawning
    a new one.
-3. **Await diagnostics** — wrap
+4. **Await diagnostics** — wrap
    `vim.lsp.handlers["textDocument/publishDiagnostics"]` with
    `plenary.async.wrap` and yield until the handler fires for the target
    URI, or `timeout_ms` elapses.
-4. **Cache & clean** — push the result into the `doktor` `vim.diagnostic`
+5. **Cache & clean** — push the result into the `doktor` `vim.diagnostic`
    namespace, then detach and `nvim_buf_delete` the hidden buffer.
 
 ```lua
 local a = require("plenary.async")
+local logging = require("backend.engines.doktor.logging")
+local log = logging.for_module("lsp_bridge")
 
 ---@async
 ---@param path string
@@ -640,7 +820,12 @@ local a = require("plenary.async")
 local function fetch(path, filetype, timeout_ms)
   local bufnr = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_name(bufnr, path)
+  vim.b[bufnr].doktor_managed = true
   vim.bo[bufnr].filetype = filetype
+
+  log:debug(function()
+    return string.format("attach path=%s ft=%s buf=%d", path, filetype, bufnr)
+  end)
 
   local result = a.wrap(function(cb)
     local handle
@@ -744,13 +929,17 @@ opportunistically:
    `doktor_linter`, `nvim-lint` produces diagnostics for that path on the
    spot. This is the "best-effort right now" lane.
 2. **LSP task is parked** — the same task is moved into a pending queue
-   keyed by filetype. The next `LspAttach` for a matching filetype drains
-   the queue and runs the LSP bridge for each parked path.
+   keyed by filetype. The next `User DoktorLspReady` event with
+   `pattern = filetype` (emitted by `backend/engines/lsp/`) drains the
+   queue and runs the LSP bridge for each parked path. doktor does
+   **not** listen to the global `LspAttach` autocmd; see
+   [Custom Event Protocol](#custom-event-protocol).
 3. **Error surfacing** — if either bridge errors (linter binary missing,
    LSP attach times out, hidden-buffer panic, etc.) and
-   `config.notify_on_error` is true, the scheduler emits a single throttled
-   `vim.notify(..., vim.log.levels.WARN)` per `(path, source)` per session
-   so the user knows a file is silently un-diagnosed.
+   `config.notify_on_error` is true, the relevant module logger emits a
+   single throttled `warn` (`DOKTOR:LSP_BRIDGE` / `DOKTOR:LINTER_BRIDGE`)
+   per `(path, source)` per session so the user knows a file is silently
+   un-diagnosed.
 
 ```mermaid
 sequenceDiagram
@@ -758,15 +947,15 @@ sequenceDiagram
     participant S as scheduler.lua
     participant LB as linter_bridge
     participant Pq as pending LSP queue
-    participant A as LspAttach autocmd
+    participant A as User DoktorLspReady<br/>(pattern = filetype)
     participant Lsp as lsp_bridge
 
     S->>LB: lint(path) (best-effort)
-    LB-->>S: ok | err -> vim.notify
+    LB-->>S: ok | err -> logger:warn
     S->>Pq: park(path, filetype)
-    A->>Pq: LspAttach for filetype
+    A->>Pq: User DoktorLspReady for filetype
     Pq->>Lsp: drain(path)
-    Lsp-->>Pq: ok | err -> vim.notify
+    Lsp-->>Pq: ok | err -> logger:warn
 ```
 
 ---
@@ -778,7 +967,10 @@ sequenceDiagram
   schedules **background** fan-out (P1+), so the two cannot fight.
 - [lua/backend/engines/lsp/](lua/backend/engines/lsp/) keeps full ownership
   of attached clients. `doktor`'s LSP bridge only piggy-backs onto already
-  running clients; it never starts a new one.
+  running clients; it never starts a new one. The LSP engine is also the
+  **sole emitter** of `User DoktorLspReady` (see
+  [Custom Event Protocol](#custom-event-protocol)); it must early-return
+  on `vim.b[bufnr].doktor_managed` so bridge attaches do not re-enter.
 - `doktor` writes into **two** namespaces it owns:
   `vim.api.nvim_create_namespace("doktor.lsp")` and
   `vim.api.nvim_create_namespace("doktor.lint")`. Separate namespaces make
@@ -786,10 +978,12 @@ sequenceDiagram
   trivial. The default config in
   [lua/config/diagnostics.lua](lua/config/diagnostics.lua) is unaffected.
 
-### Ownership transfer on `LspAttach`
+### Ownership transfer on `User DoktorLspReady`
 
-When the native LSP attaches to a file that was previously diagnosed in
-the background by `doktor`:
+When the user-facing LSP engine attaches a client to a path that was
+previously diagnosed in the background by `doktor`, it fires
+`User DoktorLspReady` with `pattern = filetype` (skipping any buffer
+where `vim.b.doktor_managed` is true). `watcher.lua` reacts:
 
 1. Clear the `doktor.lsp` namespace for that path — the real LSP client
    now owns those diagnostics and the engine in
@@ -826,6 +1020,10 @@ the background by `doktor`:
    [lua/backend/init.lua](lua/backend/init.lua) (it is already covered by
    `PluginLoader.load("backend", { exclude = { "adapters", "shared" } })`,
    so the engine just needs to land in `engines/`).
+6. Teach the engine in [lua/backend/engines/lsp/](lua/backend/engines/lsp/)
+   to emit `User DoktorLspReady` from its existing `LspAttach` handler
+   (early-returning on `vim.b.doktor_managed`). Remove any previous direct
+   coupling between that engine and doktor.
 
 ---
 
@@ -860,15 +1058,16 @@ the background by `doktor`:
   `concurrency = "auto"` to `require("backend.engines.doktor").setup(...)`,
   which resolves once to `vim.uv.available_parallelism()`.
 - **No-LSP behavior** — best-effort linter immediately, park an LSP task
-  to drain on the next matching `LspAttach`, and surface any bridge error
-  via `vim.notify` when `notify_on_error` is enabled (default on). See
-  [No-LSP behavior](#no-lsp-behavior).
+  to drain on the next matching `User DoktorLspReady`, and surface any
+  bridge error via the module logger (`DOKTOR:LSP_BRIDGE` /
+  `DOKTOR:LINTER_BRIDGE`) at `warn` when `notify_on_error` is enabled
+  (default on). See [No-LSP behavior](#no-lsp-behavior).
 - **Initial bootstrap** — `VimEnter` triggers a P3-throttled background
   workspace walk capped at `bootstrap.max_files_per_tick` files per tick.
   Results persist via `cache.lua` so subsequent startups are incremental.
-- **Active-buffer ownership** — when `LspAttach` fires for a path,
-  doktor's `doktor.lsp` namespace is cleared for that path (native LSP
-  takes over); the `doktor.lint` namespace is left intact until the
+- **Active-buffer ownership** — when `User DoktorLspReady` fires for a
+  path, doktor's `doktor.lsp` namespace is cleared for that path (native
+  LSP takes over); the `doktor.lint` namespace is left intact until the
   active-buffer linter overwrites it.
 - **Pool topology** — two pools by default (`lsp`, `lint`), each with its
   own user-configurable concurrency knob. The `lint` pool is only built
@@ -877,3 +1076,18 @@ the background by `doktor`:
   tasks immediately and flips a `CancellationToken` that in-flight bridge
   code must check at yield points. Hidden buffers are never force-killed
   mid-request to avoid LSP-client panics.
+- **Custom event protocol** — `doktor` never installs a global `LspAttach`
+  autocmd. The user-facing LSP engine emits `User DoktorLspReady` with
+  `pattern = filetype` after every real attach, and `watcher.lua` listens
+  to that. Hidden buffers used by `lsp_bridge.lua` set
+  `vim.b.doktor_managed = true` before attaching, so third-party
+  `LspAttach` consumers (including the LSP engine itself) early-return.
+  This keeps doktor's internal buffer churn out of the global autocmd
+  surface. See [Custom Event Protocol](#custom-event-protocol).
+- **Logging** — every module owns a tagged `Logger` (registered via
+  `logging.lua`, e.g. `DOKTOR:SCHEDULER`, `DOKTOR:WATCHER`) following the
+  same convention as `Keybinder.lua`. The runtime threshold is driven by
+  `config.log_level` and can be toggled to `"debug"` at runtime via
+  `:DoktorDebug [on|off|toggle]`. Hot paths use the closure form of the
+  logger to skip message construction when below threshold. See
+  [Logging](#logging).

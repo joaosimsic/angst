@@ -14,10 +14,7 @@
 ---@field formatter_cmd? string[]|fun():string[]
 ---@field linter? string|string[]
 ---@field linter_cmd? string[]|fun():string[]
----@field doktor? string
----@field doktor_cmd? string[]|fun():string[]
----@field doktor_compiler? string
 ---@field doktor_linter? string
----@field doktor_linter_cmd? string[]|fun():string[]
----@field doktor_linter_compiler? string
+---@field doktor_provider? DependencyProvider
+---@field doktor_resolver? PathResolver
 ---@field plugins? table[]
