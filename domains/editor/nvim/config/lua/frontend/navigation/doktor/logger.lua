@@ -1,6 +1,7 @@
 ---@type Logger
 local Logger = require("common.Logger")
 
-local logger = Logger.new("DOKTOR")
+---@type Logger
+local logger = Logger.new("DOKTOR", "debug")
 
 return logger

@@ -7,6 +7,12 @@ return {
 	linter = "golangcilint",
 	linter_cmd = { "golangci-lint" },
 	treesitter = "go",
+	doktor = "go",
+	doktor_cmd = { "go", "vet", "./..." },
+	doktor_compiler = "go",
+	doktor_linter = "golangci-lint",
+	doktor_linter_cmd = { "golangci-lint", "run", "./..." },
+	doktor_linter_compiler = "golangci-lint",
 	lsp_settings = {
 		gopls = {
 			hints = {

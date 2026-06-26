@@ -6,6 +6,12 @@ return {
 	formatter = "prettierd",
 	linter = "eslint_d",
 	treesitter = { "javascript", "typescript", "tsx" },
+	doktor = "tsc",
+	doktor_cmd = { "npx", "tsc", "--noEmit", "--incremental" },
+	doktor_compiler = "tsc",
+	doktor_linter = "eslint",
+	doktor_linter_cmd = { "npx", "eslint", "." },
+	doktor_linter_compiler = "eslint",
 	lsp_settings = {
 		javascript = {
 			inlayHints = {
