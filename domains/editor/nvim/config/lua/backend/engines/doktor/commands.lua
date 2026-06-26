@@ -2,8 +2,6 @@ local M = {}
 local logging = require("backend.engines.doktor.logging")
 local log = logging.for_module("commands")
 
-local debug_enabled = false
-
 local severity_order = {
 	vim.diagnostic.severity.ERROR,
 	vim.diagnostic.severity.WARN,
@@ -151,21 +149,22 @@ function M.setup(api)
 
 	vim.api.nvim_create_user_command("DoktorDebug", function(opts)
 		local action = opts.args ~= "" and opts.args or "toggle"
+		local config = api.get_config()
 
 		if action == "toggle" then
-			debug_enabled = not debug_enabled
+			local current = logging.threshold_of("scheduler") or config.log_level
+			local enabled = current == "debug"
+			logging.set_threshold_all(enabled and config.log_level or "debug")
+			log:info("debug logging " .. (enabled and "disabled" or "enabled"))
 		elseif action == "on" then
-			debug_enabled = true
+			logging.set_threshold_all("debug")
+			log:info("debug logging enabled")
 		elseif action == "off" then
-			debug_enabled = false
+			logging.set_threshold_all(config.log_level)
+			log:info("debug logging disabled")
 		else
 			vim.notify("Usage: DoktorDebug [on|off|toggle]", vim.log.levels.ERROR)
-			return
 		end
-
-		local level = debug_enabled and "debug" or api.get_config().log_level
-		logging.set_threshold_all(level)
-		log:info("debug logging " .. (debug_enabled and "enabled" or "disabled"))
 	end, {
 		nargs = "?",
 		complete = function()

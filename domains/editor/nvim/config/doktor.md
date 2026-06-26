@@ -125,7 +125,7 @@ emits a typed `User` autocmd that `doktor` consumes:
 
 | Event                 | Pattern    | `event.data`                                                                  | Emitter                        |
 | --------------------- | ---------- | ----------------------------------------------------------------------------- | ------------------------------ |
-| `User DoktorLspReady` | `filetype` | `{ bufnr: integer, client_id: integer, filetype: string, root_dir: string? }` | `backend/engines/lsp/` (only). |
+| `User` (LSP ready)    | `filetype` | `{ bufnr: integer, client_id: integer, filetype: string, root_dir: string? }` | `backend/engines/lsp/` (only). |
 
 ### Contract
 
@@ -460,7 +460,9 @@ whole-project shell-command fallback (see Migration Path).
 ---@class DependencyProvider
 ---@field filetypes string[]                                          Filetypes this provider matches.
 ---@field query string                                                Tree-sitter query string.
----@field extract fun(match: table<string, TSNode>, bufnr: integer): DependencyData
+---@field extract? fun(match: table<string, TSNode>, bufnr: integer): DependencyData
+---                                                      Optional; omit to use the default extractor
+---                                                      (capture names `import`, `export`, `dynamic_import`).
 
 ---@class ProviderRegistry
 ---@field private _by_ft table<string, DependencyProvider>
@@ -677,6 +679,11 @@ function load() end
 ---@field on_vim_enter boolean              Default: true. P3-throttled background walk of the workspace on startup.
 ---@field max_files_per_tick integer        Default: 32. Soft cap on graph upserts per scheduler tick during bootstrap.
 
+---@class DoktorWindowConfig
+---@field width_ratio number                Default: 0.8.
+---@field height_ratio number               Default: 0.6.
+---@field border string|string[]            Default: `"rounded"`.
+
 ---@class DoktorConfig
 ---@field concurrency DoktorPoolConfig
 ---@field bootstrap DoktorBootstrapConfig
@@ -685,7 +692,9 @@ function load() end
 ---@field max_hidden_buffers integer        Default: 16.
 ---@field cache_path string                 Always under vim.fn.stdpath("cache").."/doktor/<workspace-hash>.json".
 ---@field notify_on_error boolean           Default: true. Surfaces bridge errors via the module logger (see Logging).
----@field log_level "trace"|"debug"|"info"|"warn"|"error"   Applied via logging.set_threshold_all at setup.
+---@field log_level "debug"|"info"|"warn"|"error"   Applied via logging.set_threshold_all at setup.
+---@field lsp_timeout_ms integer              Default: 5000. Per-fetch deadline for `lsp_bridge.fetch`.
+---@field window DoktorWindowConfig         Floating window layout for `:Doktor`.
 ```
 
 Concurrency contract:
@@ -1091,3 +1100,212 @@ where `vim.b.doktor_managed` is true). `watcher.lua` reacts:
   `:DoktorDebug [on|off|toggle]`. Hot paths use the closure form of the
   logger to skip message construction when below threshold. See
   [Logging](#logging).
+
+---
+
+## Implementation Audit & Remediation Backlog
+
+> **Status (2025-06):** All 22 items below have been implemented in
+> `lua/backend/engines/doktor/` and related adapters/LSP plumbing.
+
+The first pass of `lua/backend/engines/doktor/` covers the module layout,
+priority queues, namespaces, `doktor_managed` flag, `User DoktorLspReady`
+plumbing, bootstrap walk, cache schema, and `:DoktorDebug` surface. The
+deeper async/coroutine contract and hidden‑buffer hygiene still diverge
+from this spec. The fixes below are the binding remediation list — they
+override the prose above wherever they conflict, and any contributor
+landing changes under `engines/doktor/` is expected to drive them down.
+
+### Severity 1 — correctness, leaks, contract violations
+
+1. **Hidden-buffer leak in `lsp_bridge.lua`.** `finish()` must
+   `vim.lsp.buf_detach_client` for every attached client and
+   `nvim_buf_delete(bufnr, { force = true })` once diagnostics are
+   captured (success **and** timeout paths). The bridge currently never
+   wipes the buffer, so every closed‑file fetch accretes attached
+   buffers for the rest of the session and silently bypasses
+   `config.max_hidden_buffers`.
+
+2. **Hidden-buffer leak in `linter_bridge.lua`.** Same fix: delete the
+   transient buffer after the result is written to the `doktor.lint`
+   namespace, including the error path inside the `pcall(lint.try_lint, …)`
+   failure branch.
+
+3. **Linter bridge swaps the user's current buffer.** Replace
+   `vim.api.nvim_set_current_buf(bufnr)` + restore with a `bufnr`‑scoped
+   `try_lint` call. If `nvim-lint` cannot be scoped without becoming
+   current, run it inside `vim.api.nvim_buf_call(bufnr, function() … end)`
+   so the user's window/cursor never observes the swap. `:DoktorRescan`
+   from cmdline windows or terminals must not move focus.
+
+4. **Linter bridge magic 500 ms delay.** Drop the
+   `vim.defer_fn(…, 500)`. Either wrap `nvim-lint`'s completion in a
+   `plenary.async` future (see #6) or hook the linter‑written
+   `DiagnosticChanged` autocmd scoped to the hidden buffer. Slow linters
+   currently return empty results; fast ones waste a hard 500 ms per
+   task.
+
+5. **Synchronous file IO on hot paths.** Replace `vim.fn.readfile` in
+   both bridges with `vim.uv.fs_open` → `vim.uv.fs_read` → `vim.uv.fs_close`
+   wrapped through `plenary.async.uv`. Same change for `cache.save` and
+   `cache.load`: spec already annotates both `@async`.
+
+6. **Pool & scheduler are not coroutine-driven.** This is the root cause
+   of #4, #7, and the partial #8. Port `pool.lua`, `scheduler.lua`,
+   `lsp_bridge.lua`, `linter_bridge.lua`, and `cache.lua` to
+   `plenary.async`:
+
+   - `WorkerPool._waiters: thread[]` of suspended coroutines, not
+     callback tables.
+   - `WorkerPool:submit(job, token): R` is `@async`; callers `await` the
+     return value.
+   - `Scheduler:drain` runs inside `a.void(function() … end)` and yields
+     between every queue pop.
+   - Bridges expose `fetch` / `lint` as `@async` functions that return
+     the result directly (no `done` callback).
+
+   Until this lands, every other async‑contract bullet in the spec
+   (cancellation, backpressure, ordering) is approximate.
+
+7. **Cooperative cancellation is not checked in-flight.** After #6,
+   every bridge must call:
+
+   ```lua
+   if token.cancelled then return nil end
+   ```
+
+   after `a.util.scheduler()` and immediately after each LSP request /
+   linter callback. `pool.lua` already gates dispatch; the in‑flight
+   path must gate too.
+
+8. **External filesystem watcher missing.** Wire `vim.uv.new_fs_event`
+   in `watcher.lua` per the "External filesystem change" sequence
+   diagram. Recursive watching is not portable across platforms, so
+   start the watcher on the workspace root with `recursive = true` where
+   supported and fall back to per‑directory watchers (one per directory
+   in the bootstrap walk, skipping the same `SKIP_DIRS` set). Debounce
+   storms via the existing `config.debounce_ms`.
+
+### Severity 2 — spec/impl drift that breaks contracts
+
+9. **`User DoktorLspReady` pattern semantics.** Resolve the conflict
+   between the spec ("`pattern = filetype`, listeners scope cheaply")
+   and Neovim's actual `User` autocmd model (where `pattern` IS the
+   event name). The chosen contract is:
+
+   - Emitter (`engines/lsp/autocmd.lua`) fires `User DoktorLspReady`
+     with `pattern = vim.bo[event.buf].filetype` (Neovim accepts any
+     string as the `User` pattern; the conventional `"DoktorLspReady"`
+     pattern is intentionally **not** used here).
+   - Listeners use `nvim_create_autocmd("User", { pattern = "lua", … })`
+     to scope per filetype, or `pattern = "*"` for the watcher.
+   - `event.data` still duplicates the filetype for callers that
+     subscribe to multiple patterns.
+
+   Update `lsp/autocmd.lua` and `watcher.lua` accordingly. The spec
+   table in [Custom Event Protocol](#custom-event-protocol) is
+   normative.
+
+10. **Lint pool is built unconditionally.** Move pool construction in
+    `Scheduler.new` behind a capability check —
+    `AdapterScanner:supported_filetypes("doktor_linter")` non‑empty.
+    `status()` must still report `lint = { in_flight = 0, queued = 0,
+    concurrency = 0 }` when the pool is absent so `:DoktorStatus` output
+    stays stable.
+
+11. **Bootstrap is not batched-async.** `collect_workspace_files`
+    currently scans the entire tree synchronously before any tick is
+    honored. Rewrite as a coroutine that interleaves
+    `vim.uv.fs_scandir` calls with `a.util.scheduler()` yields and emits
+    files in batches of `bootstrap.max_files_per_tick`, enqueueing each
+    batch at P3 before yielding to the next.
+
+12. **`Scheduler:drain_pending_lsp` mass-promotes to P1.** Drained tasks
+    should retain their original priority. Carry it on the parked task
+    when `lsp_bridge.fetch` returns `nil` and re‑enqueue at the same
+    priority. Mass P1 drain after every LSP attach starves real P0
+    saves during language load.
+
+13. **Watcher invalidation priority is index-based, not distance-based.**
+    `watcher.analyze_path` maps `index == 2 → P1`, `> 2 → P2`. Replace
+    with distance computed from the graph: index 1 is the source (P0),
+    everything in `Graph:dependents_of(path)` is P1, the remainder of
+    `Graph:transitive_dependents_of(path)` is P2. Make `Graph:apply`
+    return either a `{ direct: string[], transitive: string[] }` shape
+    or expose a separate `Graph:cascade(path)` so the watcher does not
+    need to recompute.
+
+14. **`:DoktorDebug toggle` reads a module-local boolean.** Spec
+    requires "based on the current threshold of `DOKTOR:SCHEDULER`,
+    treated as the canonical state." Drop `debug_enabled` and inspect
+    `logging.for_module("scheduler").threshold` (or expose a
+    `logging.threshold_of(name)` helper) so external threshold changes
+    are observed.
+
+15. **`watcher.rescan` falls back to a full workspace bootstrap.** The
+    `target == ""` branch silently triggers `:DoktorRescan` to rescan
+    the entire workspace from a scratch buffer. Document this as a
+    distinct command (`:DoktorRescan!` or `:DoktorRescan *`) or remove
+    the fallback so `:DoktorRescan` from an unnamed buffer is a no‑op
+    with a warning log.
+
+### Severity 3 — surface cleanups
+
+16. **`init.lua` writes `package.loaded["doktor"]`.** Remove. The module
+    is reachable via `require("backend.engines.doktor")`; the short
+    alias collides with any unrelated `require("doktor")` on the
+    runtime path.
+
+17. **`TextChangedI` in the watcher autocmd list.** Drop it. Spec lists
+    `BufWritePost` and `TextChanged` only. Insert‑mode re‑extraction
+    fires Tree‑sitter and graph updates on every short pause, which the
+    debounce only partially absorbs.
+
+18. **Hardcoded `EXTENSIONS` table and `filetype == "lua"` branch in
+    `resolver.lua`.** Move per‑language defaults onto the relevant
+    adapters under `lua/backend/adapters/` as `doktor_resolver` blocks
+    so `resolver.lua` stays purely a registry. The default resolver
+    falls back to "exact path exists" only.
+
+19. **`DependencyProvider.extract` is optional in impl, required in
+    spec.** Either:
+    - drop the implicit default extractor in `provider.lua` and make
+      `extract` mandatory (matches spec), or
+    - promote the default extractor (capture names `import`, `export`,
+      `dynamic_import`) into the spec as the canonical fallback.
+
+    Decision: keep the default extractor for ergonomics, **and** update
+    the [Dependency provider](#dependency-provider-providerlua) section
+    to document the capture‑name contract and mark `extract?` as
+    optional.
+
+20. **`DoktorConfig` exposes undocumented `lsp_timeout_ms` and `window`
+    sub-table.** Add both to the [Config](#config-configlua) section.
+    `lsp_timeout_ms` (default `5000`) is the per‑fetch deadline used by
+    `lsp_bridge.fetch`. `window = { width_ratio, height_ratio, border }`
+    drives the floating window opened by `:Doktor`.
+
+21. **`config.log_level` type lists `"trace"` but `Logger.lua` doesn't
+    support it.** Either add `trace` to `Logger.lua`'s `level_map` and
+    `:set_threshold` or drop `"trace"` from the spec union. Do not
+    leave the documented type wider than the runtime.
+
+22. **`notify_failure` throttle is per-session, never reset.** Add a
+    reset hook keyed on successful re‑evaluation of the same
+    `(path, source)` so a recovered LSP / installed linter binary
+    re‑notifies on the next failure.
+
+### Suggested landing order
+
+1. Fixes 1–4 (leaks and the linter UX bugs). Pure correctness, no
+   architectural commitments.
+2. Fix 9 (event protocol). Unblocks every consumer downstream.
+3. Fix 6 (port to `plenary.async`). Foundation for 5, 7, 11.
+4. Fixes 5, 7, 8, 11 (async IO, cancellation, fs_event, batched
+   bootstrap) — all become straightforward once #6 lands.
+5. Fixes 10, 12, 13 (scheduler/pool topology and priority correctness).
+6. Fixes 14–22 (surface polish and spec sync).
+
+Each item above is intentionally phrased as a discrete deliverable so
+PRs can land independently and the audit checklist can be ticked off
+without re‑deriving context.

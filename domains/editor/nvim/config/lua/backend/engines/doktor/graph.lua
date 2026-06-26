@@ -142,9 +142,14 @@ function Graph:transitive_dependents_of(path)
 	return result
 end
 
+---@class GraphCascade
+---@field source string
+---@field direct string[]
+---@field transitive string[]
+
 ---@param path string
 ---@param data DependencyData
----@return string[]
+---@return GraphCascade
 function Graph:apply(path, data)
 	local real_path = normalize_path(path)
 	local node = self._nodes[real_path]
@@ -171,14 +176,27 @@ function Graph:apply(path, data)
 	node.volatile = data.volatile == true
 	node.dirty = false
 
-	local invalidated = { real_path }
+	local direct = {}
+	local transitive = {}
 	if interface_changed or node.volatile then
+		direct = self:dependents_of(real_path)
+		local direct_set = {}
+		for _, dependent in ipairs(direct) do
+			direct_set[dependent] = true
+		end
+
 		for _, dependent in ipairs(self:transitive_dependents_of(real_path)) do
-			invalidated[#invalidated + 1] = dependent
+			if not direct_set[dependent] then
+				transitive[#transitive + 1] = dependent
+			end
 		end
 	end
 
-	return invalidated
+	return {
+		source = real_path,
+		direct = direct,
+		transitive = transitive,
+	}
 end
 
 ---@param nodes table<string, GraphNode>

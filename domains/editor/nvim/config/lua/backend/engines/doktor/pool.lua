@@ -1,3 +1,5 @@
+local control = require("plenary.async.control")
+
 local M = {}
 
 ---@class CancellationToken
@@ -8,7 +10,7 @@ local M = {}
 ---@field name "lsp"|"lint"
 ---@field concurrency integer
 ---@field private _in_flight integer
----@field private _waiters table[]
+---@field private _semaphore table
 local WorkerPool = {}
 WorkerPool.__index = WorkerPool
 
@@ -30,51 +32,38 @@ end
 ---@param opts { name: "lsp"|"lint", concurrency: DoktorConcurrency }
 ---@return WorkerPool
 function M.new(opts)
+	local concurrency = resolve_concurrency(opts.concurrency)
 	return setmetatable({
 		name = opts.name,
-		concurrency = resolve_concurrency(opts.concurrency),
+		concurrency = concurrency,
 		_in_flight = 0,
-		_waiters = {},
+		_semaphore = control.Semaphore.new(concurrency),
 	}, WorkerPool)
 end
 
----@param self WorkerPool
-local function run_next(self)
-	while self._in_flight < self.concurrency and #self._waiters > 0 do
-		local item = table.remove(self._waiters, 1)
-		local token = item.token
-
-		if token and token.cancelled then
-			if item.done then
-				item.done(nil)
-			end
-		else
-			self._in_flight = self._in_flight + 1
-			vim.schedule(function()
-				item.job(function(result)
-					self._in_flight = math.max(0, self._in_flight - 1)
-					if item.done then
-						item.done(result)
-					end
-					run_next(self)
-				end)
-			end)
-		end
-	end
-end
-
 ---@generic R
----@param job fun(done: fun(result: R|nil))
+---@param job async fun(token?: CancellationToken): R|nil
 ---@param token? CancellationToken
----@param done? fun(result: R|nil)
-function WorkerPool:submit(job, token, done)
-	self._waiters[#self._waiters + 1] = {
-		job = job,
-		token = token,
-		done = done,
-	}
+---@return R|nil
+function WorkerPool:submit(job, token)
+	if token and token.cancelled then
+		return nil
+	end
 
-	run_next(self)
+	local permit = self._semaphore:acquire()
+	self._in_flight = self._in_flight + 1
+
+	local result
+	if token and token.cancelled then
+		result = nil
+	else
+		local ok, value = pcall(job, token)
+		result = ok and value or nil
+	end
+
+	self._in_flight = math.max(0, self._in_flight - 1)
+	permit:forget()
+	return result
 end
 
 ---@return integer
@@ -84,7 +73,7 @@ end
 
 ---@return integer
 function WorkerPool:queued()
-	return #self._waiters
+	return 0
 end
 
 M.WorkerPool = WorkerPool

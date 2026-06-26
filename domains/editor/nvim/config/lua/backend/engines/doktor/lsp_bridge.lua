@@ -1,10 +1,36 @@
-local M = {}
+local a = require("plenary.async")
+local uv = a.uv
 local logging = require("backend.engines.doktor.logging")
+
+local M = {}
 local log = logging.for_module("lsp_bridge")
 
 ---@class LspDiagnosticsResult
 ---@field uri string
 ---@field diagnostics lsp.Diagnostic[]
+
+---@param path string
+---@return string[]|nil
+local function read_lines(path)
+	local fd = uv.fs_open(path, "r", 438)
+	if not fd then
+		return nil
+	end
+
+	local stat = uv.fs_fstat(fd)
+	if not stat then
+		uv.fs_close(fd)
+		return nil
+	end
+
+	local data = uv.fs_read(fd, stat.size)
+	uv.fs_close(fd)
+	if not data then
+		return nil
+	end
+
+	return vim.split(data, "\n", { plain = true })
+end
 
 ---@param path string
 ---@param filetype string
@@ -36,8 +62,9 @@ end
 
 ---@param path string
 ---@param filetype string
+---@param token? CancellationToken
 ---@return integer, boolean
-local function create_hidden_buffer(path, filetype)
+local function create_hidden_buffer(path, filetype, token)
 	local existing = vim.fn.bufnr(path)
 	local bufnr = existing ~= -1 and existing or vim.api.nvim_create_buf(false, true)
 	local created = existing == -1
@@ -50,92 +77,139 @@ local function create_hidden_buffer(path, filetype)
 	vim.bo[bufnr].swapfile = false
 	vim.bo[bufnr].filetype = filetype
 
-	local ok, lines = pcall(vim.fn.readfile, path)
-	if ok and created then
-		vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+	if created then
+		a.util.scheduler()
+		if token and token.cancelled then
+			return bufnr, created
+		end
+
+		local lines = read_lines(path)
+		if lines then
+			vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+		end
 	end
 
 	vim.bo[bufnr].modified = false
 	return bufnr, created
 end
 
+---@param bufnr integer
+---@param created boolean
+---@param attached_ids integer[]
+local function cleanup_buffer(bufnr, created, attached_ids)
+	for _, client_id in ipairs(attached_ids) do
+		pcall(vim.lsp.buf_detach_client, bufnr, client_id)
+	end
+
+	if created and vim.api.nvim_buf_is_valid(bufnr) then
+		pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+	end
+end
+
+---@async
 ---@param path string
 ---@param filetype string
 ---@param timeout_ms integer
 ---@param namespace integer
----@param done fun(result: LspDiagnosticsResult|nil)
-function M.fetch(path, filetype, timeout_ms, namespace, done)
+---@param token? CancellationToken
+---@return LspDiagnosticsResult|nil
+function M.fetch(path, filetype, timeout_ms, namespace, token)
+	if token and token.cancelled then
+		return nil
+	end
+
 	local clients = matching_clients(path, filetype)
 	if #clients == 0 then
 		log:debug(function()
 			return string.format("no matching client path=%s ft=%s", path, filetype)
 		end)
-		done(nil)
-		return
+		return nil
 	end
 
-	local bufnr = create_hidden_buffer(path, filetype)
+	local bufnr, created = create_hidden_buffer(path, filetype, token)
+	if token and token.cancelled then
+		cleanup_buffer(bufnr, created, {})
+		return nil
+	end
+
 	local uri = vim.uri_from_fname(path)
-	local completed = false
-	local autocmd
-	local timer
-
-	local function finish(result)
-		if completed then
-			return
-		end
-
-		completed = true
-		if autocmd then
-			pcall(vim.api.nvim_del_autocmd, autocmd)
-		end
-		if timer then
-			timer:stop()
-			timer:close()
-		end
-
-		if result then
-			vim.diagnostic.set(namespace, bufnr, result.diagnostics or {})
-		end
-
-		done(result)
-	end
+	local attached_ids = {}
 
 	for _, client in ipairs(clients) do
 		pcall(vim.lsp.buf_attach_client, bufnr, client.id)
+		attached_ids[#attached_ids + 1] = client.id
 	end
 
-	autocmd = vim.api.nvim_create_autocmd({ "LspNotify", "DiagnosticChanged", "LspDetach" }, {
-		buffer = bufnr,
-		callback = function(args)
-			if args.event == "LspDetach" then
-				finish(nil)
-				return true
+	a.util.scheduler()
+	if token and token.cancelled then
+		cleanup_buffer(bufnr, created, attached_ids)
+		return nil
+	end
+
+	local result = a.wrap(function(cb)
+		local completed = false
+		local autocmd
+		local timer
+
+		local function finish(diagnostics)
+			if completed then
+				return
+			end
+			completed = true
+
+			if autocmd then
+				pcall(vim.api.nvim_del_autocmd, autocmd)
+			end
+			if timer then
+				timer:stop()
+				timer:close()
 			end
 
-			if args.event == "LspNotify" then
-				local data = args.data or {}
-				if data.method ~= "textDocument/publishDiagnostics" then
-					return
+			if diagnostics then
+				vim.diagnostic.set(namespace, bufnr, diagnostics)
+			end
+
+			cleanup_buffer(bufnr, created, attached_ids)
+			cb(diagnostics and {
+				uri = uri,
+				diagnostics = diagnostics,
+			} or nil)
+		end
+
+		autocmd = vim.api.nvim_create_autocmd({ "LspNotify", "DiagnosticChanged", "LspDetach" }, {
+			buffer = bufnr,
+			callback = function(args)
+				if args.event == "LspDetach" then
+					finish(nil)
+					return true
 				end
-			end
 
-			vim.defer_fn(function()
-				finish({
-					uri = uri,
-					diagnostics = vim.diagnostic.get(bufnr),
-				})
-			end, 10)
-			return true
-		end,
-	})
+				if args.event == "LspNotify" then
+					local data = args.data or {}
+					if data.method ~= "textDocument/publishDiagnostics" then
+						return
+					end
+				end
 
-	timer = vim.uv.new_timer()
-	timer:start(timeout_ms, 0, function()
-		vim.schedule(function()
-			finish(nil)
+				finish(vim.diagnostic.get(bufnr))
+				return true
+			end,
+		})
+
+		timer = vim.uv.new_timer()
+		timer:start(timeout_ms, 0, function()
+			vim.schedule(function()
+				finish(nil)
+			end)
 		end)
-	end)
+	end, 1)()
+
+	a.util.scheduler()
+	if token and token.cancelled then
+		return nil
+	end
+
+	return result
 end
 
 return M

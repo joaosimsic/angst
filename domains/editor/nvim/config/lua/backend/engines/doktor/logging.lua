@@ -41,6 +41,11 @@ function M.set_threshold_all(level)
 	end
 end
 
+---@return Level|nil
+function M.threshold_of(module_name)
+	return M.for_module(module_name).threshold
+end
+
 ---@return table<string, Logger>
 function M.all()
 	return M._loggers

@@ -11,14 +11,6 @@ local M = {}
 local ResolverRegistry = {}
 ResolverRegistry.__index = ResolverRegistry
 
-local EXTENSIONS = {
-	javascript = { ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs" },
-	javascriptreact = { ".jsx", ".js", ".tsx", ".ts" },
-	typescript = { ".ts", ".tsx", ".js", ".jsx" },
-	typescriptreact = { ".tsx", ".ts", ".jsx", ".js" },
-	lua = { ".lua" },
-}
-
 ---@return ResolverRegistry
 function M.new()
 	return setmetatable({
@@ -48,29 +40,6 @@ local function existing_file(path)
 	end
 end
 
----@param base string
----@param extensions string[]
----@return string|nil
-local function resolve_with_extensions(base, extensions)
-	if existing_file(base) then
-		return existing_file(base)
-	end
-
-	for _, ext in ipairs(extensions) do
-		local resolved = existing_file(base .. ext)
-		if resolved then
-			return resolved
-		end
-	end
-
-	for _, ext in ipairs(extensions) do
-		local resolved = existing_file(base .. "/index" .. ext)
-		if resolved then
-			return resolved
-		end
-	end
-end
-
 ---@param token string
 ---@param context_buf integer
 ---@return string|nil
@@ -79,24 +48,12 @@ local function default_resolve(token, context_buf)
 		return nil
 	end
 
-	local filetype = vim.bo[context_buf].filetype
-	local extensions = EXTENSIONS[filetype] or { "" }
 	local current_path = vim.api.nvim_buf_get_name(context_buf)
 	local current_dir = vim.fn.fnamemodify(current_path, ":h")
 
 	if token:sub(1, 1) == "." then
-		return resolve_with_extensions(vim.fs.normalize(current_dir .. "/" .. token), extensions)
-	end
-
-	if filetype == "lua" then
-		local lua_path = token:gsub("%.", "/")
-		for entry in package.path:gmatch("[^;]+") do
-			local candidate = entry:gsub("%?", lua_path)
-			local resolved = existing_file(candidate)
-			if resolved then
-				return resolved
-			end
-		end
+		local candidate = vim.fs.normalize(current_dir .. "/" .. token)
+		return existing_file(candidate)
 	end
 
 	return nil

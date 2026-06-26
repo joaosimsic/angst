@@ -57,7 +57,7 @@ local function node_text(node, bufnr)
 		return nil
 	end
 
-	return text:gsub("^[\"']", ""):gsub("[\"']$", "")
+	return (text:gsub("^[\"']", ""):gsub("[\"']$", ""))
 end
 
 ---@param provider DependencyProvider

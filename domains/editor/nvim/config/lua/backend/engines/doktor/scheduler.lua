@@ -1,3 +1,4 @@
+local a = require("plenary.async")
 local AdapterScanner = require("backend.shared.AdapterScanner")
 local pool_mod = require("backend.engines.doktor.pool")
 local lsp_bridge = require("backend.engines.doktor.lsp_bridge")
@@ -17,20 +18,28 @@ local log = logging.for_module("scheduler")
 ---@field token CancellationToken
 
 ---@class Scheduler
----@field private _config DoktorConfig
----@field private _queues table<DoktorPriority, DoktorTask[]>
----@field private _pools table<string, WorkerPool>
----@field private _pending_lsp table<string, DoktorTask[]>
----@field private _tokens table<string, CancellationToken>
----@field private _scheduled boolean
----@field private _namespaces table<string, integer>
----@field private _notified table<string, true>
+---@field package _config DoktorConfig
+---@field package _queues table<DoktorPriority, DoktorTask[]>
+---@field package _pools table<string, WorkerPool>
+---@field package _pending_lsp table<string, DoktorTask[]>
+---@field package _tokens table<string, CancellationToken>
+---@field package _draining boolean
+---@field package _namespaces table<string, integer>
+---@field package _notified table<string, true>
 local Scheduler = {}
 Scheduler.__index = Scheduler
 
 ---@param config DoktorConfig
 ---@return Scheduler
 function M.new(config)
+	local pools = {
+		lsp = pool_mod.new({ name = "lsp", concurrency = config.concurrency.lsp }),
+	}
+
+	if #AdapterScanner:supported_filetypes("doktor_linter") > 0 then
+		pools.lint = pool_mod.new({ name = "lint", concurrency = config.concurrency.lint })
+	end
+
 	return setmetatable({
 		_config = config,
 		_queues = {
@@ -39,13 +48,10 @@ function M.new(config)
 			[2] = {},
 			[3] = {},
 		},
-		_pools = {
-			lsp = pool_mod.new({ name = "lsp", concurrency = config.concurrency.lsp }),
-			lint = pool_mod.new({ name = "lint", concurrency = config.concurrency.lint }),
-		},
+		_pools = pools,
 		_pending_lsp = {},
 		_tokens = {},
-		_scheduled = false,
+		_draining = false,
 		_namespaces = {
 			lsp = vim.api.nvim_create_namespace("doktor.lsp"),
 			lint = vim.api.nvim_create_namespace("doktor.lint"),
@@ -116,50 +122,8 @@ end
 
 ---@param self Scheduler
 ---@param task DoktorTask
----@param done fun()
-local function run_task(self, task, done)
-	if task.token.cancelled then
-		done()
-		return
-	end
-
-	if task.source == "lint" then
-		if not task.linter then
-			done()
-			return
-		end
-
-		self._pools.lint:submit(
-			function(finish)
-				linter_bridge.lint(task.path, task.linter, self._namespaces.lint, finish)
-			end,
-			task.token,
-			function(result)
-				if not result and not task.token.cancelled then
-					notify_failure(self, task, "Doktor linter failed for " .. vim.fn.fnamemodify(task.path, ":."))
-				end
-				done()
-			end
-		)
-		return
-	end
-
-	self._pools.lsp:submit(
-		function(finish)
-			lsp_bridge.fetch(task.path, task.filetype, self._config.lsp_timeout_ms, self._namespaces.lsp, finish)
-		end,
-		task.token,
-		function(result)
-			if not result and not task.token.cancelled then
-				self._pending_lsp[task.filetype] = self._pending_lsp[task.filetype] or {}
-				self._pending_lsp[task.filetype][#self._pending_lsp[task.filetype] + 1] = task
-				log:debug(function()
-					return string.format("park lsp task path=%s ft=%s", task.path, task.filetype)
-				end)
-			end
-			done()
-		end
-	)
+local function clear_notification(self, task)
+	self._notified[token_key(task.path, task.source)] = nil
 end
 
 ---@param self Scheduler
@@ -173,25 +137,82 @@ local function pop_next(self)
 	end
 end
 
-function Scheduler:drain()
-	if self._scheduled then
-		return
+---@param self Scheduler
+---@param task DoktorTask
+---@return boolean
+local function run_task(self, task)
+	if task.token.cancelled then
+		return false
 	end
 
-	self._scheduled = true
-	local function step()
-		local task = pop_next(self)
-		if not task then
-			self._scheduled = false
-			return
+	if task.source == "lint" then
+		if not task.linter or not self._pools.lint then
+			return false
 		end
 
-		run_task(self, task, function()
-			vim.defer_fn(step, task.priority >= 2 and self._config.idle_ms or 0)
+		local result = self._pools.lint:submit(function(token)
+			return linter_bridge.lint(task.path, task.linter, self._namespaces.lint, token)
+		end, task.token)
+
+		if result then
+			clear_notification(self, task)
+		elseif not task.token.cancelled then
+			notify_failure(self, task, "Doktor linter failed for " .. vim.fn.fnamemodify(task.path, ":."))
+		end
+
+		return true
+	end
+
+	local result = self._pools.lsp:submit(function(token)
+		return lsp_bridge.fetch(task.path, task.filetype, self._config.lsp_timeout_ms, self._namespaces.lsp, token)
+	end, task.token)
+
+	if result then
+		clear_notification(self, task)
+	elseif not task.token.cancelled then
+		self._pending_lsp[task.filetype] = self._pending_lsp[task.filetype] or {}
+		self._pending_lsp[task.filetype][#self._pending_lsp[task.filetype] + 1] = task
+		log:debug(function()
+			return string.format("park lsp task path=%s ft=%s priority=%d", task.path, task.filetype, task.priority)
 		end)
 	end
 
-	vim.schedule(step)
+	return true
+end
+
+function Scheduler:drain()
+	if self._draining then
+		return
+	end
+
+	self._draining = true
+	a.void(function()
+		while true do
+			a.util.scheduler()
+
+			local task = pop_next(self)
+			if not task then
+				break
+			end
+
+			log:debug(function()
+				return string.format(
+					"pop priority=%d path=%s source=%s",
+					task.priority,
+					task.path,
+					task.source
+				)
+			end)
+
+			run_task(self, task)
+
+			if task.priority >= 2 then
+				a.util.sleep(self._config.idle_ms)
+			end
+		end
+
+		self._draining = false
+	end)()
 end
 
 ---@param task DoktorTask
@@ -236,9 +257,8 @@ function Scheduler:drain_pending_lsp(filetype)
 
 	self._pending_lsp[filetype] = nil
 	for _, task in ipairs(pending) do
-		task.priority = 1
 		task.token = replace_token(self, task.path, task.source)
-		self._queues[1][#self._queues[1] + 1] = task
+		self._queues[task.priority][#self._queues[task.priority] + 1] = task
 	end
 
 	self:drain()
@@ -277,6 +297,7 @@ function Scheduler:status()
 		queues[priority] = #self._queues[priority]
 	end
 
+	local lint_pool = self._pools.lint
 	return {
 		queues = queues,
 		pools = {
@@ -285,10 +306,14 @@ function Scheduler:status()
 				queued = self._pools.lsp:queued(),
 				concurrency = self._pools.lsp.concurrency,
 			},
-			lint = {
-				in_flight = self._pools.lint:in_flight(),
-				queued = self._pools.lint:queued(),
-				concurrency = self._pools.lint.concurrency,
+			lint = lint_pool and {
+				in_flight = lint_pool:in_flight(),
+				queued = lint_pool:queued(),
+				concurrency = lint_pool.concurrency,
+			} or {
+				in_flight = 0,
+				queued = 0,
+				concurrency = 0,
 			},
 		},
 		pending_lsp = vim.tbl_count(self._pending_lsp),

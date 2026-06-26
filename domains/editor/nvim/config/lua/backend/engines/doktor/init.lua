@@ -1,13 +1,18 @@
 local config_mod = require("backend.engines.doktor.config")
-local graph_mod = require("backend.engines.doktor.graph")
-local provider_mod = require("backend.engines.doktor.provider")
-local resolver_mod = require("backend.engines.doktor.resolver")
-local scheduler_mod = require("backend.engines.doktor.scheduler")
-local watcher_mod = require("backend.engines.doktor.watcher")
-local commands = require("backend.engines.doktor.commands")
 local logging = require("backend.engines.doktor.logging")
 
 ---@class DoktorModule
+---@field _graph Graph?
+---@field _provider ProviderRegistry?
+---@field _resolver ResolverRegistry?
+---@field _scheduler Scheduler?
+---@field _watcher DoktorWatcher?
+---@field setup fun(opts?: table)
+---@field rescan fun(path?: string)
+---@field status fun(): table
+---@field get_config fun(): DoktorConfig
+---@field toggle fun()
+---@field scan fun()
 local M = {
 	_graph = nil,
 	_provider = nil,
@@ -20,6 +25,13 @@ local M = {
 
 ---@param opts? table
 function M.setup(opts)
+	local graph_mod = require("backend.engines.doktor.graph")
+	local provider_mod = require("backend.engines.doktor.provider")
+	local resolver_mod = require("backend.engines.doktor.resolver")
+	local scheduler_mod = require("backend.engines.doktor.scheduler")
+	local watcher_mod = require("backend.engines.doktor.watcher")
+	local commands = require("backend.engines.doktor.commands")
+
 	local config = config_mod.setup(opts)
 	logging.set_threshold_all(config.log_level)
 
@@ -45,7 +57,7 @@ function M.get_config()
 end
 
 function M.toggle()
-	commands.toggle(M)
+	require("backend.engines.doktor.commands").toggle(M)
 end
 
 ---@param path? string
@@ -75,11 +87,10 @@ function M.status()
 	return M._scheduler:status()
 end
 
-package.loaded["doktor"] = M
-
 M[1] = "doktor"
 M.virtual = true
 M.event = "VeryLazy"
+M.dependencies = { "plenary.nvim" }
 M.config = function(_, opts)
 	M.setup(opts)
 end

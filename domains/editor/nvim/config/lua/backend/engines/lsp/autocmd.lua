@@ -33,7 +33,7 @@ M.setup = function()
 			end
 
 			vim.api.nvim_exec_autocmds("User", {
-				pattern = "DoktorLspReady",
+				pattern = vim.bo[event.buf].filetype,
 				data = {
 					bufnr = event.buf,
 					client_id = event.data.client_id,

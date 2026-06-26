@@ -1,5 +1,8 @@
-local M = {}
+local a = require("plenary.async")
+local uv = a.uv
 local logging = require("backend.engines.doktor.logging")
+
+local M = {}
 local log = logging.for_module("linter_bridge")
 
 ---@class LinterDiagnosticsResult
@@ -7,16 +10,47 @@ local log = logging.for_module("linter_bridge")
 ---@field diagnostics vim.Diagnostic[]
 
 ---@param path string
----@return integer
-local function buffer_for_path(path)
+---@return string[]|nil
+local function read_lines(path)
+	local fd = uv.fs_open(path, "r", 438)
+	if not fd then
+		return nil
+	end
+
+	local stat = uv.fs_fstat(fd)
+	if not stat then
+		uv.fs_close(fd)
+		return nil
+	end
+
+	local data = uv.fs_read(fd, stat.size)
+	uv.fs_close(fd)
+	if not data then
+		return nil
+	end
+
+	return vim.split(data, "\n", { plain = true })
+end
+
+---@param path string
+---@param token? CancellationToken
+---@return integer, boolean
+local function buffer_for_path(path, token)
 	local existing = vim.fn.bufnr(path)
 	local bufnr = existing ~= -1 and existing or vim.api.nvim_create_buf(false, true)
+	local created = existing == -1
 
-	if existing == -1 then
+	if created then
 		vim.api.nvim_buf_set_name(bufnr, path)
 		vim.b[bufnr].doktor_managed = true
-		local ok, lines = pcall(vim.fn.readfile, path)
-		if ok then
+
+		a.util.scheduler()
+		if token and token.cancelled then
+			return bufnr, created
+		end
+
+		local lines = read_lines(path)
+		if lines then
 			vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
 		end
 	end
@@ -27,48 +61,103 @@ local function buffer_for_path(path)
 	vim.bo[bufnr].filetype = vim.filetype.match({ filename = path }) or vim.bo[bufnr].filetype
 	vim.bo[bufnr].modified = false
 
-	return bufnr
+	return bufnr, created
 end
 
+---@param bufnr integer
+---@param created boolean
+local function delete_buffer(bufnr, created)
+	if created and vim.api.nvim_buf_is_valid(bufnr) then
+		pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+	end
+end
+
+---@async
 ---@param path string
 ---@param linter_name string
 ---@param namespace integer
----@param done fun(result: LinterDiagnosticsResult|nil)
-function M.lint(path, linter_name, namespace, done)
+---@param token? CancellationToken
+---@return LinterDiagnosticsResult|nil
+function M.lint(path, linter_name, namespace, token)
+	if token and token.cancelled then
+		return nil
+	end
+
 	local ok_lint, lint = pcall(require, "lint")
 	if not ok_lint then
 		log:warn("nvim-lint is unavailable")
-		done(nil)
-		return
+		return nil
 	end
 
-	local bufnr = buffer_for_path(path)
-	local previous = vim.api.nvim_get_current_buf()
+	local bufnr, created = buffer_for_path(path, token)
+	if token and token.cancelled then
+		delete_buffer(bufnr, created)
+		return nil
+	end
 
-	vim.api.nvim_set_current_buf(bufnr)
-	local ok = pcall(lint.try_lint, linter_name, {
-		ignore_errors = true,
-	})
-	vim.api.nvim_set_current_buf(previous)
+	local diagnostics = a.wrap(function(cb)
+		local finished = false
+		local autocmd
 
-	if not ok then
+		local function finish()
+			if finished then
+				return
+			end
+			finished = true
+
+			if autocmd then
+				pcall(vim.api.nvim_del_autocmd, autocmd)
+			end
+
+			local lint_namespace = type(lint.get_namespace) == "function" and lint.get_namespace(linter_name) or nil
+			local diags = lint_namespace and vim.diagnostic.get(bufnr, { namespace = lint_namespace })
+				or vim.diagnostic.get(bufnr)
+			cb(diags)
+		end
+
+		autocmd = vim.api.nvim_create_autocmd("DiagnosticChanged", {
+			buffer = bufnr,
+			callback = finish,
+		})
+
+		local ok = vim.api.nvim_buf_call(bufnr, function()
+			return pcall(lint.try_lint, linter_name, {
+				ignore_errors = true,
+			})
+		end)
+
+		if not ok then
+			if autocmd then
+				pcall(vim.api.nvim_del_autocmd, autocmd)
+			end
+			cb(nil)
+			return
+		end
+
+		vim.schedule(finish)
+	end, 1)()
+
+	a.util.scheduler()
+	if token and token.cancelled then
+		delete_buffer(bufnr, created)
+		return nil
+	end
+
+	if not diagnostics then
 		log:debug(function()
 			return string.format("lint failed linter=%s path=%s", linter_name, path)
 		end)
-		done(nil)
-		return
+		delete_buffer(bufnr, created)
+		return nil
 	end
 
-	vim.defer_fn(function()
-		local lint_namespace = type(lint.get_namespace) == "function" and lint.get_namespace(linter_name) or nil
-		local diagnostics = lint_namespace and vim.diagnostic.get(bufnr, { namespace = lint_namespace })
-			or vim.diagnostic.get(bufnr)
-		vim.diagnostic.set(namespace, bufnr, diagnostics)
-		done({
-			path = path,
-			diagnostics = diagnostics,
-		})
-	end, 500)
+	vim.diagnostic.set(namespace, bufnr, diagnostics)
+	delete_buffer(bufnr, created)
+
+	return {
+		path = path,
+		diagnostics = diagnostics,
+	}
 end
 
 return M
