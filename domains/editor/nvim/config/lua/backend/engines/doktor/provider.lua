@@ -5,7 +5,7 @@ local M = {}
 ---@class DependencyProvider
 ---@field filetypes string[]
 ---@field query string
----@field lang? string|table<string, string>
+---@field lang? string
 ---@field extract? fun(match: table<string, TSNode>, bufnr: integer): DependencyData
 
 ---@class ProviderRegistry
@@ -38,10 +38,16 @@ end
 ---@return string
 local function language_for(filetype, provider)
 	if type(provider.lang) == "table" then
-		return provider.lang[filetype] or filetype
+		---@type string|nil
+		local lang = provider.lang[filetype]
+		return lang or filetype
 	end
 
-	return provider.lang or filetype
+	if type(provider.lang) == "string" then
+		return provider.lang
+	end
+
+	return filetype
 end
 
 ---@param node TSNode|string|nil
@@ -60,33 +66,34 @@ local function node_text(node, bufnr)
 	return (text:gsub("^[\"']", ""):gsub("[\"']$", ""))
 end
 
----@param provider DependencyProvider
 ---@param match table
 ---@param query vim.treesitter.Query
----@param bufnr integer
 ---@return table<string, TSNode>
-local function named_match(provider, match, query, bufnr)
+local function named_match(match, query)
 	local named = {}
 
 	for id, nodes in pairs(match) do
 		local capture_name = query.captures[id]
-		if capture_name then
-			if type(nodes) == "table" then
-				named[capture_name] = nodes[1]
-			else
-				named[capture_name] = nodes
-			end
+		if #capture_name == 0 then
+			goto continue
 		end
+
+		if type(nodes) == "table" then
+			named[capture_name] = nodes[1]
+		else
+			named[capture_name] = nodes
+		end
+
+		::continue::
 	end
 
 	return named
 end
 
----@param provider DependencyProvider
 ---@param named table<string, TSNode>
 ---@param bufnr integer
 ---@return DependencyData
-local function default_extract(provider, named, bufnr)
+local function default_extract(named, bufnr)
 	local data = {
 		imports = {},
 		exports = {},
@@ -143,11 +150,11 @@ function ProviderRegistry:analyze(bufnr)
 	}
 
 	local extract = provider.extract or function(match)
-		return default_extract(provider, match, bufnr)
+		return default_extract(match, bufnr)
 	end
 
 	for _, match in query:iter_matches(tree:root(), bufnr, 0, -1) do
-		local data = extract(named_match(provider, match, query, bufnr), bufnr)
+		local data = extract(named_match(match, query), bufnr)
 		for _, token in ipairs(data.imports or {}) do
 			aggregate.imports[#aggregate.imports + 1] = token
 		end

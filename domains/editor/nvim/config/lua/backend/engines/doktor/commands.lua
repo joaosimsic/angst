@@ -2,13 +2,6 @@ local M = {}
 local logging = require("backend.engines.doktor.logging")
 local log = logging.for_module("commands")
 
-local severity_order = {
-	vim.diagnostic.severity.ERROR,
-	vim.diagnostic.severity.WARN,
-	vim.diagnostic.severity.INFO,
-	vim.diagnostic.severity.HINT,
-}
-
 local severity_names = {
 	[vim.diagnostic.severity.ERROR] = "ERROR",
 	[vim.diagnostic.severity.WARN] = "WARN",
@@ -19,18 +12,31 @@ local severity_names = {
 ---@param diagnostics vim.Diagnostic[]
 ---@return table<string, vim.Diagnostic[]>
 local function group_by_file(diagnostics)
+	if not diagnostics or type(diagnostics) ~= "table" or #diagnostics == 0 then
+		log:warn("Invalid diagnostics")
+		return {}
+	end
+
 	local grouped = {}
 
 	for _, diagnostic in ipairs(diagnostics) do
 		local bufnr = diagnostic.bufnr
-		if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
-			local path = vim.api.nvim_buf_get_name(bufnr)
-			if path ~= "" then
-				path = vim.fn.fnamemodify(path, ":.")
-				grouped[path] = grouped[path] or {}
-				grouped[path][#grouped[path] + 1] = diagnostic
-			end
+
+		if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then
+			goto continue
 		end
+
+		local path = vim.api.nvim_buf_get_name(bufnr)
+
+		if path == "" then
+			goto continue
+		end
+
+		path = vim.fn.fnamemodify(path, ":.")
+		grouped[path] = grouped[path] or {}
+		grouped[path][#grouped[path] + 1] = diagnostic
+
+		::continue::
 	end
 
 	return grouped
@@ -119,7 +125,7 @@ end
 ---@param api table
 function M.setup(api)
 	vim.api.nvim_create_user_command("Doktor", function()
-		api.toggle()
+		api.toggle(api)
 	end, {})
 
 	vim.api.nvim_create_user_command("DoktorRescan", function(opts)
@@ -151,20 +157,29 @@ function M.setup(api)
 		local action = opts.args ~= "" and opts.args or "toggle"
 		local config = api.get_config()
 
-		if action == "toggle" then
-			local current = logging.threshold_of("scheduler") or config.log_level
-			local enabled = current == "debug"
-			logging.set_threshold_all(enabled and config.log_level or "debug")
-			log:info("debug logging " .. (enabled and "disabled" or "enabled"))
-		elseif action == "on" then
-			logging.set_threshold_all("debug")
-			log:info("debug logging enabled")
-		elseif action == "off" then
-			logging.set_threshold_all(config.log_level)
-			log:info("debug logging disabled")
-		else
+		local actions = {
+			on = function()
+				logging.set_threshold_all("debug")
+				log:info("debug logging enabled")
+			end,
+			off = function()
+				logging.set_threshold_all(config.log_level)
+				log:info("debug logging disabled")
+			end,
+			toggle = function()
+				local current = logging.threshold_of("scheduler") or config.log_level
+				local enabled = current == "debug"
+				logging.set_threshold_all(enabled and config.log_level or "debug")
+				log:info("debug logging " .. (enabled and "disabled" or "enabled"))
+			end,
+		}
+
+		if not actions[action] then
 			vim.notify("Usage: DoktorDebug [on|off|toggle]", vim.log.levels.ERROR)
+			return
 		end
+
+		actions[action]()
 	end, {
 		nargs = "?",
 		complete = function()

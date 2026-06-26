@@ -33,6 +33,7 @@ function M.setup(opts)
 	local commands = require("backend.engines.doktor.commands")
 
 	local config = config_mod.setup(opts)
+
 	logging.set_threshold_all(config.log_level)
 
 	M._graph = graph_mod.new()
@@ -73,18 +74,20 @@ end
 
 ---@return table
 function M.status()
-	if not M._scheduler then
-		return {
-			queues = { [0] = 0, [1] = 0, [2] = 0, [3] = 0 },
-			pools = {
-				lsp = { in_flight = 0, queued = 0, concurrency = 0 },
-				lint = { in_flight = 0, queued = 0, concurrency = 0 },
-			},
-			pending_lsp = 0,
-		}
+	if M._scheduler then
+		return M._scheduler:status()
 	end
 
-	return M._scheduler:status()
+	local default = {
+		queues = { [0] = 0, [1] = 0, [2] = 0, [3] = 0 },
+		pools = {
+			lsp = { in_flight = 0, queued = 0, concurrency = 0 },
+			lint = { in_flight = 0, queued = 0, concurrency = 0 },
+		},
+		pending_lsp = 0,
+	}
+
+	return default
 end
 
 M[1] = "doktor"

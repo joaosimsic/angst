@@ -65,14 +65,18 @@ end
 function ResolverRegistry:resolve(token, context_buf)
 	local filetype = vim.bo[context_buf].filetype
 	local resolver = self:get(filetype)
-	if resolver then
-		local ok, resolved = pcall(resolver.resolve, token, context_buf)
-		if ok and resolved then
-			return vim.uv.fs_realpath(resolved) or resolved
-		end
+
+	local default = default_resolve(token, context_buf)
+	if not resolver then
+		return default
 	end
 
-	return default_resolve(token, context_buf)
+	local ok, resolved = pcall(resolver.resolve, token, context_buf)
+	if not ok or not resolved then
+		return default
+	end
+
+	return vim.uv.fs_realpath(resolved) or resolved
 end
 
 ---@param data DependencyData

@@ -127,16 +127,20 @@ function Graph:transitive_dependents_of(path)
 
 	while #queue > 0 do
 		local current = table.remove(queue, 1)
-		if not seen[current] then
-			seen[current] = true
-			result[#result + 1] = current
 
-			for _, dependent in ipairs(self:dependents_of(current)) do
-				if not seen[dependent] then
-					queue[#queue + 1] = dependent
-				end
+		if seen[current] then
+			goto continue
+		end
+
+		seen[current] = true
+		result[#result + 1] = current
+
+		for _, dependent in ipairs(self:dependents_of(current)) do
+			if not seen[dependent] then
+				queue[#queue + 1] = dependent
 			end
 		end
+		::continue::
 	end
 
 	return result
@@ -153,6 +157,7 @@ end
 function Graph:apply(path, data)
 	local real_path = normalize_path(path)
 	local node = self._nodes[real_path]
+
 	if not node then
 		node = self:upsert(real_path, vim.filetype.match({ filename = real_path }) or "")
 	end
@@ -176,27 +181,29 @@ function Graph:apply(path, data)
 	node.volatile = data.volatile == true
 	node.dirty = false
 
-	local direct = {}
-	local transitive = {}
-	if interface_changed or node.volatile then
-		direct = self:dependents_of(real_path)
-		local direct_set = {}
-		for _, dependent in ipairs(direct) do
-			direct_set[dependent] = true
-		end
+	local result = {
+		source = real_path,
+		direct = {},
+		transitive = {},
+	}
 
-		for _, dependent in ipairs(self:transitive_dependents_of(real_path)) do
-			if not direct_set[dependent] then
-				transitive[#transitive + 1] = dependent
-			end
+	if not interface_changed and not node.volatile then
+		return result
+	end
+
+	result.direct = self:dependents_of(real_path)
+	local direct_set = {}
+	for _, dependent in ipairs(result.direct) do
+		direct_set[dependent] = true
+	end
+
+	for _, dependent in ipairs(self:transitive_dependents_of(real_path)) do
+		if not direct_set[dependent] then
+			result.transitive[#result.transitive + 1] = dependent
 		end
 	end
 
-	return {
-		source = real_path,
-		direct = direct,
-		transitive = transitive,
-	}
+	return result
 end
 
 ---@param nodes table<string, GraphNode>

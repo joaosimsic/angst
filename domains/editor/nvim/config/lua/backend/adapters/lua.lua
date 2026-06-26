@@ -7,7 +7,7 @@ return {
 	treesitter = "lua",
 	doktor_resolver = {
 		filetypes = { "lua" },
-		resolve = function(token, _context_buf)
+		resolve = function(token)
 			if token:sub(1, 1) == "." then
 				return nil
 			end
@@ -24,7 +24,11 @@ return {
 	},
 	lsp_settings = {
 		Lua = {
-			diagnostics = { globals = { "vim" } },
+			runtime = {
+				version = "LuaJIT",
+				pathStrict = true,
+			},
+			diagnostics = { enable = true, globals = { "vim" } },
 			workspace = {
 				library = vim.api.nvim_get_runtime_file("", true),
 				checkThirdParty = false,

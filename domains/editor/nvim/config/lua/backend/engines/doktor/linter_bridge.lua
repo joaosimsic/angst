@@ -126,18 +126,20 @@ function M.lint(path, linter_name, namespace, token)
 			})
 		end)
 
-		if not ok then
-			if autocmd then
-				pcall(vim.api.nvim_del_autocmd, autocmd)
-			end
-			cb(nil)
-			return
+		if ok then
+			vim.schedule(finish)
+      return
 		end
 
-		vim.schedule(finish)
+		if autocmd then
+			pcall(vim.api.nvim_del_autocmd, autocmd)
+		end
+
+		cb(nil)
 	end, 1)()
 
 	a.util.scheduler()
+
 	if token and token.cancelled then
 		delete_buffer(bufnr, created)
 		return nil

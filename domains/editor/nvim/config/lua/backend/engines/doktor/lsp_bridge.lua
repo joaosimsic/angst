@@ -36,25 +36,27 @@ end
 ---@param filetype string
 ---@return vim.lsp.Client[]
 local function matching_clients(path, filetype)
+	---@type vim.lsp.Client[]
 	local clients = {}
-	local current_clients = vim.lsp.get_clients({ bufnr = 0 })
-	for _, client in ipairs(current_clients) do
-		local filetypes = client.config and client.config.filetypes
-		if not filetypes or vim.tbl_contains(filetypes, filetype) then
+
+	for _, client in ipairs(vim.lsp.get_clients()) do
+		local filetypes = client.config and client.config["filetypes"]
+
+		if not filetypes then
+			goto continue
+		end
+
+		if not vim.tbl_contains(filetypes, filetype) then
+			goto continue
+		end
+
+		local root = client.config and client.config.root_dir
+
+		if not root or path:sub(1, #root) == root then
 			clients[#clients + 1] = client
 		end
-	end
 
-	if #clients == 0 then
-		for _, client in ipairs(vim.lsp.get_clients()) do
-			local filetypes = client.config and client.config.filetypes
-			if not filetypes or vim.tbl_contains(filetypes, filetype) then
-				local root = client.config and client.config.root_dir
-				if not root or path:sub(1, #root) == root then
-					clients[#clients + 1] = client
-				end
-			end
-		end
+		::continue::
 	end
 
 	return clients
@@ -65,31 +67,41 @@ end
 ---@param token? CancellationToken
 ---@return integer, boolean
 local function create_hidden_buffer(path, filetype, token)
+	if token and token.cancelled then
+		return -1, false
+	end
+
 	local existing = vim.fn.bufnr(path)
 	local bufnr = existing ~= -1 and existing or vim.api.nvim_create_buf(false, true)
 	local created = existing == -1
+
 	if created then
 		vim.api.nvim_buf_set_name(bufnr, path)
 		vim.b[bufnr].doktor_managed = true
 	end
+
 	vim.bo[bufnr].bufhidden = "hide"
 	vim.bo[bufnr].buftype = ""
 	vim.bo[bufnr].swapfile = false
 	vim.bo[bufnr].filetype = filetype
 
-	if created then
-		a.util.scheduler()
-		if token and token.cancelled then
-			return bufnr, created
-		end
+	if not created then
+		vim.bo[bufnr].modified = false
+		return bufnr, created
+	end
 
-		local lines = read_lines(path)
-		if lines then
-			vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-		end
+	a.util.scheduler()
+	if token and token.cancelled then
+		return bufnr, created
+	end
+
+	local lines = read_lines(path)
+	if lines then
+		vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
 	end
 
 	vim.bo[bufnr].modified = false
+
 	return bufnr, created
 end
 
@@ -97,12 +109,12 @@ end
 ---@param created boolean
 ---@param attached_ids integer[]
 local function cleanup_buffer(bufnr, created, attached_ids)
-	for _, client_id in ipairs(attached_ids) do
-		pcall(vim.lsp.buf_detach_client, bufnr, client_id)
-	end
-
 	if created and vim.api.nvim_buf_is_valid(bufnr) then
 		pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+	end
+
+	for _, client_id in ipairs(attached_ids) do
+		pcall(vim.lsp.buf_detach_client, bufnr, client_id)
 	end
 end
 
@@ -146,6 +158,7 @@ function M.fetch(path, filetype, timeout_ms, namespace, token)
 		return nil
 	end
 
+	---@type LspDiagnosticsResult|nil
 	local result = a.wrap(function(cb)
 		local completed = false
 		local autocmd
@@ -197,6 +210,11 @@ function M.fetch(path, filetype, timeout_ms, namespace, token)
 		})
 
 		timer = vim.uv.new_timer()
+
+		if not timer then
+			return finish(nil)
+		end
+
 		timer:start(timeout_ms, 0, function()
 			vim.schedule(function()
 				finish(nil)

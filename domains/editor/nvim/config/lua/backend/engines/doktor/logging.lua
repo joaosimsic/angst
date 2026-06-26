@@ -26,11 +26,15 @@ local TAGS = {
 ---@return Logger
 function M.for_module(module_name)
 	local key = module_name or "init"
-	if not M._loggers[key] then
-		M._loggers[key] = Logger.new(TAGS[key] or ("DOKTOR:" .. key:upper()), M._threshold)
+	local logger = M._loggers[key]
+
+	if logger then
+		return logger
 	end
 
-	return M._loggers[key]
+	logger = Logger.new(TAGS[key] or ("DOKTOR:" .. key:upper()), M._threshold)
+
+	return logger
 end
 
 ---@param level Level|nil

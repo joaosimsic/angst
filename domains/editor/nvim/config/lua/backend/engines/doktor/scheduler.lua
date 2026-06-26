@@ -196,12 +196,7 @@ function Scheduler:drain()
 			end
 
 			log:debug(function()
-				return string.format(
-					"pop priority=%d path=%s source=%s",
-					task.priority,
-					task.path,
-					task.source
-				)
+				return string.format("pop priority=%d path=%s source=%s", task.priority, task.path, task.source)
 			end)
 
 			run_task(self, task)
