@@ -57,28 +57,38 @@ The existing adapter system (`lua/backend/adapters/`) maps filetypes to LSP serv
 
 ```lua
 -- lua/backend/shared/types.lua (additions)
----@field doktor?         string           -- tool name referenced by Doktor
----@field doktor_cmd?     string[]|fun():string[]  -- CLI invocation
----@field doktor_compiler? string          -- compiler profile for errorformat
+---@field doktor?               string                    -- compiler/check tool name
+---@field doktor_cmd?           string[]|fun():string[]    -- CLI invocation
+---@field doktor_compiler?      string                    -- errorformat profile
+---@field doktor_linter?        string                    -- workspace linter tool name
+---@field doktor_linter_cmd?    string[]|fun():string[]    -- linter CLI invocation
+---@field doktor_linter_compiler? string                  -- linter errorformat profile
 ```
 
 ### Example adapters
 
 ```lua
 -- javascript.lua (additions)
-doktor         = "tsc",
-doktor_cmd     = { "npx", "tsc", "--noEmit", "--incremental" },
-doktor_compiler = "tsc",
+doktor               = "tsc",
+doktor_cmd           = { "npx", "tsc", "--noEmit", "--incremental" },
+doktor_compiler      = "tsc",
+doktor_linter        = "eslint",
+doktor_linter_cmd    = { "npx", "eslint", "." },
+doktor_linter_compiler = "eslint",
 
 -- rust.lua
 doktor         = "cargo",
 doktor_cmd     = { "cargo", "check" },
 doktor_compiler = "rustc",
+-- no doktor_linter — cargo check already covers lint
 
 -- go.lua
 doktor         = "go",
 doktor_cmd     = { "go", "vet", "./..." },
 doktor_compiler = "go",
+doktor_linter  = "golangci-lint",
+doktor_linter_cmd = { "golangci-lint", "run", "./..." },
+doktor_linter_compiler = "golangci-lint",
 ```
 
 `AdapterScanner` already provides `by_filetype`, `by_tool`, and `supported_filetypes`. These work with `"doktor"` as the engine name without changes — just call `AdapterScanner:by_filetype("doktor", opts)`.
@@ -127,9 +137,10 @@ doktor_compiler = "go",
 ```lua
 ---@class DoktorJobSpec
 ---@field cmd      string[]             -- { "npx", "tsc", "--noEmit" }
----@field cwd      string              -- project root
----@field compiler string              -- errorformat profile name ("tsc", "rustc", etc.)
----@field filetypes string[]           -- filetypes this job covers
+---@field cwd      string               -- project root
+---@field compiler string               -- errorformat profile name ("tsc", "eslint", etc.)
+---@field kind     '"compiler"'|'"linter"'  -- for logging / debugging
+---@field filetypes string[]            -- filetypes this job covers
 ```
 
 ### Config surface (`config.lua`)
@@ -283,7 +294,97 @@ No custom API needed — standard `vim.diagnostic` functions work.
 
 ---
 
-## 6. errorformat Pipeline (`engine/parser.lua`)
+## 6. Linter Integration
+
+Doktor interacts with linters at two levels: **buffer-level** (real-time, already handled) and **workspace-level** (new, save-driven).
+
+### 6a. Buffer-level linting (existing — no changes)
+
+The `backend/engines/linter.lua` engine wires `nvim-lint` to the adapter system. On `BufWritePost` and `BufEnter`, it runs the `linter` adapter tool for the buffer's filetype. Results land in the **default** diagnostic namespace (Layer A). Doktor's `window/collector.lua` calls `vim.diagnostic.get(nil)` which includes the default namespace, so buffer lint results are already visible in the floating window with no additional work.
+
+```
+nvim-lint (adapter: linter + linter_cmd)
+    │
+    ▼
+vim.diagnostic (default namespace)  ◄── Layer A
+    │
+    ▼
+DiagnosticChanged → Doktor window updates
+```
+
+### 6b. Workspace-level linting (new)
+
+Buffer-level linting only covers open files. To surface lint issues from the entire project, Doktor also runs lint tools as workspace jobs through the same `engine/runner` + `engine/parser` pipeline used for compilers.
+
+**Why a separate run instead of reusing nvim-lint?** nvim-lint operates per-buffer with a callback to `vim.diagnostic.set`. Running it headless across all files would require opening/iterating every project file. Spawning the linter CLI directly (e.g., `eslint .`) and parsing its output is faster and avoids buffer churn.
+
+### New adapter fields for workspace linters
+
+```lua
+-- lua/backend/shared/types.lua (additions)
+---@field doktor_linter?          string               -- linter tool name for workspace scan
+---@field doktor_linter_cmd?      string[]|fun():string[]  -- CLI invocation
+---@field doktor_linter_compiler? string               -- errorformat profile for parsing
+```
+
+### Example adapters
+
+```lua
+-- javascript.lua
+doktor               = "tsc",
+doktor_cmd           = { "npx", "tsc", "--noEmit", "--incremental" },
+doktor_compiler      = "tsc",
+doktor_linter        = "eslint",
+doktor_linter_cmd    = { "npx", "eslint", "." },
+doktor_linter_compiler = "eslint",
+
+-- python.lua
+doktor               = "mypy",
+doktor_cmd           = { "mypy", "." },
+doktor_compiler      = "mypy",
+doktor_linter        = "ruff",
+doktor_linter_cmd    = { "ruff", "check", "." },
+doktor_linter_compiler = "ruff",
+```
+
+### Execution order
+
+On `BufWritePost`, `engine/init.lua` resolves **two** job groups for the triggering filetype:
+
+1. **Compiler jobs** — from `doktor` / `doktor_cmd` / `doktor_compiler`
+2. **Linter jobs** — from `doktor_linter` / `doktor_linter_cmd` / `doktor_linter_compiler`
+
+Both are spawned as parallel async subprocesses. Each produces stdout/stderr that flows through `engine/parser.lua`. Results land in the **same** workspace namespace (Layer B). A single `guard` lock serializes the entire scan cycle (compiler + linter jobs together) so a linter run doesn't overlap with the next save-triggered scan.
+
+```
+BufWritePost
+    │
+    ├──► spawn compiler job (tsc, cargo, etc.) ──► parser ──┐
+    │                                                        ├──► vim.diagnostic.set(workspace_ns)
+    └──► spawn linter job (eslint, ruff, etc.) ──► parser ──┘
+```
+
+### Avoiding duplicate diagnostics
+
+A diagnostic for the same file+line+severity+message can arrive from both nvim-lint (default ns, buffer-level) and the workspace scan (doktor ns, project-level). To prevent the floating window from showing duplicates:
+
+- **`window/collector.lua`** deduplicates on `{filename, lnum, col, severity, message}` before building the tree. This is a simple hash-set check during collection.
+- The workspace namespace **does not** overwrite the default namespace. They remain separate so external consumers can still query "lint only" vs "workspace only."
+
+### Opting out of workspace linting per filetype
+
+```lua
+-- if a project doesn't need workspace-level lint for a filetype, omit doktor_linter
+-- rust.lua — cargo check already catches lint-like issues, skip separate linter
+doktor         = "cargo",
+doktor_cmd     = { "cargo", "check" },
+doktor_compiler = "rustc",
+-- no doktor_linter — workspace lint scan skips this filetype
+```
+
+---
+
+## 7. errorformat Pipeline (`engine/parser.lua`)
 
 ### Flow
 
@@ -320,7 +421,7 @@ If `vim.cmd("compiler " .. name)` fails (no such profile), fall back to `[^:]\+:
 
 ---
 
-## 7. Configuration Surface
+## 8. Configuration Surface
 
 ### `require("doktor").setup(opts)`
 
@@ -339,13 +440,24 @@ Users can override tool mappings without editing adapter files:
 require("doktor").setup({
   adapter_overrides = {
     typescript = {
-      cmd = { "npx", "tsc", "--noEmit", "--project", "tsconfig.ci.json" },
-      compiler = "tsc",
+      compiler = {
+        cmd = { "npx", "tsc", "--noEmit", "--project", "tsconfig.ci.json" },
+        compiler = "tsc",
+      },
+      linter = {
+        cmd = { "npx", "eslint", "--quiet", "." },
+        compiler = "eslint",
+      },
     },
     -- add a tool for a filetype with no adapter
     markdown = {
-      cmd = { "markdownlint", "**/*.md" },
-      compiler = "markdownlint",  -- custom compiler profile
+      linter = {
+        cmd = { "markdownlint", "**/*.md" },
+        compiler = "markdownlint",
+      },
+    },
+  },
+})
     },
   },
 })
@@ -355,30 +467,31 @@ Overrides take precedence over adapter values. This lets users customize without
 
 ---
 
-## 8. Implementation Phases
+## 9. Implementation Phases
 
 ### Phase 1 — Foundation (target: modules compile + test harness)
 - [ ] Create `lua/frontend/navigation/doktor/engine/` directory
 - [ ] Implement `guard.lua` with tests
 - [ ] Implement `runner.lua` — wrap `vim.system()` with timeout support
-- [ ] Add `doktor`, `doktor_cmd`, `doktor_compiler` fields to each adapter file
+- [ ] Add `doktor`, `doktor_cmd`, `doktor_compiler`, `doktor_linter`, `doktor_linter_cmd`, `doktor_linter_compiler` fields to each adapter file
 - [ ] Extend `AdapterTool.lua` with generic tool info path (non-LSP engines)
 - [ ] Verify `AdapterScanner:by_filetype("doktor")` returns correct mappings
 
 ### Phase 2 — Parser (target: quickfix → diagnostic pipeline works)
 - [ ] Implement `engine/parser.lua`
-- [ ] Create `compiler/` profiles for tsc, rustc, go, php
+- [ ] Create `compiler/` profiles for tsc, rustc, go, php, eslint, ruff, shellcheck
 - [ ] Test: feed known compiler output, verify `vim.Diagnostic[]` is correct
+- [ ] Test: feed known linter output (eslint, ruff), verify parsing
 - [ ] Test: feed malformed output, verify graceful degradation
 
 ### Phase 3 — Engine Orchestrator (target: end-to-end save → diag cycle)
-- [ ] Implement `engine/init.lua` — resolve jobs from adapter, dispatch via runner
+- [ ] Implement `engine/init.lua` — resolve both compiler AND linter jobs from adapter, dispatch in parallel
 - [ ] Wire `BufWritePost` → `guard:try_acquire()` → `engine` → `parser` → `vim.diagnostic.set(ns)`
 - [ ] Implement namespace reset on each scan
-- [ ] Test: save a file, verify workspace diags appear in `vim.diagnostic.get(nil, { namespace = ns })`
+- [ ] Test: save a file, verify both compiler and linter workspace diags appear
 
 ### Phase 4 — UI (target: floating window shows workspace results)
-- [ ] Rewrite `window/collector.lua` to merge namespaces
+- [ ] Rewrite `window/collector.lua` to merge namespaces AND deduplicate across layers
 - [ ] Rewrite `window/init.lua` — use new collector, update on `DiagnosticChanged`
 - [ ] Update `formatter.lua` if needed for new item shapes
 - [ ] Add `config.lua` with `setup()` API
@@ -389,11 +502,12 @@ Overrides take precedence over adapter values. This lets users customize without
 - [ ] Add timeout handling for hanged processes
 - [ ] Add per-project `.doktor.lua` config file support
 - [ ] Add debounce via `debounce_ms` config
+- [ ] Verify linter results do not duplicate buffer-level lint in the window
 - [ ] Write docs / update this spec
 
 ---
 
-## 9. Edge Cases & Error Handling
+## 10. Edge Cases & Error Handling
 
 | Case | Behavior |
 |------|----------|
@@ -408,10 +522,13 @@ Overrides take precedence over adapter values. This lets users customize without
 | **Large output (>10MB)** | Truncate to 10MB before parsing, log warning |
 | **Symlink / out-of-tree paths** | `vim.fn.fnamemodify(..., ":p")` to resolve; if not under cwd, use absolute path |
 | **Encoding errors in output** | Force `vim.system` to use `text` mode; replace invalid UTF-8 sequences |
+| **Duplicate compiler + linter hits** | Compiler and linter may catch the same issue (e.g., tsc + eslint on unused var). Collector deduplicates on `{filename, lnum, col, severity, message}` |
+| **Linter runs for filetype with no compiler** | If adapter has `doktor_linter` but no `doktor`, still spawn the linter job alone — not an error |
+| **Linter tool missing, compiler present** | Skip linter, run compiler only. Log warning. Don't block the scan |
 
 ---
 
-## 10. Integration Points
+## 11. Integration Points
 
 ### Heirline / statusline
 
