@@ -1,3 +1,6 @@
+---@type Keybinder
+local Keybinder = require("common.Keybinder")
+
 ---@type Plugin
 return {
 	"rebelot/heirline.nvim",
@@ -70,5 +73,11 @@ return {
 				hls.setup_highlights()
 			end,
 		})
+
+		local binder = Keybinder.new(nil, "HEIRLINE")
+		binder:map({ "i", "c" }, "<C-c>", function()
+			local keys = vim.api.nvim_replace_termcodes("<C-c><Cmd>redrawstatus<CR>", true, false, true)
+			vim.api.nvim_feedkeys(keys, "n", false)
+		end, { silent = true })
 	end,
 }
