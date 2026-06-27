@@ -25,7 +25,7 @@ function M.on_picker_create()
 		vim.api.nvim_feedkeys(clean_keys, "t", false)
 	end
 
-	binder:map("t", "<C-c>", function()
+	binder:map({ "t" }, "<C-c>", function()
 		send_macro([[<C-\><C-n>]])
 	end, { desc = "Exit terminal mode" })
 
@@ -42,16 +42,16 @@ function M.on_picker_create()
 	}
 
 	for key, macro in pairs(motions) do
-		binder:map("n", key, function()
+		binder:nmap(key, function()
 			send_macro(macro)
 		end, { desc = "Motion " .. key })
 	end
 
-	binder:map("n", "i", function()
+	binder:nmap("i", function()
 		vim.cmd("startinsert")
 	end, { desc = "Insert mode" })
 
-	binder:map("n", "a", function()
+	binder:nmap("a", function()
 		vim.cmd("startinsert")
 	end, { desc = "Append mode" })
 end
