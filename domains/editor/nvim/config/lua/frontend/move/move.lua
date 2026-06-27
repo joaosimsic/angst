@@ -2,7 +2,7 @@ local M = {}
 
 ---@param direction "j"|"k"
 M.move_text_vertical = function(direction)
-	vim.cmd([[:execute "normal! \<ESC>"]])
+	vim.cmd([[:execute "silent! normal! \<ESC>"]])
 
 	if direction == "j" then
 		vim.cmd("silent! '<,'>move '>+1")
@@ -10,11 +10,21 @@ M.move_text_vertical = function(direction)
 		vim.cmd("silent! '<,'>move '<-2")
 	end
 
-	vim.cmd("normal! gv")
+	vim.cmd("silent! normal! gv")
 end
 
 ---@param direction "h"|"l"
 M.move_text_horizontal = function(direction)
+	local sw = vim.o.shiftwidth
+
+	if sw == 0 then
+		sw = vim.bo.tabstop
+	end
+
+	if sw == 0 then
+		sw = 4
+	end
+
 	if direction == "h" then
 		local start_line = vim.fn.line("'<")
 		local end_line = vim.fn.line("'>")
@@ -35,7 +45,7 @@ M.move_text_horizontal = function(direction)
 	end
 
 	local action = (direction == "h") and "<" or ">"
-	vim.cmd(string.format("normal! %sgv", action))
+	vim.cmd(string.format("silent! normal! %sgv", action))
 end
 
 return M
