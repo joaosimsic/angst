@@ -1,6 +1,6 @@
 [mode]
-normal_main = { bg = "#c8c093", fg = "#181616", bold = true }
-normal_alt  = { fg = "#c8c093", bg = "#181616" }
+normal_main = { bg = "#c8c093", fg = "#211f1f", bold = true }
+normal_alt  = { fg = "#c8c093", bg = "#211f1f" }
 
 [filetype]
 rules = [
