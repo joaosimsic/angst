@@ -2,23 +2,38 @@ local M = {}
 
 ---@param direction "j"|"k"
 M.move_text_vertical = function(direction)
-	-- 1. Force exit visual mode to lock in the '< and '> marks
 	vim.cmd([[:execute "normal! \<ESC>"]])
 
-	-- 2. Execute the move command based on those locked marks
 	if direction == "j" then
 		vim.cmd("silent! '<,'>move '>+1")
 	elseif direction == "k" then
 		vim.cmd("silent! '<,'>move '<-2")
 	end
 
-	-- 3. Re-select the moved text and auto-indent it
-	vim.cmd("normal! gv=gv")
+	vim.cmd("normal! gv")
 end
 
 ---@param direction "h"|"l"
 M.move_text_horizontal = function(direction)
-	-- Shift text left or right, then immediately re-select it
+	if direction == "h" then
+		local start_line = vim.fn.line("'<")
+		local end_line = vim.fn.line("'>")
+
+		local hit_wall = false
+		for i = start_line, end_line do
+			local line_text = vim.fn.getline(i)
+			if line_text:match("^[^%s]") then
+				hit_wall = true
+				break
+			end
+		end
+
+		if hit_wall then
+			vim.cmd("normal! gv")
+			return
+		end
+	end
+
 	local action = (direction == "h") and "<" or ">"
 	vim.cmd(string.format("normal! %sgv", action))
 end
