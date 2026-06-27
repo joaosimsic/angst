@@ -1,3 +1,6 @@
+---@type Logger
+local Logger = require("common.Logger")
+
 local AdapterScanner = require("backend.shared.AdapterScanner")
 local treesitter_opts = { check_executable = false }
 local fold_disabled_filetypes = {
@@ -10,13 +13,19 @@ return {
 	virtual = true,
 	ft = AdapterScanner:supported_filetypes("treesitter", treesitter_opts),
 	config = function()
-		vim.opt.runtimepath:prepend(vim.fn.expand("~/.local/share/tree-sitter"))
+		local logger = Logger.new("TREESITTER")
+
+		local ts_path = vim.fn.expand("~/.local/share/tree-sitter")
+		if not vim.tbl_contains(vim.opt.runtimepath:get(), ts_path) then
+			vim.opt.runtimepath:prepend(ts_path)
+		end
 
 		local grammar_mappings = {
 			cs = "c_sharp",
 			razor = "c_sharp",
 			sh = "bash",
 			bash = "bash",
+			typescriptreact = "tsx",
 		}
 
 		for filetype, grammar in pairs(grammar_mappings) do
@@ -25,7 +34,7 @@ return {
 
 		local group = vim.api.nvim_create_augroup("TreesitterInit", { clear = true })
 
-		vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
+		vim.api.nvim_create_autocmd("FileType", {
 			group = group,
 			pattern = "*",
 			callback = function(event)
@@ -40,7 +49,15 @@ return {
 					return
 				end
 
-				local ok = pcall(vim.treesitter.start, event.buf)
+				local lang = vim.treesitter.language.get_lang(filetype) or filetype
+
+				local ok, err = pcall(vim.treesitter.start, event.buf, lang)
+
+				if not ok then
+					logger:error(function()
+						return string.format("Treesitter failed to start for [%s]: %s", filetype, err)
+					end)
+				end
 
 				if ok and not fold_disabled_filetypes[filetype] then
 					vim.wo.foldmethod = "expr"
