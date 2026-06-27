@@ -27,12 +27,15 @@ return {
 		for open, close in pairs(bracket_pairs) do
 			binder:imap(open, function()
 				local _, after = get_surroundings()
+
 				if open == close and after == close then
 					return "<Right>"
 				end
+
 				if after:match("%w") then
 					return open
 				end
+
 				return open .. close .. "<Left>"
 			end, { expr = true, replace_keycodes = true, desc = "Auto-close " .. open })
 
@@ -46,20 +49,25 @@ return {
 
 		binder:imap("<CR>", function()
 			local before, after = get_surroundings()
+
 			if (before == "{" and after == "}") or (before == "[" and after == "]") then
 				return "<CR><C-o>O"
 			end
+
 			if before == "(" and after == ")" then
 				return "<CR><CR><Up><Tab>"
 			end
+
 			return "\r"
 		end, { expr = true, replace_keycodes = true, desc = "Expand pair on Enter" })
 
 		binder:imap("<BS>", function()
 			local before, after = get_surroundings()
+
 			if bracket_pairs[before] == after then
 				return "<BS><Del>"
 			end
+
 			return "<BS>"
 		end, { expr = true, replace_keycodes = true, desc = "Delete empty pair" })
 	end,
