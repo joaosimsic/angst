@@ -13,7 +13,7 @@ return {
 			},
 			severity_sort = true,
 			float = { border = "none" },
-			update_in_insert = false,
+			update_in_insert = true,
 			signs = {
 				text = {
 					[vim.diagnostic.severity.ERROR] = icons.error,

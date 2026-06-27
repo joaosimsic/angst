@@ -22,5 +22,6 @@ return {
 		vim.opt.ttimeoutlen = 10
     vim.opt.splitright = true
     vim.opt.splitbelow = true
+    vim.opt.signcolumn = "yes"
 	end,
 }
