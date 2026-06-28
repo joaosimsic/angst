@@ -16,9 +16,9 @@ M.setup_highlights = function()
 	hl("HeirlineModeCommand", { fg = p.black, bg = p.red_bright, bold = true })
 	hl("HeirlineModeTerminal", { fg = p.black, bg = p.magenta_bright, bold = true })
 
-	hl("HeirlineSurface", { fg = p.base, bg = p.surface })
+	hl("HeirlineSurface", { fg = p.subtle, bg = p.surface })
 	hl("HeirlineSurfaceBold", { fg = p.bright, bg = p.surface, bold = true })
-	hl("HeirlineBlack", { fg = p.base, bg = p.black })
+	hl("HeirlineBlack", { fg = p.subtle, bg = p.black })
 	hl("HeirlineBlackBright", { fg = p.bright, bg = p.black })
 
 	hl("HeirlineGit", { fg = p.bright, bg = p.surface })

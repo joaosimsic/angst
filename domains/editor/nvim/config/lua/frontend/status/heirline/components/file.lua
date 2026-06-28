@@ -41,7 +41,7 @@ local FileName = {
 
 	hl = function(self)
 		return utils.is_active(self) and "HeirlineSurfaceBold"
-			or { fg = utils.status_color(self, p.base), bg = utils.status_bg(self, p.surface), bold = true }
+			or { fg = utils.status_color(self, p.subtle), bg = utils.status_bg(self, p.surface), bold = true }
 	end,
 }
 
@@ -69,7 +69,7 @@ local FileFormat = {
 	end,
 
 	hl = function(self)
-		return { fg = utils.status_color(self, p.base), bg = utils.status_bg(self, p.surface) }
+		return { fg = utils.status_color(self, p.subtle), bg = utils.status_bg(self, p.surface) }
 	end,
 }
 

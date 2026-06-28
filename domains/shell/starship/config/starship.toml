@@ -6,20 +6,20 @@ add_newline = true
 
 [directory]
 format = "[$path]($style)[$read_only]($read_only_style)"
-style = "bold #c8c093"
+style = "bold #eeeeee"
 read_only = " RO"
-read_only_style = "bold #c4746e"
+read_only_style = "bold #b84a4a"
 truncation_length = 3
 truncate_to_repo = false
 
 [git_branch]
 format = "on [$branch]($style)"
-style = "#a292a3"
+style = "#6e6e5c"
 symbol = ""
 
 [git_status]
 format = " [$all_status$ahead_behind]($style)"
-style = "#c4b28a"
+style = "#c4904a"
 conflicted = "!"
 ahead = "+"
 behind = "-"
@@ -34,67 +34,67 @@ deleted = "x"
 # vimcmd_symbol is ignored when STARSHIP_SHELL=nu; Nushell handles vi mode via
 # PROMPT_INDICATOR_VI_INSERT / PROMPT_INDICATOR_VI_NORMAL in env.nu.
 [character]
-success_symbol = "[>](bold #8a9a7b)"
-error_symbol = "[>](bold #c4746e)"
-vimcmd_symbol = "[<](bold #c5c9c5)"
+success_symbol = "[>](bold #608f60)"
+error_symbol = "[>](bold #b84a4a)"
+vimcmd_symbol = "[<](bold #c2c2b0)"
 
 [username]
 format = "[$user]($style) "
-style_user = "bold #c8c093"
-style_root = "bold #c4746e"
+style_user = "bold #eeeeee"
+style_root = "bold #b84a4a"
 show_always = false
 
 [hostname]
 format = "[@$hostname]($style) "
-style = "bold #a292a3"
+style = "bold #6e6e5c"
 ssh_only = true
 
 [nodejs]
 format = "[$symbol($version)]($style) "
 symbol = "node "
-style = "#a292a3"
+style = "#6e6e5c"
 
 [python]
 format = "[$symbol$version]($style) "
 symbol = "py "
-style = "#a292a3"
+style = "#6e6e5c"
 
 [rust]
 format = "[$symbol($version)]($style) "
 symbol = "rs "
-style = "#a292a3"
+style = "#6e6e5c"
 
 [golang]
 format = "[$symbol($version)]($style) "
 symbol = "go "
-style = "#a292a3"
+style = "#6e6e5c"
 
 [java]
 format = "[$symbol($version)]($style) "
 symbol = "java "
-style = "#a292a3"
+style = "#6e6e5c"
 
 [php]
 format = "[$symbol($version)]($style) "
 symbol = "php "
-style = "#a292a3"
+style = "#6e6e5c"
 
 [ruby]
 format = "[$symbol($version)]($style) "
 symbol = "rb "
-style = "#a292a3"
+style = "#6e6e5c"
 
 [nix_shell]
 format = "[$symbol$state]($style) "
 symbol = "nix "
-style = "#a292a3"
+style = "#6e6e5c"
 
 [docker_context]
 format = "[$symbol$context]($style) "
 symbol = "docker "
-style = "#a292a3"
+style = "#6e6e5c"
 
 [package]
 format = "[$symbol$version]($style) "
 symbol = "pkg "
-style = "#a292a3"
+style = "#6e6e5c"

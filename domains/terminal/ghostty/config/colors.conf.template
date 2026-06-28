@@ -1,7 +1,7 @@
 background           = {{BLACK}}
 foreground           = {{BASE}}
 cursor-color         = {{BASE}}
-selection-background = {{DIM}}
+selection-background = {{SUBTLE}}
 selection-foreground = {{BASE}}
 palette = 0=#{{BLACK}}
 palette = 1=#{{RED}}
