@@ -2,9 +2,9 @@
 return {
 	"zellij-navigation",
 	virtual = true,
-	event = "VeryLazy",
+	lazy = false,
 	cond = function()
-		return vim.fn.executable("zellij") == 1 and vim.env.ZELLIJ ~= nil
+		return vim.fn.executable("zellij") == 1
 	end,
 	config = function()
 		require("frontend.navigation.zellij-nav.keys").setup()

@@ -17,14 +17,20 @@ keybinds clear-defaults=true {
     }
 
     pane {
+        bind "h" { MoveFocus "Left"; }
+        bind "j" { MoveFocus "Down"; }
+        bind "k" { MoveFocus "Up"; }
+        bind "l" { MoveFocus "Right"; }
         bind "n" { NewPane "Right"; }
-        bind "x" { CloseFocus; } 
+        bind "x" { CloseFocus; }
+        bind "=" { Resize "Increase"; }
+        bind "-" { Resize "Decrease"; }
         bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
     }
 
     tab {
         bind "n" { NewTab; }
-        bind "x" { CloseTab; }   
+        bind "x" { CloseTab; }
         bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
     }
 

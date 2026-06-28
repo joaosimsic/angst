@@ -43,7 +43,19 @@ let
     "${byte 0}${byte 2}${byte 4}";
 
   brighten = color: lightenHex color 24;
+
+  mixHex =
+    hex1: hex2: pct:
+    let
+      byte = offset:
+        let
+          v1 = hexByte hex1 offset;
+          v2 = hexByte hex2 offset;
+        in
+        toHexByte (builtins.div (v1 * (100 - pct) + v2 * pct) 100);
+    in
+    "${byte 0}${byte 2}${byte 4}";
 in
 {
-  inherit lightenHex brighten;
+  inherit lightenHex brighten mixHex;
 }

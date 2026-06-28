@@ -4,6 +4,8 @@
 ---@field base string
 ---@field bright string
 ---@field dim string
+---@field subtle string
+---@field accent string
 ---@field surface string
 ---@field bg string
 ---@field black string
@@ -32,6 +34,8 @@
 ---| "base"
 ---| "bright"
 ---| "dim"
+---| "subtle"
+---| "accent"
 ---| "surface"
 ---| "bg"
 ---| "black"

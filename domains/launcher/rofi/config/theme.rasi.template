@@ -2,6 +2,7 @@
     bg:       #{{BLACK}};
     fg:       #{{BASE}};
     accent:   #{{BRIGHT}};
+    subtle:   #{{SUBTLE}};
 
     background-color: transparent;
     text-color:       @fg;
@@ -36,6 +37,7 @@ inputbar {
 entry {
     background-color: transparent;
     text-color:       @fg;
+    placeholder-color: @subtle;
     placeholder:      "";
     cursor-width:     8px;
 }

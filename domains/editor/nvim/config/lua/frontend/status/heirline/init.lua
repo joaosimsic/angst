@@ -30,7 +30,7 @@ return {
 				vim.g.heirline_statusline_is_active = self.is_active
 
 				self.bg = utils.status_color(self, p.surface)
-				self.fg = utils.status_color(self, p.base)
+				self.fg = utils.status_color(self, p.subtle)
 			end,
 
 			hl = function(self)

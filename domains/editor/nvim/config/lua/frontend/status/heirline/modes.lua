@@ -28,7 +28,7 @@ M.mode_colors = {
 
 ---@type ModeConfig
 M.mode_fallback = {
-	fg = p.base,
+	fg = p.subtle,
 	bg = p.surface,
 	label = "UNKNOWN",
 }

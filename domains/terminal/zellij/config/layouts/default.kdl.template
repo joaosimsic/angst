@@ -24,13 +24,13 @@ layout {
                 mode_session       "#[bg=#{{FG}},fg=#{{BG}},bold] SESSION "
                 mode_tmux          "#[bg=#{{FG}},fg=#{{BG}},bold] TMUX    "
 
-                tab_normal              "#[bg=#{{FG}},fg=#{{BG}}]  {index}  "
-                tab_normal_fullscreen   "#[bg=#{{FG}},fg=#{{BG}}]  {index}  "
-                tab_normal_sync         "#[bg=#{{FG}},fg=#{{BG}}]  {index}  "
+                tab_normal              "#[bg=#{{SUBTLE}},fg=#{{BG}}]  {index}  "
+                tab_normal_fullscreen   "#[bg=#{{SUBTLE}},fg=#{{BG}}]  {index}  "
+                tab_normal_sync         "#[bg=#{{SUBTLE}},fg=#{{BG}}]  {index}  "
                 tab_active              "#[bg=#{{BRIGHT}},fg=#{{BG}},bold]  {index}  "
                 tab_active_fullscreen   "#[bg=#{{BRIGHT}},fg=#{{BG}},bold]  {index}  "
                 tab_active_sync         "#[bg=#{{BRIGHT}},fg=#{{BG}},bold]  {index}  "
-                tab_separator           "#[bg=#{{FG}}] "
+                tab_separator           "#[bg=#{{SUBTLE}}] "
 
                 command_cwd_command    "pwd"
                 command_cwd_format     "{stdout}"

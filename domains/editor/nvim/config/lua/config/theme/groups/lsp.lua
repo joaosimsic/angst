@@ -51,11 +51,11 @@ M.get = function(p)
 		["@lsp.type.enum"] = { fg = p.yellow },
 		["@lsp.type.enumMember"] = { fg = p.bright },
 		["@lsp.type.function"] = { link = "@function" },
-		["@lsp.type.interface"] = { fg = p.yellow },
+		["@lsp.type.interface"] = { fg = p.cyan_bright },
 		["@lsp.type.keyword"] = { link = "@keyword" },
 		["@lsp.type.macro"] = { fg = p.cyan },
 		["@lsp.type.method"] = { link = "@function.method" },
-		["@lsp.type.namespace"] = { fg = p.base },
+		["@lsp.type.namespace"] = { fg = p.accent },
 		["@lsp.type.parameter"] = { link = "@variable.parameter" },
 		["@lsp.type.property"] = { link = "@property" },
 		["@lsp.type.string"] = { link = "@string" },
@@ -69,7 +69,7 @@ M.get = function(p)
 		["@lsp.mod.static"] = { fg = p.yellow },
 		["@lsp.mod.async"] = { italic = true },
 
-		["@lsp.typemod.variable.readonly"] = { fg = p.magenta, italic = true },
+		["@lsp.typemod.variable.readonly"] = { fg = p.bright, italic = true },
 		["@lsp.typemod.function.async"] = { fg = p.yellow, italic = true },
 	}
 end

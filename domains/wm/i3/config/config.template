@@ -9,8 +9,8 @@ hide_edge_borders smart
 
 # Theme colors: border, background, text, indicator, child_border
 client.focused          #{{INFO}} #{{BG}} #{{FG}} #{{INFO}} #{{INFO}}
-client.focused_inactive #{{MUTED}} #{{BG}} #{{FG}} #{{MUTED}} #{{MUTED}}
-client.unfocused        #{{BG}} #{{BG}} #{{MUTED}} #{{BG}} #{{BG}}
+client.focused_inactive #{{MUTED}} #{{BG}} #{{SUBTLE}} #{{MUTED}} #{{MUTED}}
+client.unfocused        #{{BG}} #{{BG}} #{{SUBTLE}} #{{BG}} #{{BG}}
 client.urgent           #{{ERROR}} #{{BG}} #{{ERROR}} #{{WARNING}} #{{WARNING}}
 
 set $mod Mod4
