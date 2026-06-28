@@ -4,7 +4,7 @@ local utils = require("frontend.status.heirline.utils")
 
 ---@type HeirlineComponent
 local FileIcon = {
-	update = { "BufEnter", "BufWinEnter" },
+	update = { "BufEnter", "BufWinEnter", "WinEnter", "WinLeave" },
 	init = function(self)
 		local bufnr = self.bufnr or 0
 		local filename = vim.api.nvim_buf_get_name(bufnr)
@@ -32,7 +32,7 @@ local FileIcon = {
 
 ---@type HeirlineComponent
 local FileName = {
-	update = { "BufEnter", "BufWinEnter", "BufWritePost" },
+	update = { "BufEnter", "BufWinEnter", "BufWritePost", "WinEnter", "WinLeave" },
 	provider = function(self)
 		local bufnr = self.bufnr or 0
 		local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":t")
@@ -40,14 +40,17 @@ local FileName = {
 	end,
 
 	hl = function(self)
-		return utils.is_active(self) and "HeirlineSurfaceBold"
-			or { fg = utils.status_color(self, p.subtle), bg = utils.status_bg(self, p.surface), bold = true }
+		return {
+			fg = utils.status_color(self, p.bright),
+			bg = utils.status_bg(self, p.surface),
+			bold = true,
+		}
 	end,
 }
 
 ---@type HeirlineComponent
 local FileType = {
-	update = { "BufEnter", "FileType" },
+	update = { "BufEnter", "FileType", "WinEnter", "WinLeave" },
 	provider = function(self)
 		local bufnr = self.bufnr or 0
 		local ft = vim.bo[bufnr].filetype
@@ -61,7 +64,7 @@ local FileType = {
 
 ---@type HeirlineComponent
 local FileFormat = {
-	update = { "BufEnter" },
+	update = { "BufEnter", "WinEnter", "WinLeave" },
 	provider = function(self)
 		local bufnr = self.bufnr or 0
 		local fmt = vim.bo[bufnr].fileformat
