@@ -13,7 +13,7 @@ return {
 	virtual = true,
 	ft = AdapterScanner:supported_filetypes("treesitter", treesitter_opts),
 	config = function()
-		local logger = Logger.new("TREESITTER", "debug")
+		local logger = Logger.new("TREESITTER")
 
 		local ts_path = vim.fn.expand("~/.local/share/tree-sitter")
 		if not vim.tbl_contains(vim.opt.runtimepath:get(), ts_path) then
