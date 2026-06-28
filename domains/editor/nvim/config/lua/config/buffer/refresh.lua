@@ -14,9 +14,11 @@ return {
 				if vim.bo.buftype == "terminal" then
 					return
 				end
+
 				if vim.fn.mode() ~= "c" then
 					vim.cmd("checktime")
 				end
+
 			end,
 			pattern = { "*" },
 		})
