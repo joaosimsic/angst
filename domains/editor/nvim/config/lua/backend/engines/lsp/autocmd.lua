@@ -28,6 +28,10 @@ M.setup = function()
 
 			local client = vim.lsp.get_client_by_id(event.data.client_id)
 
+			if client and client:supports_method("textDocument/documentColor") then
+				vim.lsp.document_color.enable(false, { bufnr = event.buf })
+			end
+
 			if client and client:supports_method("textDocument/inlayHint") then
 				vim.lsp.inlay_hint.enable(true, { bufnr = event.buf })
 			end
