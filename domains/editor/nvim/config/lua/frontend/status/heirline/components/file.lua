@@ -1,17 +1,28 @@
-local c = require("config.theme").colors
+---@type ThemePalette
+local p = require("config.theme.palette").get()
+local utils = require("frontend.status.heirline.utils")
 
+---@type HeirlineComponent
 local FileIcon = {
+	update = { "BufEnter", "BufWinEnter", "WinEnter", "WinLeave" },
 	init = function(self)
-		local filename = vim.api.nvim_buf_get_name(0)
+		local bufnr = self.bufnr or 0
+		local filename = vim.api.nvim_buf_get_name(bufnr)
 		local extension = vim.fn.fnamemodify(filename, ":e")
-		local icon, color = require("nvim-web-devicons").get_icon_color(filename, extension, { default = false })
 
-		self.icon = icon
-		self.icon_color = color
+		local has_devicons, devicons = pcall(require, "nvim-web-devicons")
+		if has_devicons then
+			local icon, color = devicons.get_icon_color(filename, extension, { default = false })
+			self.icon = icon
+			self.icon_color = color
+		else
+			self.icon = ""
+			self.icon_color = p.bright
+		end
 	end,
 
 	hl = function(self)
-		return { fg = self.icon_color, bg = c.surface }
+		return { fg = utils.status_color(self, self.icon_color), bg = utils.status_bg(self, p.surface) }
 	end,
 
 	provider = function(self)
@@ -19,31 +30,50 @@ local FileIcon = {
 	end,
 }
 
+---@type HeirlineComponent
 local FileName = {
-	provider = function()
-		local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":t")
+	update = { "BufEnter", "BufWinEnter", "BufWritePost", "WinEnter", "WinLeave" },
+	provider = function(self)
+		local bufnr = self.bufnr or 0
+		local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":t")
 		return name == "" and "[No Name]" or string.format(" %s ", name)
 	end,
 
-	hl = { fg = c.base, bg = c.surface, bold = true },
+	hl = function(self)
+		return {
+			fg = utils.status_color(self, p.bright),
+			bg = utils.status_bg(self, p.surface),
+			bold = true,
+		}
+	end,
 }
 
+---@type HeirlineComponent
 local FileType = {
-	provider = function()
-		local ft = vim.bo.filetype
+	update = { "BufEnter", "FileType", "WinEnter", "WinLeave" },
+	provider = function(self)
+		local bufnr = self.bufnr or 0
+		local ft = vim.bo[bufnr].filetype
 		return ft ~= "" and string.format(" %s ", ft) or ""
 	end,
 
-	hl = "HeirlineSurfaceBold",
+	hl = function(self)
+		return { fg = utils.status_color(self, p.bright), bg = utils.status_bg(self, p.surface), bold = true }
+	end,
 }
 
+---@type HeirlineComponent
 local FileFormat = {
-	provider = function()
-		local fmt = vim.bo.fileformat
+	update = { "BufEnter", "WinEnter", "WinLeave" },
+	provider = function(self)
+		local bufnr = self.bufnr or 0
+		local fmt = vim.bo[bufnr].fileformat
 		return string.format(" %s ", fmt)
 	end,
 
-	hl = "HeirlineSurface",
+	hl = function(self)
+		return { fg = utils.status_color(self, p.subtle), bg = utils.status_bg(self, p.surface) }
+	end,
 }
 
 return {

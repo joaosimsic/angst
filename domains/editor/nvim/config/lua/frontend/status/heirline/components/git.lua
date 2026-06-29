@@ -1,6 +1,20 @@
-local c = require("config.theme").colors
+---@type ThemePalette
+local p = require("config.theme.palette").get()
 local conditions = require("heirline.conditions")
+local utils = require("frontend.status.heirline.utils")
 
+---@param active_hl_name string
+---@param fallback_color string
+local function git_hl(active_hl_name, fallback_color)
+	return function(self)
+		if utils.is_active(self) then
+			return active_hl_name
+		end
+		return { fg = utils.apply_dark_filter(fallback_color, 0.65), bg = utils.status_bg(self, p.surface) }
+	end
+end
+
+---@type HeirlineComponent
 local Git = {
 	condition = function()
 		return conditions.is_git_repo() and vim.b.gitsigns_status_dict ~= nil
@@ -13,15 +27,21 @@ local Git = {
 			or (self.status_dict.changed or 0) ~= 0
 	end,
 
-	hl = { bg = c.surface },
+	update = { "User", "BufEnter" },
 
-	{ provider = " ", hl = { bg = c.surface } },
+	hl = function(self)
+		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, p.surface) }
+	end,
+
+	{
+		provider = " ",
+	},
 
 	{
 		provider = function(self)
 			return "* " .. self.status_dict.head
 		end,
-		hl = "HeirlineGit",
+		hl = git_hl("HeirlineGit", p.bright),
 	},
 
 	{
@@ -36,7 +56,7 @@ local Git = {
 			local count = self.status_dict.added or 0
 			return count > 0 and ("+" .. count .. " ") or ""
 		end,
-		hl = "HeirlineGitAdd",
+		hl = git_hl("HeirlineGitAdd", p.green),
 	},
 
 	{
@@ -44,7 +64,7 @@ local Git = {
 			local count = self.status_dict.changed or 0
 			return count > 0 and ("~" .. count .. " ") or ""
 		end,
-		hl = "HeirlineGitChange",
+		hl = git_hl("HeirlineGitChange", p.yellow),
 	},
 
 	{
@@ -52,10 +72,12 @@ local Git = {
 			local count = self.status_dict.removed or 0
 			return count > 0 and ("-" .. count) or ""
 		end,
-		hl = "HeirlineGitDelete",
+		hl = git_hl("HeirlineGitDelete", p.red),
 	},
 
-	{ provider = " ", hl = { bg = c.surface } },
+	{
+		provider = " ",
+	},
 }
 
 return { Git = Git }

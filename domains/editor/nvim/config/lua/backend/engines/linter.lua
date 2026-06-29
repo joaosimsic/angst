@@ -1,28 +1,27 @@
+local AdapterScanner = require("backend.shared.AdapterScanner")
+local linter_opts = { check_executable = true }
+
+---@type Plugin
 return {
 	"mfussenegger/nvim-lint",
-	event = { "BufReadPre", "BufNewFile" },
+	ft = AdapterScanner:supported_filetypes("linter", linter_opts),
 
 	config = function()
 		local lint = require("lint")
-		local scan_adapters = require("backend.shared.scan_adapters")
-
-		local linters_by_ft = {}
-
-		for linter_name, opts in pairs(scan_adapters("linter", { check_executable = true })) do
-			for _, ft in ipairs(opts.filetypes or {}) do
-				linters_by_ft[ft] = linters_by_ft[ft] or {}
-				table.insert(linters_by_ft[ft], linter_name)
-			end
-		end
-
-		lint.linters_by_ft = linters_by_ft
+		lint.linters_by_ft = AdapterScanner:by_filetype("linter", linter_opts)
 
 		local group = vim.api.nvim_create_augroup("LinterWatch", { clear = true })
 
-		vim.api.nvim_create_autocmd({ "BufWritePost", "BufEnter", "InsertLeave" }, {
+		vim.api.nvim_create_autocmd({ "BufWritePost", "BufEnter" }, {
 			group = group,
-			callback = function()
-				if vim.bo.filetype == "" then
+			callback = function(event)
+				local filetype = vim.bo[event.buf].filetype
+
+				if filetype == "" or vim.bo[event.buf].buftype ~= "" then
+					return
+				end
+
+				if not AdapterScanner:supports_filetype("linter", filetype, linter_opts) then
 					return
 				end
 

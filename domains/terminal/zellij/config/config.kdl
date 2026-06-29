@@ -2,6 +2,9 @@ plugins {
     vim-navigator location="https://github.com/hiasr/vim-zellij-navigator/releases/download/0.3.0/vim-zellij-navigator.wasm"
 }
 
+copy_command "xclip -selection clipboard"
+copy_clipboard "system"
+
 keybinds clear-defaults=true {
     locked {
         bind "Ctrl g" { SwitchToMode "normal"; }
@@ -14,14 +17,20 @@ keybinds clear-defaults=true {
     }
 
     pane {
+        bind "h" { MoveFocus "Left"; }
+        bind "j" { MoveFocus "Down"; }
+        bind "k" { MoveFocus "Up"; }
+        bind "l" { MoveFocus "Right"; }
         bind "n" { NewPane "Right"; }
-        bind "x" { CloseFocus; } 
+        bind "x" { CloseFocus; }
+        bind "=" { Resize "Increase"; }
+        bind "-" { Resize "Decrease"; }
         bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
     }
 
     tab {
         bind "n" { NewTab; }
-        bind "x" { CloseTab; }   
+        bind "x" { CloseTab; }
         bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
     }
 

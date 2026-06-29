@@ -1,12 +1,20 @@
+---@meta
+
 ---@class Adapter
 ---@field filetypes string[]
 ---@field lsp? string
 ---@field lsp_cmd? string[]|fun():string[]
----@field lsp_settings? table<string, table>
+---@field lsp_settings? table
+---@field lsp_init_options? table
+---@field lsp_root_markers? string[]
+---@field lsp_root_dir? function
+---@field lsp_handlers? table
 ---@field treesitter? string|string[]
 ---@field formatter? string|string[]
+---@field formatter_cmd? string[]|fun():string[]
 ---@field linter? string|string[]
 ---@field linter_cmd? string[]|fun():string[]
+---@field doktor_linter? string
+---@field doktor_provider? DependencyProvider
+---@field doktor_resolver? PathResolver
 ---@field plugins? table[]
-
-return {}

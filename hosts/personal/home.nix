@@ -11,4 +11,5 @@
   domains.terminal.ghostty.enable = true;
   domains.terminal.zellij.enable = true;
   domains.editor.nvim.enable = true;
+  domains.files.yazi.enable = true;
 }

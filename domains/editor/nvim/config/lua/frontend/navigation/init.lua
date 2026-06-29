@@ -1,3 +1,3 @@
-return {
-	require("frontend.navigation.zellij-nav"),
-}
+local PluginLoader = require("common.PluginLoader")
+
+return PluginLoader.load("frontend.navigation")

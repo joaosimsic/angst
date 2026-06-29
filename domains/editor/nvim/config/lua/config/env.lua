@@ -1,33 +1,27 @@
-require("config.theme")
-
-vim.g.mapleader = " "
-vim.g.maplocalleader = " "
-
-vim.opt.equalalways = false
-
-vim.opt.tabstop = 4
-vim.opt.softtabstop = 4
-vim.opt.shiftwidth = 4
-vim.opt.expandtab = true
-
-vim.opt.clipboard = "unnamedplus"
-
-vim.opt.relativenumber = true
-vim.opt.number = true
-
-vim.opt.termguicolors = true
-
-vim.opt.cursorline = true
-
-vim.opt.colorcolumn = "100,101"
-
-vim.o.guicursor = "n-v-c:block"
-
-vim.diagnostic.config({
-	virtual_text = true,
-	severity_sort = true,
-	float = { border = "none" },
-	update_in_insert = false,
-})
-
-vim.opt.showmode = false
+---@type Plugin
+return {
+	"env",
+	virtual = true,
+	lazy = false,
+	priority = 1001,
+	config = function()
+		vim.opt.equalalways = false
+		vim.opt.tabstop = 4
+		vim.opt.softtabstop = 4
+		vim.opt.shiftwidth = 4
+		vim.opt.expandtab = true
+		vim.opt.relativenumber = true
+		vim.opt.number = true
+		vim.opt.termguicolors = true
+		vim.opt.cursorline = true
+		vim.opt.colorcolumn = "100,101"
+		vim.o.guicursor = "n-v-c:block"
+		vim.opt.showmode = false
+		vim.opt.scrolloff = 999
+		vim.opt.timeoutlen = 300
+		vim.opt.ttimeoutlen = 10
+    vim.opt.splitright = true
+    vim.opt.splitbelow = true
+    vim.opt.signcolumn = "yes"
+	end,
+}

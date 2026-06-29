@@ -1,7 +1,7 @@
 {
   system = "x86_64-linux";
 
-  theme = "kanagawa";
+  theme = "miasma";
 
   user = {
     username = "joao";

@@ -13,6 +13,8 @@
   BLACK = "#03191b";
   BASE = "#b2cacd";
   DIM = "#083d44";
+  SUBTLE = "#4c767b";
+  ACCENT = "#a2babd";
   RED = "#e66533";
   GREEN = "#49e9a6";
   YELLOW = "#e4b781";

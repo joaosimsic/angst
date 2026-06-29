@@ -23,5 +23,7 @@
     "MAGENTA"
     "BASE"
     "DIM"
+    "SUBTLE"
+    "ACCENT"
   ];
 }

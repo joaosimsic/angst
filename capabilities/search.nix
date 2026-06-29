@@ -5,13 +5,14 @@ let
 in
 {
   options.capabilities.search = {
-    enable = lib.mkEnableOption "Search tools (fd, ripgrep)";
+    enable = lib.mkEnableOption "Search tools";
   };
 
   config = lib.mkIf cfg.enable {
     environment.systemPackages = with pkgs; [
       fd
       ripgrep
+      fzf
     ];
   };
 }

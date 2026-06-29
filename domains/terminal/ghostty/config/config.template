@@ -3,6 +3,8 @@ config-file = colors.conf
 font-family = {{FONT_FAMILY}}
 font-size = 13
 
+adjust-underline-thickness = 100%
+
 cursor-style = block
 cursor-style-blink = false
 
@@ -21,5 +23,7 @@ font-feature = +liga
 font-feature = +dlig
 
 scrollback-limit = 10000
+
+clipboard-write = allow
 
 keybind = ctrl+q=text:\x11

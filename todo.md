@@ -2,6 +2,10 @@
 - [x] vim modes still appear on command prompt
 - [ ] refac config
 - [x] test lsp, treesitter, etc...
+- [x] fzf vim motions
+- [x] autocmd for lspdetach
+- [ ] auto closing enter bug
+- [ ] Doktor at root
 
 # starship
 - [ ] show vim modes

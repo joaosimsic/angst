@@ -1,4 +1,5 @@
 local logger = require("common.Logger")
+local AdapterScanner = require("backend.shared.AdapterScanner")
 
 local M = {}
 
@@ -21,10 +22,14 @@ function M.setup()
 	end
 
 	blink.setup({
+		enabled = function()
+			return vim.bo.buftype == "" and AdapterScanner:supports_filetype("lsp", vim.bo.filetype)
+		end,
+
 		keymap = {
 			preset = "none",
 			["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
-			["<C-e>"] = { "hide" },
+			["Q"] = { "hide" },
 			["<CR>"] = { "accept", "fallback" },
 
 			["<Tab>"] = { "select_next", "snippet_forward", "fallback" },
@@ -40,7 +45,14 @@ function M.setup()
 		},
 
 		sources = {
-			default = { "lsp", "path", "snippets", "buffer" },
+			default = { "lazydev", "lsp", "path", "snippets", "buffer" },
+			providers = {
+				lazydev = {
+					name = "LazyDev",
+					module = "lazydev.integrations.blink",
+					score_offset = 100,
+				},
+			},
 		},
 
 		completion = {

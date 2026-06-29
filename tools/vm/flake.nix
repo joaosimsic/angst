@@ -140,6 +140,8 @@
 
             export PATH="${vm-run-script}/bin:$PATH"
 
+            alias res="vm restart -l && sleep 0.5 && vm ssh"
+
             if [ -z "$SSH_AUTH_SOCK" ]; then
               echo "Initializing local shell-bound SSH Agent..."
               eval $(ssh-agent -s) > /dev/null

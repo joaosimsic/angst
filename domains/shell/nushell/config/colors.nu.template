@@ -44,12 +44,12 @@ $env.config.color_config = {
     shape_match_pattern:         "#{{FG}}"
     shape_matching_brackets:     { attr: u }
     shape_nothing:               "#{{COMMENT}}"
-    shape_operator:              "#{{FG}}"
+    shape_operator:              "#{{SUBTLE}}"
     shape_or:                    { fg: "#{{FG}}" attr: b }
-    shape_pipe:                  { fg: "#{{BRIGHT}}" attr: b }
+    shape_pipe:                  { fg: "#{{SUBTLE}}" attr: b }
     shape_range:                 "#{{FG}}"
     shape_record:                "#{{COMMENT}}"
-    shape_redirection:           { fg: "#{{BRIGHT}}" attr: b }
+    shape_redirection:           { fg: "#{{SUBTLE}}" attr: b }
     shape_signature:             "#{{BRIGHT}}"
     shape_string:                "#{{COMMENT}}"
     shape_string_interpolation:  "#{{BRIGHT}}"
@@ -77,6 +77,8 @@ def ls-entry [selector: string, hex: string, --bold, --underline] {
 
 let _fg = "#{{FG}}"
 let _bright = "#{{BRIGHT}}"
+let _subtle = "#{{SUBTLE}}"
+let _accent = "#{{ACCENT}}"
 let _muted = "#{{MUTED}}"
 let _comment = "#{{COMMENT}}"
 let _success = "#{{SUCCESS}}"

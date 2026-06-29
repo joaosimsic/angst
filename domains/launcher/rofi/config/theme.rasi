@@ -1,7 +1,8 @@
 * {
-    bg:       #181616;
-    fg:       #c5c9c5;
-    accent:   #c8c093;
+    bg:       #222222;
+    fg:       #c2c2b0;
+    accent:   #eeeeee;
+    subtle:   #8c8c7a;
 
     background-color: transparent;
     text-color:       @fg;
@@ -36,6 +37,7 @@ inputbar {
 entry {
     background-color: transparent;
     text-color:       @fg;
+    placeholder-color: @subtle;
     placeholder:      "";
     cursor-width:     8px;
 }

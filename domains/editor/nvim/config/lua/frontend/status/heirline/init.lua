@@ -1,20 +1,43 @@
+---@type Keybinder
+local Keybinder = require("common.Keybinder")
+
+---@type Plugin
 return {
 	"rebelot/heirline.nvim",
-	dependencies = {
-		"nvim-tree/nvim-web-devicons",
-		"lewis6991/gitsigns.nvim",
-	},
 	event = "VeryLazy",
 	config = function()
 		local hls = require("frontend.status.heirline.hls")
 		local comp = require("frontend.status.heirline.components")
+		local utils = require("frontend.status.heirline.utils")
 		local conditions = require("heirline.conditions")
-		local c = require("config.theme").colors
+
+		---@type ThemePalette
+		local p = require("config.theme.palette").get()
 
 		hls.setup_highlights()
 
-		local StatusLine = {
+		---@type HeirlineComponent
+		local LeftSideMode = {
+			fallthrough = false,
+			comp.Hydra,
 			comp.Mode,
+		}
+
+		---@type HeirlineComponent
+		local StatusLine = {
+			init = function(self)
+				self.is_active = conditions.is_active()
+				vim.g.heirline_statusline_is_active = self.is_active
+
+				self.bg = utils.status_color(self, p.surface)
+				self.fg = utils.status_color(self, p.subtle)
+			end,
+
+			hl = function(self)
+				return { fg = self.fg, bg = self.bg }
+			end,
+
+			LeftSideMode,
 			comp.Space,
 			comp.FileName,
 			comp.Git,
@@ -30,16 +53,8 @@ return {
 			comp.Ruler,
 		}
 
-		local InactiveStatusLine = {
-			condition = function()
-				return not conditions.is_active()
-			end,
-			{ provider = "%<%F", hl = { fg = c.comment, bg = c.black } },
-			comp.Align,
-		}
-
 		require("heirline").setup({
-			statusline = { StatusLine, InactiveStatusLine },
+			statusline = StatusLine,
 			opts = {
 				disable_winbar_cb = function(args)
 					return conditions.buffer_matches({
@@ -58,5 +73,11 @@ return {
 				hls.setup_highlights()
 			end,
 		})
+
+		local binder = Keybinder.new(nil, "HEIRLINE")
+		binder:map({ "i", "c" }, "<C-c>", function()
+			local keys = vim.api.nvim_replace_termcodes("<C-c><Cmd>redrawstatus<CR>", true, false, true)
+			vim.api.nvim_feedkeys(keys, "n", false)
+		end, { silent = true })
 	end,
 }

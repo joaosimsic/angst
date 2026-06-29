@@ -1,0 +1,14 @@
+[mode]
+normal_main = { bg = "#{{BRIGHT}}", fg = "#{{SURFACE}}", bold = true }
+normal_alt  = { fg = "#{{BRIGHT}}", bg = "#{{SURFACE}}" }
+
+[filetype]
+rules = [
+    { mime = "image/*", fg = "#{{GREEN}}" },        
+    { mime = "video/*", fg = "#{{MAGENTA}}" },       
+    { mime = "inode/empty", fg = "#{{DIM}}" },  
+    { url = "*/", fg = "#{{BLUE}}" }            
+]
+
+[overall]
+bg = "#{{BG}}"

@@ -5,10 +5,10 @@ bar {
     colors {
         background #{{BG}}
         statusline #{{FG}}
-        separator  #{{MUTED}}
+        separator  #{{SUBTLE}}
         focused_workspace  #{{BG}} #{{BG}} #{{FG}}
         active_workspace   #{{BG}} #{{BG}} #{{BRIGHT}}
-        inactive_workspace #{{BG}} #{{BG}} #{{MUTED}}
+        inactive_workspace #{{BG}} #{{BG}} #{{SUBTLE}}
         urgent_workspace   #{{ERROR}} #{{BG}} #{{FG}}
     }
 }
