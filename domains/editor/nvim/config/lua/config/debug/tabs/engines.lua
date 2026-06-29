@@ -29,6 +29,10 @@ local function join_or_none(values, none)
 	return table.concat(values, ", ")
 end
 
+local function count_label(name, count)
+	return string.format("%s (%d)", name, count)
+end
+
 local function add_highlight(view, line, group, start_col, end_col)
 	table.insert(view.highlights, {
 		line = line,
@@ -86,6 +90,10 @@ local function buffer_name(bufnr)
 end
 
 local function client_root(client)
+	if client.root_dir then
+		return vim.fn.fnamemodify(client.root_dir, ":~:.")
+	end
+
 	if client.config and client.config.root_dir then
 		return vim.fn.fnamemodify(client.config.root_dir, ":~:.")
 	end
@@ -118,9 +126,10 @@ local function add_tools_section(view, title, engine, ft)
 	if #configured == 0 then
 		add_row(view, "Configured", "none for this filetype", "DebugMuted")
 	else
+		add_row(view, "Configured", join_or_none(configured), "DebugValue")
 		add_row(
 			view,
-			"Available",
+			"Executable",
 			join_or_none(available, "none executable"),
 			#available > 0 and "DebugOk" or "DebugWarn"
 		)
@@ -204,7 +213,7 @@ local function query_summary(lang)
 		local ok, files = pcall(vim.treesitter.query.get_files, lang, group)
 
 		if ok and files and #files > 0 then
-			table.insert(parts, string.format("%s:%d", group, #files))
+			table.insert(parts, count_label(group, #files))
 
 			local sources = {}
 			for _, path in ipairs(files) do
@@ -213,7 +222,7 @@ local function query_summary(lang)
 
 			table.insert(detail, {
 				group = group,
-				value = table.concat(sources, ", "),
+				sources = sources,
 			})
 		end
 	end
@@ -284,15 +293,14 @@ function M.render(bufnr)
 	for _, query_lang in ipairs(query_langs) do
 		local parts, detail = query_summary(query_lang)
 
-		add_row(view, query_lang, join_or_none(parts, "no query files found"), #parts > 0 and "DebugOk" or "DebugWarn")
+		add_row(view, "Language", query_lang, "DebugInfo")
+		add_row(view, "Groups", join_or_none(parts, "no query files found"), #parts > 0 and "DebugOk" or "DebugWarn")
 
 		for _, item in ipairs(detail) do
-			add_row(
-				view,
-				"  " .. item.group,
-				item.value,
-				item.value:find("custom/", 1, true) and "DebugInfo" or "DebugValue"
-			)
+			for i, source in ipairs(item.sources) do
+				local label = i == 1 and item.group or ""
+				add_row(view, label, source, source:find("custom/", 1, true) and "DebugInfo" or "DebugValue")
+			end
 		end
 	end
 
