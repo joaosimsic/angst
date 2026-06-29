@@ -15,6 +15,37 @@ local level_map = {
 }
 
 local GLOBAL_THRESHOLD = "warn"
+local HISTORY_LIMIT = 1000
+local history = {}
+local sequence = 0
+
+local function emit_history_event(entry)
+	vim.schedule(function()
+		pcall(vim.api.nvim_exec_autocmds, "User", {
+			pattern = "DebugLogAdded",
+			data = entry,
+		})
+	end)
+end
+
+local function push_history(tag, level, text)
+	sequence = sequence + 1
+
+	local entry = {
+		sequence = sequence,
+		time = os.time(),
+		tag = tag,
+		level = level,
+		message = text,
+	}
+
+	table.insert(history, entry)
+	if #history > HISTORY_LIMIT then
+		table.remove(history, 1)
+	end
+
+	emit_history_event(entry)
+end
 
 ---@param tag string
 ---@param threshold Level|nil
@@ -43,15 +74,16 @@ function Logger:log(level, msg)
 	local threshold_level = self.threshold or GLOBAL_THRESHOLD
 	local threshold = level_map[threshold_level]
 
-	if current[2] < threshold[2] then
-		return
-	end
-
 	if type(msg) == "function" then
 		msg = msg()
 	end
 
 	local text = string.format("[%s] %s: %s", self.tag, level:upper(), msg)
+	push_history(self.tag, level, text)
+
+	if current[2] < threshold[2] then
+		return
+	end
 
 	vim.schedule(function()
 		vim.notify(text, current[1])
@@ -76,6 +108,16 @@ end
 ---@param msg LogMessage
 function Logger:error(msg)
 	self:log("error", msg)
+end
+
+---@return table[]
+function Logger.history()
+	return vim.deepcopy(history)
+end
+
+function Logger.clear_history()
+	history = {}
+	sequence = 0
 end
 
 return Logger

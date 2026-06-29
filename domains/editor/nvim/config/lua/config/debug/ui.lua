@@ -7,6 +7,7 @@ local TAB_WIDTH = 12
 local TAB_LEFT = ""
 local TAB_RIGHT = ""
 local DEBUG_NS = vim.api.nvim_create_namespace("debug.window")
+local LOG_AUGROUP = vim.api.nvim_create_augroup("DebugWindowLogs", { clear = true })
 
 local function center_label(label, width)
 	local padding = width - #label
@@ -52,8 +53,8 @@ local function redraw_window()
 		local engines_tab = require("config.debug.tabs.engines")
 		rendered = engines_tab.render(state.origin_buf)
 	elseif state.current_tab == 2 then
-		table.insert(rendered.lines, "  🪵  Backend Logs go here...")
-		table.insert(rendered.lines, "  (Feature coming soon)")
+		local logs_tab = require("config.debug.tabs.logs")
+		rendered = logs_tab.render()
 	elseif state.current_tab == 3 then
 		table.insert(rendered.lines, "  ⚙️  Engine Settings go here...")
 		table.insert(rendered.lines, "  (Feature coming soon)")
@@ -65,15 +66,18 @@ local function redraw_window()
 
 	vim.api.nvim_buf_clear_namespace(state.buf, DEBUG_NS, 0, -1)
 	for _, highlight in ipairs(rendered.highlights or {}) do
-		pcall(
-			vim.api.nvim_buf_add_highlight,
-			state.buf,
-			DEBUG_NS,
-			highlight.group,
-			highlight.line - 1,
-			highlight.start_col or 0,
-			highlight.end_col or -1
-		)
+		local line = rendered.lines[highlight.line] or ""
+		local start_col = highlight.start_col or 0
+		local end_col = highlight.end_col or #line
+
+		if end_col < 0 then
+			end_col = #line
+		end
+
+		pcall(vim.api.nvim_buf_set_extmark, state.buf, DEBUG_NS, highlight.line - 1, start_col, {
+			end_col = end_col,
+			hl_group = highlight.group,
+		})
 	end
 end
 
@@ -137,6 +141,17 @@ function M.open_debug_window()
 
 	vim.keymap.set("n", "q", M.close_debug_window, { buffer = state.buf, silent = true })
 	vim.keymap.set("n", "<Esc>", M.close_debug_window, { buffer = state.buf, silent = true })
+
+	vim.api.nvim_clear_autocmds({ group = LOG_AUGROUP })
+	vim.api.nvim_create_autocmd("User", {
+		group = LOG_AUGROUP,
+		pattern = "DebugLogAdded",
+		callback = function()
+			if state.buf and vim.api.nvim_buf_is_valid(state.buf) and state.current_tab == 2 then
+				redraw_window()
+			end
+		end,
+	})
 end
 
 return M
