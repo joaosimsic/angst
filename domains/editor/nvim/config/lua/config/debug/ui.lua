@@ -6,6 +6,7 @@ local TABS = { "ENGINES", "LOGS", "SETTINGS" }
 local TAB_WIDTH = 12
 local TAB_LEFT = ""
 local TAB_RIGHT = ""
+local DEBUG_NS = vim.api.nvim_create_namespace("debug.window")
 
 local function center_label(label, width)
 	local padding = width - #label
@@ -26,10 +27,7 @@ local function render_winbar_tabs()
 		local sep_hl = hl .. "Sep"
 		local label = center_label(tab_name, TAB_WIDTH)
 
-		table.insert(
-			pieces,
-			string.format("%%#%s#%s%%#%s#%s%%#%s#%s", sep_hl, TAB_LEFT, hl, label, sep_hl, TAB_RIGHT)
-		)
+		table.insert(pieces, string.format("%%#%s#%s%%#%s#%s%%#%s#%s", sep_hl, TAB_LEFT, hl, label, sep_hl, TAB_RIGHT))
 	end
 
 	return "%#DebugTabFill# " .. table.concat(pieces, "%#DebugTabFill# ") .. "%#DebugTabFill#%="
@@ -44,25 +42,39 @@ local function redraw_window()
 		vim.wo[state.win].winbar = render_winbar_tabs()
 	end
 
-	local lines = {}
+	---@type { lines: string[], highlights: table[] }
+	local rendered = {
+		lines = {},
+		highlights = {},
+	}
 
 	if state.current_tab == 1 then
 		local engines_tab = require("config.debug.tabs.engines")
-		local engine_lines = engines_tab.render(state.origin_buf)
-		for _, line in ipairs(engine_lines) do
-			table.insert(lines, line)
-		end
+		rendered = engines_tab.render(state.origin_buf)
 	elseif state.current_tab == 2 then
-		table.insert(lines, "  🪵  Backend Logs go here...")
-		table.insert(lines, "  (Feature coming soon)")
+		table.insert(rendered.lines, "  🪵  Backend Logs go here...")
+		table.insert(rendered.lines, "  (Feature coming soon)")
 	elseif state.current_tab == 3 then
-		table.insert(lines, "  ⚙️  Engine Settings go here...")
-		table.insert(lines, "  (Feature coming soon)")
+		table.insert(rendered.lines, "  ⚙️  Engine Settings go here...")
+		table.insert(rendered.lines, "  (Feature coming soon)")
 	end
 
 	vim.bo[state.buf].modifiable = true
-	vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
+	vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, rendered.lines)
 	vim.bo[state.buf].modifiable = false
+
+	vim.api.nvim_buf_clear_namespace(state.buf, DEBUG_NS, 0, -1)
+	for _, highlight in ipairs(rendered.highlights or {}) do
+		pcall(
+			vim.api.nvim_buf_add_highlight,
+			state.buf,
+			DEBUG_NS,
+			highlight.group,
+			highlight.line - 1,
+			highlight.start_col or 0,
+			highlight.end_col or -1
+		)
+	end
 end
 
 local function switch_tab(delta)
@@ -88,8 +100,8 @@ function M.open_debug_window()
 	state.origin_buf = vim.api.nvim_get_current_buf()
 	state.current_tab = 1
 
-	local width = 65
-	local height = 18
+	local width = math.min(92, math.max(64, vim.o.columns - 8))
+	local height = math.min(32, math.max(18, vim.o.lines - 6))
 	local row = math.floor((vim.o.lines - height) / 2)
 	local col = math.floor((vim.o.columns - width) / 2)
 
@@ -108,6 +120,11 @@ function M.open_debug_window()
 	})
 
 	vim.bo[state.buf].buftype = "nofile"
+	vim.bo[state.buf].bufhidden = "wipe"
+	vim.bo[state.buf].modifiable = false
+	vim.bo[state.buf].filetype = "debug"
+	vim.wo[state.win].cursorline = true
+	vim.wo[state.win].wrap = false
 	redraw_window()
 
 	vim.keymap.set("n", "<Tab>", function()
