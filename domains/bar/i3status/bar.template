@@ -1,5 +1,5 @@
 bar {
-    status_command {{I3STATUS_PATH}} -c ~/.config/i3status/config
+    status_command i3status -c ~/.config/i3status/config
     position top
     font pango:{{FONT_FAMILY}} 10
     colors {

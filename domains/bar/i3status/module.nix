@@ -1,26 +1,10 @@
-{ config, lib, pkgs, themesLib, renderTemplate, templateTokens, ... }:
+{ config, lib, pkgs, ... }:
 
 let
   cfg = config.domains.bar.i3status;
-
-  tokens = templateTokens {
-    inherit lib themesLib;
-    theme = config.theme;
-    fontFamily = config.font.family;
-  } // {
-    I3STATUS_PATH = "${pkgs.i3status}/bin/i3status";
-  };
-
-  barBlock = renderTemplate {
-    inherit lib;
-    templatePath = ./bar.template;
-    inherit tokens;
-  };
 in
 {
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.i3status ];
-
-    domains.wm._i3.configLines = [ barBlock ];
   };
 }

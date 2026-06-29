@@ -7,20 +7,20 @@ add_newline = true
 
 [directory]
 format = "[$path]($style)[$read_only]($read_only_style)"
-style = "bold #d4c8a8"
+style = "bold #d7c483"
 read_only = " RO"
-read_only_style = "bold #b84a4a"
+read_only_style = "bold #685742"
 truncation_length = 3
 truncate_to_repo = false
 
 [git_branch]
 format = "*[$branch]($style)"
-style = "#6e6e5c"
+style = "#685742"
 symbol = ""
 
 [git_status]
 format = ' [\[$all_status$ahead_behind\]]($style) '
-style = "#c4904a"
+style = "#b36d43"
 conflicted = "!"
 ahead = "+"
 behind = "-"
@@ -34,308 +34,308 @@ deleted = "x"
 
 [username]
 format = "[$user]($style) "
-style_user = "bold #eeeeee"
-style_root = "bold #b84a4a"
+style_user = "bold #d7c483"
+style_root = "bold #685742"
 show_always = true
 
 [hostname]
 format = "[@$hostname]($style) "
-style = "bold #6e6e5c"
+style = "bold #685742"
 ssh_only = true
 
 [buf]
 format = "[$symbol](#00A1E0)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [bun]
 format = "[$symbol](#FBF0DF)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [c]
 format = "[$symbol](#A8B9CC)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [cpp]
 format = "[$symbol](#00599C)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 disabled = false
 
 [cmake]
 format = "[$symbol](#064F8C)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [cobol]
 format = "[$symbol](#005CA5)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [crystal]
 format = "[$symbol](#FFFFFF)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [daml]
 format = "[$symbol](#4477AA)[($version)]($style) "
 symbol = "󰚩 "
-style = "#6e6e5c"
+style = "#685742"
 
 [dart]
 format = "[$symbol](#0175C2)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [deno]
 format = "[$symbol](#70FFAF)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [dotnet]
 format = "[$symbol](#512BD4)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [elixir]
 format = "[$symbol](#4B275F)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [elm]
 format = "[$symbol](#1293D8)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [erlang]
 format = "[$symbol](#A90533)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [fennel]
 format = "[$symbol](#FFF3D7)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 disabled = false
 
 [fortran]
 format = "[$symbol](#734F96)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [gleam]
 format = "[$symbol](#FFAFF3)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [golang]
 format = "[$symbol](#00ADD8)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [gradle]
 format = "[$symbol](#02303A)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [haskell]
 format = "[$symbol](#5E5086)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [haxe]
 format = "[$symbol](#EA8220)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [helm]
 format = "[$symbol](#0F1689)[($version)]($style) "
 symbol = "󰠳 "
-style = "#6e6e5c"
+style = "#685742"
 
 [java]
 format = "[$symbol](#ED8B00)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [julia]
 format = "[$symbol](#9558B2)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [kotlin]
 format = "[$symbol](#7F52FF)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [lua]
 format = "[$symbol](#000080)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [maven]
 format = "[$symbol](#C71A36)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [meson]
 format = "[$symbol](#007800)[$project]($style) "
 symbol = "󰔷 "
-style = "#6e6e5c"
+style = "#685742"
 
 [mojo]
 format = "[$symbol](#FF4C1F)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [nim]
 format = "[$symbol](#FFC200)[($version)]($style) "
 symbol = "󰆥 "
-style = "#6e6e5c"
+style = "#685742"
 
 [nodejs]
 format = "[$symbol](#339933)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [ocaml]
 format = "[$symbol](#EC6813)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [odin]
 format = "[$symbol](#3882D2)[($version)]($style) "
 symbol = "󰟢 "
-style = "#6e6e5c"
+style = "#685742"
 
 [opa]
 format = "[$symbol](#7D9199)[($version)]($style) "
 symbol = "󰟓 "
-style = "#6e6e5c"
+style = "#685742"
 
 [perl]
 format = "[$symbol](#39457E)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [php]
 format = "[$symbol](#777BB4)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [pixi]
 format = "[$symbol](#F5C542)[($version)]($style) "
 symbol = "󰏗 "
-style = "#6e6e5c"
+style = "#685742"
 
 [purescript]
 format = "[$symbol](#FFFFFF)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [python]
 format = "[$symbol](#3776AB)[$version]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [quarto]
 format = "[$symbol](#39729E)[($version)]($style) "
 symbol = "󰧮 "
-style = "#6e6e5c"
+style = "#685742"
 
 [raku]
 format = "[$symbol](#0000FB)[($version)]($style) "
 symbol = "󰛓 "
-style = "#6e6e5c"
+style = "#685742"
 
 [red]
 format = "[$symbol](#D91E18)[($version)]($style) "
 symbol = "󰝤 "
-style = "#6e6e5c"
+style = "#685742"
 
 [rlang]
 format = "[$symbol](#276DC3)[($version)]($style) "
 symbol = "󰟔 "
-style = "#6e6e5c"
+style = "#685742"
 
 [ruby]
 format = "[$symbol](#CC342D)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [rust]
 format = "[$symbol](#DEA584)[($version)]($style) "
 symbol = "󱘗 "
-style = "#6e6e5c"
+style = "#685742"
 
 [scala]
 format = "[$symbol](#DC322F)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [solidity]
 format = "[$symbol](#8A8A8A)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [spack]
 format = "[$symbol](#0F70B7)[$environment]($style) "
 symbol = "󰆼 "
-style = "#6e6e5c"
+style = "#685742"
 
 [swift]
 format = "[$symbol](#F05138)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [terraform]
 format = "[$symbol](#844FBA)[$workspace]($style) "
 symbol = "󱁢 "
-style = "#6e6e5c"
+style = "#685742"
 
 [typst]
 format = "[$symbol](#239DAD)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [vlang]
 format = "[$symbol](#5D87BF)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [xmake]
 format = "[$symbol](#22A079)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [zig]
 format = "[$symbol](#F7A41D)[($version)]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [conda]
 format = "[$symbol](#44A833)[$environment]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [nix_shell]
 format = "[$symbol](#5277C3)[$state]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [guix_shell]
 format = "[$symbol](#FFCC00) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [docker_context]
 format = "[$symbol](#2496ED)[$context]($style) "
 symbol = " "
-style = "#6e6e5c"
+style = "#685742"
 
 [package]
 format = "[$symbol](#CB3837)[$version]($style) "
 symbol = "󰏗 "
-style = "#6e6e5c"
+style = "#685742"

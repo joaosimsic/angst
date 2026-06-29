@@ -22,7 +22,7 @@ This is equivalent to `nix flake check --print-build-logs`.
 | `nixos-personal` | Full NixOS system evaluation for the personal host |
 | `home-joao` | Standalone home-manager activation for the personal profile |
 
-`lint-themes` validates placeholders like `{{BG}}` and `{{FONT_FAMILY}}`. Domain-specific placeholders (e.g. `{{I3STATUS_PATH}}` in the i3 bar template) are injected at render time by domain modules and validated by integration checks (`lint-desktop`, `lint-shell`, etc.).
+`lint-themes` validates placeholders like `{{BG}}` and `{{FONT_FAMILY}}`. Domain config templates use the shared theme token layer and are validated by integration checks (`lint-desktop`, `lint-shell`, etc.).
 
 ## Individual lints
 

@@ -1,23 +1,72 @@
 {
-  FG = "#eeeeee";
-  BG = "#0a0a0a";
-  BRIGHT = "#ebebeb";
-  MUTED = "#6b6b6b";
-  COMMENT = "#838383";
-  ERROR = "#9b9b9b";
-  SUCCESS = "#a7a7a7";
-  WARNING = "#b3b3b3";
-  INFO = "#8f8f8f";
+  palette = {
+    black = "#0a0a0a";
+    base = "#eeeeee";
+    dim = "#6b6b6b";
+    subtle = "#9f9f9f";
+    accent = "#dedede";
+    surface = "#131313";
+    overlay = "#838383";
+  };
 
-  BLACK = "#0a0a0a";
-  BASE = "#eeeeee";
-  DIM = "#6b6b6b";
-  SUBTLE = "#9f9f9f";
-  ACCENT = "#dedede";
-  RED = "#9b9b9b";
-  GREEN = "#a7a7a7";
-  YELLOW = "#b3b3b3";
-  CYAN = "#8f8f8f";
-  BLUE = "#858585";
-  MAGENTA = "#919191";
+  ansi = {
+    normal = {
+      black = "#0a0a0a";
+      red = "#9b9b9b";
+      green = "#a7a7a7";
+      yellow = "#b3b3b3";
+      blue = "#858585";
+      magenta = "#919191";
+      cyan = "#8f8f8f";
+      white = "#eeeeee";
+    };
+
+    bright = {
+      black = "#6b6b6b";
+      red = "#9b9b9b";
+      green = "#a7a7a7";
+      yellow = "#b3b3b3";
+      blue = "#858585";
+      magenta = "#919191";
+      cyan = "#8f8f8f";
+      white = "#ebebeb";
+    };
+  };
+
+  ui = {
+    fg = "#eeeeee";
+    bg = "#0a0a0a";
+    bright = "#ebebeb";
+    muted = "#6b6b6b";
+    comment = "#838383";
+    surface = "#131313";
+    subtle = "#9f9f9f";
+    accent = "#dedede";
+    border = "#8f8f8f";
+    selectionBg = "#9f9f9f";
+    selectionFg = "#eeeeee";
+    overlay = "#838383";
+    prompt = "#ebebeb";
+  };
+
+  syntax = {
+    comment = "#838383";
+    keyword = "#ebebeb";
+    string = "#a7a7a7";
+    function = "#858585";
+    variable = "#eeeeee";
+    constant = "#919191";
+    operator = "#9f9f9f";
+    type = "#8f8f8f";
+    number = "#b3b3b3";
+    punctuation = "#9f9f9f";
+  };
+
+  diagnostic = {
+    error = "#9b9b9b";
+    warning = "#b3b3b3";
+    info = "#8f8f8f";
+    hint = "#858585";
+    success = "#a7a7a7";
+  };
 }

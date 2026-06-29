@@ -2,13 +2,13 @@ general {
     colors = true
     interval = 5
     markup = pango
-    color_good = "#608f60"
-    color_degraded = "#c4904a"
-    color_bad = "#b84a4a"
+    color_good = "#5f875f"
+    color_degraded = "#b36d43"
+    color_bad = "#685742"
 }
 
 order = "tztime local"
 
 tztime "local" {
-    format = " <span color='#eeeeee'>%Y-%m-%d %H:%M</span> "
+    format = " <span color='#d7c483'>%Y-%m-%d %H:%M</span> "
 }

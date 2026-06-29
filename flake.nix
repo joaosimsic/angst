@@ -55,6 +55,20 @@
   {
     nixosConfigurations = nixpkgs.lib.genAttrs hosts mkHost;
 
-    inherit (flakeLib) homeConfigurations checks packages apps devShells;
+    inherit (flakeLib)
+      homeConfigurations
+      checks
+      packages
+      apps
+      devShells
+      ;
+
+    lib = {
+      inherit (flakeLib)
+        themeLint
+        renderTemplateFor
+        renderMonitorsFor
+        ;
+    };
   };
 }
