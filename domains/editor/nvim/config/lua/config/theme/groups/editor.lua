@@ -71,7 +71,7 @@ M.get = function(p)
 		TabLineFill = { bg = e.bg },
 		TabLineSel = { fg = e.bright, bg = e.surface, bold = true },
 		Title = { fg = e.bright, bold = true },
-		Visual = { bg = e.selectionBg },
+		Visual = { bg = e.selectionBg, fg = e.selectionFg },
 		VisualNOS = { bg = e.selectionBg },
 		Whitespace = { fg = e.dim },
 		WildMenu = { fg = e.bg, bg = d.info, bold = true },

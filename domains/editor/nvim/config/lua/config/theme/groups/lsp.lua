@@ -73,7 +73,7 @@ M.get = function(p)
 		["@lsp.mod.static"] = { fg = s.constant },
 		["@lsp.mod.async"] = { italic = true },
 
-		["@lsp.typemod.variable.readonly"] = { fg = e.bright, italic = true },
+		["@lsp.typemod.variable.readonly"] = { fg = s.constant, italic = true },
 		["@lsp.typemod.function.async"] = { fg = s["function"], italic = true },
 	}
 end
