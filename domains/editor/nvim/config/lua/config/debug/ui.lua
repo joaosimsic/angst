@@ -2,8 +2,8 @@ local state = require("config.debug.state")
 
 local M = {}
 
-local TABS = { "ENGINES", "LOGS", "SETTINGS" }
-local TAB_WIDTH = 12
+local TABS = { "ENGINES", "LOGS", "ENVIRONMENT" }
+local TAB_WIDTH = 13
 local TAB_LEFT = ""
 local TAB_RIGHT = ""
 local DEBUG_NS = vim.api.nvim_create_namespace("debug.window")
@@ -56,8 +56,8 @@ local function redraw_window()
 		local logs_tab = require("config.debug.tabs.logs")
 		rendered = logs_tab.render()
 	elseif state.current_tab == 3 then
-		table.insert(rendered.lines, "  ⚙️  Engine Settings go here...")
-		table.insert(rendered.lines, "  (Feature coming soon)")
+		local environment_tab = require("config.debug.tabs.environment")
+		rendered = environment_tab.render(state.origin_buf)
 	end
 
 	vim.bo[state.buf].modifiable = true
