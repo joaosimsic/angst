@@ -25,6 +25,7 @@ local pallete = require("config.theme.palette").get()
 ---@field name string
 ---@field fg_color string
 ---@field bg_color string
+---@field bufnr? number
 
 ---@class Hydra
 ---@field name string
@@ -37,6 +38,7 @@ local pallete = require("config.theme.palette").get()
 ---@field global boolean
 ---@field bufnr? number
 ---@field binder? Keybinder
+---@field active_autocmds integer[]
 ---@field logger Logger
 local Hydra = {}
 Hydra.__index = Hydra
@@ -46,6 +48,8 @@ vim.g.active_hydra = nil
 
 ---@type Hydra|nil
 local active_hydra_instance = nil
+
+local lifecycle_group = vim.api.nvim_create_augroup("HydraLifecycle", { clear = false })
 
 local function notify_hydra_changed()
 	vim.api.nvim_exec_autocmds("User", {
@@ -74,6 +78,7 @@ function Hydra.new(cfg, bufnr)
 	self.global = cfg.global or false
 	self.bufnr = bufnr
 	self.binder = nil
+	self.active_autocmds = {}
 
 	self.debug_level = cfg.debug_level
 	self.logger = Logger.new("HYDRA:" .. self.name:upper(), self.debug_level)
@@ -85,6 +90,38 @@ function Hydra.new(cfg, bufnr)
 	end, { desc = "Enter " .. self.name })
 
 	return self
+end
+
+function Hydra:clear_active_autocmds()
+	for _, autocmd in ipairs(self.active_autocmds) do
+		pcall(vim.api.nvim_del_autocmd, autocmd)
+	end
+
+	self.active_autocmds = {}
+end
+
+---@param event string|string[]
+---@param opts table
+function Hydra:add_lifecycle_autocmd(event, opts)
+	opts = vim.tbl_extend("force", opts, {
+		group = lifecycle_group,
+		callback = function()
+			self:deactivate()
+		end,
+	})
+
+	table.insert(self.active_autocmds, vim.api.nvim_create_autocmd(event, opts))
+end
+
+---@param bufnr number|nil
+function Hydra:setup_lifecycle_autocmds(bufnr)
+	self:clear_active_autocmds()
+
+	self:add_lifecycle_autocmd("InsertEnter", self.global and {} or { buffer = bufnr })
+
+	if not self.global then
+		self:add_lifecycle_autocmd({ "BufLeave", "BufWipeout" }, { buffer = bufnr })
+	end
 end
 
 function Hydra:set_debug_level(level)
@@ -110,6 +147,7 @@ function Hydra:activate()
 	end
 
 	local target_scope = self.global and nil or vim.api.nvim_get_current_buf()
+	self:setup_lifecycle_autocmds(target_scope)
 
 	self.binder = Keybinder.new(target_scope, "HYDRA:" .. self.name:upper())
 
@@ -149,7 +187,8 @@ function Hydra:activate()
 	end
 
 	active_hydra_instance = self
-	vim.g.active_hydra = { name = self.name, fg_color = self.fg_color_hex, bg_color = self.bg_color_hex }
+	vim.g.active_hydra =
+		{ name = self.name, fg_color = self.fg_color_hex, bg_color = self.bg_color_hex, bufnr = target_scope }
 	notify_hydra_changed()
 end
 
@@ -167,6 +206,7 @@ end
 function Hydra:deactivate()
 	if self.binder then
 		self.logger:info("Deactivating")
+		self:clear_active_autocmds()
 		self.binder:purge()
 		self.binder = nil
 
