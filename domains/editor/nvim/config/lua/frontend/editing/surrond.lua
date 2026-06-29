@@ -9,8 +9,6 @@ return {
 	config = function()
 		local binder = Keybinder.new(nil, "Sandwich")
 
-		binder:set_debug(true)
-
 		local function get_char()
 			local ok, char_code = pcall(vim.fn.getchar)
 			if not ok then
