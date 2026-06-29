@@ -1,24 +1,25 @@
 format = """
-$directory $git_branch$git_status$all
-$character"""
+$directory $git_branch$git_status$buf$bun$c$cpp$cmake$cobol$crystal$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$gleam$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$maven$meson$mojo$nim$nodejs$ocaml$odin$opa$perl$php$pixi$purescript$python$quarto$raku$red$rlang$ruby$rust$scala$solidity$spack$swift$terraform$typst$vlang$xmake$zig$conda$nix_shell$guix_shell$docker_context$package
+
+"""
 
 add_newline = true
 
 [directory]
 format = "[$path]($style)[$read_only]($read_only_style)"
-style = "bold #{{BRIGHT}}"
+style = "bold #{{ACCENT}}"
 read_only = " RO"
 read_only_style = "bold #{{ERROR}}"
 truncation_length = 3
 truncate_to_repo = false
 
 [git_branch]
-format = "on [$branch]($style)"
+format = "*[$branch]($style)"
 style = "#{{COMMENT}}"
 symbol = ""
 
 [git_status]
-format = " [$all_status$ahead_behind]($style)"
+format = ' [\[$all_status$ahead_behind\]]($style) '
 style = "#{{WARNING}}"
 conflicted = "!"
 ahead = "+"
@@ -27,74 +28,314 @@ diverged = "+-"
 untracked = "?"
 stashed = "*"
 modified = "~"
-staged = ">"
+staged = "+"
 renamed = "r"
 deleted = "x"
-
-# vimcmd_symbol is ignored when STARSHIP_SHELL=nu; Nushell handles vi mode via
-# PROMPT_INDICATOR_VI_INSERT / PROMPT_INDICATOR_VI_NORMAL in env.nu.
-[character]
-success_symbol = "[>](bold #{{SUCCESS}})"
-error_symbol = "[>](bold #{{ERROR}})"
-vimcmd_symbol = "[<](bold #{{FG}})"
 
 [username]
 format = "[$user]($style) "
 style_user = "bold #{{BRIGHT}}"
 style_root = "bold #{{ERROR}}"
-show_always = false
+show_always = true
 
 [hostname]
 format = "[@$hostname]($style) "
 style = "bold #{{COMMENT}}"
 ssh_only = true
 
-[nodejs]
-format = "[$symbol($version)]($style) "
-symbol = "node "
+[buf]
+format = "[$symbol](#00A1E0)[($version)]($style) "
+symbol = " "
 style = "#{{COMMENT}}"
 
-[python]
-format = "[$symbol$version]($style) "
-symbol = "py "
+[bun]
+format = "[$symbol](#FBF0DF)[($version)]($style) "
+symbol = " "
 style = "#{{COMMENT}}"
 
-[rust]
-format = "[$symbol($version)]($style) "
-symbol = "rs "
+[c]
+format = "[$symbol](#A8B9CC)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[cpp]
+format = "[$symbol](#00599C)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+disabled = false
+
+[cmake]
+format = "[$symbol](#064F8C)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[cobol]
+format = "[$symbol](#005CA5)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[crystal]
+format = "[$symbol](#FFFFFF)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[daml]
+format = "[$symbol](#4477AA)[($version)]($style) "
+symbol = "󰚩 "
+style = "#{{COMMENT}}"
+
+[dart]
+format = "[$symbol](#0175C2)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[deno]
+format = "[$symbol](#70FFAF)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[dotnet]
+format = "[$symbol](#512BD4)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[elixir]
+format = "[$symbol](#4B275F)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[elm]
+format = "[$symbol](#1293D8)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[erlang]
+format = "[$symbol](#A90533)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[fennel]
+format = "[$symbol](#FFF3D7)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+disabled = false
+
+[fortran]
+format = "[$symbol](#734F96)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[gleam]
+format = "[$symbol](#FFAFF3)[($version)]($style) "
+symbol = " "
 style = "#{{COMMENT}}"
 
 [golang]
-format = "[$symbol($version)]($style) "
-symbol = "go "
+format = "[$symbol](#00ADD8)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[gradle]
+format = "[$symbol](#02303A)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[haskell]
+format = "[$symbol](#5E5086)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[haxe]
+format = "[$symbol](#EA8220)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[helm]
+format = "[$symbol](#0F1689)[($version)]($style) "
+symbol = "󰠳 "
 style = "#{{COMMENT}}"
 
 [java]
-format = "[$symbol($version)]($style) "
-symbol = "java "
+format = "[$symbol](#ED8B00)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[julia]
+format = "[$symbol](#9558B2)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[kotlin]
+format = "[$symbol](#7F52FF)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[lua]
+format = "[$symbol](#000080)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[maven]
+format = "[$symbol](#C71A36)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[meson]
+format = "[$symbol](#007800)[$project]($style) "
+symbol = "󰔷 "
+style = "#{{COMMENT}}"
+
+[mojo]
+format = "[$symbol](#FF4C1F)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[nim]
+format = "[$symbol](#FFC200)[($version)]($style) "
+symbol = "󰆥 "
+style = "#{{COMMENT}}"
+
+[nodejs]
+format = "[$symbol](#339933)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[ocaml]
+format = "[$symbol](#EC6813)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[odin]
+format = "[$symbol](#3882D2)[($version)]($style) "
+symbol = "󰟢 "
+style = "#{{COMMENT}}"
+
+[opa]
+format = "[$symbol](#7D9199)[($version)]($style) "
+symbol = "󰟓 "
+style = "#{{COMMENT}}"
+
+[perl]
+format = "[$symbol](#39457E)[($version)]($style) "
+symbol = " "
 style = "#{{COMMENT}}"
 
 [php]
-format = "[$symbol($version)]($style) "
-symbol = "php "
+format = "[$symbol](#777BB4)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[pixi]
+format = "[$symbol](#F5C542)[($version)]($style) "
+symbol = "󰏗 "
+style = "#{{COMMENT}}"
+
+[purescript]
+format = "[$symbol](#FFFFFF)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[python]
+format = "[$symbol](#3776AB)[$version]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[quarto]
+format = "[$symbol](#39729E)[($version)]($style) "
+symbol = "󰧮 "
+style = "#{{COMMENT}}"
+
+[raku]
+format = "[$symbol](#0000FB)[($version)]($style) "
+symbol = "󰛓 "
+style = "#{{COMMENT}}"
+
+[red]
+format = "[$symbol](#D91E18)[($version)]($style) "
+symbol = "󰝤 "
+style = "#{{COMMENT}}"
+
+[rlang]
+format = "[$symbol](#276DC3)[($version)]($style) "
+symbol = "󰟔 "
 style = "#{{COMMENT}}"
 
 [ruby]
-format = "[$symbol($version)]($style) "
-symbol = "rb "
+format = "[$symbol](#CC342D)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[rust]
+format = "[$symbol](#DEA584)[($version)]($style) "
+symbol = "󱘗 "
+style = "#{{COMMENT}}"
+
+[scala]
+format = "[$symbol](#DC322F)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[solidity]
+format = "[$symbol](#8A8A8A)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[spack]
+format = "[$symbol](#0F70B7)[$environment]($style) "
+symbol = "󰆼 "
+style = "#{{COMMENT}}"
+
+[swift]
+format = "[$symbol](#F05138)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[terraform]
+format = "[$symbol](#844FBA)[$workspace]($style) "
+symbol = "󱁢 "
+style = "#{{COMMENT}}"
+
+[typst]
+format = "[$symbol](#239DAD)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[vlang]
+format = "[$symbol](#5D87BF)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[xmake]
+format = "[$symbol](#22A079)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[zig]
+format = "[$symbol](#F7A41D)[($version)]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[conda]
+format = "[$symbol](#44A833)[$environment]($style) "
+symbol = " "
 style = "#{{COMMENT}}"
 
 [nix_shell]
-format = "[$symbol$state]($style) "
-symbol = "nix "
+format = "[$symbol](#5277C3)[$state]($style) "
+symbol = " "
+style = "#{{COMMENT}}"
+
+[guix_shell]
+format = "[$symbol](#FFCC00) "
+symbol = " "
 style = "#{{COMMENT}}"
 
 [docker_context]
-format = "[$symbol$context]($style) "
-symbol = "docker "
+format = "[$symbol](#2496ED)[$context]($style) "
+symbol = " "
 style = "#{{COMMENT}}"
 
 [package]
-format = "[$symbol$version]($style) "
-symbol = "pkg "
+format = "[$symbol](#CB3837)[$version]($style) "
+symbol = "󰏗 "
 style = "#{{COMMENT}}"

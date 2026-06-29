@@ -27,12 +27,12 @@ $env.config.color_config = {
     shape_bool:                  "#eeeeee"
     shape_custom:                "#c2c2b0"
     shape_datetime:              "#eeeeee"
-    shape_directory:             "#c2c2b0"
+    shape_directory:             "#d4c8a8"
     shape_external:              { fg: "#b84a4a" }
     shape_external_resolved:     { fg: "#608f60" attr: b }
     shape_externalarg:           "#c2c2b0"
     shape_filepath:              "#c2c2b0"
-    shape_flag:                  { fg: "#eeeeee" attr: b }
+    shape_flag:                  { fg: "#d4c8a8" attr: b }
     shape_float:                 "#c2c2b0"
     shape_garbage:               { fg: "#b84a4a" attr: b }
     shape_globpattern:           "#6290a0"
