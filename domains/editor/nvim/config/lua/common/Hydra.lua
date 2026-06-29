@@ -44,6 +44,17 @@ Hydra.__index = Hydra
 ---@type ActiveHydraState|nil
 vim.g.active_hydra = nil
 
+---@type Hydra|nil
+local active_hydra_instance = nil
+
+local function notify_hydra_changed()
+	vim.api.nvim_exec_autocmds("User", {
+		pattern = "HydraChanged",
+		data = vim.g.active_hydra,
+	})
+	vim.cmd("redrawstatus")
+end
+
 ---@param cfg HydraConfig
 ---@param bufnr number|nil
 ---@return Hydra
@@ -90,7 +101,10 @@ function Hydra:activate()
 		return "Activating " .. self.name
 	end)
 
-	if vim.g.active_hydra then
+	if active_hydra_instance then
+		self.logger:debug("Deactivating previous hydra instance directly")
+		active_hydra_instance:deactivate()
+	elseif vim.g.active_hydra then
 		self.logger:debug("Deactivating previous hydra silently")
 		vim.api.nvim_exec_autocmds("User", { pattern = "HydraDeactivateSilently" })
 	end
@@ -134,8 +148,9 @@ function Hydra:activate()
 		end, { desc = "Exit Hydra" })
 	end
 
+	active_hydra_instance = self
 	vim.g.active_hydra = { name = self.name, fg_color = self.fg_color_hex, bg_color = self.bg_color_hex }
-	vim.cmd("redrawstatus")
+	notify_hydra_changed()
 end
 
 function Hydra:purge()
@@ -144,7 +159,7 @@ function Hydra:purge()
 		self.init_binder = nil
 	end
 
-	if vim.g.active_hydra and vim.g.active_hydra == self.name then
+	if vim.g.active_hydra and vim.g.active_hydra.name == self.name then
 		self:deactivate()
 	end
 end
@@ -155,13 +170,16 @@ function Hydra:deactivate()
 		self.binder:purge()
 		self.binder = nil
 
+		if active_hydra_instance == self then
+			active_hydra_instance = nil
+		end
 		vim.g.active_hydra = nil
-		vim.cmd("redrawstatus")
+		notify_hydra_changed()
 	end
 end
 
 function Hydra:refresh_statusline()
-	vim.cmd("redrawstatus")
+	notify_hydra_changed()
 end
 
 return Hydra

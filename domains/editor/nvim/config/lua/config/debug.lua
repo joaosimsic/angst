@@ -3,21 +3,19 @@ local AdapterScanner = require("backend.shared.AdapterScanner")
 
 local M = {}
 
--- State variables to track the active UI instances
 local state = {
 	win = nil,
 	buf = nil,
 	current_tab = 1,
-	origin_buf = nil, -- Track where the user opened the window from
+	origin_buf = nil,
 }
 
--- Define your available tabs
-local TABS = { "Engine Status", "Logs", "Settings" }
+local TABS = { "ENGINES", "LOGS", "SETTINGS" }
 
 local function get_engine_status(bufnr)
 	local ft = vim.bo[bufnr].filetype
 	if ft == "" then
-		ft = "none"
+		ft = "unsupported"
 	end
 
 	local lines = {
@@ -26,38 +24,48 @@ local function get_engine_status(bufnr)
 		"",
 	}
 
-	table.insert(lines, "● LSP:")
+	table.insert(lines, "LSP:")
 	local lsp_clients = vim.lsp.get_clients({ bufnr = bufnr })
+
 	if #lsp_clients == 0 then
-		table.insert(lines, "  State: 🛑 No active clients attached.")
-	else
-		for _, client in ipairs(lsp_clients) do
-			table.insert(lines, string.format("  State: 🟢 Active [%s] (ID: %d)", client.name, client.id))
-		end
+		table.insert(lines, "  No active clients attached.")
 	end
+
+	for _, client in ipairs(lsp_clients) do
+		table.insert(lines, string.format("  Active [%s] (ID: %d)", client.name, client.id))
+	end
+
 	table.insert(lines, "")
 
-	table.insert(lines, "● Tree-sitter:")
+	table.insert(lines, "Tree-sitter:")
+
 	local has_highlighter = vim.treesitter.highlighter.active[bufnr] ~= nil
-	if has_highlighter then
-		local lang = vim.treesitter.language.get_lang(ft) or ft
-		table.insert(lines, string.format("  State: 🟢 Active (Parser: %s)", lang))
-	else
-		table.insert(lines, "  State: 🛑 Inactive / No parser attached.")
+
+	if not has_highlighter then
+		table.insert(lines, "  Inactive / No parser attached.")
 	end
+
+	local lang = vim.treesitter.language.get_lang(ft) or ft
+	table.insert(lines, string.format("  Active (Parser: %s)", lang))
+
 	table.insert(lines, "")
 
-	table.insert(lines, "● Formatter:")
+	table.insert(lines, "Formatter:")
+
 	local formatters = AdapterScanner:tools_for_filetype("formatter", ft, { check_executable = true })
+
 	if #formatters == 0 then
-		table.insert(lines, "  State: 🛑 None configured.")
-	else
-		table.insert(lines, "  Configured: " .. table.concat(formatters, ", "))
+		table.insert(lines, "  No formatter configured.")
 	end
+
+	table.insert(lines, "  Configured: " .. table.concat(formatters, ", "))
+
 	table.insert(lines, "")
 
-	table.insert(lines, "● Linter:")
+	table.insert(lines, "Linter:")
+
 	local linters = AdapterScanner:tools_for_filetype("linter", ft, { check_executable = true })
+
 	if #linters == 0 then
 		table.insert(lines, "  State: 🛑 None configured.")
 	else
