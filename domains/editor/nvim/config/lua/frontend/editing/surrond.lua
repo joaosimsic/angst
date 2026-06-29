@@ -100,16 +100,24 @@ return {
 			target_char = nil
 		end
 
-		binder:nmap("sa", function()
+		binder:map({ "n", "v" }, "sa", function()
 			local char = get_char()
 			if not char then
 				return
 			end
+
 			target_char = char
 
 			vim.o.operatorfunc = "v:lua.sandwich_add_operator"
 
-			local keys = vim.api.nvim_replace_termcodes("g@iw", true, false, true)
+			local mode = vim.api.nvim_get_mode().mode
+			local keys
+			if mode:match("[vV\22]") then
+				keys = vim.api.nvim_replace_termcodes("g@", true, false, true)
+			else
+				keys = vim.api.nvim_replace_termcodes("g@iw", true, false, true)
+			end
+
 			vim.api.nvim_feedkeys(keys, "nt", false)
 		end, { silent = true })
 
