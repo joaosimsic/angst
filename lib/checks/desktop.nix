@@ -1,30 +1,14 @@
-{ lib, pkgs, themesLib, renderTemplate, domainsPath }:
+{ lib, pkgs, themesLib, renderDomainOutputFor }:
 
 let
-  templateLib = import ../template/default.nix { inherit lib themesLib domainsPath; };
-  inherit (templateLib) mkTokens;
-
   themeNames = lib.attrNames themesLib.themes;
 
   renderForTheme =
     themeName:
-    let
-      tokens = mkTokens { theme = themeName; };
-
-      i3Body = renderTemplate {
-        inherit lib;
-        templatePath = "${domainsPath}/wm/i3/config/config.template";
-        inherit tokens;
-      };
-    in
     {
       inherit themeName;
-      i3Config = i3Body;
-      i3statusConfig = renderTemplate {
-        inherit lib;
-        templatePath = "${domainsPath}/bar/i3status/config/config.template";
-        inherit tokens;
-      };
+      i3Config = renderDomainOutputFor "personal" themeName "domains/wm/i3/config/config";
+      i3statusConfig = renderDomainOutputFor "personal" themeName "domains/bar/i3status/config/config";
     };
 
   rendered = map renderForTheme themeNames;

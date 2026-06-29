@@ -15,52 +15,62 @@ let
   themesLib = import ../../themes/default.nix { inherit lib; };
   fontsLib = import ../home/fonts.nix;
 
-  templateLib = import ../template/default.nix {
-    inherit lib domainsPath themesLib fontsLib;
-  };
+  domainRendererPaths = [
+    ../../domains/terminal/ghostty/render.nix
+    ../../domains/launcher/rofi/render.nix
+    ../../domains/shell/nushell/render.nix
+    ../../domains/editor/nvim/render.nix
+    ../../domains/wm/i3/render.nix
+    ../../domains/bar/i3status/render.nix
+    ../../domains/shell/starship/render.nix
+    ../../domains/terminal/zellij/render.nix
+    ../../domains/files/yazi/render.nix
+  ];
 
-  inherit (templateLib) renderTemplate renderTemplateFor;
-
-  renderMonitorsFor =
-    hostName:
+  renderDomainOutputsFor =
+    hostName: themeName:
     let
       hostConfig = loadHost hostName;
-      monitors = hostConfig.monitors or { };
-      monitorOrder = lib.unique (
-        lib.filter (n: lib.hasAttr n monitors) (
-          [ "primary" "secondary" ] ++ lib.attrNames monitors
-        )
-      );
-      monitorLine =
-        name:
-        let
-          m = monitors.${name};
-        in
-        "exec --no-startup-id xrandr --output ${m.name} --mode ${m.resolution} --rate ${toString m.refreshRate} --pos ${m.position}";
+      args = {
+        inherit lib themesLib themeName hostConfig;
+        fontFamily = fontsLib.defaultFamily;
+        monitors = hostConfig.monitors or { };
+      };
     in
-    if monitors == { } then
-      "# no monitor overrides configured"
+    lib.concatLists (map (path: import path args) domainRendererPaths);
+
+  renderDomainOutputPathsFor =
+    hostName: themeName:
+    lib.concatStringsSep "\n" (map (output: output.path) (renderDomainOutputsFor hostName themeName));
+
+  renderDomainOutputFor =
+    hostName: themeName: outputPath:
+    let
+      matches = lib.filter (output: output.path == outputPath) (renderDomainOutputsFor hostName themeName);
+    in
+    if matches == [ ] then
+      builtins.throw "Unknown domain render output: ${outputPath}"
     else
-      lib.concatStringsSep "\n" (map monitorLine monitorOrder);
+      (builtins.head matches).text;
 
   themeContext = import ../checks/theme/context.nix {
     inherit loadHost themesLib lib;
   };
 
   themeLint = import ../checks/theme {
-    inherit lib themesLib domainsPath;
+    inherit lib themesLib renderDomainOutputsFor;
   };
 
   lintDesktop = import ../checks/desktop.nix {
-    inherit lib pkgs themesLib renderTemplate domainsPath;
+    inherit lib pkgs themesLib renderDomainOutputFor;
   };
 
   lintShell = import ../checks/shell.nix {
-    inherit lib pkgs themesLib renderTemplate domainsPath;
+    inherit lib pkgs themesLib renderDomainOutputFor;
   };
 
   themeRenderedChecks = import ../checks/theme/rendered.nix {
-    inherit lib pkgs themesLib renderTemplateFor;
+    inherit lib pkgs themesLib renderDomainOutputFor;
     themeName = themeContext.hostTheme;
   };
 
@@ -69,7 +79,7 @@ let
   };
 
   checks = import ./checks.nix {
-    inherit self pkgs lib themesLib themeContext themeLint lintDesktop lintShell themeRenderedChecks renderTemplateFor;
+    inherit self pkgs lib themesLib themeContext themeLint lintDesktop lintShell themeRenderedChecks renderDomainOutputFor;
   };
 
   toolchainDir = ../../toolchains;
@@ -213,22 +223,14 @@ let
           return 1
         fi
 
-        while IFS= read -r -d "" template; do
-          local rel output template_rel
-          rel="''${template#"$repo_root/domains/"}"
-          output="''${template%.template}"
-          template_rel="''${rel%.template}"
+        while IFS= read -r output_path || [ -n "$output_path" ]; do
+          [ -n "$output_path" ] || continue
+          local output="$repo_root/$output_path"
           mkdir -p "$(dirname "$output")"
-          nix eval "$repo_root#lib.renderTemplateFor" --apply "f: f \"$template_rel\" \"$theme_name\"" --raw > "$output"
+          nix eval "$repo_root#lib.renderDomainOutputFor" --apply "f: f \"$host_name\" \"$theme_name\" \"$output_path\"" --raw > "$output"
           chmod u+w "$output"
-          echo "rendered $template_rel"
-        done < <(find "$repo_root/domains" -path "*/config/*" -type f -name "*.template" -print0)
-
-        if [ -d "$repo_root/domains/wm/i3/config" ]; then
-          nix eval "$repo_root#lib.renderMonitorsFor" --apply "f: f \"$host_name\"" --raw > "$repo_root/domains/wm/i3/config/monitors.conf"
-          chmod u+w "$repo_root/domains/wm/i3/config/monitors.conf"
-          echo "rendered wm/i3/config/monitors.conf"
-        fi
+          echo "rendered $output_path"
+        done < <(nix eval "$repo_root#lib.renderDomainOutputPathsFor" --apply "f: f \"$host_name\" \"$theme_name\"" --raw)
 
         if [ "$should_reload" -eq 1 ]; then
           reload_hooks
@@ -304,7 +306,16 @@ let
   };
 in
 {
-  inherit themeLint lintDesktop lintShell themeRenderedChecks renderTemplateFor renderMonitorsFor homeConfigurations;
+  inherit
+    themeLint
+    lintDesktop
+    lintShell
+    themeRenderedChecks
+    renderDomainOutputsFor
+    renderDomainOutputPathsFor
+    renderDomainOutputFor
+    homeConfigurations
+    ;
 
   checks = {
     ${system} = checks;
@@ -346,7 +357,7 @@ in
           program = "${pkgs.writeShellScript "angst-render" ''
             exec ${angstCli}/bin/angst render "$@"
           ''}";
-          meta.description = "Render hot-reloadable configuration templates.";
+          meta.description = "Render hot-reloadable domain configuration.";
         };
 
         watch = {
@@ -354,7 +365,7 @@ in
           program = "${pkgs.writeShellScript "angst-watch" ''
             exec ${angstCli}/bin/angst watch "$@"
           ''}";
-          meta.description = "Watch templates and themes, then render and reload.";
+          meta.description = "Watch domain configs and themes, then render and reload.";
         };
 
         check = {
@@ -372,7 +383,7 @@ in
             set -euo pipefail
             ${pkgs.nix}/bin/nix eval ${self}#lib.themeLint --raw
           ''}";
-          meta.description = "Validate configuration template themes.";
+          meta.description = "Validate domain theme renderers.";
         };
 
         lint-desktop = {
@@ -395,19 +406,6 @@ in
           meta.description = "Lint shell script configuration profiles.";
         };
 
-        render-template = {
-          type = "app";
-          program = "${pkgs.writeShellScript "render-template" ''
-            set -euo pipefail
-            if [ "$#" -lt 2 ]; then
-              echo "Usage: render-template <template-path> <theme>" >&2
-              echo "Example: render-template terminal/ghostty/config/colors.conf monochrome" >&2
-              exit 1
-            fi
-            ${pkgs.nix}/bin/nix eval ${self}#lib.renderTemplateFor --apply "f: f \"$1\" \"$2\"" --raw
-          ''}";
-          meta.description = "Render structural environment templates with target configuration profiles.";
-        };
       };
     };
     

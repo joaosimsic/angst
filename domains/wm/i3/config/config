@@ -1,4 +1,4 @@
-# i3 config — colors from angst theme tokens
+# i3 config - colors from angst theme tokens
 
 font pango:JetBrainsMono Nerd Font 10
 
@@ -98,4 +98,3 @@ bar {
         urgent_workspace   #685742 #222222 #c2c2b0
     }
 }
-

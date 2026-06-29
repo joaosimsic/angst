@@ -1,25 +1,13 @@
 { lib }:
 
 let
-  inherit (lib)
-    concatStringsSep
-    removeSuffix
-    hasSuffix
-    attrNames
-    foldl'
-    optionalString
-    ;
-
   mkDomainActivation =
     {
       lib,
-      pkgs,
       configDir,
       meta,
       category,
       name,
-      tokens,
-      renderTemplate,
       homeDirectory,
     }:
     let
@@ -27,71 +15,6 @@ let
       hasXdgFile = (meta.xdgFile or null) != null;
       hasConfigDir = builtins.pathExists configDir;
 
-      
-      findTemplates =
-        dir: relPath:
-        let
-          entries = builtins.readDir dir;
-        in
-        foldl' (
-          acc: entryName:
-          let
-            fullPath = "${dir}/${entryName}";
-            entry = entries.${entryName};
-            newRel =
-              if relPath == "" then entryName else "${relPath}/${entryName}";
-          in
-          if entry == "directory" then
-            acc ++ findTemplates fullPath newRel
-          else if hasSuffix ".template" entryName then
-            acc
-            ++ [
-              {
-                rel = newRel;
-                fullPath = fullPath;
-                outputRel =
-                  if relPath == "" then
-                    removeSuffix ".template" entryName
-                  else
-                    "${relPath}/${removeSuffix ".template" entryName}";
-              }
-            ]
-          else
-            acc
-        ) [ ] (attrNames entries);
-
-      templateFiles = if hasConfigDir then findTemplates configDir "" else [ ];
-
-      
-      renderedTemplates = map (tpl: {
-        inherit (tpl) outputRel;
-        storePath = pkgs.writeText
-          "domain-${category}-${name}-${builtins.replaceStrings [ "/" ] [ "-" ] tpl.outputRel}"
-          (renderTemplate {
-            inherit lib;
-            templatePath = tpl.fullPath;
-            inherit tokens;
-          });
-      }) templateFiles;
-
-      
-      templateDerivation =
-        if renderedTemplates != [ ] then
-          pkgs.runCommand "domain-${category}-${name}-rendered" { } (
-            ''
-              mkdir -p "$out"
-            ''
-            + concatStringsSep "\n" (
-              map (tpl: ''
-                mkdir -p "$(dirname "$out/${tpl.outputRel}")"
-                cp ${tpl.storePath} "$out/${tpl.outputRel}"
-              '') renderedTemplates
-            )
-          )
-        else
-          null;
-
-      
       mkXdgScript =
         xdgName:
         ''
@@ -117,21 +40,10 @@ let
 
           $DRY_RUN_CMD mkdir -p "$(dirname "$TARGET")"
           $DRY_RUN_CMD ln -sfn "$DOMAIN_SRC" "$TARGET"
-        ''
-        + optionalString (templateDerivation != null) ''
-          # Copy rendered templates into source dir (through symlink)
-          $DRY_RUN_CMD cp -rfL ${templateDerivation}/* "$TARGET/"
-          $DRY_RUN_CMD chmod -R u+w "$TARGET/"
         '';
 
-      
       mkXdgFileScript =
         xdgFile:
-        let
-          hasTemplate = builtins.pathExists "${configDir}/${xdgFile}.template";
-          renderedStorePath =
-            if hasTemplate then (builtins.head renderedTemplates).storePath else null;
-        in
         ''
           # Domain ${category}/${name}: single-file symlink
           if [ -d "/host${homeDirectory}/proj/angst" ]; then
@@ -145,13 +57,7 @@ let
 
           # Ensure source dir exists
           $DRY_RUN_CMD mkdir -p "$DOMAIN_SRC"
-        ''
-        + optionalString hasTemplate ''
-          # Copy rendered template into source dir
-          $DRY_RUN_CMD cp -f ${renderedStorePath} "$DOMAIN_SRC/${xdgFile}"
-          $DRY_RUN_CMD chmod u+w "$DOMAIN_SRC/${xdgFile}"
-        ''
-        + ''
+
           if [ ! -f "$DOMAIN_SRC/${xdgFile}" ]; then
             echo "domains.${category}.${name}: config file not found at $DOMAIN_SRC/${xdgFile}" >&2
             exit 1

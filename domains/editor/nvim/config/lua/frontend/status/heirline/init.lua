@@ -11,8 +11,8 @@ return {
 		local utils = require("frontend.status.heirline.utils")
 		local conditions = require("heirline.conditions")
 
-		---@type ThemePalette
-		local p = require("config.theme.palette").get()
+		---@type ThemeColors
+		local c = require("config.theme.colors").get()
 
 		hls.setup_highlights()
 
@@ -29,8 +29,8 @@ return {
 				self.is_active = conditions.is_active()
 				vim.g.heirline_statusline_is_active = self.is_active
 
-				self.bg = utils.status_color(self, p.surface)
-				self.fg = utils.status_color(self, p.subtle)
+				self.bg = utils.status_color(self, c.status.bg)
+				self.fg = utils.status_color(self, c.status.fg)
 			end,
 
 			hl = function(self)

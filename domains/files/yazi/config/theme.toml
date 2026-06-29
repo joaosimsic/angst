@@ -4,10 +4,10 @@ normal_alt  = { fg = "#d7c483", bg = "#2b2b2b" }
 
 [filetype]
 rules = [
-    { mime = "image/*", fg = "#5f875f" },        
-    { mime = "video/*", fg = "#bb7744" },       
-    { mime = "inode/empty", fg = "#666666" },  
-    { url = "*/", fg = "#78824b" }            
+    { mime = "image/*", fg = "#5f875f" },
+    { mime = "video/*", fg = "#bb7744" },
+    { mime = "inode/empty", fg = "#666666" },
+    { url = "*/", fg = "#78824b" }
 ]
 
 [overall]

@@ -1,4 +1,4 @@
-{ lib, pkgs, themesLib, renderTemplateFor, themeName }:
+{ lib, pkgs, themesLib, renderDomainOutputFor, themeName }:
 
 let
   theme = themesLib.get themeName;
@@ -8,10 +8,10 @@ let
     requireInfix
     ;
 
-  ghostty = renderTemplateFor "terminal/ghostty/config/colors.conf" themeName;
-  starship = renderTemplateFor "shell/starship/config/starship.toml" themeName;
-  nushell = renderTemplateFor "shell/nushell/config/colors.nu" themeName;
-  zellijLayout = renderTemplateFor "terminal/zellij/config/layouts/default.kdl" themeName;
+  ghostty = renderDomainOutputFor "personal" themeName "domains/terminal/ghostty/config/colors.conf";
+  starship = renderDomainOutputFor "personal" themeName "domains/shell/starship/config/starship.toml";
+  nushell = renderDomainOutputFor "personal" themeName "domains/shell/nushell/config/colors.nu";
+  zellijLayout = renderDomainOutputFor "personal" themeName "domains/terminal/zellij/config/layouts/default.kdl";
 
   checks = [
     (requireDistinct "palette tokens" [
@@ -28,8 +28,8 @@ let
       "ghostty palette slot 13 should render ${themeName} MAGENTA")
     (requireInfix ghostty "palette = 1=#${theme.RED}"
       "ghostty palette slot 1 should render ${themeName} RED")
-    (requireInfix starship "bold #${theme.SUCCESS}"
-      "starship success_symbol should render ${themeName} SUCCESS")
+    (requireInfix starship "bold #${theme.ACCENT}"
+      "starship directory style should render ${themeName} ACCENT")
     (requireInfix starship "bold #${theme.ERROR}"
       "starship error_symbol should render ${themeName} ERROR")
     (require (theme.SUCCESS != theme.ERROR)

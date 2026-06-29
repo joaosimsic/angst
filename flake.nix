@@ -66,8 +66,9 @@
     lib = {
       inherit (flakeLib)
         themeLint
-        renderTemplateFor
-        renderMonitorsFor
+        renderDomainOutputsFor
+        renderDomainOutputPathsFor
+        renderDomainOutputFor
         ;
     };
   };

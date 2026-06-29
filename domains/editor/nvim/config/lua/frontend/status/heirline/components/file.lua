@@ -1,5 +1,5 @@
----@type ThemePalette
-local p = require("config.theme.palette").get()
+---@type ThemeColors
+local c = require("config.theme.colors").get()
 local utils = require("frontend.status.heirline.utils")
 
 ---@type HeirlineComponent
@@ -17,12 +17,12 @@ local FileIcon = {
 			self.icon_color = color
 		else
 			self.icon = ""
-			self.icon_color = p.bright
+			self.icon_color = c.status.active
 		end
 	end,
 
 	hl = function(self)
-		return { fg = utils.status_color(self, self.icon_color), bg = utils.status_bg(self, p.surface) }
+		return { fg = utils.status_color(self, self.icon_color), bg = utils.status_bg(self, c.status.bg) }
 	end,
 
 	provider = function(self)
@@ -41,8 +41,8 @@ local FileName = {
 
 	hl = function(self)
 		return {
-			fg = utils.status_color(self, p.bright),
-			bg = utils.status_bg(self, p.surface),
+			fg = utils.status_color(self, c.status.active),
+			bg = utils.status_bg(self, c.status.bg),
 			bold = true,
 		}
 	end,
@@ -58,7 +58,7 @@ local FileType = {
 	end,
 
 	hl = function(self)
-		return { fg = utils.status_color(self, p.bright), bg = utils.status_bg(self, p.surface), bold = true }
+		return { fg = utils.status_color(self, c.status.active), bg = utils.status_bg(self, c.status.bg), bold = true }
 	end,
 }
 
@@ -72,7 +72,7 @@ local FileFormat = {
 	end,
 
 	hl = function(self)
-		return { fg = utils.status_color(self, p.subtle), bg = utils.status_bg(self, p.surface) }
+		return { fg = utils.status_color(self, c.status.fg), bg = utils.status_bg(self, c.status.bg) }
 	end,
 }
 

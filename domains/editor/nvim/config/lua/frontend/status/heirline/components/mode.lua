@@ -1,5 +1,6 @@
 local modes = require("frontend.status.heirline.modes")
 local utils = require("frontend.status.heirline.utils")
+local c = require("config.theme.colors").get()
 
 ---@type HeirlineComponent
 local Mode = {
@@ -8,8 +9,8 @@ local Mode = {
 			self.mode = modes.get_mode_data()
 		else
 			self.mode = {
-				fg = require("config.theme.palette").get().dim,
-				bg = require("config.theme.palette").get().surface,
+				fg = c.mode.fallbackFg,
+				bg = c.mode.fallbackBg,
 				label = "INACTIVE",
 			}
 		end

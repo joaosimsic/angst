@@ -1,8 +1,8 @@
 local conditions = require("heirline.conditions")
 local utils = require("frontend.status.heirline.utils")
 
----@type ThemePalette
-local p = require("config.theme.palette").get()
+---@type ThemeColors
+local c = require("config.theme.colors").get()
 local provider = utils.to_small_caps(" lsp ")
 
 ---@type HeirlineComponent
@@ -14,7 +14,7 @@ local LspActive = {
 	end,
 	provider = provider,
 	hl = function(self)
-		return { fg = utils.status_color(self, p.bright), bg = utils.status_bg(self, p.surface) }
+		return { fg = utils.status_color(self, c.status.active), bg = utils.status_bg(self, c.status.bg) }
 	end,
 }
 
@@ -29,7 +29,7 @@ local LspInactive = {
 	end,
 	provider = provider,
 	hl = function(self)
-		return { fg = utils.status_color(self, p.dim), bg = utils.status_bg(self, p.surface) }
+		return { fg = utils.status_color(self, c.status.inactive), bg = utils.status_bg(self, c.status.bg) }
 	end,
 }
 

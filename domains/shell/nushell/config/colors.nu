@@ -60,7 +60,7 @@ $env.config.color_config = {
 }
 
 def ls-entry [selector: string, hex: string, --bold, --underline] {
-    let h = ($hex | str replace '#' '')
+    let h = ($hex | str replace "#" "")
     let r = ($h | str substring 0..<2 | into int -r 16)
     let g = ($h | str substring 2..<4 | into int -r 16)
     let b = ($h | str substring 4..<6 | into int -r 16)

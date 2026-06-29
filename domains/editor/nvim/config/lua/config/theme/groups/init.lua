@@ -8,7 +8,7 @@ local modules = {
 
 local M = {}
 
----@param p ThemePalette
+---@param p ThemeColors
 ---@return HighlightGroups
 M.get = function(p)
 	---@type HighlightGroups
@@ -21,7 +21,7 @@ M.get = function(p)
 	return groups
 end
 
----@param p ThemePalette
+---@param p ThemeColors
 M.apply = function(p)
 	for name, opts in pairs(M.get(p)) do
 		vim.api.nvim_set_hl(0, name, opts)
