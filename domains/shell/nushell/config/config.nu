@@ -2,8 +2,9 @@ $env.config = {
     show_banner: false
 
     edit_mode: vi
+
     cursor_shape: {
-        vi_insert: line
+        vi_insert: block
         vi_normal: block
     }
 
@@ -43,7 +44,7 @@ $env.config = {
             modifier: control
             keycode: char_c
             mode: [vi_insert]
-            event: { send: esc }
+            event: { send: vichangemode, mode: normal }
         }
         {
             name: history_search

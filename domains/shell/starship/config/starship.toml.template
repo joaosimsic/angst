@@ -1,8 +1,8 @@
 format = """
-$directory $git_branch$git_status$all
-$character"""
+$directory $git_branch$git_status$nodejs$python$rust$golang$java$php$ruby$nix_shell$docker_context$package
+"""
 
-add_newline = true
+add_newline = false
 
 [directory]
 format = "[$path]($style)[$read_only]($read_only_style)"
@@ -27,16 +27,9 @@ diverged = "+-"
 untracked = "?"
 stashed = "*"
 modified = "~"
-staged = ">"
+staged = "+"
 renamed = "r"
 deleted = "x"
-
-# vimcmd_symbol is ignored when STARSHIP_SHELL=nu; Nushell handles vi mode via
-# PROMPT_INDICATOR_VI_INSERT / PROMPT_INDICATOR_VI_NORMAL in env.nu.
-[character]
-success_symbol = "[>](bold #{{SUCCESS}})"
-error_symbol = "[>](bold #{{ERROR}})"
-vimcmd_symbol = "[<](bold #{{FG}})"
 
 [username]
 format = "[$user]($style) "
