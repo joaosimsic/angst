@@ -102,6 +102,23 @@ return {
 			end,
 		})
 
+		vim.api.nvim_create_autocmd("TermClose", {
+			group = group,
+			callback = function()
+				if vim.bo.filetype == "yazi" then
+					local win = vim.api.nvim_get_current_win()
+					if vim.api.nvim_win_is_valid(win) then
+						vim.api.nvim_set_current_win(win)
+						vim.cmd("close!")
+					end
+				end
+				require("heirline").statusline:broadcast(function(c)
+					c._win_cache = nil
+				end)
+				vim.cmd("redrawstatus!")
+			end,
+		})
+
 		vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter", "WinLeave" }, {
 			group = group,
 			callback = function()

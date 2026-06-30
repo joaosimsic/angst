@@ -20,6 +20,7 @@ local Mode = {
 		"ModeChanged",
 		"BufEnter",
 		"WinEnter",
+		"TermClose",
 		"FocusGained",
 		"FocusLost",
 	},

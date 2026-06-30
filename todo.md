@@ -5,8 +5,9 @@
 - [x] fzf vim motions
 - [x] autocmd for lspdetach
 - [x] auto closing enter bug
-- [ ] paste and copy without overriding registers
-- [ ] break distance based either on tab space or formatters
+- [x] paste and copy without overriding registers
+- [x] break distance based either on tab space or formatters
+- [ ] leave yazi returns heirline in terminal mode
 - [ ] Doktor at root
 
 # nu

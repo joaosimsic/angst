@@ -50,14 +50,27 @@ M.hl_name_map = {
 	t = "HeirlineModeTerminal",
 }
 
+---@return string
+M.effective_mode = function()
+	local mode = vim.fn.mode()
+	if mode == "t" then
+		local bufnr = vim.api.nvim_get_current_buf()
+		local ok, status = pcall(vim.fn.term_getstatus, bufnr)
+		if ok and status and status:find("finished") then
+			return "n"
+		end
+	end
+	return mode
+end
+
 ---@return ModeConfig
 M.get_mode_data = function()
-	return M.mode_colors[vim.fn.mode()] or M.mode_fallback
+	return M.mode_colors[M.effective_mode()] or M.mode_fallback
 end
 
 ---@return string
 M.mode_hl_name = function()
-	return M.hl_name_map[vim.fn.mode()] or "HeirlineModeUnknown"
+	return M.hl_name_map[M.effective_mode()] or "HeirlineModeUnknown"
 end
 
 return M

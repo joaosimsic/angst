@@ -69,16 +69,21 @@ function Keybinder:_bind(mode, lhs, rhs, opts)
 		final_opts.buffer = self.bufnr
 	end
 
-	if type(rhs) ~= "function" then
-		self.logger:error(string.format("Invalid RHS to keymap %s.", lhs))
+	if type(rhs) ~= "function" and type(rhs) ~= "string" then
+		self.logger:error(string.format("Invalid RHS to keymap %s. Must be a function or string.", lhs))
 		return
 	end
 
-	local final_rhs = function(...)
-		if self.debug then
-			self.logger:debug(string.format("Pressed: %s -> Executing: %s", lhs, desc))
+	local final_rhs
+	if type(rhs) == "function" then
+		final_rhs = function(...)
+			if self.debug then
+				self.logger:debug(string.format("Pressed: %s -> Executing: %s", lhs, desc))
+			end
+			return rhs(...)
 		end
-		return rhs(...)
+	else
+		final_rhs = rhs
 	end
 
 	table.insert(self.history, {
