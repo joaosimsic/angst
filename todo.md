@@ -9,12 +9,9 @@
 - [ ] break distance based either on tab space or formatters
 - [ ] Doktor at root
 
-# starship
-- [ ] show vim modes
-
 # nu
-- [ ] set ":" to replace ">"
-- [ ] fix vim motions
+- [x] set ":" to replace ">"
+- [x] fix vim motions
 
 # nix
 - [ ] add package managers to toolchains
