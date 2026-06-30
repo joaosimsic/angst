@@ -37,7 +37,7 @@ in
           shape_custom:                "#${t.FG}"
           shape_datetime:              "#${t.BRIGHT}"
           shape_directory:             "#${t.ACCENT}"
-          shape_external:              { fg: "#${t.ERROR}" }
+          shape_external:              { fg: "#${t.WARNING}" }
           shape_external_resolved:     { fg: "#${t.SUCCESS}" attr: b }
           shape_externalarg:           "#${t.FG}"
           shape_filepath:              "#${t.FG}"
