@@ -41,7 +41,7 @@ return {
 			require("yazi").yazi(nil, dir)
 		end, { desc = "Toggle yazi in buffer cwd" })
 
-		binder:nmap("<C-d>", function()
+		binder:nmap("<C-f>", function()
 			require("yazi").yazi(nil, vim.fn.getcwd())
 		end, { desc = "Toggle yazi in root cwd" })
 	end,
