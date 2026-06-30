@@ -16,15 +16,24 @@ end
 
 ---@type HeirlineComponent
 local Git = {
-	condition = function()
-		return conditions.is_git_repo() and vim.b.gitsigns_status_dict ~= nil
+	condition = function(self)
+		local winnr = self.winnr or 0
+		if not vim.api.nvim_win_is_valid(winnr) then
+			return false
+		end
+		local bufnr = vim.api.nvim_win_get_buf(winnr)
+		return conditions.is_git_repo(bufnr)
 	end,
 
 	init = function(self)
-		self.status_dict = vim.b.gitsigns_status_dict or {}
-		self.has_changes = (self.status_dict.added or 0) ~= 0
-			or (self.status_dict.removed or 0) ~= 0
-			or (self.status_dict.changed or 0) ~= 0
+		local bufnr = vim.api.nvim_win_get_buf(self.winnr or 0)
+		self.status_dict = vim.b[bufnr].gitsigns_status_dict
+		self.has_changes = self.status_dict
+			and (
+				(self.status_dict.added and self.status_dict.added > 0)
+				or (self.status_dict.changed and self.status_dict.changed > 0)
+				or (self.status_dict.removed and self.status_dict.removed > 0)
+			)
 	end,
 
 	update = { "User", "BufEnter" },
