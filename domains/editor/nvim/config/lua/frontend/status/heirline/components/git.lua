@@ -36,7 +36,7 @@ local Git = {
 			)
 	end,
 
-	update = { "User", "BufEnter" },
+	update = { "User", "BufEnter", "WinEnter", "WinLeave", "FocusGained", "FocusLost" },
 
 	hl = function(self)
 		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, c.status.bg) }

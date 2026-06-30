@@ -26,7 +26,9 @@ return {
 		---@type HeirlineComponent
 		local StatusLine = {
 			init = function(self)
-				self.is_active = conditions.is_active()
+				local is_nvim_active = conditions.is_active()
+				local is_term_active = vim.g.terminal_focused ~= false
+				self.is_active = is_nvim_active and is_term_active
 
 				self.bg = utils.status_color(self, c.status.bg)
 				self.fg = utils.status_color(self, c.status.fg)
@@ -55,6 +57,9 @@ return {
 		require("heirline").setup({
 			statusline = StatusLine,
 			opts = {
+				always_update = function()
+					return true
+				end,
 				disable_winbar_cb = function(args)
 					return conditions.buffer_matches({
 						buftype = { "nofile", "prompt", "help", "quickfix" },
@@ -66,6 +71,30 @@ return {
 
 		local group = vim.api.nvim_create_augroup("Heirline", { clear = true })
 
+		vim.g.terminal_focused = true
+
+		vim.api.nvim_create_autocmd("FocusGained", {
+			group = group,
+			callback = function()
+				vim.g.terminal_focused = true
+				require("heirline").statusline:broadcast(function(c)
+					c._win_cache = nil
+				end)
+				vim.cmd("redrawstatus!")
+			end,
+		})
+
+		vim.api.nvim_create_autocmd("FocusLost", {
+			group = group,
+			callback = function()
+				vim.g.terminal_focused = false
+				require("heirline").statusline:broadcast(function(c)
+					c._win_cache = nil
+				end)
+				vim.cmd("redrawstatus!")
+			end,
+		})
+
 		vim.api.nvim_create_autocmd("ColorScheme", {
 			group = group,
 			callback = function()
@@ -76,7 +105,10 @@ return {
 		vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter", "WinLeave" }, {
 			group = group,
 			callback = function()
-				vim.cmd("redrawstatus")
+				require("heirline").statusline:broadcast(function(c)
+					c._win_cache = nil
+				end)
+				vim.cmd("redrawstatus!")
 			end,
 		})
 

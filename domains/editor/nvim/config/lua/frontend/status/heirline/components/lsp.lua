@@ -16,11 +16,7 @@ local LspActive = {
 		return next(vim.lsp.get_clients({ bufnr = bufnr })) ~= nil
 	end,
 
-	update = { "LspAttach", "LspDetach", "WinEnter", "WinLeave", "BufEnter" },
-
-	init = function(self)
-		self.is_active = conditions.is_active()
-	end,
+	update = { "LspAttach", "LspDetach", "WinEnter", "WinLeave", "BufEnter", "FocusGained", "FocusLost" },
 
 	provider = provider,
 
@@ -35,11 +31,7 @@ local LspInactive = {
 		return not conditions.lsp_attached()
 	end,
 
-	update = { "WinEnter", "WinLeave", "BufEnter" },
-
-	init = function(self)
-		self.is_active = conditions.is_active()
-	end,
+	update = { "LspAttach", "LspDetach", "WinEnter", "WinLeave", "BufEnter", "FocusGained", "FocusLost" },
 
 	provider = provider,
 

@@ -14,7 +14,11 @@ M.Space = { provider = " " }
 M.Ruler = {
 	provider = " %l:%c | %P ",
 	hl = function(self)
-		return { fg = utils.status_color(self, c.status.positionFg), bg = utils.status_color(self, c.status.positionBg), bold = true }
+		return {
+			fg = utils.status_color(self, c.status.positionFg),
+			bg = utils.status_color(self, c.status.positionBg),
+			bold = true,
+		}
 	end,
 }
 

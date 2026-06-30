@@ -20,6 +20,8 @@ local Mode = {
 		"ModeChanged",
 		"BufEnter",
 		"WinEnter",
+		"FocusGained",
+		"FocusLost",
 	},
 
 	hl = function(self)

@@ -54,7 +54,14 @@ local Diagnostics = {
 		hint_icon = space_out(icons.diagnostics.hint),
 	},
 
-	update = { "DiagnosticChanged", "BufEnter" },
+	update = {
+		"DiagnosticChanged",
+		"BufEnter",
+		"WinEnter",
+		"WinLeave",
+		"FocusGained",
+		"FocusLost",
+	},
 
 	hl = function(self)
 		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, c.status.bg) }
