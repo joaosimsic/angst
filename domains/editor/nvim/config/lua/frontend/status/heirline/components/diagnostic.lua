@@ -21,7 +21,31 @@ end
 
 ---@type HeirlineComponent
 local Diagnostics = {
-	condition = conditions.has_diagnostics,
+	condition = function(self)
+		local winnr = self.winnr or 0
+		if not vim.api.nvim_win_is_valid(winnr) then
+			return false
+		end
+		local bufnr = vim.api.nvim_win_get_buf(winnr)
+		return conditions.has_diagnostics(bufnr)
+	end,
+
+	init = function(self)
+		local winnr = self.winnr or 0
+		if not vim.api.nvim_win_is_valid(winnr) then
+			self.errors = 0
+			self.warnings = 0
+			self.hints = 0
+			self.info = 0
+			return
+		end
+
+		local bufnr = vim.api.nvim_win_get_buf(winnr)
+		self.errors = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.ERROR })
+		self.warnings = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.WARN })
+		self.hints = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.HINT })
+		self.info = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.INFO })
+	end,
 
 	static = {
 		error_icon = space_out(icons.diagnostics.error),
@@ -29,13 +53,6 @@ local Diagnostics = {
 		info_icon = space_out(icons.diagnostics.info),
 		hint_icon = space_out(icons.diagnostics.hint),
 	},
-
-	init = function(self)
-		self.errors = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.ERROR })
-		self.warnings = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.WARN })
-		self.hints = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.HINT })
-		self.info = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.INFO })
-	end,
 
 	update = { "DiagnosticChanged", "BufEnter" },
 

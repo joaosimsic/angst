@@ -27,7 +27,6 @@ return {
 		local StatusLine = {
 			init = function(self)
 				self.is_active = conditions.is_active()
-				vim.g.heirline_statusline_is_active = self.is_active
 
 				self.bg = utils.status_color(self, p.surface)
 				self.fg = utils.status_color(self, p.subtle)
@@ -65,12 +64,19 @@ return {
 			},
 		})
 
-		local group = vim.api.nvim_create_augroup("HeirlineHighlights", { clear = true })
+		local group = vim.api.nvim_create_augroup("Heirline", { clear = true })
 
 		vim.api.nvim_create_autocmd("ColorScheme", {
 			group = group,
 			callback = function()
 				hls.setup_highlights()
+			end,
+		})
+
+		vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter", "WinLeave" }, {
+			group = group,
+			callback = function()
+				vim.cmd("redrawstatus")
 			end,
 		})
 
