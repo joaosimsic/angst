@@ -3,22 +3,20 @@
 let
   t = themesLib.get themeName;
 
-  bar = "bg=#${t.ui.surface},fg=#${t.ui.fg}";
-  inactiveTab = "bg=#${t.ui.surface},fg=#${t.ui.subtle}";
-  activeTab = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
-  cwd = "bg=#${t.ui.surface},fg=#${t.ui.comment}";
+  standard = "bg=#${t.ui.subtle},fg=#${t.ui.bg}";
+  inactiveTab = "bg=#${t.ui.subtle},fg=#${t.ui.bg}";
+  activeTab = "bg=#${t.ui.bg},fg=#${t.ui.subtle},bold";
 
-  # Unique mode colors like Neovim statusline
-  modeNormal   = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
-  modeLocked   = "bg=#${t.ui.subtle},fg=#${t.ui.bg},bold";
+  modeNormal   = "bg=#${t.ui.subtle},fg=#${t.ui.bg},bold";
+  modeLocked   = "bg=#${t.ansi.normal.red},fg=#${t.ui.bg},bold";
   modePane     = "bg=#${t.ansi.normal.green},fg=#${t.ui.bg},bold";
-  modeTab      = "bg=#${t.ansi.normal.blue},fg=#${t.ui.bg},bold";
+  modeTab      = "bg=#${t.ansi.bright.magenta},fg=#${t.ui.bg},bold";
   modeScroll   = "bg=#${t.ansi.normal.yellow},fg=#${t.ui.bg},bold";
   modeSearch   = "bg=#${t.ansi.normal.magenta},fg=#${t.ui.bg},bold";
-  modeResize   = "bg=#${t.ansi.normal.red},fg=#${t.ui.bg},bold";
+  modeResize   = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
   modeRename   = "bg=#${t.ansi.normal.cyan},fg=#${t.ui.bg},bold";
   modeMove     = "bg=#${t.ansi.bright.yellow},fg=#${t.ui.bg},bold";
-  modeSession  = "bg=#${t.ansi.bright.magenta},fg=#${t.ui.bg},bold";
+  modeSession  = "bg=#${t.ansi.normal.blue},fg=#${t.ui.bg},bold";
   modePrompt   = "bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold";
   modeTmux     = "bg=#${t.ansi.bright.cyan},fg=#${t.ui.bg},bold";
 in
@@ -32,11 +30,126 @@ in
 
       theme "angst"
       default_layout "default"
-      pane_frames true
+      pane_frames false
       auto_layout true
       copy_clipboard "system"
+      show_startup_tips false
+      show_release_notes false
 
-      themes {
+      keybinds clear-defaults=true {
+          locked {
+              bind "Ctrl g" { SwitchToMode "normal"; }
+          }
+
+          normal {
+              bind "Ctrl g" { SwitchToMode "locked"; }
+              bind "Ctrl p" { SwitchToMode "pane"; }
+              bind "Ctrl t" { SwitchToMode "tab"; }
+          }
+
+          pane {
+              bind "h" { MoveFocus "Left"; }
+              bind "j" { MoveFocus "Down"; }
+              bind "k" { MoveFocus "Up"; }
+              bind "l" { MoveFocus "Right"; }
+              bind "n" { NewPane "Right"; }
+              bind "x" { CloseFocus; }
+              bind "=" { Resize "Increase"; }
+              bind "-" { Resize "Decrease"; }
+              bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
+          }
+
+          tab {
+              bind "n" { NewTab; }
+              bind "x" { CloseTab; }
+              bind "1" { GoToTab 1; }
+              bind "2" { GoToTab 2; }
+              bind "3" { GoToTab 3; }
+              bind "4" { GoToTab 4; }
+              bind "5" { GoToTab 5; }
+              bind "6" { GoToTab 6; }
+              bind "7" { GoToTab 7; }
+              bind "8" { GoToTab 8; }
+              bind "9" { GoToTab 9; }
+              bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
+          }
+
+          shared_except "locked" {
+              bind "Ctrl h" {
+                  MessagePlugin "vim-navigator" {
+                      name "move_focus_or_tab";
+                      payload "left";
+                      move_mod "ctrl";
+                      use_arrow_keys "false";
+                  };
+              }
+
+              bind "Ctrl j" {
+                  MessagePlugin "vim-navigator" {
+                      name "move_focus";
+                      payload "down";
+                      move_mod "ctrl";
+                      use_arrow_keys "false";
+                  };
+              }
+
+              bind "Ctrl k" {
+                  MessagePlugin "vim-navigator" {
+                      name "move_focus";
+                      payload "up";
+                      move_mod "ctrl";
+                      use_arrow_keys "false";
+                  };
+              }
+
+              bind "Ctrl l" {
+                  MessagePlugin "vim-navigator" {
+                      name "move_focus_or_tab";
+                      payload "right";
+                      move_mod "ctrl";
+                      use_arrow_keys "false";
+                  };
+              }
+
+              bind "Alt h" {
+                  MessagePlugin "vim-navigator" {
+                      name "resize";
+                      payload "left";
+                      resize_mod "alt";
+                  };
+              }
+
+              bind "Alt j" {
+                  MessagePlugin "vim-navigator" {
+                      name "resize";
+                      payload "down";
+                      resize_mod "alt";
+                  };
+              }
+
+              bind "Alt k" {
+                  MessagePlugin "vim-navigator" {
+                      name "resize";
+                      payload "up";
+                      resize_mod "alt";
+                  };
+              }
+
+              bind "Alt l" {
+                  MessagePlugin "vim-navigator" {
+                      name "resize";
+                      payload "right";
+                      resize_mod "alt";
+                  };
+              }
+          }
+      }
+    '';
+  }
+  {
+    path = "domains/terminal/zellij/config/themes/angst.kdl";
+    text = ''
+          themes {
           angst {
               text_unselected {
                   base "#${t.ui.fg}"
@@ -179,105 +292,6 @@ in
           }
       }
 
-      keybinds clear-defaults=true {
-          locked {
-              bind "Ctrl g" { SwitchToMode "normal"; }
-          }
-
-          normal {
-              bind "Ctrl g" { SwitchToMode "locked"; }
-              bind "Ctrl p" { SwitchToMode "pane"; }
-              bind "Ctrl t" { SwitchToMode "tab"; }
-          }
-
-          pane {
-              bind "h" { MoveFocus "Left"; }
-              bind "j" { MoveFocus "Down"; }
-              bind "k" { MoveFocus "Up"; }
-              bind "l" { MoveFocus "Right"; }
-              bind "n" { NewPane "Right"; }
-              bind "x" { CloseFocus; }
-              bind "=" { Resize "Increase"; }
-              bind "-" { Resize "Decrease"; }
-              bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
-          }
-
-          tab {
-              bind "n" { NewTab; }
-              bind "x" { CloseTab; }
-              bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
-          }
-
-          shared_except "locked" {
-              bind "Ctrl h" {
-                  MessagePlugin "vim-navigator" {
-                      name "move_focus_or_tab";
-                      payload "left";
-                      move_mod "ctrl";
-                      use_arrow_keys "false";
-                  };
-              }
-
-              bind "Ctrl j" {
-                  MessagePlugin "vim-navigator" {
-                      name "move_focus";
-                      payload "down";
-                      move_mod "ctrl";
-                      use_arrow_keys "false";
-                  };
-              }
-
-              bind "Ctrl k" {
-                  MessagePlugin "vim-navigator" {
-                      name "move_focus";
-                      payload "up";
-                      move_mod "ctrl";
-                      use_arrow_keys "false";
-                  };
-              }
-
-              bind "Ctrl l" {
-                  MessagePlugin "vim-navigator" {
-                      name "move_focus_or_tab";
-                      payload "right";
-                      move_mod "ctrl";
-                      use_arrow_keys "false";
-                  };
-              }
-
-              bind "Alt h" {
-                  MessagePlugin "vim-navigator" {
-                      name "resize";
-                      payload "left";
-                      resize_mod "alt";
-                  };
-              }
-
-              bind "Alt j" {
-                  MessagePlugin "vim-navigator" {
-                      name "resize";
-                      payload "down";
-                      resize_mod "alt";
-                  };
-              }
-
-              bind "Alt k" {
-                  MessagePlugin "vim-navigator" {
-                      name "resize";
-                      payload "up";
-                      resize_mod "alt";
-                  };
-              }
-
-              bind "Alt l" {
-                  MessagePlugin "vim-navigator" {
-                      name "resize";
-                      payload "right";
-                      resize_mod "alt";
-                  };
-              }
-          }
-      }
     '';
   }
   {
@@ -288,26 +302,26 @@ in
           children
           pane size=1 borderless=true {
             plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
-                      format_left  " {mode}  {tabs}"
-                      format_center ""
-                      format_right "#[${cwd}] {command_cwd} "
-                      format_space "#[${bar}] "
+                      format_left   "{mode}"
+                      format_center "#[${standard}]{command_cwd}"
+                      format_right  "{tabs}"
+                      format_space  "#[${standard}]"
 
                       mode_default_to_mode "normal"
-                      mode_normal        "#[${modeNormal}]  NORMAL  "
-                      mode_locked        "#[${modeLocked}]  LOCKED  "
-                      mode_pane          "#[${modePane}]  PANE    "
-                      mode_tab           "#[${modeTab}]  TAB     "
-                      mode_scroll        "#[${modeScroll}]  SCROLL  "
-                      mode_enter_search  "#[${modeSearch}]  SEARCH  "
-                      mode_search        "#[${modeSearch}]  SEARCH  "
-                      mode_resize        "#[${modeResize}]  RESIZE  "
-                      mode_rename_tab    "#[${modeRename}]  RENAME  "
-                      mode_rename_pane   "#[${modeRename}]  RENAME  "
-                      mode_move          "#[${modeMove}]  MOVE    "
-                      mode_session       "#[${modeSession}]  SESSION "
-                      mode_prompt        "#[${modePrompt}]  PROMPT  "
-                      mode_tmux          "#[${modeTmux}]  TMUX    "
+                      mode_normal        "#[${modeNormal}] NORMAL "
+                      mode_locked        "#[${modeLocked}] LOCKED "
+                      mode_pane          "#[${modePane}] PANE "
+                      mode_tab           "#[${modeTab}] TAB "
+                      mode_scroll        "#[${modeScroll}] SCROLL "
+                      mode_enter_search  "#[${modeSearch}] SEARCH "
+                      mode_search        "#[${modeSearch}] SEARCH "
+                      mode_resize        "#[${modeResize}] RESIZE "
+                      mode_rename_tab    "#[${modeRename}] RENAME "
+                      mode_rename_pane   "#[${modeRename}] RENAME "
+                      mode_move          "#[${modeMove}] MOVE "
+                      mode_session       "#[${modeSession}] SESSION "
+                      mode_prompt        "#[${modePrompt}] PROMPT "
+                      mode_tmux          "#[${modeTmux}] TMUX "
 
                       tab_normal              "#[${inactiveTab}] {index} "
                       tab_normal_fullscreen   "#[${inactiveTab}] {index} "
@@ -315,11 +329,10 @@ in
                       tab_active              "#[${activeTab}] {index} "
                       tab_active_fullscreen   "#[${activeTab}] {index} "
                       tab_active_sync         "#[${activeTab}] {index} "
-                      tab_separator           "#[${bar}] "
 
-                      command_cwd_command     "pwd"
-                      command_cwd_format      "{stdout}"
-                      command_cwd_interval    "0"
+                      command_cwd_command    "pwd"
+                      command_cwd_format     "{stdout}"
+                      command_cwd_interval   "0"
                       command_cwd_rendermode "dynamic"
                   }
               }
