@@ -26,4 +26,4 @@
 
 # zellij
 
-- [ ] screen freeze when exit or close last pane
+- [x] screen freeze when exit or close last pane
