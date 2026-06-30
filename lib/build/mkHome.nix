@@ -40,6 +40,9 @@ let
         ({ pkgs, ...}: {
           home.packages = [ vmTool ];
         })
+        ({ ... }: {
+          home.file.".ssh/config".force = true;
+        })
       ] ++ homeModules;
     };
 in

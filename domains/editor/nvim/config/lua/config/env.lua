@@ -20,8 +20,9 @@ return {
 		vim.opt.scrolloff = 999
 		vim.opt.timeoutlen = 300
 		vim.opt.ttimeoutlen = 10
-    vim.opt.splitright = true
-    vim.opt.splitbelow = true
-    vim.opt.signcolumn = "yes"
+		vim.opt.splitright = true
+		vim.opt.splitbelow = true
+		vim.opt.signcolumn = "yes"
+        vim.g.editorconfig = true
 	end,
 }

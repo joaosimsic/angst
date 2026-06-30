@@ -4,7 +4,7 @@ return {
 	virtual = true,
 	lazy = false,
 	config = function()
-    vim.opt.clipboard = "unnamedplus"
+		vim.opt.clipboard = "unnamedplus"
 
 		local is_remote = vim.env.SSH_TTY ~= nil or vim.env.SSH_CONNECTION ~= nil
 		local has_display = vim.env.DISPLAY ~= nil or vim.env.WAYLAND_DISPLAY ~= nil
@@ -29,6 +29,5 @@ return {
 				["*"] = osc52.paste("*"),
 			},
 		}
-
 	end,
 }

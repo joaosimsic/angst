@@ -1,14 +1,12 @@
 layout {
-    default_tab_template {
-        children
-        pane size=1 borderless=true {
-            plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
+  default_tab_template {
+    children
+    pane size=1 borderless=true {
+      plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
                 format_left  "{mode}#[bg=#2b2b2b,fg=#c9a554]│ {tabs}"
                 format_center ""
                 format_right "#[bg=#2b2b2b,fg=#685742] {command_cwd} "
                 format_space "#[bg=#2b2b2b,fg=#c2c2b0] "
-
-                hide_frame_for_single_pane "true"
 
                 mode_default_to_mode "normal"
                 mode_normal        "#[bg=#d7c483,fg=#222222,bold] NORMAL  "
@@ -34,11 +32,12 @@ layout {
                 tab_active_sync         "#[bg=#d7c483,fg=#222222,bold]  {index}  "
                 tab_separator           "#[bg=#2b2b2b,fg=#c2c2b0] "
 
-                command_cwd_command    "pwd"
-                command_cwd_format     "{stdout}"
-                command_cwd_interval   "1"
-                command_cwd_rendermode "static"
+                 command_cwd_command     "pwd"
+                command_cwd_format      "{stdout}"
+                command_cwd_interval    "0"
+                command_cwd_rendermode "dynamic"
             }
         }
     }
 }
+

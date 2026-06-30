@@ -5,6 +5,10 @@ plugins {
 theme "angst"
 default_layout "default"
 pane_frames true
+auto_layout true
+copy_clipboard "system"
+disable_focus_reporting true
+mouse_mode false
 
 themes {
     angst {
@@ -149,9 +153,6 @@ themes {
     }
 }
 
-copy_command "xclip -selection clipboard"
-copy_clipboard "system"
-
 keybinds clear-defaults=true {
     locked {
         bind "Ctrl g" { SwitchToMode "normal"; }
@@ -251,3 +252,4 @@ keybinds clear-defaults=true {
         }
     }
 }
+

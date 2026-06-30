@@ -12,3 +12,4 @@ order = "tztime local"
 tztime "local" {
     format = " <span color='#d7c483'>%Y-%m-%d %H:%M</span> "
 }
+

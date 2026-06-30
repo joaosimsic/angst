@@ -137,6 +137,7 @@ let
       pkgs.git
       pkgs.nix
       pkgs.watchexec
+      pkgs.jq
     ];
     text = ''
       usage() {
@@ -163,7 +164,8 @@ let
         if [ -n "''${ANGST_THEME:-}" ]; then
           printf '%s\n' "$ANGST_THEME"
         else
-          nix eval --impure --raw --expr "let host = import ''${repo_root}/hosts/''${host_name}; in host.theme or \"monochrome\""
+          # Fixed: Wrap with builtins.toString to clear string/derivation contexts that crash on dirty trees
+          nix eval --impure --raw --expr "let host = import ''${repo_root}/hosts/''${host_name}; in builtins.toString (host.theme or \"monochrome\")"
         fi
       }
 
@@ -223,14 +225,21 @@ let
           return 1
         fi
 
-        while IFS= read -r output_path || [ -n "$output_path" ]; do
-          [ -n "$output_path" ] || continue
-          local output="$repo_root/$output_path"
-          mkdir -p "$(dirname "$output")"
-          nix eval "$repo_root#lib.renderDomainOutputFor" --apply "f: f \"$host_name\" \"$theme_name\" \"$output_path\"" --raw > "$output"
-          chmod u+w "$output"
-          echo "rendered $output_path"
-        done < <(nix eval "$repo_root#lib.renderDomainOutputPathsFor" --apply "f: f \"$host_name\" \"$theme_name\"" --raw)
+        echo "Evaluating templates in a single optimized batch..."
+        local json_data
+        json_data=$(nix eval --impure "$repo_root#lib.renderDomainOutputsFor" \
+          --apply "f: builtins.toJSON (f \"$host_name\" \"$theme_name\")" --raw)
+
+        while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            local output="$repo_root/$path"
+            mkdir -p "$(dirname "$output")"
+
+            echo "$json_data" | jq -r ".[] | select(.path == \"$path\") | .text" > "$output"
+            
+            chmod u+w "$output"
+            echo "rendered $path"
+        done < <(echo "$json_data" | jq -r '.[] | .path')
 
         if [ "$should_reload" -eq 1 ]; then
           reload_hooks
@@ -408,5 +417,4 @@ in
 
       };
     };
-    
 }

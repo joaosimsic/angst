@@ -28,7 +28,7 @@ $env.config.color_config = {
     shape_custom:                "#c2c2b0"
     shape_datetime:              "#d7c483"
     shape_directory:             "#d7c483"
-    shape_external:              { fg: "#685742" }
+    shape_external:              { fg: "#b36d43" }
     shape_external_resolved:     { fg: "#5f875f" attr: b }
     shape_externalarg:           "#c2c2b0"
     shape_filepath:              "#c2c2b0"
@@ -99,3 +99,4 @@ $env.LS_COLORS = [
     (ls-entry "*.gz" $_warning)
     (ls-entry "*.zip" $_warning)
 ] | str join ':'
+

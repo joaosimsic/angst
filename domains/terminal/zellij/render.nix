@@ -21,6 +21,10 @@ in
       theme "angst"
       default_layout "default"
       pane_frames true
+      auto_layout true
+      copy_clipboard "system"
+      disable_focus_reporting true
+      mouse_mode false
 
       themes {
           angst {
@@ -165,9 +169,6 @@ in
           }
       }
 
-      copy_command "xclip -selection clipboard"
-      copy_clipboard "system"
-
       keybinds clear-defaults=true {
           locked {
               bind "Ctrl g" { SwitchToMode "normal"; }
@@ -273,16 +274,14 @@ in
     path = "domains/terminal/zellij/config/layouts/default.kdl";
     text = ''
       layout {
-          default_tab_template {
-              children
-              pane size=1 borderless=true {
-                  plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
+        default_tab_template {
+          children
+          pane size=1 borderless=true {
+            plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
                       format_left  "{mode}#[${separator}]│ {tabs}"
                       format_center ""
                       format_right "#[${cwd}] {command_cwd} "
                       format_space "#[${bar}] "
-
-                      hide_frame_for_single_pane "true"
 
                       mode_default_to_mode "normal"
                       mode_normal        "#[${mode}] NORMAL  "
@@ -308,10 +307,10 @@ in
                       tab_active_sync         "#[${activeTab}]  {index}  "
                       tab_separator           "#[${bar}] "
 
-                      command_cwd_command    "pwd"
-                      command_cwd_format     "{stdout}"
-                      command_cwd_interval   "1"
-                      command_cwd_rendermode "static"
+                       command_cwd_command     "pwd"
+                      command_cwd_format      "{stdout}"
+                      command_cwd_interval    "0"
+                      command_cwd_rendermode "dynamic"
                   }
               }
           }
