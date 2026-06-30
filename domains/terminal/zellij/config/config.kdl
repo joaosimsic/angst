@@ -7,8 +7,6 @@ default_layout "default"
 pane_frames true
 auto_layout true
 copy_clipboard "system"
-disable_focus_reporting true
-mouse_mode false
 
 themes {
     angst {

@@ -4,11 +4,23 @@ let
   t = themesLib.get themeName;
 
   bar = "bg=#${t.ui.surface},fg=#${t.ui.fg}";
-  mode = "bg=#${t.ui.prompt},fg=#${t.ui.bg},bold";
-  separator = "bg=#${t.ui.surface},fg=#${t.ui.border}";
   inactiveTab = "bg=#${t.ui.surface},fg=#${t.ui.subtle}";
   activeTab = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
   cwd = "bg=#${t.ui.surface},fg=#${t.ui.comment}";
+
+  # Unique mode colors like Neovim statusline
+  modeNormal   = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
+  modeLocked   = "bg=#${t.ui.subtle},fg=#${t.ui.bg},bold";
+  modePane     = "bg=#${t.ansi.normal.green},fg=#${t.ui.bg},bold";
+  modeTab      = "bg=#${t.ansi.normal.blue},fg=#${t.ui.bg},bold";
+  modeScroll   = "bg=#${t.ansi.normal.yellow},fg=#${t.ui.bg},bold";
+  modeSearch   = "bg=#${t.ansi.normal.magenta},fg=#${t.ui.bg},bold";
+  modeResize   = "bg=#${t.ansi.normal.red},fg=#${t.ui.bg},bold";
+  modeRename   = "bg=#${t.ansi.normal.cyan},fg=#${t.ui.bg},bold";
+  modeMove     = "bg=#${t.ansi.bright.yellow},fg=#${t.ui.bg},bold";
+  modeSession  = "bg=#${t.ansi.bright.magenta},fg=#${t.ui.bg},bold";
+  modePrompt   = "bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold";
+  modeTmux     = "bg=#${t.ansi.bright.cyan},fg=#${t.ui.bg},bold";
 in
 [
   {
@@ -23,8 +35,6 @@ in
       pane_frames true
       auto_layout true
       copy_clipboard "system"
-      disable_focus_reporting true
-      mouse_mode false
 
       themes {
           angst {
@@ -278,36 +288,36 @@ in
           children
           pane size=1 borderless=true {
             plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
-                      format_left  "{mode}#[${separator}]│ {tabs}"
+                      format_left  " {mode}  {tabs}"
                       format_center ""
                       format_right "#[${cwd}] {command_cwd} "
                       format_space "#[${bar}] "
 
                       mode_default_to_mode "normal"
-                      mode_normal        "#[${mode}] NORMAL  "
-                      mode_locked        "#[${mode}] LOCKED  "
-                      mode_pane          "#[${mode}] PANE    "
-                      mode_tab           "#[${mode}] TAB     "
-                      mode_scroll        "#[${mode}] SCROLL  "
-                      mode_enter_search  "#[${mode}] SEARCH  "
-                      mode_search        "#[${mode}] SEARCH  "
-                      mode_resize        "#[${mode}] RESIZE  "
-                      mode_rename_tab    "#[${mode}] RENAME  "
-                      mode_rename_pane   "#[${mode}] RENAME  "
-                      mode_move          "#[${mode}] MOVE    "
-                      mode_session       "#[${mode}] SESSION "
-                      mode_prompt        "#[${mode}] PROMPT  "
-                      mode_tmux          "#[${mode}] TMUX    "
+                      mode_normal        "#[${modeNormal}]  NORMAL  "
+                      mode_locked        "#[${modeLocked}]  LOCKED  "
+                      mode_pane          "#[${modePane}]  PANE    "
+                      mode_tab           "#[${modeTab}]  TAB     "
+                      mode_scroll        "#[${modeScroll}]  SCROLL  "
+                      mode_enter_search  "#[${modeSearch}]  SEARCH  "
+                      mode_search        "#[${modeSearch}]  SEARCH  "
+                      mode_resize        "#[${modeResize}]  RESIZE  "
+                      mode_rename_tab    "#[${modeRename}]  RENAME  "
+                      mode_rename_pane   "#[${modeRename}]  RENAME  "
+                      mode_move          "#[${modeMove}]  MOVE    "
+                      mode_session       "#[${modeSession}]  SESSION "
+                      mode_prompt        "#[${modePrompt}]  PROMPT  "
+                      mode_tmux          "#[${modeTmux}]  TMUX    "
 
-                      tab_normal              "#[${inactiveTab}]  {index}  "
-                      tab_normal_fullscreen   "#[${inactiveTab}]  {index}  "
-                      tab_normal_sync         "#[${inactiveTab}]  {index}  "
-                      tab_active              "#[${activeTab}]  {index}  "
-                      tab_active_fullscreen   "#[${activeTab}]  {index}  "
-                      tab_active_sync         "#[${activeTab}]  {index}  "
+                      tab_normal              "#[${inactiveTab}] {index} "
+                      tab_normal_fullscreen   "#[${inactiveTab}] {index} "
+                      tab_normal_sync         "#[${inactiveTab}] {index} "
+                      tab_active              "#[${activeTab}] {index} "
+                      tab_active_fullscreen   "#[${activeTab}] {index} "
+                      tab_active_sync         "#[${activeTab}] {index} "
                       tab_separator           "#[${bar}] "
 
-                       command_cwd_command     "pwd"
+                      command_cwd_command     "pwd"
                       command_cwd_format      "{stdout}"
                       command_cwd_interval    "0"
                       command_cwd_rendermode "dynamic"

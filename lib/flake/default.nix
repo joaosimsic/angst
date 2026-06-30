@@ -119,7 +119,7 @@ let
 
   devShells = {
     nvim-test = pkgs.mkShell {
-      packages = [ pkgs.neovim pkgs.git ] ++ allToolchainPackages;
+      packages = [ pkgs.neovim pkgs.git angstCli ] ++ allToolchainPackages;
       shellHook = ''
         mkdir -p ~/.local/share/tree-sitter
         rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
@@ -343,7 +343,10 @@ in
 
   devShells = {
     ${system} = devShells // {
-      vm = vmOutputs.devShells.${system}.default;
+      vm = pkgs.mkShell {
+        inputsFrom = [ vmOutputs.devShells.${system}.default ];
+        packages = [ angstCli ];
+      };
     };
   };
 

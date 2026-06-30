@@ -63,12 +63,12 @@ let
       "zellij highlighted frame must differ from background in ${themeName}")
     (requireInfix zellijLayout "mode_default_to_mode \"normal\""
       "zjstatus should fall back to normal mode formatting")
-    (requireInfix zellijLayout "mode_normal        \"#[bg=#${theme.ui.prompt},fg=#${theme.ui.bg},bold]"
-      "zellij mode should render ${themeName} ui.prompt on ui.bg")
-    (requireInfix zellijLayout "mode_prompt        \"#[bg=#${theme.ui.prompt},fg=#${theme.ui.bg},bold]"
-      "zjstatus prompt mode should render ${themeName} ui.prompt on ui.bg")
-    (requireInfix zellijLayout "format_left  \"{mode}#[bg=#${theme.ui.surface},fg=#${theme.ui.border}]│ {tabs}\""
-      "zellij separator should render ${themeName} ui.border on ui.surface")
+    (requireInfix zellijLayout "mode_normal        \"#[bg=#${theme.ui.accent},fg=#${theme.ui.bg},bold]"
+      "zellij normal mode should render ${themeName} ui.accent on ui.bg")
+    (requireInfix zellijLayout "mode_prompt        \"#[bg=#${theme.diagnostic.success},fg=#${theme.ui.bg},bold]"
+      "zjstatus prompt mode should render ${themeName} diagnostic.success on ui.bg")
+    (requireInfix zellijLayout "format_left  \" {mode}  {tabs}\""
+      "zellij format should use uniform bar background")
     (requireInfix zellijLayout "format_right \"#[bg=#${theme.ui.surface},fg=#${theme.ui.comment}] {command_cwd} \""
       "zellij cwd should render ${themeName} ui.comment on ui.surface")
     (requireInfix zellijLayout "tab_active              \"#[bg=#${theme.ui.accent},fg=#${theme.ui.bg},bold]"
