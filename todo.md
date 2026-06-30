@@ -6,6 +6,7 @@
 - [x] autocmd for lspdetach
 - [x] auto closing enter bug
 - [ ] paste and copy without overriding registers
+- [ ] break distance based either on tab space or formatters
 - [ ] Doktor at root
 
 # starship
