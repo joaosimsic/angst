@@ -80,7 +80,18 @@ function Keybinder:_bind(mode, lhs, rhs, opts)
 			if self.debug then
 				self.logger:debug(string.format("Pressed: %s -> Executing: %s", lhs, desc))
 			end
-			return rhs(...)
+			local ok, result = pcall(rhs, ...)
+			if self.debug then
+				if ok then
+					self.logger:debug(string.format("Completed: %s (%s)", lhs, desc))
+				else
+					self.logger:error(string.format("Failed: %s (%s): %s", lhs, desc, tostring(result)))
+				end
+			end
+			if ok then
+				return result
+			end
+			error(result)
 		end
 	else
 		final_rhs = rhs
