@@ -10,7 +10,7 @@ function M.setup(logger)
 	set_window_title = function(name)
 		local win = vim.fn.bufwinid(vim.fn.bufnr())
 		if win and win ~= -1 then
-			pcall(vim.api.nvim_win_set_config, win, { title = "yazi [⚓] " .. name })
+			pcall(vim.api.nvim_win_set_config, win, { title = "yazi [ ] " .. name })
 		end
 	end
 
@@ -52,7 +52,7 @@ function M.setup(logger)
 			vim.g.anchor_path = { path = path, name = name }
 
 			set_window_title(name)
-			logger:warn('⚓ Anchored to "' .. name .. '"')
+			logger:warn('Anchored to "' .. name .. '"')
 
 			require("heirline").statusline:broadcast(function(c)
 				c._win_cache = nil

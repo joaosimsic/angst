@@ -24,7 +24,7 @@ local Anchor = {
 			if not self.anchor_name then
 				return ""
 			end
-			return " ⚓ " .. self.anchor_name .. " "
+			return "  " .. self.anchor_name .. " "
 		end,
 	},
 }
