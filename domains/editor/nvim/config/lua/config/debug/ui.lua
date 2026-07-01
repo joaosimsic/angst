@@ -2,7 +2,7 @@ local state = require("config.debug.state")
 
 local M = {}
 
-local TABS = { "ENGINES", "LOGS", "ENVIRONMENT" }
+local TABS = { "ENGINES", "LOGS", "ENVIRONMENT", "KEYMAPS" }
 local TAB_WIDTH = 13
 local TAB_LEFT = ""
 local TAB_RIGHT = ""
@@ -49,15 +49,23 @@ local function redraw_window()
 		highlights = {},
 	}
 
+	local content_width = state.win
+		and vim.api.nvim_win_is_valid(state.win)
+		and vim.api.nvim_win_get_width(state.win) - 2
+		or 84
+
 	if state.current_tab == 1 then
 		local engines_tab = require("config.debug.tabs.engines")
-		rendered = engines_tab.render(state.origin_buf)
+		rendered = engines_tab.render(state.origin_buf, content_width)
 	elseif state.current_tab == 2 then
 		local logs_tab = require("config.debug.tabs.logs")
-		rendered = logs_tab.render()
+		rendered = logs_tab.render(content_width)
 	elseif state.current_tab == 3 then
 		local environment_tab = require("config.debug.tabs.environment")
-		rendered = environment_tab.render(state.origin_buf)
+		rendered = environment_tab.render(state.origin_buf, content_width)
+	elseif state.current_tab == 4 then
+		local keymaps_tab = require("config.debug.tabs.keymaps")
+		rendered = keymaps_tab.render(state.origin_buf, content_width)
 	end
 
 	vim.bo[state.buf].modifiable = true
@@ -104,8 +112,8 @@ function M.open_debug_window()
 	state.origin_buf = vim.api.nvim_get_current_buf()
 	state.current_tab = 1
 
-	local width = math.min(92, math.max(64, vim.o.columns - 8))
-	local height = math.min(32, math.max(18, vim.o.lines - 6))
+	local width = math.min(math.floor(vim.o.columns * 0.8), math.max(84, vim.o.columns - 8))
+	local height = math.min(math.floor(vim.o.lines * 0.7), math.max(20, vim.o.lines - 4))
 	local row = math.floor((vim.o.lines - height) / 2)
 	local col = math.floor((vim.o.columns - width) / 2)
 
