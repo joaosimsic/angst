@@ -10,7 +10,6 @@ return {
 		vim.opt.clipboard = "unnamedplus"
 
 		local binder = Keybinder.new(nil, "CLIPBOARD")
-		binder:set_debug(true)
 
 		local function ensure_linewise_register()
 			local lines = vim.fn.getreg('"', 1)

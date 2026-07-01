@@ -112,15 +112,18 @@ local MODE_CHARS = {
 	c = "C",
 }
 
-local function add_table_header(view, card_width, natural)
+local function add_table_header(view, card_width, natural, widths)
 	natural = natural or {}
-	local _, modes_w, lhs_w, scope_w, desc_w, source_w = layout(card_width, natural)
+	if not widths then
+		local _, modes_w, lhs_w, scope_w, desc_w, source_w = layout(card_width, natural)
+		widths = { modes = modes_w, lhs = lhs_w, scope = scope_w, desc = desc_w, source = source_w }
+	end
 	local header = "| "
-		.. R.str_pad("MODES", modes_w)
-		.. " " .. R.str_pad("LHS", lhs_w)
-		.. " " .. R.str_pad("SCOPE", scope_w)
-		.. " " .. R.str_pad("DESC/RHS", desc_w)
-		.. "  " .. R.str_pad("SOURCE", source_w)
+		.. R.str_pad("MODES", widths.modes)
+		.. " " .. R.str_pad("LHS", widths.lhs)
+		.. " " .. R.str_pad("SCOPE", widths.scope)
+		.. " " .. R.str_pad("DESC/RHS", widths.desc)
+		.. "  " .. R.str_pad("SOURCE", widths.source)
 		.. " |"
 	local header_nr = R.add_line(view, header)
 
@@ -132,22 +135,25 @@ local function add_table_header(view, card_width, natural)
 	R.add_highlight(view, sep_nr, "DebugBorder", 0, -1)
 end
 
-local function add_table_row(view, modes, lhs, scope, desc, source, conflict, card_width, natural)
+local function add_table_row(view, modes, lhs, scope, desc, source, conflict, card_width, natural, widths)
 	scope = scope or "gbl"
 	natural = natural or {}
-	local _, modes_w, lhs_w, scope_w, desc_w, source_w = layout(card_width, natural)
+	if not widths then
+		local _, modes_w, lhs_w, scope_w, desc_w, source_w = layout(card_width, natural)
+		widths = { modes = modes_w, lhs = lhs_w, scope = scope_w, desc = desc_w, source = source_w }
+	end
 
-	modes = R.ellipsize(modes, modes_w)
-	lhs = R.ellipsize(lhs, lhs_w)
-	scope = R.ellipsize(scope, scope_w)
-	desc = R.ellipsize(desc, desc_w)
-	source = R.ellipsize(source, source_w)
+	modes = R.ellipsize(modes, widths.modes)
+	lhs = R.ellipsize(lhs, widths.lhs)
+	scope = R.ellipsize(scope, widths.scope)
+	desc = R.ellipsize(desc, widths.desc)
+	source = R.ellipsize(source, widths.source)
 
-	local col_modes = R.str_pad(modes, modes_w)
-	local col_lhs = R.str_pad(lhs, lhs_w)
-	local col_scope = R.str_pad(scope, scope_w)
-	local col_desc = R.str_pad(desc, desc_w)
-	local col_source = R.str_pad(source, source_w)
+	local col_modes = R.str_pad(modes, widths.modes)
+	local col_lhs = R.str_pad(lhs, widths.lhs)
+	local col_scope = R.str_pad(scope, widths.scope)
+	local col_desc = R.str_pad(desc, widths.desc)
+	local col_source = R.str_pad(source, widths.source)
 
 	local line = "| "
 		.. col_modes .. " " .. col_lhs .. " " .. col_scope .. " " .. col_desc
@@ -180,26 +186,17 @@ local function add_table_row(view, modes, lhs, scope, desc, source, conflict, ca
 	end
 end
 
-local get_keymap = vim.keymap.get
-	or function(mode, opts)
-		if opts and opts.buffer then
-			return vim.api.nvim_buf_get_keymap(opts.buffer, mode)
-		end
-
-		return vim.api.nvim_get_keymap(mode)
-	end
-
 local function collect_keymaps(bufnr)
 	local raw = {}
 
 	for _, mode in ipairs(MODE_ORDER) do
-		for _, km in ipairs(get_keymap(mode) or {}) do
+		for _, km in ipairs(vim.api.nvim_get_keymap(mode) or {}) do
 			km._mode = mode
 			table.insert(raw, km)
 		end
 
 		if bufnr then
-			for _, km in ipairs(get_keymap(mode, { buffer = bufnr }) or {}) do
+			for _, km in ipairs(vim.api.nvim_buf_get_keymap(bufnr, mode) or {}) do
 				km._mode = mode
 				table.insert(raw, km)
 			end
@@ -413,7 +410,9 @@ local function render_conflicts(view, raw, conflict_set, sid_cache, card_width)
 	R.add_section(view, "Conflicts (" .. #conflict_raw .. ")", card_width)
 	R.add_gap(view)
 	local natural = measure_cols(conflict_raw)
-	add_table_header(view, card_width, natural)
+	local _, mw, lw, sw, dw, scw = layout(card_width, natural)
+	local widths = { modes = mw, lhs = lw, scope = sw, desc = dw, source = scw }
+	add_table_header(view, card_width, natural, widths)
 
 	for _, km in ipairs(conflict_raw) do
 		local scope = km.buffer > 0 and "buf " .. km.buffer or "gbl"
@@ -429,7 +428,8 @@ local function render_conflicts(view, raw, conflict_set, sid_cache, card_width)
 			source,
 			true,
 			card_width,
-			natural
+			natural,
+			widths
 		)
 	end
 
@@ -440,7 +440,9 @@ local function render_bindings(view, collapsed, card_width)
 	R.add_section(view, "Bindings (" .. #collapsed .. ")", card_width)
 	R.add_gap(view)
 	local natural = measure_cols(collapsed)
-	add_table_header(view, card_width, natural)
+	local _, mw, lw, sw, dw, scw = layout(card_width, natural)
+	local widths = { modes = mw, lhs = lw, scope = sw, desc = dw, source = scw }
+	add_table_header(view, card_width, natural, widths)
 
 	for _, entry in ipairs(collapsed) do
 		local scope = entry.buffer > 0 and "buf " .. entry.buffer or "gbl"
@@ -454,7 +456,8 @@ local function render_bindings(view, collapsed, card_width)
 			entry.source,
 			entry.conflict,
 			card_width,
-			natural
+			natural,
+			widths
 		)
 	end
 
