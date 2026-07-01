@@ -41,15 +41,24 @@ end
 function M.ellipsize(value, width)
 	value = tostring(value or "")
 
-	if #value <= width then
+	if vim.fn.strdisplaywidth(value) <= width then
 		return value
 	end
 
-	if width <= 1 then
-		return string.sub(value, 1, width)
+	if width <= 3 then
+		return vim.fn.strcharpart(value, 0, width)
 	end
 
-	return string.sub(value, 1, width - 1) .. "…"
+	local dw = width - 1
+	while dw > 0 do
+		local s = vim.fn.strcharpart(value, 0, dw)
+		if #s + 3 <= width then
+			return s .. "…"
+		end
+		dw = dw - 1
+	end
+
+	return "…"
 end
 
 ---@param view { lines: string[], highlights: table[] }
@@ -91,8 +100,13 @@ function M.add_row(view, label, value, value_hl, opts)
 	label = M.ellipsize(label, label_width)
 	value = M.ellipsize(value, value_width)
 
-	local line = "| " .. label .. string.rep(" ", label_width - #label)
-		.. " " .. value .. string.rep(" ", value_width - #value) .. " |"
+	local line = "| "
+		.. label
+		.. string.rep(" ", label_width - #label)
+		.. " "
+		.. value
+		.. string.rep(" ", value_width - #value)
+		.. " |"
 	local line_nr = M.add_line(view, line)
 	local value_start = 2 + label_width + 1
 
@@ -100,6 +114,17 @@ function M.add_row(view, label, value, value_hl, opts)
 	M.add_highlight(view, line_nr, "DebugBorder", #line - 1, #line)
 	M.add_highlight(view, line_nr, "DebugLabel", 2, 2 + #label)
 	M.add_highlight(view, line_nr, value_hl or "DebugValue", value_start, value_start + #value)
+end
+
+---@param s string
+---@param width integer
+---@return string
+function M.str_pad(s, width)
+	local dw = vim.fn.strdisplaywidth(s)
+	if dw >= width then
+		return s
+	end
+	return s .. string.rep(" ", width - dw)
 end
 
 ---@param values table|nil

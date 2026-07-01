@@ -1,27 +1,103 @@
 local R = require("config.debug.render")
 local M = {}
 
-local MODES_W = 7
-local LHS_W = 17
-local SCOPE_W = 6
-local MIN_DESC_W = 25
-local MIN_SOURCE_W = 13
+local MIN_WIDTHS = { modes = 7, lhs = 12, scope = 5, desc = 15, source = 10 }
+local COL_NAMES = { "modes", "lhs", "scope", "desc", "source" }
 
-local function layout(card_width)
-	local source_w = math.max(MIN_SOURCE_W, math.floor((card_width - 2 - MODES_W - 1 - LHS_W - 1 - SCOPE_W - 1 - 1 - 2 - MIN_DESC_W) / 2) + MIN_SOURCE_W)
-	local desc_w = card_width - 2 - MODES_W - 1 - LHS_W - 1 - SCOPE_W - 1 - 1 - source_w - 2
-	desc_w = math.max(MIN_DESC_W, desc_w)
-	source_w = card_width - 2 - MODES_W - 1 - LHS_W - 1 - SCOPE_W - 1 - 1 - desc_w - 2
+local function layout(card_width, natural)
+	natural = natural or {}
+	local n = {}
+	for _, name in ipairs(COL_NAMES) do
+		n[name] = math.max(MIN_WIDTHS[name], natural[name] or MIN_WIDTHS[name])
+	end
 
-	local col_fmt = "| %-" .. MODES_W .. "s %-" .. LHS_W .. "s %-" .. SCOPE_W .. "s %-" .. desc_w .. "s %-" .. source_w .. "s |"
+	local gaps = 5
+	local borders = 4
+	local available = card_width - gaps - borders
+
+	local widths = {}
+	local total_n = n.modes + n.lhs + n.scope + n.desc + n.source
+
+	if total_n <= available then
+		for _, name in ipairs(COL_NAMES) do
+			widths[name] = math.floor(available * n[name] / total_n)
+		end
+		local sum = 0
+		for _, name in ipairs(COL_NAMES) do
+			sum = sum + widths[name]
+		end
+		widths.desc = widths.desc + (available - sum)
+	else
+		for _, name in ipairs(COL_NAMES) do
+			widths[name] = MIN_WIDTHS[name]
+		end
+		local remaining = available
+		for _, name in ipairs(COL_NAMES) do
+			remaining = remaining - widths[name]
+		end
+		if remaining > 0 then
+			local priority = { "lhs", "desc", "source" }
+			local total_need = 0
+			for _, name in ipairs(priority) do
+				total_need = total_need + math.max(0, n[name] - MIN_WIDTHS[name])
+			end
+			if total_need > 0 then
+				for _, name in ipairs(priority) do
+					local need = math.max(0, n[name] - MIN_WIDTHS[name])
+					widths[name] = widths[name] + math.floor(remaining * need / total_need)
+				end
+			end
+		end
+		local sum = 0
+		for _, name in ipairs(COL_NAMES) do
+			sum = sum + widths[name]
+		end
+		widths.desc = widths.desc + (available - sum)
+	end
+
+	local col_fmt = "| %-"
+		.. widths.modes
+		.. "s %-"
+		.. widths.lhs
+		.. "s %-"
+		.. widths.scope
+		.. "s %-"
+		.. widths.desc
+		.. "s  %-"
+		.. widths.source
+		.. "s |"
 
 	local modes_start = 2
-	local lhs_start = modes_start + MODES_W + 1
-	local scope_start = lhs_start + LHS_W + 1
-	local desc_start = scope_start + SCOPE_W + 1
-	local source_start = desc_start + desc_w + 1
+	local lhs_start = modes_start + widths.modes + 1
+	local scope_start = lhs_start + widths.lhs + 1
+	local desc_start = scope_start + widths.scope + 1
+	local source_start = desc_start + widths.desc + 2
 
-	return col_fmt, desc_w, source_w, modes_start, lhs_start, scope_start, desc_start, source_start
+	return col_fmt,
+		widths.modes,
+		widths.lhs,
+		widths.scope,
+		widths.desc,
+		widths.source,
+		modes_start,
+		lhs_start,
+		scope_start,
+		desc_start,
+		source_start
+end
+
+local function measure_cols(entries)
+	local natural = { modes = #"MODES", lhs = #"LHS", scope = #"SCOPE", desc = #"DESC/RHS", source = #"SOURCE" }
+	for _, e in ipairs(entries) do
+		natural.modes =
+			math.max(natural.modes, vim.fn.strdisplaywidth(e.modes_str or MODE_CHARS[e._mode] or e._mode:upper()))
+		natural.lhs = math.max(natural.lhs, vim.fn.strdisplaywidth(e.lhs))
+		local scope = (e.buffer or 0) > 0 and "buf " .. (e.buffer or 0) or "gbl"
+		natural.scope = math.max(natural.scope, #scope)
+		natural.desc = math.max(natural.desc, vim.fn.strdisplaywidth(e.desc or ""))
+		natural.source = math.max(natural.source, vim.fn.strdisplaywidth(e.source or "builtin"))
+	end
+	return natural
 end
 
 local MODE_ORDER = { "n", "i", "v", "x", "s", "o", "t", "c" }
@@ -36,9 +112,16 @@ local MODE_CHARS = {
 	c = "C",
 }
 
-local function add_table_header(view, card_width)
-	local col_fmt = layout(card_width)
-	local header = string.format(col_fmt, "MODES", "LHS", "SCOPE", "DESC/RHS", "SOURCE")
+local function add_table_header(view, card_width, natural)
+	natural = natural or {}
+	local _, modes_w, lhs_w, scope_w, desc_w, source_w = layout(card_width, natural)
+	local header = "| "
+		.. R.str_pad("MODES", modes_w)
+		.. " " .. R.str_pad("LHS", lhs_w)
+		.. " " .. R.str_pad("SCOPE", scope_w)
+		.. " " .. R.str_pad("DESC/RHS", desc_w)
+		.. "  " .. R.str_pad("SOURCE", source_w)
+		.. " |"
 	local header_nr = R.add_line(view, header)
 
 	R.add_highlight(view, header_nr, "DebugHeader", 0, -1)
@@ -49,14 +132,25 @@ local function add_table_header(view, card_width)
 	R.add_highlight(view, sep_nr, "DebugBorder", 0, -1)
 end
 
-local function add_table_row(view, modes, lhs, scope, desc, source, conflict, card_width)
+local function add_table_row(view, modes, lhs, scope, desc, source, conflict, card_width, natural)
 	scope = scope or "gbl"
-	local col_fmt, desc_w, source_w, modes_start, lhs_start, scope_start, desc_start, source_start = layout(card_width)
+	natural = natural or {}
+	local _, modes_w, lhs_w, scope_w, desc_w, source_w, modes_start, lhs_start, scope_start, desc_start, source_start =
+		layout(card_width, natural)
 
+	modes = R.ellipsize(modes, modes_w)
+	lhs = R.ellipsize(lhs, lhs_w)
+	scope = R.ellipsize(scope, scope_w)
 	desc = R.ellipsize(desc, desc_w)
 	source = R.ellipsize(source, source_w)
 
-	local line = string.format(col_fmt, modes, lhs, scope, desc, source)
+	local line = "| "
+		.. R.str_pad(modes, modes_w)
+		.. " " .. R.str_pad(lhs, lhs_w)
+		.. " " .. R.str_pad(scope, scope_w)
+		.. " " .. R.str_pad(desc, desc_w)
+		.. "  " .. R.str_pad(source, source_w)
+		.. " |"
 	local line_nr = R.add_line(view, line)
 
 	R.add_highlight(view, line_nr, "DebugBorder", 0, 1)
@@ -67,19 +161,26 @@ local function add_table_row(view, modes, lhs, scope, desc, source, conflict, ca
 	else
 		R.add_highlight(view, line_nr, "DebugInfo", modes_start, modes_start + #modes)
 		R.add_highlight(view, line_nr, "DebugLabel", lhs_start, lhs_start + #lhs)
-		R.add_highlight(view, line_nr, scope ~= "gbl" and "DebugInfo" or "DebugValue", scope_start, scope_start + #scope)
+		R.add_highlight(
+			view,
+			line_nr,
+			scope ~= "gbl" and "DebugInfo" or "DebugValue",
+			scope_start,
+			scope_start + #scope
+		)
 		R.add_highlight(view, line_nr, "DebugValue", desc_start, desc_start + #desc)
 		R.add_highlight(view, line_nr, "DebugMuted", source_start, source_start + #source)
 	end
 end
 
-local get_keymap = vim.keymap.get or function(mode, opts)
-	if opts and opts.buffer then
-		return vim.api.nvim_buf_get_keymap(opts.buffer, mode)
-	end
+local get_keymap = vim.keymap.get
+	or function(mode, opts)
+		if opts and opts.buffer then
+			return vim.api.nvim_buf_get_keymap(opts.buffer, mode)
+		end
 
-	return vim.api.nvim_get_keymap(mode)
-end
+		return vim.api.nvim_get_keymap(mode)
+	end
 
 local function collect_keymaps(bufnr)
 	local raw = {}
@@ -247,9 +348,21 @@ end
 
 local function render_summary(view, total, collapsed_count, conflict_count, per_mode, card_width)
 	R.add_section(view, "Keymap Summary", card_width)
-	R.add_row(view, "Keymaps", total, total > 0 and "DebugInfo" or "DebugWarn", { label_width = 16, card_width = card_width })
+	R.add_row(
+		view,
+		"Keymaps",
+		total,
+		total > 0 and "DebugInfo" or "DebugWarn",
+		{ label_width = 16, card_width = card_width }
+	)
 	R.add_row(view, "Collapsed", collapsed_count, "DebugValue", { label_width = 16, card_width = card_width })
-	R.add_row(view, "Conflicts", conflict_count, conflict_count > 0 and "DebugWarn" or "DebugOk", { label_width = 16, card_width = card_width })
+	R.add_row(
+		view,
+		"Conflicts",
+		conflict_count,
+		conflict_count > 0 and "DebugWarn" or "DebugOk",
+		{ label_width = 16, card_width = card_width }
+	)
 
 	local mode_parts = {}
 
@@ -257,7 +370,13 @@ local function render_summary(view, total, collapsed_count, conflict_count, per_
 		table.insert(mode_parts, MODE_CHARS[m] .. " " .. (per_mode[m] or 0))
 	end
 
-	R.add_row(view, "Per mode", table.concat(mode_parts, "  "), "DebugInfo", { label_width = 16, card_width = card_width })
+	R.add_row(
+		view,
+		"Per mode",
+		table.concat(mode_parts, "  "),
+		"DebugInfo",
+		{ label_width = 16, card_width = card_width }
+	)
 	R.add_footer(view, card_width)
 end
 
@@ -286,14 +405,25 @@ local function render_conflicts(view, raw, conflict_set, sid_cache, card_width)
 
 	R.add_section(view, "Conflicts (" .. #conflict_raw .. ")", card_width)
 	R.add_gap(view)
-	add_table_header(view, card_width)
+	local natural = measure_cols(conflict_raw)
+	add_table_header(view, card_width, natural)
 
 	for _, km in ipairs(conflict_raw) do
 		local scope = km.buffer > 0 and "buf " .. km.buffer or "gbl"
 		local desc = (km.desc or "") ~= "" and km.desc or (km.rhs or "<lua>")
 		local source = sid_cache[km.sid] and shorten_source(sid_cache[km.sid]) or "builtin"
 
-		add_table_row(view, MODE_CHARS[km._mode] or km._mode:upper(), km.lhs, scope, desc, source, true, card_width)
+		add_table_row(
+			view,
+			MODE_CHARS[km._mode] or km._mode:upper(),
+			km.lhs,
+			scope,
+			desc,
+			source,
+			true,
+			card_width,
+			natural
+		)
 	end
 
 	R.add_footer(view, card_width)
@@ -302,7 +432,8 @@ end
 local function render_bindings(view, collapsed, card_width)
 	R.add_section(view, "Bindings (" .. #collapsed .. ")", card_width)
 	R.add_gap(view)
-	add_table_header(view, card_width)
+	local natural = measure_cols(collapsed)
+	add_table_header(view, card_width, natural)
 
 	for _, entry in ipairs(collapsed) do
 		local scope = entry.buffer > 0 and "buf " .. entry.buffer or "gbl"
@@ -315,7 +446,8 @@ local function render_bindings(view, collapsed, card_width)
 			entry.desc,
 			entry.source,
 			entry.conflict,
-			card_width
+			card_width,
+			natural
 		)
 	end
 

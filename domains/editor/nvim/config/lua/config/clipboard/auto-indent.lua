@@ -35,7 +35,7 @@ return {
 		end
 
 		local function paste_inside_block(forward)
-			local lines = vim.fn.getreg('"', 1, true)
+			local lines = vim.fn.getreg('"', 1)
 			if #lines == 0 then
 				return
 			end
