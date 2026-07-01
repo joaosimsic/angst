@@ -1,3 +1,6 @@
+---@type Keybinder
+local Keybinder = require("common.Keybinder")
+
 ---@type Plugin
 return {
 	"clipboard-auto-indent",
@@ -6,7 +9,6 @@ return {
 	config = function()
 		vim.opt.clipboard = "unnamedplus"
 
-		local Keybinder = require("common.Keybinder")
 		local binder = Keybinder.new(nil, "CLIPBOARD")
 
 		local function is_inside_block()

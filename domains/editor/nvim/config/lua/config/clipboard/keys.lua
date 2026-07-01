@@ -1,10 +1,12 @@
+---@type Keybinder
+local Keybinder = require("common.Keybinder")
+
 ---@type Plugin
 return {
 	"clipboard-keys",
 	virtual = true,
 	lazy = false,
 	config = function()
-		local Keybinder = require("common.Keybinder")
 		local binder = Keybinder.new(nil, "CLIPBOARD")
 
 		binder:map({ "n", "v" }, "<leader>y", function()
