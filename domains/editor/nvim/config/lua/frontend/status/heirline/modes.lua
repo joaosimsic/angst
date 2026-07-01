@@ -55,6 +55,9 @@ M.effective_mode = function()
 	local mode = vim.fn.mode()
 	if mode == "t" then
 		local bufnr = vim.api.nvim_get_current_buf()
+		if vim.bo[bufnr].buftype ~= "terminal" then
+			return "n"
+		end
 		local ok, status = pcall(vim.fn.term_getstatus, bufnr)
 		if ok and status and status:find("finished") then
 			return "n"
