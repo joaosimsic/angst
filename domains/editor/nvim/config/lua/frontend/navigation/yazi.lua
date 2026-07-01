@@ -14,12 +14,20 @@ return {
 		keymaps = {
 			show_help = "<f1>",
 		},
+		hooks = {
+			on_yazi_ready = function(buffer, config, process_api)
+				vim.g.yazi_process_id = process_api.yazi_id
+				vim.g.yazi_buffer = buffer
+			end,
+		},
 	},
 	init = function()
 		vim.g.loaded_netrw = 1
 		vim.g.loaded_netrwPlugin = 1
 	end,
-	config = function()
+	config = function(_, opts)
+		require("yazi").setup(opts)
+
 		local binder = Keybinder.new(nil, "YAZI")
 		local logger = Logger.new("YAZI")
 

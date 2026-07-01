@@ -46,6 +46,7 @@ return {
 			comp.Diagnostics,
 			comp.LspActive,
 			comp.LspInactive,
+			comp.Anchor,
 			comp.Space,
 			comp.FileIcon,
 			comp.FileType,
