@@ -1,0 +1,2 @@
+[env]
+PKG_CONFIG_PATH = "/home/joao/.nix-profile/lib/pkgconfig"

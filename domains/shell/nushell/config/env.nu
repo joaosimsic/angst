@@ -27,3 +27,6 @@ $env.PATH = (
     | prepend ($env.HOME | path join ".cargo/bin")
     | uniq
 )
+
+# Add nix profile pkgconfig to PKG_CONFIG_PATH for cargo/rust-analyzer builds
+$env.PKG_CONFIG_PATH = ("~/.nix-profile/lib/pkgconfig" | path expand)

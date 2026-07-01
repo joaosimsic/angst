@@ -39,8 +39,10 @@ in
 
     services.spice-vdagentd.enable = true;
 
-    environment.systemPackages = [
-      pkgs.spice-vdagent
+    environment.systemPackages = with pkgs; [
+      spice-vdagent
+      pkg-config
+      openssl.dev
     ];
 
     users.users.${userConfig.username}.openssh.authorizedKeys.keys =
