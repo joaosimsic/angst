@@ -135,8 +135,7 @@ end
 local function add_table_row(view, modes, lhs, scope, desc, source, conflict, card_width, natural)
 	scope = scope or "gbl"
 	natural = natural or {}
-	local _, modes_w, lhs_w, scope_w, desc_w, source_w, modes_start, lhs_start, scope_start, desc_start, source_start =
-		layout(card_width, natural)
+	local _, modes_w, lhs_w, scope_w, desc_w, source_w = layout(card_width, natural)
 
 	modes = R.ellipsize(modes, modes_w)
 	lhs = R.ellipsize(lhs, lhs_w)
@@ -144,20 +143,28 @@ local function add_table_row(view, modes, lhs, scope, desc, source, conflict, ca
 	desc = R.ellipsize(desc, desc_w)
 	source = R.ellipsize(source, source_w)
 
+	local col_modes = R.str_pad(modes, modes_w)
+	local col_lhs = R.str_pad(lhs, lhs_w)
+	local col_scope = R.str_pad(scope, scope_w)
+	local col_desc = R.str_pad(desc, desc_w)
+	local col_source = R.str_pad(source, source_w)
+
 	local line = "| "
-		.. R.str_pad(modes, modes_w)
-		.. " " .. R.str_pad(lhs, lhs_w)
-		.. " " .. R.str_pad(scope, scope_w)
-		.. " " .. R.str_pad(desc, desc_w)
-		.. "  " .. R.str_pad(source, source_w)
-		.. " |"
+		.. col_modes .. " " .. col_lhs .. " " .. col_scope .. " " .. col_desc
+		.. "  " .. col_source .. " |"
 	local line_nr = R.add_line(view, line)
+
+	local modes_start = 2
+	local lhs_start = modes_start + #col_modes + 1
+	local scope_start = lhs_start + #col_lhs + 1
+	local desc_start = scope_start + #col_scope + 1
+	local source_start = desc_start + #col_desc + 2
 
 	R.add_highlight(view, line_nr, "DebugBorder", 0, 1)
 	R.add_highlight(view, line_nr, "DebugBorder", #line - 1, #line)
 
 	if conflict then
-		R.add_highlight(view, line_nr, "DebugWarn", modes_start, source_start + source_w)
+		R.add_highlight(view, line_nr, "DebugWarn", modes_start, source_start + #col_source)
 	else
 		R.add_highlight(view, line_nr, "DebugInfo", modes_start, modes_start + #modes)
 		R.add_highlight(view, line_nr, "DebugLabel", lhs_start, lhs_start + #lhs)
