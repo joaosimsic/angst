@@ -1,9 +1,7 @@
 { lib, mkDomainActivation }:
 
 let
-  mkTokens = import ../template/tokens.nix;
-
-  mkDomainModule = entry: { config, lib, pkgs, themesLib, renderTemplate, ... }:
+  mkDomainModule = entry: { config, lib, pkgs, ... }:
   let
     inherit (entry) category name meta path;
     modulePath = "${path}/module.nix";
@@ -29,13 +27,8 @@ let
         // lib.optionalAttrs (!(meta.customXdg or false)) (
           mkDomainActivation {
             inherit configDir meta category name;
-            tokens = mkTokens {
-              inherit lib themesLib;
-              theme = config.theme;
-              fontFamily = config.font.family;
-            };
             inherit (config.home) homeDirectory;
-            inherit lib pkgs renderTemplate;
+            inherit lib;
           }
         )
       );

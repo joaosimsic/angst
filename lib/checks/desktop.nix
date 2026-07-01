@@ -1,48 +1,14 @@
-{ lib, pkgs, themesLib, renderTemplate, domainsPath }:
+{ lib, pkgs, themesLib, renderDomainOutputFor }:
 
 let
-  templateLib = import ../template/default.nix { inherit lib themesLib domainsPath; };
-  inherit (templateLib) mkTokens;
-
   themeNames = lib.attrNames themesLib.themes;
 
   renderForTheme =
     themeName:
-    let
-      tokens = mkTokens { theme = themeName; } // {
-        I3STATUS_PATH = "${pkgs.i3status}/bin/i3status";
-      };
-
-      i3Body = renderTemplate {
-        inherit lib;
-        templatePath = "${domainsPath}/wm/i3/config/config.template";
-        inherit tokens;
-      };
-
-      barBlock = renderTemplate {
-        inherit lib;
-        templatePath = "${domainsPath}/bar/i3status/bar.template";
-        inherit tokens;
-      };
-
-      fixtureFragments = [
-        "bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ${pkgs.ghostty}/bin/ghostty"
-        "bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ${pkgs.ghostty}/bin/ghostty"
-        "bindsym $mod+space exec --no-startup-id ${pkgs.rofi}/bin/rofi -show drun"
-        barBlock
-        "exec_always --no-startup-id ${pkgs.hsetroot}/bin/hsetroot -solid '#${tokens.BG}'"
-        "exec --no-startup-id dbus-update-activation-environment --systemd --all"
-        "exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY PATH XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS"
-      ];
-    in
     {
       inherit themeName;
-      i3Config = i3Body + "\n" + lib.concatStringsSep "\n" fixtureFragments;
-      i3statusConfig = renderTemplate {
-        inherit lib;
-        templatePath = "${domainsPath}/bar/i3status/config/config.template";
-        inherit tokens;
-      };
+      i3Config = renderDomainOutputFor "personal" themeName "domains/wm/i3/config/config";
+      i3statusConfig = renderDomainOutputFor "personal" themeName "domains/bar/i3status/config/config";
     };
 
   rendered = map renderForTheme themeNames;

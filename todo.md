@@ -1,18 +1,18 @@
 # nvim
 - [x] vim modes still appear on command prompt
-- [ ] refac config
+- [x] refac config
 - [x] test lsp, treesitter, etc...
 - [x] fzf vim motions
 - [x] autocmd for lspdetach
-- [ ] auto closing enter bug
+- [x] auto closing enter bug
+- [x] paste and copy without overriding registers
+- [x] break distance based either on tab space or formatters
+- [ ] leave yazi returns heirline in terminal mode
 - [ ] Doktor at root
 
-# starship
-- [ ] show vim modes
-
 # nu
-- [ ] set ":" to replace ">"
-- [ ] fix vim motions
+- [x] set ":" to replace ">"
+- [x] fix vim motions
 
 # nix
 - [ ] add package managers to toolchains
@@ -26,4 +26,4 @@
 
 # zellij
 
-- [ ] screen freeze when exit or close last pane
+- [x] screen freeze when exit or close last pane

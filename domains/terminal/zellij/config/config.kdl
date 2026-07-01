@@ -2,8 +2,13 @@ plugins {
     vim-navigator location="https://github.com/hiasr/vim-zellij-navigator/releases/download/0.3.0/vim-zellij-navigator.wasm"
 }
 
-copy_command "xclip -selection clipboard"
+theme "angst"
+default_layout "default"
+pane_frames false
+auto_layout true
 copy_clipboard "system"
+show_startup_tips false
+show_release_notes false
 
 keybinds clear-defaults=true {
     locked {
@@ -31,6 +36,15 @@ keybinds clear-defaults=true {
     tab {
         bind "n" { NewTab; }
         bind "x" { CloseTab; }
+        bind "1" { GoToTab 1; }
+        bind "2" { GoToTab 2; }
+        bind "3" { GoToTab 3; }
+        bind "4" { GoToTab 4; }
+        bind "5" { GoToTab 5; }
+        bind "6" { GoToTab 6; }
+        bind "7" { GoToTab 7; }
+        bind "8" { GoToTab 8; }
+        bind "9" { GoToTab 9; }
         bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
     }
 
@@ -75,7 +89,7 @@ keybinds clear-defaults=true {
             MessagePlugin "vim-navigator" {
                 name "resize";
                 payload "left";
-                resize_mod "alt"; 
+                resize_mod "alt";
             };
         }
 
@@ -104,3 +118,4 @@ keybinds clear-defaults=true {
         }
     }
 }
+

@@ -1,22 +1,17 @@
- { lib, themesLib, domainsPath }:
+ { lib, themesLib, renderDomainOutputsFor }:
 
 let
-  templateLib = import ../../template/default.nix {
-    inherit lib themesLib domainsPath;
-  };
-
-  inherit (templateLib) findTemplates;
-
-  templates = findTemplates domainsPath "";
   themeNames = lib.attrNames themesLib.themes;
 
-  common = {
-    inherit lib templateLib templates themeNames;
-  };
-
   themeResults = import ./entries.nix { inherit themesLib themeNames; };
-  placeholderResults = import ./placeholders.nix common;
-  renderResults = import ./renders.nix common;
+
+  renderResults =
+    lib.concatLists (map
+      (themeName:
+        map
+          (output: "  ${output.path} render + ${themeName}: ok")
+          (renderDomainOutputsFor "personal" themeName))
+      themeNames);
 
   summary = lib.concatStringsSep "\n" ([
     "Themes (${toString (lib.length themeNames)}):"
@@ -24,12 +19,7 @@ let
   ++ themeResults
   ++ [
     ""
-    "Template placeholders (${toString (lib.length templates)}):"
-  ]
-  ++ placeholderResults
-  ++ [
-    ""
-    "Template renders (${toString (lib.length templates)}):"
+    "Domain renders:"
   ]
   ++ renderResults
   ++ [

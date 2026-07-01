@@ -1,12 +1,19 @@
----@type ThemePalette
-local p = require("config.theme.palette").get()
+---@type ThemeColors
+local c = require("config.theme.colors").get()
 local utils = require("frontend.status.heirline.utils")
 
 ---@type HeirlineComponent
 local FileIcon = {
-	update = { "BufEnter", "BufWinEnter", "WinEnter", "WinLeave" },
+	update = {
+		"BufEnter",
+		"BufWinEnter",
+		"WinEnter",
+		"WinLeave",
+		"FocusGained",
+		"FocusLost",
+	},
 	init = function(self)
-		local bufnr = self.bufnr or 0
+		local bufnr = self.bufnr or vim.api.nvim_get_current_buf()
 		local filename = vim.api.nvim_buf_get_name(bufnr)
 		local extension = vim.fn.fnamemodify(filename, ":e")
 
@@ -17,12 +24,12 @@ local FileIcon = {
 			self.icon_color = color
 		else
 			self.icon = ""
-			self.icon_color = p.bright
+			self.icon_color = c.status.active
 		end
 	end,
 
 	hl = function(self)
-		return { fg = utils.status_color(self, self.icon_color), bg = utils.status_bg(self, p.surface) }
+		return { fg = utils.status_color(self, self.icon_color), bg = utils.status_bg(self, c.status.bg) }
 	end,
 
 	provider = function(self)
@@ -32,7 +39,14 @@ local FileIcon = {
 
 ---@type HeirlineComponent
 local FileName = {
-	update = { "BufEnter", "BufWinEnter", "BufWritePost", "WinEnter", "WinLeave" },
+	update = {
+		"BufEnter",
+		"BufWinEnter",
+		"WinEnter",
+		"WinLeave",
+		"FocusGained",
+		"FocusLost",
+	},
 	provider = function(self)
 		local bufnr = self.bufnr or 0
 		local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":t")
@@ -41,8 +55,8 @@ local FileName = {
 
 	hl = function(self)
 		return {
-			fg = utils.status_color(self, p.bright),
-			bg = utils.status_bg(self, p.surface),
+			fg = utils.status_color(self, c.status.active),
+			bg = utils.status_bg(self, c.status.bg),
 			bold = true,
 		}
 	end,
@@ -50,7 +64,14 @@ local FileName = {
 
 ---@type HeirlineComponent
 local FileType = {
-	update = { "BufEnter", "FileType", "WinEnter", "WinLeave" },
+	update = {
+		"BufEnter",
+		"BufWinEnter",
+		"WinEnter",
+		"WinLeave",
+		"FocusGained",
+		"FocusLost",
+	},
 	provider = function(self)
 		local bufnr = self.bufnr or 0
 		local ft = vim.bo[bufnr].filetype
@@ -58,13 +79,20 @@ local FileType = {
 	end,
 
 	hl = function(self)
-		return { fg = utils.status_color(self, p.bright), bg = utils.status_bg(self, p.surface), bold = true }
+		return { fg = utils.status_color(self, c.status.active), bg = utils.status_bg(self, c.status.bg), bold = true }
 	end,
 }
 
 ---@type HeirlineComponent
 local FileFormat = {
-	update = { "BufEnter", "WinEnter", "WinLeave" },
+	update = {
+		"BufEnter",
+		"BufWinEnter",
+		"WinEnter",
+		"WinLeave",
+		"FocusGained",
+		"FocusLost",
+	},
 	provider = function(self)
 		local bufnr = self.bufnr or 0
 		local fmt = vim.bo[bufnr].fileformat
@@ -72,7 +100,7 @@ local FileFormat = {
 	end,
 
 	hl = function(self)
-		return { fg = utils.status_color(self, p.subtle), bg = utils.status_bg(self, p.surface) }
+		return { fg = utils.status_color(self, c.status.fg), bg = utils.status_bg(self, c.status.bg) }
 	end,
 }
 

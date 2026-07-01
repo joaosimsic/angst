@@ -19,8 +19,6 @@ let
 
       domainsPath = ../../domains;
       domainsLib = import ../domains/default.nix { inherit lib domainsPath; };
-      templateLib = import ../template/default.nix { inherit lib themesLib; };
-      inherit (templateLib) renderTemplate mkTokens;
 
       homeModules = map domainsLib.mkDomainModule domainsLib.homeEntries;
     in
@@ -28,8 +26,7 @@ let
       inherit pkgs;
 
       extraSpecialArgs = {
-        inherit inputs flakeSelf themesLib hostTheme renderTemplate;
-        templateTokens = { theme, fontFamily, ... }: mkTokens { inherit theme fontFamily; };
+        inherit inputs flakeSelf themesLib hostTheme;
         userConfig = hostConfig.user;
         monitors = hostConfig.monitors or {};
       };
@@ -42,6 +39,9 @@ let
 
         ({ pkgs, ...}: {
           home.packages = [ vmTool ];
+        })
+        ({ ... }: {
+          home.file.".ssh/config".force = true;
         })
       ] ++ homeModules;
     };

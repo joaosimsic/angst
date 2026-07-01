@@ -21,18 +21,18 @@ return {
 			},
 		}
 
-		local ok, palette_mod = pcall(require, "config.theme.palette")
+		local ok, colors_mod = pcall(require, "config.theme.colors")
 		if not ok then
 			return
 		end
-		local p = palette_mod.get()
+		local rainbow = colors_mod.get().rainbow
 
 		local semantic_colors = {
-			RainbowDelimiter1 = { fg = p.accent },
-			RainbowDelimiter2 = { fg = p.subtle },
-			RainbowDelimiter3 = { fg = p.bright },
-			RainbowDelimiter4 = { fg = p.base },
-			RainbowDelimiter5 = { fg = p.cyan_bright },
+			RainbowDelimiter1 = { fg = rainbow[1] },
+			RainbowDelimiter2 = { fg = rainbow[2] },
+			RainbowDelimiter3 = { fg = rainbow[3] },
+			RainbowDelimiter4 = { fg = rainbow[4] },
+			RainbowDelimiter5 = { fg = rainbow[5] },
 		}
 
 		for hl_group, opts in pairs(semantic_colors) do

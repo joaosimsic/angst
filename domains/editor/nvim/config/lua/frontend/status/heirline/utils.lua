@@ -34,6 +34,9 @@ M.is_active = function(self)
 	if self.is_active ~= nil then
 		return self.is_active
 	end
+	if vim.g.terminal_focused == false then
+		return false
+	end
 	return vim.api.nvim_get_current_win() == vim.g.statusline_winid
 end
 

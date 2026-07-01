@@ -12,7 +12,7 @@ This is equivalent to `nix flake check --print-build-logs`.
 
 | Check | Catches |
 |-------|---------|
-| `lint-themes` | Broken themes; missing or invalid theme placeholders; theme-only template renders |
+| `lint-themes` | Broken themes or invalid domain theme renders |
 | `lint-desktop` | Invalid i3 and i3status configs (all themes) |
 | `lint-shell` | Invalid starship and nushell configs (all themes) |
 | `theme-rendered` | Theme tokens not appearing in rendered ghostty, starship, nushell, zellij output |
@@ -22,7 +22,7 @@ This is equivalent to `nix flake check --print-build-logs`.
 | `nixos-personal` | Full NixOS system evaluation for the personal host |
 | `home-joao` | Standalone home-manager activation for the personal profile |
 
-`lint-themes` validates placeholders like `{{BG}}` and `{{FONT_FAMILY}}`. Domain-specific placeholders (e.g. `{{I3STATUS_PATH}}` in the i3 bar template) are injected at render time by domain modules and validated by integration checks (`lint-desktop`, `lint-shell`, etc.).
+`lint-themes` validates layered theme definitions and domain-local renderers. Rendered configs are validated by integration checks (`lint-desktop`, `lint-shell`, etc.).
 
 ## Individual lints
 

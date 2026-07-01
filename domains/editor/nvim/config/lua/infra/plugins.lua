@@ -31,7 +31,7 @@ return {
 					untracked = { text = "┆" },
 				},
 				update_debounce = 100,
-        word_diff = false,
+				word_diff = false,
 			})
 		end,
 	},

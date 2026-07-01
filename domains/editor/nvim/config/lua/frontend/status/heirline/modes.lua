@@ -1,4 +1,4 @@
-local p = require("config.theme.palette").get()
+local c = require("config.theme.colors").get()
 
 ---@meta
 
@@ -11,25 +11,25 @@ local M = {}
 
 ---@type table<string, ModeConfig>
 M.mode_colors = {
-	n = { fg = p.black, bg = p.base, label = "NORMAL" },
-	o = { fg = p.black, bg = p.base, label = "OP-PENDING" },
-	i = { fg = p.black, bg = p.bright, label = "INSERT" },
-	v = { fg = p.black, bg = p.green_bright, label = "VISUAL" },
-	V = { fg = p.black, bg = p.green_bright, label = "V-LINE" },
-	["\22"] = { fg = p.black, bg = p.green_bright, label = "V-BLOCK" },
-	s = { fg = p.black, bg = p.blue_bright, label = "SELECT" },
-	S = { fg = p.black, bg = p.blue_bright, label = "S-LINE" },
-	["\19"] = { fg = p.black, bg = p.blue_bright, label = "S-BLOCK" },
-	r = { fg = p.black, bg = p.yellow_bright, label = "REPLACE" },
-	R = { fg = p.black, bg = p.yellow_bright, label = "REPLACE" },
-	c = { fg = p.black, bg = p.red_bright, label = "COMMAND" },
-	t = { fg = p.black, bg = p.magenta_bright, label = "TERMINAL" },
+	n = { fg = c.mode.fg, bg = c.mode.normal, label = "NORMAL" },
+	o = { fg = c.mode.fg, bg = c.mode.normal, label = "OP-PENDING" },
+	i = { fg = c.mode.fg, bg = c.mode.insert, label = "INSERT" },
+	v = { fg = c.mode.fg, bg = c.mode.visual, label = "VISUAL" },
+	V = { fg = c.mode.fg, bg = c.mode.visual, label = "V-LINE" },
+	["\22"] = { fg = c.mode.fg, bg = c.mode.visual, label = "V-BLOCK" },
+	s = { fg = c.mode.fg, bg = c.mode.select, label = "SELECT" },
+	S = { fg = c.mode.fg, bg = c.mode.select, label = "S-LINE" },
+	["\19"] = { fg = c.mode.fg, bg = c.mode.select, label = "S-BLOCK" },
+	r = { fg = c.mode.fg, bg = c.mode.replace, label = "REPLACE" },
+	R = { fg = c.mode.fg, bg = c.mode.replace, label = "REPLACE" },
+	c = { fg = c.mode.fg, bg = c.mode.command, label = "COMMAND" },
+	t = { fg = c.mode.fg, bg = c.mode.terminal, label = "TERMINAL" },
 }
 
 ---@type ModeConfig
 M.mode_fallback = {
-	fg = p.subtle,
-	bg = p.surface,
+	fg = c.mode.fallbackFg,
+	bg = c.mode.fallbackBg,
 	label = "UNKNOWN",
 }
 
@@ -50,14 +50,30 @@ M.hl_name_map = {
 	t = "HeirlineModeTerminal",
 }
 
+---@return string
+M.effective_mode = function()
+	local mode = vim.fn.mode()
+	if mode == "t" then
+		local bufnr = vim.api.nvim_get_current_buf()
+		if vim.bo[bufnr].buftype ~= "terminal" then
+			return "n"
+		end
+		local ok, status = pcall(vim.fn.term_getstatus, bufnr)
+		if ok and status and status:find("finished") then
+			return "n"
+		end
+	end
+	return mode
+end
+
 ---@return ModeConfig
 M.get_mode_data = function()
-	return M.mode_colors[vim.fn.mode()] or M.mode_fallback
+	return M.mode_colors[M.effective_mode()] or M.mode_fallback
 end
 
 ---@return string
 M.mode_hl_name = function()
-	return M.hl_name_map[vim.fn.mode()] or "HeirlineModeUnknown"
+	return M.hl_name_map[M.effective_mode()] or "HeirlineModeUnknown"
 end
 
 return M

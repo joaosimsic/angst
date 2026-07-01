@@ -1,5 +1,5 @@
----@type ThemePalette
-local p = require("config.theme.palette").get()
+---@type ThemeColors
+local c = require("config.theme.colors").get()
 local icons = require("common.icons")
 local conditions = require("heirline.conditions")
 local utils = require("frontend.status.heirline.utils")
@@ -11,7 +11,7 @@ local function diagnostic_hl(active_hl_name, fallback_color)
 		if utils.is_active(self) then
 			return active_hl_name
 		end
-		return { fg = utils.apply_dark_filter(fallback_color, 0.65), bg = utils.status_bg(self, p.surface) }
+		return { fg = utils.apply_dark_filter(fallback_color, 0.65), bg = utils.status_bg(self, c.status.bg) }
 	end
 end
 
@@ -54,10 +54,17 @@ local Diagnostics = {
 		hint_icon = space_out(icons.diagnostics.hint),
 	},
 
-	update = { "DiagnosticChanged", "BufEnter" },
+	update = {
+		"DiagnosticChanged",
+		"BufEnter",
+		"WinEnter",
+		"WinLeave",
+		"FocusGained",
+		"FocusLost",
+	},
 
 	hl = function(self)
-		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, p.surface) }
+		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, c.status.bg) }
 	end,
 
 	{
@@ -67,25 +74,25 @@ local Diagnostics = {
 		provider = function(self)
 			return self.errors > 0 and (self.error_icon .. self.errors) or ""
 		end,
-		hl = diagnostic_hl("HeirlineDiagnosticError", p.red),
+		hl = diagnostic_hl("HeirlineDiagnosticError", c.diagnostic.error),
 	},
 	{
 		provider = function(self)
 			return self.warnings > 0 and (self.warn_icon .. self.warnings) or ""
 		end,
-		hl = diagnostic_hl("HeirlineDiagnosticWarn", p.yellow),
+		hl = diagnostic_hl("HeirlineDiagnosticWarn", c.diagnostic.warn),
 	},
 	{
 		provider = function(self)
 			return self.info > 0 and (self.info_icon .. self.info) or ""
 		end,
-		hl = diagnostic_hl("HeirlineDiagnosticInfo", p.blue),
+		hl = diagnostic_hl("HeirlineDiagnosticInfo", c.diagnostic.info),
 	},
 	{
 		provider = function(self)
 			return self.hints > 0 and (self.hint_icon .. self.hints) or ""
 		end,
-		hl = diagnostic_hl("HeirlineDiagnosticHint", p.cyan),
+		hl = diagnostic_hl("HeirlineDiagnosticHint", c.diagnostic.hint),
 	},
 	{
 		provider = " ",

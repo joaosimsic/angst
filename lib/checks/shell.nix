@@ -1,28 +1,14 @@
-{ lib, pkgs, themesLib, renderTemplate, domainsPath }:
+{ lib, pkgs, themesLib, renderDomainOutputFor }:
 
 let
-  templateLib = import ../template/default.nix { inherit lib themesLib domainsPath; };
-  inherit (templateLib) mkTokens;
-
   themeNames = lib.attrNames themesLib.themes;
 
   renderForTheme =
     themeName:
-    let
-      tokens = mkTokens { theme = themeName; };
-    in
     {
       inherit themeName;
-      starship = renderTemplate {
-        inherit lib;
-        templatePath = "${domainsPath}/shell/starship/config/starship.toml.template";
-        inherit tokens;
-      };
-      nushellColors = renderTemplate {
-        inherit lib;
-        templatePath = "${domainsPath}/shell/nushell/config/colors.nu.template";
-        inherit tokens;
-      };
+      starship = renderDomainOutputFor "personal" themeName "domains/shell/starship/config/starship.toml";
+      nushellColors = renderDomainOutputFor "personal" themeName "domains/shell/nushell/config/colors.nu";
     };
 
   rendered = map renderForTheme themeNames;

@@ -1,10 +1,10 @@
-{ lib, pkgs, themesLib, overrideTheme, homeConfiguration, renderTemplateFor }:
+{ lib, pkgs, themesLib, overrideTheme, homeConfiguration, renderDomainOutputFor }:
 
 let
   theme = homeConfiguration.config.theme;
   expected = themesLib.get overrideTheme;
   
-  ghosttyColors = renderTemplateFor "terminal/ghostty/config/colors.conf" overrideTheme;
+  ghosttyColors = renderDomainOutputFor "personal" overrideTheme "domains/terminal/ghostty/config/colors.conf";
 in
 if theme != overrideTheme then
   throw "expected config.theme = ${overrideTheme}, got ${theme}"
