@@ -39,7 +39,7 @@ M.setup = function()
 				vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
 				vim.defer_fn(function()
 					if vim.api.nvim_buf_is_valid(bufnr) then
-						vim.api.nvim__redraw({ win = 0 })
+						vim.api.nvim__redraw({ flush = true })
 					end
 				end, 100)
 			end

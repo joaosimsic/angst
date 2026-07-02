@@ -45,6 +45,10 @@ in
       openssl.dev
     ];
 
+    environment.sessionVariables = {
+      PKG_CONFIG_PATH = "/run/current-system/sw/lib/pkgconfig";
+    };
+
     users.users.${userConfig.username}.openssh.authorizedKeys.keys =
       userConfig.ssh.authorizedKeys or [ ];
 
