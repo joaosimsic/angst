@@ -38,7 +38,7 @@ return {
 
 			for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
 				if vim.lsp.buf_is_attached(bufnr, client.id) then
-					if vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }) then
+					if vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }) and not vim.b[bufnr].lsp_inlay_verified then
 						logger:info(function()
 							return string.format(
 								"%s quiescent: refreshing inlay hints for bufnr=%d",

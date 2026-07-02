@@ -62,6 +62,10 @@ return {
 			group = group,
 			pattern = "*",
 			callback = function(event)
+				if vim.b[event.buf].ts_highlight_started then
+					return
+				end
+
 				local filetype = vim.bo[event.buf].filetype
 				local supported = AdapterScanner:supports_filetype("treesitter", filetype, treesitter_opts)
 
@@ -130,6 +134,7 @@ return {
 					return string.format("Treesitter failed to start for [%s]: %s", filetype, err)
 				end)
 			else
+				vim.b[event.buf].ts_highlight_started = true
 				logger:info(function()
 					return string.format("Highlighting started for [%s] on bufnr=%d", lang, event.buf)
 				end)
