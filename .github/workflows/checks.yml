@@ -5,13 +5,48 @@ on:
       - '**'
   pull_request:
 jobs:
-  flake-check:
+  lint-themes:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix flake check --print-build-logs
+      - run: nix build '.#checks.x86_64-linux.lint-themes' --no-link --print-build-logs
+  lint-desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix build '.#checks.x86_64-linux.lint-desktop' --no-link --print-build-logs
+  lint-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix build '.#checks.x86_64-linux.lint-shell' --no-link --print-build-logs
+  theme-rendered:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix build '.#checks.x86_64-linux.theme-rendered' --no-link --print-build-logs
+  theme-override:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix build '.#checks.x86_64-linux.theme-override' --no-link --print-build-logs
+  theme-semantic-distinct:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix build '.#checks.x86_64-linux.theme-semantic-distinct' --no-link --print-build-logs
   vm-tests:
     runs-on: ubuntu-latest
     steps:
