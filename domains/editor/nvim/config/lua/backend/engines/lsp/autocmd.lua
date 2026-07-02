@@ -1,6 +1,7 @@
 local M = {}
 
-M.setup = function()
+---@param logger Logger
+M.setup = function(logger)
 	local group = vim.api.nvim_create_augroup("LspLifecycle", { clear = true })
 
 	vim.api.nvim_create_autocmd("BufReadPost", {
@@ -31,17 +32,74 @@ M.setup = function()
 
 			local client = vim.lsp.get_client_by_id(client_id)
 
-			if client and client:supports_method("textDocument/documentColor") then
-				vim.lsp.document_color.enable(false, { bufnr = bufnr })
+			if client and client:supports_method("textDocument/documentColor") and vim.lsp.color then
+				vim.lsp.color.enable(false, { bufnr = bufnr })
 			end
 
-			if client and client:supports_method("textDocument/inlayHint") then
-				vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
-				vim.defer_fn(function()
-					if vim.api.nvim_buf_is_valid(bufnr) then
-						vim.api.nvim__redraw({ flush = true })
+			local function try_enable_hints()
+				if client:supports_method("textDocument/inlayHint") then
+					vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+					vim.api.nvim__redraw({ flush = true })
+					return true
+				end
+				return false
+			end
+
+			if try_enable_hints() then
+				if logger then
+					logger:debug(function()
+						return string.format("inlayHint enabled for bufnr=%d client=%s", bufnr, client.name)
+					end)
+				end
+
+				local timer = vim.uv.new_timer()
+				local attempts = 0
+				timer:start(500, 500, vim.schedule_wrap(function()
+					attempts = attempts + 1
+					if attempts > 10 then
+						timer:stop()
+						return
 					end
-				end, 100)
+					vim.lsp.buf_request(bufnr, "textDocument/inlayHint", {
+						textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+						range = {
+							start = { line = 0, character = 0 },
+							["end"] = { line = 0, character = 0 },
+						},
+					}, function(err, result)
+						if err then
+							return
+						end
+						if result and #result > 0 then
+							timer:stop()
+							if vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }) then
+								vim.lsp.inlay_hint.enable(false, { bufnr = bufnr })
+								vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+							end
+						end
+					end)
+				end))
+			else
+				if logger then
+					logger:debug(function()
+						return string.format(
+							"inlayHint not yet supported for bufnr=%d client=%s, queuing LspNotify retry",
+							bufnr,
+							client.name
+						)
+					end)
+				end
+				vim.api.nvim_create_autocmd("LspNotify", {
+					buffer = bufnr,
+					once = true,
+					callback = function()
+						if try_enable_hints() and logger then
+							logger:debug(function()
+								return string.format("delayed inlayHint enable succeeded for bufnr=%d", bufnr)
+							end)
+						end
+					end,
+				})
 			end
 
 			vim.api.nvim_exec_autocmds("User", {

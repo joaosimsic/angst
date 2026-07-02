@@ -1,12 +1,11 @@
-local Logger = require("common.Logger")
 local AdapterScanner = require("backend.shared.AdapterScanner")
-
-local logger = Logger.new("LSPCFG")
 
 local M = {}
 
 M.setup = function()
 	local capabilities = vim.deepcopy(require("backend.engines.completion.config").capabilities())
+	capabilities.experimental = capabilities.experimental or {}
+	capabilities.experimental.serverStatusNotification = true
 
 	local active_servers = AdapterScanner:by_tool("lsp")
 
@@ -34,16 +33,6 @@ M.setup = function()
 
 		vim.lsp.config(server_name, final_config)
 		vim.lsp.enable(server_name)
-
-		if server_opts.settings then
-			logger:info(function()
-				return "applied settings for '" .. server_name .. "': " .. vim.inspect(server_opts.settings)
-			end)
-		else
-			logger:warn(function()
-				return "no settings found for '" .. server_name .. "' — inlay hints may not work"
-			end)
-		end
 
 		::continue::
 	end

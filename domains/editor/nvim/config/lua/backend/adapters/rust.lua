@@ -22,4 +22,25 @@ return {
 			},
 		},
 	},
+	lsp_handlers = {
+		["experimental/serverStatus"] = function(_, result, ctx)
+			if not result or not result.quiescent then
+				return
+			end
+
+			local client = vim.lsp.get_client_by_id(ctx.client_id)
+			if not client then
+				return
+			end
+
+			for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+				if vim.lsp.buf_is_attached(bufnr, client.id) then
+					if vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }) then
+						vim.lsp.inlay_hint.enable(false, { bufnr = bufnr })
+						vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+					end
+				end
+			end
+		end,
+	},
 }
