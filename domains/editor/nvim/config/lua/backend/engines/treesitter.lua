@@ -1,8 +1,6 @@
 ---@type Logger
 local Logger = require("common.Logger")
 
-local AdapterScanner = require("backend.shared.AdapterScanner")
-local treesitter_opts = { check_executable = false }
 local fold_disabled_filetypes = {
 	php = true,
 }
@@ -11,8 +9,10 @@ local fold_disabled_filetypes = {
 return {
 	"treesitter",
 	virtual = true,
-	ft = AdapterScanner:supported_filetypes("treesitter", treesitter_opts),
+	event = { "BufReadPre", "BufNewFile" },
 	config = function()
+		local AdapterScanner = require("backend.shared.AdapterScanner")
+		local treesitter_opts = { check_executable = false }
 		local logger = Logger.new("TREESITTER")
 
 		local ts_path = vim.fn.expand("~/.local/share/tree-sitter")

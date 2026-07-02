@@ -1,5 +1,3 @@
-local AdapterScanner = require("backend.shared.AdapterScanner")
-
 ---@type Logger
 local Logger = require("common.Logger")
 
@@ -7,10 +5,10 @@ local Logger = require("common.Logger")
 return {
 	"lsp-engine",
 	virtual = true,
-	ft = AdapterScanner:supported_filetypes("lsp"),
+	event = { "BufReadPre", "BufNewFile" },
 	config = function()
 		local logger = Logger.new("LSP", "debug")
 		require("backend.engines.lsp.autocmd").setup(logger)
-		require("backend.engines.lsp.config").setup()
+		require("backend.engines.lsp.config").setup(logger)
 	end,
 }

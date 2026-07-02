@@ -1,5 +1,17 @@
 local M = {}
 
+local inlay_timers = {}
+
+local function cleanup_timer(bufnr)
+	local timer = inlay_timers[bufnr]
+	if timer then
+		timer:stop()
+		inlay_timers[bufnr] = nil
+	end
+	vim.b[bufnr].lsp_inlay_polling = nil
+	vim.b[bufnr].lsp_inlay_verified = nil
+end
+
 ---@param logger Logger
 M.setup = function(logger)
 	local group = vim.api.nvim_create_augroup("LspLifecycle", { clear = true })
@@ -39,7 +51,6 @@ M.setup = function(logger)
 			local function try_enable_hints()
 				if client:supports_method("textDocument/inlayHint") then
 					vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
-					vim.api.nvim__redraw({ flush = true })
 					return true
 				end
 				return false
@@ -52,33 +63,52 @@ M.setup = function(logger)
 					end)
 				end
 
-				local timer = vim.uv.new_timer()
-				local attempts = 0
-				timer:start(500, 500, vim.schedule_wrap(function()
-					attempts = attempts + 1
-					if attempts > 10 then
-						timer:stop()
-						return
-					end
-					vim.lsp.buf_request(bufnr, "textDocument/inlayHint", {
-						textDocument = { uri = vim.uri_from_bufnr(bufnr) },
-						range = {
-							start = { line = 0, character = 0 },
-							["end"] = { line = 0, character = 0 },
-						},
-					}, function(err, result)
-						if err then
+				if vim.b[bufnr].lsp_inlay_verified then
+					return
+				end
+
+				if not vim.b[bufnr].lsp_inlay_polling then
+					vim.b[bufnr].lsp_inlay_polling = true
+					local timer = vim.uv.new_timer()
+					inlay_timers[bufnr] = timer
+					local attempts = 0
+					timer:start(1000, 1000, vim.schedule_wrap(function()
+						attempts = attempts + 1
+						if attempts > 5 then
+							timer:stop()
+							cleanup_timer(bufnr)
 							return
 						end
-						if result and #result > 0 then
+
+						if vim.b[bufnr].lsp_inlay_verified then
 							timer:stop()
-							if vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }) then
-								vim.lsp.inlay_hint.enable(false, { bufnr = bufnr })
-								vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
-							end
+							cleanup_timer(bufnr)
+							return
 						end
-					end)
-				end))
+
+						vim.lsp.buf_request(bufnr, "textDocument/inlayHint", {
+							textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+							range = {
+								start = { line = 0, character = 0 },
+								["end"] = { line = 0, character = 0 },
+							},
+						}, function(err, result)
+							if err then
+								return
+							end
+							if result and #result > 0 then
+								timer:stop()
+								cleanup_timer(bufnr)
+								vim.b[bufnr].lsp_inlay_verified = true
+
+								if vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }) then
+									vim.lsp.inlay_hint.enable(false, { bufnr = bufnr })
+									vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+								end
+							end
+						end)
+					end))
+				end
 			else
 				if logger then
 					logger:debug(function()
@@ -130,6 +160,13 @@ M.setup = function(logger)
 				hydra_instance:purge()
 				vim.b[bufnr].diagnostic_hydra = nil
 			end
+		end,
+	})
+
+	vim.api.nvim_create_autocmd("BufUnload", {
+		group = group,
+		callback = function(event)
+			cleanup_timer(event.buf)
 		end,
 	})
 end
