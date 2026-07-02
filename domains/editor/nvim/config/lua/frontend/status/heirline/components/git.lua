@@ -1,6 +1,5 @@
 ---@type ThemeColors
 local c = require("config.theme.colors").get()
-local conditions = require("heirline.conditions")
 local utils = require("frontend.status.heirline.utils")
 
 ---@param active_hl_name string
@@ -17,16 +16,12 @@ end
 ---@type HeirlineComponent
 local Git = {
 	condition = function(self)
-		local winnr = self.winnr or 0
-		if not vim.api.nvim_win_is_valid(winnr) then
-			return false
-		end
-		local bufnr = vim.api.nvim_win_get_buf(winnr)
-		return conditions.is_git_repo(bufnr)
+		local bufnr = self.bufnr or 0
+		return vim.b[bufnr].gitsigns_head or vim.b[bufnr].gitsigns_status_dict
 	end,
 
 	init = function(self)
-		local bufnr = vim.api.nvim_win_get_buf(self.winnr or 0)
+		local bufnr = self.bufnr or 0
 		self.status_dict = vim.b[bufnr].gitsigns_status_dict
 		self.has_changes = self.status_dict
 			and (
@@ -48,7 +43,8 @@ local Git = {
 
 	{
 		provider = function(self)
-			return "* " .. self.status_dict.head
+			if not self.status_dict then return "" end
+			return "* " .. (self.status_dict.head or "")
 		end,
 		hl = git_hl("HeirlineGit", c.git.branch),
 	},

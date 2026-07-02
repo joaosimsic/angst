@@ -1,7 +1,6 @@
 ---@type ThemeColors
 local c = require("config.theme.colors").get()
 local icons = require("common.icons")
-local conditions = require("heirline.conditions")
 local utils = require("frontend.status.heirline.utils")
 
 ---@param active_hl_name string
@@ -22,25 +21,12 @@ end
 ---@type HeirlineComponent
 local Diagnostics = {
 	condition = function(self)
-		local winnr = self.winnr or 0
-		if not vim.api.nvim_win_is_valid(winnr) then
-			return false
-		end
-		local bufnr = vim.api.nvim_win_get_buf(winnr)
-		return conditions.has_diagnostics(bufnr)
+		local bufnr = self.bufnr or 0
+		return #vim.diagnostic.get(bufnr) > 0
 	end,
 
 	init = function(self)
-		local winnr = self.winnr or 0
-		if not vim.api.nvim_win_is_valid(winnr) then
-			self.errors = 0
-			self.warnings = 0
-			self.hints = 0
-			self.info = 0
-			return
-		end
-
-		local bufnr = vim.api.nvim_win_get_buf(winnr)
+		local bufnr = self.bufnr or 0
 		self.errors = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.ERROR })
 		self.warnings = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.WARN })
 		self.hints = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.HINT })
