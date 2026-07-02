@@ -44,6 +44,7 @@ return {
 			comp.Git,
 			comp.Align,
 			comp.Diagnostics,
+			comp.DiagnosticsHistory,
 			comp.LspActive,
 			comp.LspInactive,
 			comp.Anchor,

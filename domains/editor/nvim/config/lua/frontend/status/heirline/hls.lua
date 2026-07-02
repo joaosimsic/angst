@@ -31,6 +31,8 @@ M.setup_highlights = function()
 	hl("HeirlineDiagnosticInfo", { fg = c.diagnostic.info, bg = c.status.bg })
 	hl("HeirlineDiagnosticHint", { fg = c.diagnostic.hint, bg = c.status.bg })
 
+	hl("HeirlineDiagnosticHistory", { fg = c.diagnostic.info, bg = c.status.bg })
+
 	hl("HeirlineLspActive", { fg = c.status.active, bg = c.status.bg })
 	hl("HeirlineLspInactive", { fg = c.status.inactive, bg = c.status.bg })
 
