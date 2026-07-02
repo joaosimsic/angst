@@ -27,6 +27,7 @@ in
       settings = {
         PasswordAuthentication = cfg.server.passwordAuthentication;
         PermitRootLogin = "no";
+        AllowAgentForwarding = true;
       };
     };
   };

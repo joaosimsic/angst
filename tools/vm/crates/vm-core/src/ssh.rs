@@ -47,6 +47,7 @@ impl SshEngine {
         let sess = self.connect()?;
 
         let mut channel = sess.channel_session().map_err(|e| e.to_string())?;
+        channel.request_auth_agent_forwarding().ok();
         channel.exec(command).map_err(|e| e.to_string())?;
 
         let mut stdout = String::new();

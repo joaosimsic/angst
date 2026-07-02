@@ -80,6 +80,8 @@ pub fn ssh(args: Vec<String>) -> Result<(), String> {
         .arg("UserKnownHostsFile=/dev/null")
         .arg("-o")
         .arg("LogLevel=ERROR")
+        .arg("-o")
+        .arg("ForwardAgent=yes")
         .arg(format!("{}@127.0.0.1", config.ssh_user));
 
     if !args.is_empty() {
