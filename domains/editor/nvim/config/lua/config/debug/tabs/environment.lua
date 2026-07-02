@@ -220,41 +220,6 @@ local function add_current_buffer_section(view, bufnr, card_width)
 	R.add_footer(view, card_width)
 end
 
-local function add_doktor_section(view, card_width)
-	local ok, config = pcall(require, "backend.engines.doktor.config")
-	local doktor = ok and config.get() or nil
-
-	R.add_section(view, "Doktor", card_width)
-
-	if not doktor then
-		R.add_row(view, "Status", "config unavailable", "DebugWarn")
-		R.add_footer(view, card_width)
-		return
-	end
-
-	R.add_row(view, "Debounce", tostring(doktor.debounce_ms) .. "ms", "DebugInfo")
-	R.add_row(view, "Idle", tostring(doktor.idle_ms) .. "ms", "DebugInfo")
-	R.add_row(view, "Max hidden buffers", doktor.max_hidden_buffers, "DebugInfo")
-	R.add_row(view, "Cache path", doktor.cache_path, "DebugValue")
-	R.add_row(view, "Log level", doktor.log_level, "DebugInfo")
-	R.add_row(view, "Notify on error", bool_label(doktor.notify_on_error), doktor.notify_on_error and "DebugOk" or "DebugMuted")
-	R.add_row(view, "LSP timeout", tostring(doktor.lsp_timeout_ms) .. "ms", "DebugInfo")
-	R.add_row(view, "Concurrency", string.format("lsp %s | lint %s", doktor.concurrency.lsp, doktor.concurrency.lint), "DebugInfo")
-	R.add_row(
-		view,
-		"Bootstrap",
-		string.format("enter %s | tick %s", bool_label(doktor.bootstrap.on_vim_enter), doktor.bootstrap.max_files_per_tick),
-		"DebugInfo"
-	)
-	R.add_row(
-		view,
-		"Window",
-		string.format("%sx%s | %s", doktor.window.width_ratio, doktor.window.height_ratio, doktor.window.border),
-		"DebugInfo"
-	)
-	R.add_footer(view, card_width)
-end
-
 ---@param bufnr integer
 ---@param card_width? integer
 ---@return { lines: string[], highlights: table[] }
@@ -274,10 +239,7 @@ function M.render(bufnr, card_width)
 	add_engines_section(view, card_width)
 	R.add_gap(view)
 	add_current_buffer_section(view, bufnr, card_width)
-	R.add_gap(view)
-	add_doktor_section(view, card_width)
-
-	return view
+		return view
 end
 
 return M

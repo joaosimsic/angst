@@ -1,4 +1,0 @@
-return {
-  "doktor",
-  enabled = false,
-}

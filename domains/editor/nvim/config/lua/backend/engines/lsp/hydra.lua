@@ -54,13 +54,7 @@ function M.create_diagnostics(bufnr)
 				end,
 				"Prev Diagnostic",
 			},
-			{
-				"l",
-				function()
-					require("backend.engines.doktor").toggle()
-				end,
-				"Line Diagnostics",
-			},
+	
 		},
 	}, bufnr)
 end
