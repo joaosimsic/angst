@@ -12,7 +12,7 @@ return {
 		local logger = Logger.new("UNDO")
 		local binder = Keybinder.new(nil, "UNDO")
 
-		vim.cmd("packadd nvim.undotree")
+		pcall(vim.cmd, "packadd nvim.undotree")
 
 		binder:nmap("<leader>u", function()
 			require("undotree").open()

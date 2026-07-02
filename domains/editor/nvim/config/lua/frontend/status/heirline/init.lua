@@ -131,7 +131,7 @@ return {
 		})
 
 		local binder = Keybinder.new(nil, "HEIRLINE")
-		binder:map({ "i", "c" }, "<C-c>", function()
+		binder:map({ "i", "c", "v" }, "<C-c>", function()
 			local keys = vim.api.nvim_replace_termcodes("<C-c><Cmd>redrawstatus<CR>", true, false, true)
 			vim.api.nvim_feedkeys(keys, "n", false)
 		end, { silent = true })
