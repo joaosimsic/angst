@@ -7,14 +7,7 @@ local provider = utils.to_small_caps(" lsp ")
 
 ---@type HeirlineComponent
 local LspActive = {
-	condition = function(self)
-		local winnr = self.winnr or 0
-		if not vim.api.nvim_win_is_valid(winnr) then
-			return false
-		end
-		local bufnr = vim.api.nvim_win_get_buf(winnr)
-		return next(vim.lsp.get_clients({ bufnr = bufnr })) ~= nil
-	end,
+	condition = conditions.lsp_attached,
 
 	update = { "LspAttach", "LspDetach", "WinEnter", "WinLeave", "BufEnter", "FocusGained", "FocusLost" },
 
