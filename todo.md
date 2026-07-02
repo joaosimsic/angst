@@ -15,7 +15,7 @@
 - [x] fix vim motions
 
 # nix
-- [ ] add package managers to toolchains
+- [x] add package managers to toolchains
 
 # vm
 

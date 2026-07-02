@@ -4,7 +4,8 @@ let
   inherit (import ../lib/toolchain.nix { inherit lib pkgs; }) mkToolchain;
 in
 mkToolchain {
-  runtime = with pkgs; [ cargo rustc ];
+  runtime = with pkgs; [ rustc ];
+  packageManager = with pkgs; [ cargo ];
   lsp = with pkgs; [ rust-analyzer ];
   linter = with pkgs; [ clippy ];
   formatter = with pkgs; [ rustfmt ];

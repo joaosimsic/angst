@@ -6,6 +6,8 @@ in
 mkToolchain {
   runtime = with pkgs; [
     php
+  ];
+  packageManager = with pkgs; [
     phpPackages.composer
   ];
 
