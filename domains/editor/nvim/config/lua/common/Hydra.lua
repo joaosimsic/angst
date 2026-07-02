@@ -18,7 +18,6 @@ local colors = require("config.theme.colors")
 ---@field exit_keys? string[]
 ---@field global? boolean
 ---@field bufnr? number
----@field init_binder Keybinder
 ---@field logger Logger
 
 ---@class ActiveHydraState

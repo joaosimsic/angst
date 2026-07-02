@@ -12,8 +12,38 @@ local function cleanup_timer(bufnr)
 	vim.b[bufnr].lsp_inlay_verified = nil
 end
 
+local client_attach_time = {}
+
+---@param logger Logger
+local function setup_progress_logger(logger)
+	vim.lsp.handlers["$/progress"] = function(_, result, ctx)
+		if not result or not result.value then
+			return
+		end
+
+		local client = vim.lsp.get_client_by_id(ctx.client_id)
+		if not client then
+			return
+		end
+
+		if result.value.kind == "begin" then
+			client_attach_time[client.id] = client_attach_time[client.id] or vim.uv.now()
+		elseif result.value.kind == "end" then
+			if logger and client_attach_time[client.id] and not client._lsp_ready_logged then
+				local elapsed = vim.uv.now() - client_attach_time[client.id]
+				client._lsp_ready_logged = true
+				logger:info(function()
+					return string.format("%s ready after %dms", client.name, elapsed)
+				end)
+			end
+		end
+	end
+end
+
 ---@param logger Logger
 M.setup = function(logger)
+	setup_progress_logger(logger)
+
 	local group = vim.api.nvim_create_augroup("LspLifecycle", { clear = true })
 
 	vim.api.nvim_create_autocmd("BufReadPost", {
@@ -72,11 +102,20 @@ M.setup = function(logger)
 					local timer = vim.uv.new_timer()
 					inlay_timers[bufnr] = timer
 					local attempts = 0
-					timer:start(1000, 1000, vim.schedule_wrap(function()
+					local function check_hints()
 						attempts = attempts + 1
 						if attempts > 5 then
 							timer:stop()
 							cleanup_timer(bufnr)
+							if logger then
+								logger:warn(function()
+									return string.format(
+										"inlayHint polling exhausted for bufnr=%d client=%s — no hints found, check server analysis status",
+										bufnr,
+										client.name
+									)
+								end)
+							end
 							return
 						end
 
@@ -86,11 +125,12 @@ M.setup = function(logger)
 							return
 						end
 
+						local line_count = vim.api.nvim_buf_line_count(bufnr)
 						vim.lsp.buf_request(bufnr, "textDocument/inlayHint", {
 							textDocument = { uri = vim.uri_from_bufnr(bufnr) },
 							range = {
 								start = { line = 0, character = 0 },
-								["end"] = { line = 0, character = 0 },
+								["end"] = { line = line_count - 1, character = 9999 },
 							},
 						}, function(err, result)
 							if err then
@@ -101,14 +141,73 @@ M.setup = function(logger)
 								cleanup_timer(bufnr)
 								vim.b[bufnr].lsp_inlay_verified = true
 
+								if logger then
+									logger:info(function()
+										return string.format(
+											"inlayHint verified for bufnr=%d client=%s",
+											bufnr,
+											client.name
+										)
+									end)
+								end
+
 								if vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }) then
 									vim.lsp.inlay_hint.enable(false, { bufnr = bufnr })
 									vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+
+									if logger then
+										logger:info(function()
+											return string.format(
+												"inlayHint refreshed for bufnr=%d client=%s",
+												bufnr,
+												client.name
+											)
+										end)
+									end
 								end
 							end
 						end)
-					end))
+					end
+					timer:start(800, 800, vim.schedule_wrap(check_hints))
 				end
+
+				vim.defer_fn(function()
+					if not vim.api.nvim_buf_is_valid(bufnr) then
+						return
+					end
+
+					local ns = vim.lsp.inlay_hint.namespace
+					if ns then
+						local extmarks = vim.api.nvim_buf_get_extmarks(bufnr, ns, 0, -1, {
+							details = false,
+						})
+						if #extmarks > 0 then
+							if logger then
+								logger:info(function()
+									return string.format(
+										"inlayHint extmarks confirmed for bufnr=%d (%d hints visible)",
+										bufnr,
+										#extmarks
+									)
+								end)
+							end
+						elseif not vim.b[bufnr].lsp_inlay_verified then
+							if vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }) then
+								vim.lsp.inlay_hint.enable(false, { bufnr = bufnr })
+								vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+								if logger then
+									logger:info(function()
+										return string.format(
+											"inlayHint force-refreshed for bufnr=%d after fallback timeout",
+											bufnr
+										)
+									end)
+								end
+							end
+						end
+					end
+				end, 5000)
+
 			else
 				if logger then
 					logger:debug(function()
@@ -141,6 +240,22 @@ M.setup = function(logger)
 					root_dir = client and client.config and client.config.root_dir or nil,
 				},
 			})
+
+			if logger and client and not client._lsp_fallback_timer then
+				client._lsp_fallback_timer = vim.defer_fn(function()
+					client._lsp_fallback_timer = nil
+					if not client._lsp_ready_logged then
+						local elapsed = vim.uv.now() - (client_attach_time[client.id] or vim.uv.now())
+						logger:warn(function()
+							return string.format(
+								"%s not ready after %dms (no $/progress received). Inlay hints may still apply.",
+								client.name,
+								elapsed
+							)
+						end)
+					end
+				end, 15000)
+			end
 		end,
 	})
 

@@ -1,0 +1,1469 @@
+SCRIPT  /home/joao/.local/share/nvim/lazy/blink.cmp/plugin/blink-cmp.lua
+Sourced 1 time
+Total time:   0.009541
+ Self time:   0.009541
+
+count  total (s)   self (s)
+                            if vim.fn.has('nvim-0.11') == 1 and vim.lsp.config then
+                              local user_caps = vim.lsp.config['*'] and vim.lsp.config['*'].capabilities
+                            
+                              vim.lsp.config('*', {
+                                capabilities = require('blink.cmp').get_lsp_capabilities(user_caps),
+                              })
+                            end
+                            
+                            -- Commands
+                            local subcommands = {
+                              status = function() vim.cmd('checkhealth blink.cmp') end,
+                              build = function() require('blink.cmp.fuzzy.build').build() end,
+                              ['build-log'] = function() require('blink.cmp.fuzzy.build').build_log() end,
+                            }
+                            vim.api.nvim_create_user_command('BlinkCmp', function(cmd)
+                              local subcmd_name = cmd.fargs[1]
+                              local subcmd = subcommands[subcmd_name]
+                            
+                              if subcmd then
+                                subcmd()
+                              else
+                                vim.notify("[blink.cmp] invalid subcommand '" .. tostring(subcmd_name) .. "'", vim.log.levels.ERROR)
+                              end
+                            end, { nargs = 1, complete = function() return vim.tbl_keys(subcommands) end, desc = 'blink.cmp' })
+
+SCRIPT  /home/joao/.local/share/nvim/lazy/conform.nvim/plugin/conform.lua
+Sourced 1 time
+Total time:   0.000075
+ Self time:   0.000075
+
+count  total (s)   self (s)
+                            vim.api.nvim_create_user_command("ConformInfo", function()
+                              require("conform.health").show_window()
+                            end, { desc = "Show information about Conform formatters" })
+
+SCRIPT  /nix/store/a96v7ma6k0fwzmrrqn1fqb8flyddakj4-neovim-unwrapped-0.12.3/share/nvim/runtime/ftplugin/rust.vim
+Sourced 2 times
+Total time:   0.043364
+ Self time:   0.039643
+
+count  total (s)   self (s)
+                            " Language:	Rust
+                            " Description:	Vim ftplugin for Rust
+                            " Maintainer:	Chris Morgan <me@chrismorgan.info>
+                            " Last Change:	2024 Mar 17
+                            "		2024 May 23 by Riley Bruins <ribru17@gmail.com ('commentstring')
+                            "		2025 Dec 09 update 'textwidth# to 100 #18892
+                            " For bugs, patches and license go to https://github.com/rust-lang/rust.vim
+                            
+    2              0.000018 if exists("b:did_ftplugin")
+                                finish
+    2              0.000001 endif
+    2              0.000009 let b:did_ftplugin = 1
+                            
+                            " vint: -ProhibitAbbreviationOption
+    2              0.000007 let s:save_cpo = &cpo
+    2              0.000015 set cpo&vim
+                            " vint: +ProhibitAbbreviationOption
+                            
+    2              0.000008 if get(b:, 'current_compiler', '') ==# ''
+    2              0.029318     if strlen(findfile('Cargo.toml', '.;')) > 0
+    2   0.013409   0.009688         compiler cargo
+                                else
+                                    compiler rustc
+    2              0.000001     endif
+    2              0.000001 endif
+                            
+                            " Variables {{{1
+                            
+                            " The rust source code at present seems to typically omit a leader on /*!
+                            " comments, so we'll use that as our default, but make it easy to switch.
+                            " This does not affect indentation at all (I tested it with and without
+                            " leader), merely whether a leader is inserted by default or not.
+    2              0.000006 if get(g:, 'rust_bang_comment_leader', 0)
+                                " Why is the `,s0:/*,mb:\ ,ex:*/` there, you ask? I don't understand why,
+                                " but without it, */ gets indented one space even if there were no
+                                " leaders. I'm fairly sure that's a Vim bug.
+                                setlocal comments=s1:/*,mb:*,ex:*/,s0:/*,mb:\ ,ex:*/,:///,://!,://
+    2              0.000001 else
+    2              0.000010     setlocal comments=s0:/*!,ex:*/,s1:/*,mb:*,ex:*/,:///,://!,://
+    2              0.000001 endif
+    2              0.000005 setlocal commentstring=//\ %s
+    2              0.000011 setlocal formatoptions-=t formatoptions+=croqnl
+                            " j was only added in 7.3.541, so stop complaints about its nonexistence
+    2              0.000004 silent! setlocal formatoptions+=j
+                            
+                            " smartindent will be overridden by indentexpr if filetype indent is on, but
+                            " otherwise it's better than nothing.
+    2              0.000007 setlocal smartindent nocindent
+                            
+    2              0.000004 if get(g:, 'rust_recommended_style', 1)
+    2              0.000004     let b:rust_set_style = 1
+    2              0.000013     setlocal shiftwidth=4 softtabstop=4 expandtab
+    2              0.000009     setlocal textwidth=100
+    2              0.000001 endif
+                            
+    2              0.000007 setlocal include=\\v^\\s*(pub\\s+)?use\\s+\\zs(\\f\|:)+
+    2              0.000005 setlocal includeexpr=rust#IncludeExpr(v:fname)
+                            
+    2              0.000004 setlocal suffixesadd=.rs
+                            
+    2              0.000004 if exists("g:ftplugin_rust_source_path")
+                                let &l:path=g:ftplugin_rust_source_path . ',' . &l:path
+    2              0.000001 endif
+                            
+    2              0.000003 if exists("g:loaded_delimitMate")
+                                if exists("b:delimitMate_excluded_regions")
+                                    let b:rust_original_delimitMate_excluded_regions = b:delimitMate_excluded_regions
+                                endif
+                            
+                                augroup rust.vim.DelimitMate
+                                    autocmd!
+                            
+                                    autocmd User delimitMate_map   :call rust#delimitmate#onMap()
+                                    autocmd User delimitMate_unmap :call rust#delimitmate#onUnmap()
+                                augroup END
+    2              0.000001 endif
+                            
+                            " Integration with auto-pairs (https://github.com/jiangmiao/auto-pairs)
+    2              0.000005 if exists("g:AutoPairsLoaded") && !get(g:, 'rust_keep_autopairs_default', 0)
+                                let b:AutoPairs = {'(':')', '[':']', '{':'}','"':'"', '`':'`'}
+    2              0.000001 endif
+                            
+    2              0.000007 if has("folding") && get(g:, 'rust_fold', 0)
+                                let b:rust_set_foldmethod=1
+                                setlocal foldmethod=syntax
+                                if g:rust_fold == 2
+                                    setlocal foldlevel<
+                                else
+                                    setlocal foldlevel=99
+                                endif
+    2              0.000001 endif
+                            
+    2              0.000004 if has('conceal') && get(g:, 'rust_conceal', 0)
+                                let b:rust_set_conceallevel=1
+                                setlocal conceallevel=2
+    2              0.000001 endif
+                            
+                            " Motion Commands {{{1
+    2              0.000005 if !exists("g:no_plugin_maps") && !exists("g:no_rust_maps")
+                                " Bind motion commands to support hanging indents
+    2              0.000014     nnoremap <silent> <buffer> [[ :call rust#Jump('n', 'Back')<CR>
+    2              0.000005     nnoremap <silent> <buffer> ]] :call rust#Jump('n', 'Forward')<CR>
+    2              0.000021     xnoremap <silent> <buffer> [[ :call rust#Jump('v', 'Back')<CR>
+    2              0.000005     xnoremap <silent> <buffer> ]] :call rust#Jump('v', 'Forward')<CR>
+    2              0.000005     onoremap <silent> <buffer> [[ :call rust#Jump('o', 'Back')<CR>
+    2              0.000004     onoremap <silent> <buffer> ]] :call rust#Jump('o', 'Forward')<CR>
+    2              0.000001 endif
+                            
+                            " Commands {{{1
+                            
+                            " See |:RustRun| for docs
+    2              0.000009 command! -nargs=* -complete=file -bang -buffer RustRun call rust#Run(<bang>0, <q-args>)
+                            
+                            " See |:RustExpand| for docs
+    2              0.000007 command! -nargs=* -complete=customlist,rust#CompleteExpand -bang -buffer RustExpand call rust#Expand(<bang>0, <q-args>)
+                            
+                            " See |:RustEmitIr| for docs
+    2              0.000004 command! -nargs=* -buffer RustEmitIr call rust#Emit("llvm-ir", <q-args>)
+                            
+                            " See |:RustEmitAsm| for docs
+    2              0.000017 command! -nargs=* -buffer RustEmitAsm call rust#Emit("asm", <q-args>)
+                            
+                            " See |:RustPlay| for docs
+    2              0.000008 command! -range=% -buffer RustPlay :call rust#Play(<count>, <line1>, <line2>, <f-args>)
+                            
+                            " See |:RustFmt| for docs
+    2              0.000003 command! -bar -buffer RustFmt call rustfmt#Format()
+                            
+                            " See |:RustFmtRange| for docs
+    2              0.000017 command! -range -buffer RustFmtRange call rustfmt#FormatRange(<line1>, <line2>)
+                            
+                            " See |:RustInfo| for docs
+    2              0.000003 command! -bar -buffer RustInfo call rust#debugging#Info()
+                            
+                            " See |:RustInfoToClipboard| for docs
+    2              0.000005 command! -bar -buffer RustInfoToClipboard call rust#debugging#InfoToClipboard()
+                            
+                            " See |:RustInfoToFile| for docs
+    2              0.000005 command! -bar -nargs=1 -buffer RustInfoToFile call rust#debugging#InfoToFile(<f-args>)
+                            
+                            " See |:RustTest| for docs
+    2              0.000006 command! -buffer -nargs=* -count -bang RustTest call rust#Test(<q-mods>, <count>, <bang>0, <q-args>)
+                            
+    2              0.000006 if !exists("b:rust_last_rustc_args") || !exists("b:rust_last_args")
+    2              0.000004     let b:rust_last_rustc_args = []
+    2              0.000002     let b:rust_last_args = []
+    2              0.000001 endif
+                            
+                            " Cleanup {{{1
+                            
+    2              0.000046 let b:undo_ftplugin = "
+                                        \ compiler make |
+                                        \ setlocal formatoptions< comments< commentstring< include< includeexpr< suffixesadd<
+                                        \|if exists('b:rust_set_style')
+                                            \|setlocal tabstop< shiftwidth< softtabstop< expandtab< textwidth<
+                                            \|endif
+                                            \|if exists('b:rust_original_delimitMate_excluded_regions')
+                                                \|let b:delimitMate_excluded_regions = b:rust_original_delimitMate_excluded_regions
+                                                \|unlet b:rust_original_delimitMate_excluded_regions
+                                                \|else
+                                                    \|unlet! b:delimitMate_excluded_regions
+                                                    \|endif
+                                                    \|if exists('b:rust_set_foldmethod')
+                                                        \|setlocal foldmethod< foldlevel<
+                                                        \|unlet b:rust_set_foldmethod
+                                                        \|endif
+                                                        \|if exists('b:rust_set_conceallevel')
+                                                            \|setlocal conceallevel<
+                                                            \|unlet b:rust_set_conceallevel
+                                                            \|endif
+                                                            \|unlet! b:rust_last_rustc_args b:rust_last_args
+                                                            \|delcommand -buffer RustRun
+                                                            \|delcommand -buffer RustExpand
+                                                            \|delcommand -buffer RustEmitIr
+                                                            \|delcommand -buffer RustEmitAsm
+                                                            \|delcommand -buffer RustPlay
+                                                            \|delcommand -buffer RustFmt
+                                                            \|delcommand -buffer RustFmtRange
+                                                            \|delcommand -buffer RustInfo
+                                                            \|delcommand -buffer RustInfoToClipboard
+                                                            \|delcommand -buffer RustInfoToFile
+                                                            \|delcommand -buffer RustTest
+                                                            \|silent! nunmap <buffer> [[
+                                                            \|silent! nunmap <buffer> ]]
+                                                            \|silent! xunmap <buffer> [[
+                                                            \|silent! xunmap <buffer> ]]
+                                                            \|silent! ounmap <buffer> [[
+                                                            \|silent! ounmap <buffer> ]]
+                                                            \|setlocal matchpairs-=<:>
+                                                            \|unlet b:match_skip
+                                                            \"
+                            
+                            " }}}1
+                            
+                            " Code formatting on save
+    2              0.000002 augroup rust.vim.PreWrite
+    2              0.000010     autocmd!
+    2              0.000009     autocmd BufWritePre *.rs silent! call rustfmt#PreWrite()
+    2              0.000001 augroup END
+                            
+    2              0.000008 setlocal matchpairs+=<:>
+                            " For matchit.vim (rustArrow stops `Fn() -> X` messing things up)
+    2              0.000004 let b:match_skip = 's:comment\|string\|rustCharacter\|rustArrow'
+                            
+    2              0.000004 command! -buffer -nargs=+ Cargo call cargo#cmd(<q-args>)
+    2              0.000004 command! -buffer -nargs=* Cbuild call cargo#build(<q-args>)
+    2              0.000003 command! -buffer -nargs=* Ccheck call cargo#check(<q-args>)
+    2              0.000003 command! -buffer -nargs=* Cclean call cargo#clean(<q-args>)
+    2              0.000003 command! -buffer -nargs=* Cdoc call cargo#doc(<q-args>)
+    2              0.000003 command! -buffer -nargs=+ Cnew call cargo#new(<q-args>)
+    2              0.000003 command! -buffer -nargs=* Cinit call cargo#init(<q-args>)
+    2              0.000012 command! -buffer -nargs=* Crun call cargo#run(<q-args>)
+    2              0.000003 command! -buffer -nargs=* Ctest call cargo#test(<q-args>)
+    2              0.000003 command! -buffer -nargs=* Cbench call cargo#bench(<q-args>)
+    2              0.000003 command! -buffer -nargs=* Cupdate call cargo#update(<q-args>)
+    2              0.000004 command! -buffer -nargs=* Csearch  call cargo#search(<q-args>)
+    2              0.000003 command! -buffer -nargs=* Cpublish call cargo#publish(<q-args>)
+    2              0.000003 command! -buffer -nargs=* Cinstall call cargo#install(<q-args>)
+    2              0.000004 command! -buffer -nargs=* Cruntarget call cargo#runtarget(<q-args>)
+                            
+    2              0.000019 let b:undo_ftplugin .= '
+                                        \|delcommand -buffer Cargo
+                                        \|delcommand -buffer Cbuild
+                                        \|delcommand -buffer Ccheck
+                                        \|delcommand -buffer Cclean
+                                        \|delcommand -buffer Cdoc
+                                        \|delcommand -buffer Cnew
+                                        \|delcommand -buffer Cinit
+                                        \|delcommand -buffer Crun
+                                        \|delcommand -buffer Ctest
+                                        \|delcommand -buffer Cbench
+                                        \|delcommand -buffer Cupdate
+                                        \|delcommand -buffer Csearch
+                                        \|delcommand -buffer Cpublish
+                                        \|delcommand -buffer Cinstall
+                                        \|delcommand -buffer Cruntarget'
+                            
+                            " vint: -ProhibitAbbreviationOption
+    2              0.000008 let &cpo = s:save_cpo
+    2              0.000002 unlet s:save_cpo
+                            " vint: +ProhibitAbbreviationOption
+                            
+                            " vim: set et sw=4 sts=4 ts=8:
+
+SCRIPT  /nix/store/a96v7ma6k0fwzmrrqn1fqb8flyddakj4-neovim-unwrapped-0.12.3/share/nvim/runtime/compiler/cargo.vim
+Sourced 2 times
+Total time:   0.003711
+ Self time:   0.003533
+
+count  total (s)   self (s)
+                            " Vim compiler file
+                            " Compiler:         Cargo Compiler
+                            " Maintainer:       Damien Radtke <damienradtke@gmail.com>
+                            " Latest Revision:  2023-09-11
+                            "                   2024 Apr 05 by The Vim Project (removed :CompilerSet definition)
+                            " For bugs, patches and license go to https://github.com/rust-lang/rust.vim
+                            
+    2              0.000014 if exists('current_compiler')
+                                finish
+    2              0.000001 endif
+    2   0.003534   0.003357 runtime compiler/rustc.vim
+    2              0.000006 let current_compiler = "cargo"
+                            
+                            " vint: -ProhibitAbbreviationOption
+    2              0.000003 let s:save_cpo = &cpo
+    2              0.000006 set cpo&vim
+                            " vint: +ProhibitAbbreviationOption
+                            
+    2              0.000005 if exists('g:cargo_makeprg_params')
+                                execute 'CompilerSet makeprg=cargo\ '.escape(g:cargo_makeprg_params, ' \|"').'\ $*'
+    2              0.000001 else
+    2              0.000009     CompilerSet makeprg=cargo\ $*
+    2              0.000001 endif
+                            
+    2              0.000011 augroup RustCargoQuickFixHooks
+    2              0.000022     autocmd!
+    2              0.000013     autocmd QuickFixCmdPre make call cargo#quickfix#CmdPre()
+    2              0.000005     autocmd QuickFixCmdPost make call cargo#quickfix#CmdPost()
+    2              0.000001 augroup END
+                            
+                            " Ignore general cargo progress messages
+    2              0.000023 CompilerSet errorformat+=
+                                        \%-G%\\s%#Downloading%.%#,
+                                        \%-G%\\s%#Checking%.%#,
+                                        \%-G%\\s%#Compiling%.%#,
+                                        \%-G%\\s%#Finished%.%#,
+                                        \%-G%\\s%#error:\ Could\ not\ compile\ %.%#,
+                                        \%-G%\\s%#To\ learn\ more\\,%.%#,
+                                        \%-G%\\s%#For\ more\ information\ about\ this\ error\\,%.%#,
+                                        \%-Gnote:\ Run\ with\ \`RUST_BACKTRACE=%.%#,
+                                        \%.%#panicked\ at\ \\'%m\\'\\,\ %f:%l:%c
+                            
+                            " vint: -ProhibitAbbreviationOption
+    2              0.000007 let &cpo = s:save_cpo
+    2              0.000002 unlet s:save_cpo
+                            " vint: +ProhibitAbbreviationOption
+                            
+                            " vim: set et sw=4 sts=4 ts=8:
+
+SCRIPT  /nix/store/a96v7ma6k0fwzmrrqn1fqb8flyddakj4-neovim-unwrapped-0.12.3/share/nvim/runtime/compiler/rustc.vim
+Sourced 2 times
+Total time:   0.000168
+ Self time:   0.000168
+
+count  total (s)   self (s)
+                            " Vim compiler file
+                            " Compiler:         Rust Compiler
+                            " Maintainer:       Chris Morgan <me@chrismorgan.info>
+                            " Latest Revision:  2023-09-11
+                            " 2025 Nov 15 by Vim project: remove test for Vim patch 7.4.191
+                            " 2025 Dec 18 by Vim project: detect more errors #18957
+                            " For bugs, patches and license go to https://github.com/rust-lang/rust.vim
+                            
+    2              0.000011 if exists("current_compiler")
+                                finish
+    2              0.000001 endif
+    2              0.000008 let current_compiler = "rustc"
+                            
+                            " vint: -ProhibitAbbreviationOption
+    2              0.000007 let s:save_cpo = &cpo
+    2              0.000012 set cpo&vim
+                            " vint: +ProhibitAbbreviationOption
+                            
+    2              0.000007 if get(g:, 'rustc_makeprg_no_percent', 0)
+                                CompilerSet makeprg=rustc
+    2              0.000001 else
+    2              0.000015     CompilerSet makeprg=rustc\ \%:S
+    2              0.000001 endif
+                            
+                            " New errorformat (after nightly 2016/08/10)
+    2              0.000030 CompilerSet errorformat=
+                                        \%-G,
+                                        \%-Gerror:\ aborting\ %.%#,
+                                        \%-Gerror:\ Could\ not\ compile\ %.%#,
+                                        \%Eerror:\ %m,
+                                        \%Eerror[E%n]:\ %m,
+                                        \%Wwarning:\ %m,
+                                        \%Wwarning[E%n]:\ %m,
+                                        \%Inote:\ %m,
+                                        \%C\ %#-->\ %f:%l:%c,
+                                        \%C\ %#╭▸\ %f:%l:%c,
+                                        \%E\ \ left:%m,%C\ right:%m\ %f:%l:%c,%Z
+                            
+                            " Old errorformat (before nightly 2016/08/10)
+    2              0.000015 CompilerSet errorformat+=
+                                        \%f:%l:%c:\ %t%*[^:]:\ %m,
+                                        \%f:%l:%c:\ %*\\d:%*\\d\ %t%*[^:]:\ %m,
+                                        \%-G%f:%l\ %s,
+                                        \%-G%*[\ ]^,
+                                        \%-G%*[\ ]^%*[~],
+                                        \%-G%*[\ ]...
+                            
+                            " vint: -ProhibitAbbreviationOption
+    2              0.000009 let &cpo = s:save_cpo
+    2              0.000003 unlet s:save_cpo
+                            " vint: +ProhibitAbbreviationOption
+                            
+                            " vim: set et sw=4 sts=4 ts=8:
+
+SCRIPT  /nix/store/a96v7ma6k0fwzmrrqn1fqb8flyddakj4-neovim-unwrapped-0.12.3/share/nvim/runtime/indent/rust.vim
+Sourced 2 times
+Total time:   0.000219
+ Self time:   0.000219
+
+count  total (s)   self (s)
+                            " Vim indent file
+                            " Language:         Rust
+                            " Author:           Chris Morgan <me@chrismorgan.info>
+                            " Last Change:      2023-09-11
+                            " 2024 Jul 04 by Vim Project: use shiftwidth() instead of hard-coding shifted values #15138
+                            " 2025 Dec 29 by Vim Project: clean up
+                            " 2025 Dec 31 by Vim Project: correcly indent after nested array literal #19042
+                            " 2026 Jan 28 by Vim Project: fix indentation when a string literal contains 'if' #19265
+                            
+                            " For bugs, patches and license go to https://github.com/rust-lang/rust.vim
+                            " Note: upstream seems umaintained: https://github.com/rust-lang/rust.vim/issues/502
+                            
+                            " Only load this indent file when no other was loaded.
+    2              0.000012 if exists("b:did_indent")
+                                finish
+    2              0.000001 endif
+    2              0.000005 let b:did_indent = 1
+                            
+    2              0.000009 setlocal cindent
+    2              0.000010 setlocal cinoptions=L0,(s,Ws,J1,j1,m1
+    2              0.000005 setlocal cinkeys=0{,0},!^F,o,O,0[,0],0(,0)
+                            " Don't think cinwords will actually do anything at all... never mind
+    2              0.000006 setlocal cinwords=for,if,else,while,loop,impl,mod,unsafe,trait,struct,enum,fn,extern,macro
+                            
+                            " Some preliminary settings
+    2              0.000011 setlocal nolisp		" Make sure lisp indenting doesn't supersede us
+    2              0.000006 setlocal autoindent	" indentexpr isn't much help otherwise
+                            " Also do indentkeys, otherwise # gets shoved to column 0 :-/
+    2              0.000004 setlocal indentkeys=0{,0},!^F,o,O,0[,0],0(,0)
+                            
+    2              0.000004 setlocal indentexpr=GetRustIndent(v:lnum)
+                            
+    2              0.000005 let b:undo_indent = "setlocal cindent< cinoptions< cinkeys< cinwords< lisp< autoindent< indentkeys< indentexpr<"
+                            
+                            " Only define the function once.
+    2              0.000005 if exists("*GetRustIndent")
+    1              0.000001     finish
+    1              0.000001 endif
+                            
+                            " vint: -ProhibitAbbreviationOption
+    1              0.000002 let s:save_cpo = &cpo
+    1              0.000003 set cpo&vim
+                            " vint: +ProhibitAbbreviationOption
+                            
+                            " Come here when loading the script the first time.
+                            
+    1              0.000003 function! s:get_line_trimmed(lnum)
+                                " Get the line and remove a trailing comment.
+                                " Use syntax highlighting attributes when possible.
+                                " NOTE: this is not accurate; /* */ or a line continuation could trick it
+                                let line = getline(a:lnum)
+                                let line_len = strlen(line)
+                                if has('syntax_items')
+                                    " If the last character in the line is a comment, do a binary search for
+                                    " the start of the comment.  synID() is slow, a linear search would take
+                                    " too long on a long line.
+                                    if synIDattr(synID(a:lnum, line_len, 1), "name") =~? 'Comment\|Todo'
+                                        let min = 1
+                                        let max = line_len
+                                        while min < max
+                                            let col = (min + max) / 2
+                                            if synIDattr(synID(a:lnum, col, 1), "name") =~? 'Comment\|Todo'
+                                                let max = col
+                                            else
+                                                let min = col + 1
+                                            endif
+                                        endwhile
+                                        let line = strpart(line, 0, min - 1)
+                                    endif
+                                    return substitute(line, "\s*$", "", "")
+                                else
+                                    " Sorry, this is not complete, nor fully correct (e.g. string "//").
+                                    " Such is life.
+                                    return substitute(line, "\s*//.*$", "", "")
+                                endif
+                            endfunction
+                            
+    1              0.000002 function! s:is_string_comment(lnum, col)
+                                if has('syntax_items')
+                                    for id in synstack(a:lnum, a:col)
+                                        let synname = synIDattr(id, "name")
+                                        if synname ==# "rustString" || synname =~# "^rustComment"
+                                            return 1
+                                        endif
+                                    endfor
+                                else
+                                    " without syntax, let's not even try
+                                    return 0
+                                endif
+                            endfunction
+                            
+    1              0.000001 function GetRustIndent(lnum)
+                                " Starting assumption: cindent (called at the end) will do it right
+                                " normally. We just want to fix up a few cases.
+                            
+                                let line = getline(a:lnum)
+                            
+                                if has('syntax_items')
+                                    let synname = synIDattr(synID(a:lnum, 1, 1), "name")
+                                    if synname ==# "rustString"
+                                        " If the start of the line is in a string, don't change the indent
+                                        return -1
+                                    elseif synname =~? '\(Comment\|Todo\)'
+                                                \ && line !~# '^\s*/\*'  " not /* opening line
+                                        if synname =~? "CommentML" " multi-line
+                                            if line !~# '^\s*\*' && getline(a:lnum - 1) =~# '^\s*/\*'
+                                                " This is (hopefully) the line after a /*, and it has no
+                                                " leader, so the correct indentation is that of the
+                                                " previous line.
+                                                return GetRustIndent(a:lnum - 1)
+                                            endif
+                                        endif
+                                        " If it's in a comment, let cindent take care of it now. This is
+                                        " for cases like "/*" where the next line should start " * ", not
+                                        " "* " as the code below would otherwise cause for module scope
+                                        " Fun fact: "  /*\n*\n*/" takes two calls to get right!
+                                        return cindent(a:lnum)
+                                    endif
+                                endif
+                            
+                                " cindent gets second and subsequent match patterns/struct members wrong,
+                                " as it treats the comma as indicating an unfinished statement::
+                                "
+                                " match a {
+                                "     b => c,
+                                "         d => e,
+                                "         f => g,
+                                " };
+                            
+                                " Search backwards for the previous non-empty line.
+                                let prevlinenum = prevnonblank(a:lnum - 1)
+                                let prevline = s:get_line_trimmed(prevlinenum)
+                                while prevlinenum > 1 && prevline !~# '[^[:blank:]]'
+                                    let prevlinenum = prevnonblank(prevlinenum - 1)
+                                    let prevline = s:get_line_trimmed(prevlinenum)
+                                endwhile
+                            
+                                " A standalone '{', '}', or 'where'
+                                let l:standalone_open = line =~# '\V\^\s\*{\s\*\$'
+                                let l:standalone_close = line =~# '\V\^\s\*}\s\*\$'
+                                let l:standalone_where = line =~# '\V\^\s\*where\s\*\$'
+                                if l:standalone_open || l:standalone_close || l:standalone_where
+                                    let l:orig_line = line('.')
+                                    let l:orig_col = col('.')
+                                    let l:i = 0
+                                    while 1
+                                        " ToDo: we can search for more items than 'fn' and 'if'.
+                                        let [l:found_line, l:col, l:submatch] =
+                                                    \ searchpos('\<\(fn\|if\)\>', 'bWp')
+                                        if l:found_line ==# 0 || !s:is_string_comment(l:found_line, l:col)
+                                            break
+                                        endif
+                                        let l:i += 1
+                                        " Limit to 10 iterations as a failsafe against endless looping.
+                                        if l:i >= 10
+                                            let l:found_line = 0
+                                            break
+                                        endif
+                                    endwhile
+                                    call cursor(l:orig_line, l:orig_col)
+                                    if l:found_line !=# 0
+                                        " Now we count the number of '{' and '}' in between the match
+                                        " locations and the current line (there is probably a better
+                                        " way to compute this).
+                                        let l:i = l:found_line
+                                        let l:search_line = strpart(getline(l:i), l:col - 1)
+                                        let l:opens = 0
+                                        let l:closes = 0
+                                        while l:i < a:lnum
+                                            let l:search_line2 = substitute(l:search_line, '\V{', '', 'g')
+                                            let l:opens += strlen(l:search_line) - strlen(l:search_line2)
+                                            let l:search_line3 = substitute(l:search_line2, '\V}', '', 'g')
+                                            let l:closes += strlen(l:search_line2) - strlen(l:search_line3)
+                                            let l:i += 1
+                                            let l:search_line = getline(l:i)
+                                        endwhile
+                                        if l:standalone_open || l:standalone_where
+                                            if l:opens ==# l:closes
+                                                return indent(l:found_line)
+                                            endif
+                                        else
+                                            " Expect to find just one more close than an open
+                                            if l:opens ==# l:closes + 1
+                                                return indent(l:found_line)
+                                            endif
+                                        endif
+                                    endif
+                                endif
+                            
+                                " A standalone 'where' adds a shift.
+                                let l:standalone_prevline_where = prevline =~# '\V\^\s\*where\s\*\$'
+                                if l:standalone_prevline_where
+                                    return indent(prevlinenum) + shiftwidth()
+                                endif
+                            
+                                " Handle where clauses nicely: subsequent values should line up nicely.
+                                if prevline[len(prevline) - 1] ==# ","
+                                            \ && prevline =~# '^\s*where\s'
+                                    return indent(prevlinenum) + 6
+                                endif
+                            
+                                let l:last_prevline_character = prevline[len(prevline) - 1]
+                            
+                                " A line that ends with '.<expr>;' is probably an end of a long list
+                                " of method operations.
+                                if prevline =~# '\V\^\s\*.' && l:last_prevline_character ==# ';'
+                                    call cursor(a:lnum - 1, 1)
+                                    let l:scope_start = searchpair('{\|(', '', '}\|)', 'nbW',
+                                                \ 's:is_string_comment(line("."), col("."))')
+                                    if l:scope_start != 0 && l:scope_start < a:lnum
+                                        return indent(l:scope_start) + shiftwidth()
+                                    endif
+                                endif
+                            
+                                " Prevent cindent from becoming confused when pairing square brackets, as
+                                " in
+                                "
+                                " let arr = [[u8; 4]; 2] = [
+                                "     [0; 4],
+                                "     [1, 3, 5, 9],
+                                " ];
+                                "     | ← indentation placed here
+                                "
+                                " for which it calculates too much indentation in the line following the
+                                " close of the array.
+                                if prevline =~# '^\s*\]' && l:last_prevline_character ==# ';'
+                                            \ && line !~# '^\s*}'
+                                    return indent(prevlinenum)
+                                endif
+                            
+                                if l:last_prevline_character ==# ","
+                                            \ && s:get_line_trimmed(a:lnum) !~# '^\s*[\[\]{})]'
+                                            \ && prevline !~# '^\s*fn\s'
+                                            \ && prevline !~# '([^()]\+,$'
+                                            \ && s:get_line_trimmed(a:lnum) !~# '^\s*\S\+\s*=>'
+                                    " Oh ho! The previous line ended in a comma! I bet cindent will try to
+                                    " take this too far... For now, let's normally use the previous line's
+                                    " indent.
+                            
+                                    " One case where this doesn't work out is where *this* line contains
+                                    " square or curly brackets; then we normally *do* want to be indenting
+                                    " further.
+                                    "
+                                    " Another case where we don't want to is one like a function
+                                    " definition with arguments spread over multiple lines:
+                                    "
+                                    " fn foo(baz: Baz,
+                                    "        baz: Baz) // <-- cindent gets this right by itself
+                                    "
+                                    " Another case is similar to the previous, except calling a function
+                                    " instead of defining it, or any conditional expression that leaves
+                                    " an open paren:
+                                    "
+                                    " foo(baz,
+                                    "     baz);
+                                    "
+                                    " if baz && (foo ||
+                                    "            bar) {
+                                    "
+                                    " Another case is when the current line is a new match arm.
+                                    "
+                                    " There are probably other cases where we don't want to do this as
+                                    " well. Add them as needed.
+                                    return indent(prevlinenum)
+                                endif
+                            
+                                " Fall back on cindent, which does it mostly right
+                                return cindent(a:lnum)
+                            endfunction
+                            
+                            " vint: -ProhibitAbbreviationOption
+    1              0.000005 let &cpo = s:save_cpo
+    1              0.000001 unlet s:save_cpo
+                            " vint: +ProhibitAbbreviationOption
+                            
+                            " vim: set et sw=4 sts=4 ts=8:
+
+SCRIPT  /home/joao/.local/share/nvim/lazy/rainbow-delimiters.nvim/plugin/rainbow-delimiters.lua
+Sourced 1 time
+Total time:   0.000132
+ Self time:   0.000132
+
+count  total (s)   self (s)
+                            -- SPDX-License-Identifier: Apache-2.0
+                            
+                            --  Copyright 2023 Alejandro "HiPhish" Sanchez
+                            --  Copyright 2020-2022 Chinmay Dalal
+                            --
+                            --  Licensed under the Apache License, Version 2.0 (the "License");
+                            --  you may not use this file except in compliance with the License.
+                            --  You may obtain a copy of the License at
+                            --
+                            --      http://www.apache.org/licenses/LICENSE-2.0
+                            --
+                            --  Unless required by applicable law or agreed to in writing, software
+                            --  distributed under the License is distributed on an "AS IS" BASIS,
+                            --  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                            --  See the License for the specific language governing permissions and
+                            --  limitations under the License.
+                            
+                            if vim.g.loaded_rainbow_delimiters then
+                            	return
+                            end
+                            
+                            local api = vim.api
+                            local set_hl         = api.nvim_set_hl
+                            local create_augroup = api.nvim_create_augroup
+                            local create_autocmd = api.nvim_create_autocmd
+                            local get_lang   = vim.treesitter.language.get_lang
+                            
+                            
+                            --- [ DEFINE HIGHLIGHT GROUPS ]------------------------------------------------
+                            local function define_hlgroups()
+                            	set_hl(0, 'RainbowDelimiterRed'   , {default = true, fg = '#cc241d', ctermfg= 'Red'    })
+                            	set_hl(0, 'RainbowDelimiterOrange', {default = true, fg = '#d65d0e', ctermfg= 'White'  })
+                            	set_hl(0, 'RainbowDelimiterYellow', {default = true, fg = '#d79921', ctermfg= 'Yellow' })
+                            	set_hl(0, 'RainbowDelimiterGreen' , {default = true, fg = '#689d6a', ctermfg= 'Green'  })
+                            	set_hl(0, 'RainbowDelimiterCyan'  , {default = true, fg = '#a89984', ctermfg= 'Cyan'   })
+                            	set_hl(0, 'RainbowDelimiterBlue'  , {default = true, fg = '#458588', ctermfg= 'Blue'   })
+                            	set_hl(0, 'RainbowDelimiterViolet', {default = true, fg = '#b16286', ctermfg= 'Magenta'})
+                            end
+                            
+                            define_hlgroups()
+                            
+                            
+                            --- [ SET UP AUTOCOMMANDS ]----------------------------------------------------
+                            local hl_augroup = create_augroup('TSRainbowHighlight', {})
+                            local rb_augroup = create_augroup('TSRainbowDelimits', {})
+                            
+                            create_autocmd('ColorScheme', {
+                            	desc = 'Re-apply highlight group definitions when the colour scheme changes',
+                            	group = hl_augroup,
+                            	callback = define_hlgroups
+                            })
+                            
+                            create_autocmd('FileType', {
+                            	desc = 'Attach to a new buffer',
+                            	group = rb_augroup,
+                            	callback = function(args)
+                            		local config = require 'rainbow-delimiters.config'
+                            		local lib    = require 'rainbow-delimiters.lib'
+                            
+                            		local lang = get_lang(args.match)
+                            		local bufnr = args.buf
+                            		if not config.enabled_for(lang) then return end
+                            		if not config.enabled_when(bufnr) then return end
+                            
+                            		lib.attach(bufnr)
+                            	end,
+                            })
+                            
+                            create_autocmd('BufUnload', {
+                            	desc = 'Detach from the current buffer',
+                            	group = rb_augroup,
+                            	callback = function(args)
+                            		local lib = require 'rainbow-delimiters.lib'
+                            		lib.detach(args.buf)
+                            	end
+                            })
+                            
+                            vim.g.loaded_rainbow_delimiters = true
+                            
+                            -- vim:tw=79:ts=4:sw=4:noet:
+
+SCRIPT  /nix/store/a96v7ma6k0fwzmrrqn1fqb8flyddakj4-neovim-unwrapped-0.12.3/share/nvim/runtime/compiler/make.vim
+Sourced 1 time
+Total time:   0.000045
+ Self time:   0.000045
+
+count  total (s)   self (s)
+                            " Vim compiler plugin
+                            "
+                            " Maintainer:	The Vim Project <https://github.com/vim/vim>
+                            " Last Change:	2024 Sep 10
+                            " Original Author: Konfekt
+                            "
+                            " This compiler plugin is used to reset previously set compiler options.
+                            
+    1              0.000009 if exists("g:current_compiler") | unlet g:current_compiler | endif
+    1              0.000003 if exists("b:current_compiler") | unlet b:current_compiler | endif
+                            
+    1              0.000011 CompilerSet makeprg&
+    1              0.000010 CompilerSet errorformat&
+
+SCRIPT  /nix/store/a96v7ma6k0fwzmrrqn1fqb8flyddakj4-neovim-unwrapped-0.12.3/share/nvim/runtime/syntax/rust.vim
+Sourced 2 times
+Total time: 2369.526407
+ Self time: 2369.522895
+
+count  total (s)   self (s)
+                            " Vim syntax file
+                            " Language:     Rust
+                            " Maintainer:   Patrick Walton <pcwalton@mozilla.com>
+                            " Maintainer:   Ben Blum <bblum@cs.cmu.edu>
+                            " Maintainer:   Chris Morgan <me@chrismorgan.info>
+                            " Last Change:  2023-09-11
+                            " For bugs, patches and license go to https://github.com/rust-lang/rust.vim
+                            
+    2              0.000010 if version < 600
+                                syntax clear
+    2              0.000009 elseif exists("b:current_syntax")
+                                finish
+    2              0.000001 endif
+                            
+                            " Syntax definitions {{{1
+                            " Basic keywords {{{2
+    2              0.000008 syn keyword   rustConditional match if else
+    2              0.000008 syn keyword   rustRepeat loop while
+                            " `:syn match` must be used to prioritize highlighting `for` keyword.
+    2              0.000010 syn match     rustRepeat /\<for\>/
+                            " Highlight `for` keyword in `impl ... for ... {}` statement. This line must
+                            " be put after previous `syn match` line to overwrite it.
+    2              0.000009 syn match     rustKeyword /\%(\<impl\>.\+\)\@<=\<for\>/
+    2              0.000002 syn keyword   rustRepeat in
+    2              0.000006 syn keyword   rustTypedef type nextgroup=rustIdentifier skipwhite skipempty
+    2              0.000004 syn keyword   rustStructure struct enum nextgroup=rustIdentifier skipwhite skipempty
+    2              0.000004 syn keyword   rustUnion union nextgroup=rustIdentifier skipwhite skipempty contained
+    2              0.000021 syn match rustUnionContextual /\<union\_s\+\%([^[:cntrl:][:space:][:punct:][:digit:]]\|_\)\%([^[:cntrl:][:punct:][:space:]]\|_\)*/ transparent contains=rustUnion
+    2              0.000003 syn keyword   rustOperator    as
+    2              0.000004 syn keyword   rustExistential existential nextgroup=rustTypedef skipwhite skipempty contained
+    2              0.000009 syn match rustExistentialContextual /\<existential\_s\+type/ transparent contains=rustExistential,rustTypedef
+                            
+    2              0.000005 syn match     rustAssert      "\<assert\(\w\)*!" contained
+    2              0.000005 syn match     rustPanic       "\<panic\(\w\)*!" contained
+    2              0.000007 syn match     rustAsync       "\<async\%(\s\|\n\)\@="
+    2              0.000002 syn keyword   rustKeyword     break
+    2              0.000002 syn keyword   rustKeyword     box
+    2              0.000002 syn keyword   rustKeyword     continue
+    2              0.000002 syn keyword   rustKeyword     crate
+    2              0.000005 syn keyword   rustKeyword     extern nextgroup=rustExternCrate,rustObsoleteExternMod skipwhite skipempty
+    2              0.000003 syn keyword   rustKeyword     fn nextgroup=rustFuncName skipwhite skipempty
+    2              0.000002 syn keyword   rustKeyword     impl let
+    2              0.000001 syn keyword   rustKeyword     macro
+    2              0.000003 syn keyword   rustKeyword     pub nextgroup=rustPubScope skipwhite skipempty
+    2              0.000001 syn keyword   rustKeyword     return
+    2              0.000001 syn keyword   rustKeyword     yield
+    2              0.000002 syn keyword   rustSuper       super
+    2              0.000002 syn keyword   rustKeyword     where
+    2              0.000002 syn keyword   rustUnsafeKeyword unsafe
+    2              0.000004 syn keyword   rustKeyword     use nextgroup=rustModPath skipwhite skipempty
+                            " FIXME: Scoped impl's name is also fallen in this category
+    2              0.000003 syn keyword   rustKeyword     mod trait nextgroup=rustIdentifier skipwhite skipempty
+    2              0.000004 syn keyword   rustStorage     move mut ref static const
+    2              0.000012 syn match     rustDefault     /\<default\ze\_s\+\(impl\|fn\|type\|const\)\>/
+    2              0.000002 syn keyword   rustAwait       await
+    2              0.000005 syn match     rustKeyword     /\<try\>!\@!/ display
+                            
+    2              0.000002 syn keyword rustPubScopeCrate crate contained
+    2              0.000005 syn match rustPubScopeDelim /[()]/ contained
+    2              0.000009 syn match rustPubScope /([^()]*)/ contained contains=rustPubScopeDelim,rustPubScopeCrate,rustSuper,rustModPath,rustModPathSep,rustSelf transparent
+                            
+    2              0.000005 syn keyword   rustExternCrate crate contained nextgroup=rustIdentifier,rustExternCrateString skipwhite skipempty
+                            " This is to get the `bar` part of `extern crate "foo" as bar;` highlighting.
+    2              0.000008 syn match   rustExternCrateString /".*"\_s*as/ contained nextgroup=rustIdentifier skipwhite transparent skipempty contains=rustString,rustOperator
+    2              0.000003 syn keyword   rustObsoleteExternMod mod contained nextgroup=rustIdentifier skipwhite skipempty
+                            
+    2              0.000013 syn match     rustIdentifier  contains=rustIdentifierPrime "\%([^[:cntrl:][:space:][:punct:][:digit:]]\|_\)\%([^[:cntrl:][:punct:][:space:]]\|_\)*" display contained
+    2              0.000008 syn match     rustFuncName    "\%(r#\)\=\%([^[:cntrl:][:space:][:punct:][:digit:]]\|_\)\%([^[:cntrl:][:punct:][:space:]]\|_\)*" display contained
+                            
+    2              0.000023 syn region rustMacroRepeat matchgroup=rustMacroRepeatDelimiters start="$(" end="),\=[*+]" contains=TOP
+    2              0.000005 syn match rustMacroVariable "$\w\+"
+    2              0.000006 syn match rustRawIdent "\<r#\h\w*" contains=NONE
+                            
+                            " Reserved (but not yet used) keywords {{{2
+    2              0.000006 syn keyword   rustReservedKeyword become do priv typeof unsized abstract virtual final override
+                            
+                            " Built-in types {{{2
+    2              0.000027 syn keyword   rustType        isize usize char bool u8 u16 u32 u64 u128 f32
+    2              0.000004 syn keyword   rustType        f64 i8 i16 i32 i64 i128 str Self
+                            
+                            " Things from the libstd v1 prelude (src/libstd/prelude/v1.rs) {{{2
+                            " This section is just straight transformation of the contents of the prelude,
+                            " to make it easy to update.
+                            
+                            " Reexported core operators {{{3
+    2              0.000004 syn keyword   rustTrait       Copy Send Sized Sync
+    2              0.000003 syn keyword   rustTrait       Drop Fn FnMut FnOnce
+                            
+                            " Reexported functions {{{3
+                            " There’s no point in highlighting these; when one writes drop( or drop::< it
+                            " gets the same highlighting anyway, and if someone writes `let drop = …;` we
+                            " don’t really want *that* drop to be highlighted.
+                            "syn keyword rustFunction drop
+                            
+                            " Reexported types and traits {{{3
+    2              0.000002 syn keyword rustTrait Box
+    2              0.000002 syn keyword rustTrait ToOwned
+    2              0.000016 syn keyword rustTrait Clone
+    2              0.000003 syn keyword rustTrait PartialEq PartialOrd Eq Ord
+    2              0.000003 syn keyword rustTrait AsRef AsMut Into From
+    2              0.000002 syn keyword rustTrait Default
+    2              0.000003 syn keyword rustTrait Iterator Extend IntoIterator
+    2              0.000003 syn keyword rustTrait DoubleEndedIterator ExactSizeIterator
+    2              0.000002 syn keyword rustEnum Option
+    2              0.000003 syn keyword rustEnumVariant Some None
+    2              0.000002 syn keyword rustEnum Result
+    2              0.000002 syn keyword rustEnumVariant Ok Err
+    2              0.000002 syn keyword rustTrait SliceConcatExt
+    2              0.000002 syn keyword rustTrait String ToString
+    2              0.000002 syn keyword rustTrait Vec
+                            
+                            " Other syntax {{{2
+    2              0.000002 syn keyword   rustSelf        self
+    2              0.000003 syn keyword   rustBoolean     true false
+                            
+                            " If foo::bar changes to foo.bar, change this ("::" to "\.").
+                            " If foo::bar changes to Foo::bar, change this (first "\w" to "\u").
+    2              0.000007 syn match     rustModPath     "\w\(\w\)*::[^<]"he=e-3,me=e-3
+    2              0.000004 syn match     rustModPathSep  "::"
+                            
+    2              0.000008 syn match     rustFuncCall    "\w\(\w\)*("he=e-1,me=e-1
+    2              0.000004 syn match     rustFuncCall    "\w\(\w\)*::<"he=e-3,me=e-3 " foo::<T>();
+                            
+                            " This is merely a convention; note also the use of [A-Z], restricting it to
+                            " latin identifiers rather than the full Unicode uppercase. I have not used
+                            " [:upper:] as it depends upon 'noignorecase'
+                            "syn match     rustCapsIdent    display "[A-Z]\w\(\w\)*"
+                            
+    2              0.000013 syn match     rustOperator     display "\%(+\|-\|/\|*\|=\|\^\|&\||\|!\|>\|<\|%\)=\?"
+                            " This one isn't *quite* right, as we could have binary-& with a reference
+    2              0.000008 syn match     rustSigil        display /&\s\+[&~@*][^)= \t\r\n]/he=e-1,me=e-1
+    2              0.000005 syn match     rustSigil        display /[&~@*][^)= \t\r\n]/he=e-1,me=e-1
+                            " This isn't actually correct; a closure with no arguments can be `|| { }`.
+                            " Last, because the & in && isn't a sigil
+    2              0.000005 syn match     rustOperator     display "&&\|||"
+                            " This is rustArrowCharacter rather than rustArrow for the sake of matchparen,
+                            " so it skips the ->; see http://stackoverflow.com/a/30309949 for details.
+    2              0.000004 syn match     rustArrowCharacter display "->"
+    2              0.000006 syn match     rustQuestionMark display "?\([a-zA-Z]\+\)\@!"
+                            
+    2              0.000006 syn match     rustMacro       '\w\(\w\)*!' contains=rustAssert,rustPanic
+    2              0.000005 syn match     rustMacro       '#\w\(\w\)*' contains=rustAssert,rustPanic
+                            
+    2              0.000004 syn match     rustEscapeError   display contained /\\./
+    2              0.000008 syn match     rustEscape        display contained /\\\([nrt0\\'"]\|x\x\{2}\)/
+    2              0.000008 syn match     rustEscapeUnicode display contained /\\u{\%(\x_*\)\{1,6}}/
+    2              0.000004 syn match     rustStringContinuation display contained /\\\n\s*/
+    2              0.000028 syn region    rustString      matchgroup=rustStringDelimiter start=+b"+ skip=+\\\\\|\\"+ end=+"+ contains=rustEscape,rustEscapeError,rustStringContinuation
+    2              0.000014 syn region    rustString      matchgroup=rustStringDelimiter start=+"+ skip=+\\\\\|\\"+ end=+"+ contains=rustEscape,rustEscapeUnicode,rustEscapeError,rustStringContinuation,@Spell
+    2              0.000010 syn region    rustString      matchgroup=rustStringDelimiter start='b\?r\z(#*\)"' end='"\z1' contains=@Spell
+                            
+                            " Match attributes with either arbitrary syntax or special highlighting for
+                            " derives. We still highlight strings and comments inside of the attribute.
+    2              0.000020 syn region    rustAttribute   start="#!\?\[" end="\]" contains=@rustAttributeContents,rustAttributeParenthesizedParens,rustAttributeParenthesizedCurly,rustAttributeParenthesizedBrackets,rustDerive
+    2              0.000021 syn region    rustAttributeParenthesizedParens matchgroup=rustAttribute start="\w\%(\w\)*("rs=e end=")"re=s transparent contained contains=rustAttributeBalancedParens,@rustAttributeContents
+    2              0.000009 syn region    rustAttributeParenthesizedCurly matchgroup=rustAttribute start="\w\%(\w\)*{"rs=e end="}"re=s transparent contained contains=rustAttributeBalancedCurly,@rustAttributeContents
+    2              0.000008 syn region    rustAttributeParenthesizedBrackets matchgroup=rustAttribute start="\w\%(\w\)*\["rs=e end="\]"re=s transparent contained contains=rustAttributeBalancedBrackets,@rustAttributeContents
+    2              0.000007 syn region    rustAttributeBalancedParens matchgroup=rustAttribute start="("rs=e end=")"re=s transparent contained contains=rustAttributeBalancedParens,@rustAttributeContents
+    2              0.000006 syn region    rustAttributeBalancedCurly matchgroup=rustAttribute start="{"rs=e end="}"re=s transparent contained contains=rustAttributeBalancedCurly,@rustAttributeContents
+    2              0.000006 syn region    rustAttributeBalancedBrackets matchgroup=rustAttribute start="\["rs=e end="\]"re=s transparent contained contains=rustAttributeBalancedBrackets,@rustAttributeContents
+    2              0.000008 syn cluster   rustAttributeContents contains=rustString,rustCommentLine,rustCommentBlock,rustCommentLineDocError,rustCommentBlockDocError
+    2              0.000007 syn region    rustDerive      start="derive(" end=")" contained contains=rustDeriveTrait
+                            " This list comes from src/libsyntax/ext/deriving/mod.rs
+                            " Some are deprecated (Encodable, Decodable) or to be removed after a new snapshot (Show).
+    2              0.000009 syn keyword   rustDeriveTrait contained Clone Hash RustcEncodable RustcDecodable Encodable Decodable PartialEq Eq PartialOrd Ord Rand Show Debug Default FromPrimitive Send Sync Copy
+                            
+                            " dyn keyword: It's only a keyword when used inside a type expression, so
+                            " we make effort here to highlight it only when Rust identifiers follow it
+                            " (not minding the case of pre-2018 Rust where a path starting with :: can
+                            " follow).
+                            "
+                            " This is so that uses of dyn variable names such as in 'let &dyn = &2'
+                            " and 'let dyn = 2' will not get highlighted as a keyword.
+    2              0.000012 syn match     rustKeyword "\<dyn\ze\_s\+\%([^[:cntrl:][:space:][:punct:][:digit:]]\|_\)" contains=rustDynKeyword
+    2              0.000002 syn keyword   rustDynKeyword  dyn contained
+                            
+                            " Number literals
+    2              0.000011 syn match     rustDecNumber   display "\<[0-9][0-9_]*\%([iu]\%(size\|8\|16\|32\|64\|128\)\)\="
+    2              0.000032 syn match     rustHexNumber   display "\<0x[a-fA-F0-9_]\+\%([iu]\%(size\|8\|16\|32\|64\|128\)\)\="
+    2              0.000012 syn match     rustOctNumber   display "\<0o[0-7_]\+\%([iu]\%(size\|8\|16\|32\|64\|128\)\)\="
+    2              0.000008 syn match     rustBinNumber   display "\<0b[01_]\+\%([iu]\%(size\|8\|16\|32\|64\|128\)\)\="
+                            
+                            " Special case for numbers of the form "1." which are float literals, unless followed by
+                            " an identifier, which makes them integer literals with a method call or field access,
+                            " or by another ".", which makes them integer literals followed by the ".." token.
+                            " (This must go first so the others take precedence.)
+    2              0.000017 syn match     rustFloat       display "\<[0-9][0-9_]*\.\%([^[:cntrl:][:space:][:punct:][:digit:]]\|_\|\.\)\@!"
+                            " To mark a number as a normal float, it must have at least one of the three things integral values don't have:
+                            " a decimal point and more numbers; an exponent; and a type suffix.
+    2              0.000011 syn match     rustFloat       display "\<[0-9][0-9_]*\%(\.[0-9][0-9_]*\)\%([eE][+-]\=[0-9_]\+\)\=\(f32\|f64\)\="
+    2              0.000009 syn match     rustFloat       display "\<[0-9][0-9_]*\%(\.[0-9][0-9_]*\)\=\%([eE][+-]\=[0-9_]\+\)\(f32\|f64\)\="
+    2              0.000011 syn match     rustFloat       display "\<[0-9][0-9_]*\%(\.[0-9][0-9_]*\)\=\%([eE][+-]\=[0-9_]\+\)\=\(f32\|f64\)"
+                            
+                            " For the benefit of delimitMate
+    2              0.000029 syn region rustLifetimeCandidate display start=/&'\%(\([^'\\]\|\\\(['nrt0\\\"]\|x\x\{2}\|u{\%(\x_*\)\{1,6}}\)\)'\)\@!/ end=/[[:cntrl:][:space:][:punct:]]\@=\|$/ contains=rustSigil,rustLifetime
+    2              0.000017 syn region rustGenericRegion display start=/<\%('\|[^[:cntrl:][:space:][:punct:]]\)\@=')\S\@=/ end=/>/ contains=rustGenericLifetimeCandidate
+    2              0.000016 syn region rustGenericLifetimeCandidate display start=/\%(<\|,\s*\)\@<='/ end=/[[:cntrl:][:space:][:punct:]]\@=\|$/ contains=rustSigil,rustLifetime
+                            
+                            "rustLifetime must appear before rustCharacter, or chars will get the lifetime highlighting
+    2              0.000011 syn match     rustLifetime    display "\'\%([^[:cntrl:][:space:][:punct:][:digit:]]\|_\)\%([^[:cntrl:][:punct:][:space:]]\|_\)*"
+    2              0.000010 syn match     rustLabel       display "\'\%([^[:cntrl:][:space:][:punct:][:digit:]]\|_\)\%([^[:cntrl:][:punct:][:space:]]\|_\)*:"
+    2              0.000017 syn match     rustLabel       display "\%(\<\%(break\|continue\)\s*\)\@<=\'\%([^[:cntrl:][:space:][:punct:][:digit:]]\|_\)\%([^[:cntrl:][:punct:][:space:]]\|_\)*"
+    2              0.000007 syn match   rustCharacterInvalid   display contained /b\?'\zs[\n\r\t']\ze'/
+                            " The groups negated here add up to 0-255 but nothing else (they do not seem to go beyond ASCII).
+    2              0.000008 syn match   rustCharacterInvalidUnicode   display contained /b'\zs[^[:cntrl:][:graph:][:alnum:][:space:]]\ze'/
+    2              0.000011 syn match   rustCharacter   /b'\([^\\]\|\\\(.\|x\x\{2}\)\)'/ contains=rustEscape,rustEscapeError,rustCharacterInvalid,rustCharacterInvalidUnicode
+    2              0.000026 syn match   rustCharacter   /'\([^\\]\|\\\(.\|x\x\{2}\|u{\%(\x_*\)\{1,6}}\)\)'/ contains=rustEscape,rustEscapeUnicode,rustEscapeError,rustCharacterInvalid
+                            
+    2              0.000007 syn match rustShebang /\%^#![^[].*/
+    2              0.000010 syn region rustCommentLine                                                  start="//"                      end="$"   contains=rustTodo,@Spell
+    2              0.000009 syn region rustCommentLineDoc                                               start="//\%(//\@!\|!\)"         end="$"   contains=rustTodo,@Spell
+    2              0.000007 syn region rustCommentLineDocError                                          start="//\%(//\@!\|!\)"         end="$"   contains=rustTodo,@Spell contained
+    2              0.000013 syn region rustCommentBlock             matchgroup=rustCommentBlock         start="/\*\%(!\|\*[*/]\@!\)\@!" end="\*/" contains=rustTodo,rustCommentBlockNest,@Spell
+    2              0.000013 syn region rustCommentBlockDoc          matchgroup=rustCommentBlockDoc      start="/\*\%(!\|\*[*/]\@!\)"    end="\*/" contains=rustTodo,rustCommentBlockDocNest,rustCommentBlockDocRustCode,@Spell
+    2              0.000009 syn region rustCommentBlockDocError     matchgroup=rustCommentBlockDocError start="/\*\%(!\|\*[*/]\@!\)"    end="\*/" contains=rustTodo,rustCommentBlockDocNestError,@Spell contained
+    2              0.000007 syn region rustCommentBlockNest         matchgroup=rustCommentBlock         start="/\*"                     end="\*/" contains=rustTodo,rustCommentBlockNest,@Spell contained transparent
+    2              0.000007 syn region rustCommentBlockDocNest      matchgroup=rustCommentBlockDoc      start="/\*"                     end="\*/" contains=rustTodo,rustCommentBlockDocNest,@Spell contained transparent
+    2              0.000006 syn region rustCommentBlockDocNestError matchgroup=rustCommentBlockDocError start="/\*"                     end="\*/" contains=rustTodo,rustCommentBlockDocNestError,@Spell contained transparent
+                            
+                            " FIXME: this is a really ugly and not fully correct implementation. Most
+                            " importantly, a case like ``/* */*`` should have the final ``*`` not being in
+                            " a comment, but in practice at present it leaves comments open two levels
+                            " deep. But as long as you stay away from that particular case, I *believe*
+                            " the highlighting is correct. Due to the way Vim's syntax engine works
+                            " (greedy for start matches, unlike Rust's tokeniser which is searching for
+                            " the earliest-starting match, start or end), I believe this cannot be solved.
+                            " Oh you who would fix it, don't bother with things like duplicating the Block
+                            " rules and putting ``\*\@<!`` at the start of them; it makes it worse, as
+                            " then you must deal with cases like ``/*/**/*/``. And don't try making it
+                            " worse with ``\%(/\@<!\*\)\@<!``, either...
+                            
+    2              0.000004 syn keyword rustTodo contained TODO FIXME XXX NB NOTE SAFETY
+                            
+                            " asm! macro {{{2
+    2              0.002092 syn region rustAsmMacro matchgroup=rustMacro start="\<asm!\s*(" end=")" contains=rustAsmDirSpec,rustAsmSym,rustAsmConst,rustAsmOptionsGroup,rustComment.*,rustString.*
+                            
+                            " Clobbered registers
+    2              0.000008 syn keyword rustAsmDirSpec in out lateout inout inlateout contained nextgroup=rustAsmReg skipwhite skipempty
+    2              0.000008 syn region  rustAsmReg start="(" end=")" contained contains=rustString
+                            
+                            " Symbol operands
+    2              0.000004 syn keyword rustAsmSym sym contained nextgroup=rustAsmSymPath skipwhite skipempty
+    2              0.000988 syn region  rustAsmSymPath start="\S" end=",\|)"me=s-1 contained contains=rustComment.*,rustIdentifier
+                            
+                            " Const
+    2              0.000015 syn region  rustAsmConstBalancedParens start="("ms=s+1 end=")" contained contains=@rustAsmConstExpr
+    2              0.002296 syn cluster rustAsmConstExpr contains=rustComment.*,rust.*Number,rustString,rustAsmConstBalancedParens
+    2              0.000033 syn region  rustAsmConst start="const" end=",\|)"me=s-1 contained contains=rustStorage,@rustAsmConstExpr
+                            
+                            " Options
+    2              0.000009 syn region  rustAsmOptionsGroup start="options\s*(" end=")" contained contains=rustAsmOptions,rustAsmOptionsKey
+    2              0.000003 syn keyword rustAsmOptionsKey options contained
+    2              0.000004 syn keyword rustAsmOptions pure nomem readonly preserves_flags noreturn nostack att_syntax contained
+                            
+                            " Folding rules {{{2
+                            " Trivial folding rules to begin with.
+                            " FIXME: use the AST to make really good folding
+    2              0.000007 syn region rustFoldBraces start="{" end="}" transparent fold
+                            
+    2              0.000009 if !exists("b:current_syntax_embed")
+    1              0.000004     let b:current_syntax_embed = 1
+    1              0.000552     syntax include @RustCodeInComment <sfile>:p:h/rust.vim
+    1              0.000005     unlet b:current_syntax_embed
+                            
+                                " Currently regions marked as ```<some-other-syntax> will not get
+                                " highlighted at all. In the future, we can do as vim-markdown does and
+                                " highlight with the other syntax. But for now, let's make sure we find
+                                " the closing block marker, because the rules below won't catch it.
+    1              0.000012     syn region rustCommentLinesDocNonRustCode matchgroup=rustCommentDocCodeFence start='^\z(\s*//[!/]\s*```\).\+$' end='^\z1$' keepend contains=rustCommentLineDoc
+                            
+                                " We borrow the rules from rust’s src/librustdoc/html/markdown.rs, so that
+                                " we only highlight as Rust what it would perceive as Rust (almost; it’s
+                                " possible to trick it if you try hard, and indented code blocks aren’t
+                                " supported because Markdown is a menace to parse and only mad dogs and
+                                " Englishmen would try to handle that case correctly in this syntax file).
+    1              0.000023     syn region rustCommentLinesDocRustCode matchgroup=rustCommentDocCodeFence start='^\z(\s*//[!/]\s*```\)[^A-Za-z0-9_-]*\%(\%(should_panic\|no_run\|ignore\|allow_fail\|rust\|test_harness\|compile_fail\|E\d\{4}\|edition201[58]\)\%([^A-Za-z0-9_-]\+\|$\)\)*$' end='^\z1$' keepend contains=@RustCodeInComment,rustCommentLineDocLeader
+    1              0.000013     syn region rustCommentBlockDocRustCode matchgroup=rustCommentDocCodeFence start='^\z(\%(\s*\*\)\?\s*```\)[^A-Za-z0-9_-]*\%(\%(should_panic\|no_run\|ignore\|allow_fail\|rust\|test_harness\|compile_fail\|E\d\{4}\|edition201[58]\)\%([^A-Za-z0-9_-]\+\|$\)\)*$' end='^\z1$' keepend contains=@RustCodeInComment,rustCommentBlockDocStar
+                                " Strictly, this may or may not be correct; this code, for example, would
+                                " mishighlight:
+                                "
+                                "     /**
+                                "     ```rust
+                                "     println!("{}", 1
+                                "     * 1);
+                                "     ```
+                                "     */
+                                "
+                                " … but I don’t care. Balance of probability, and all that.
+    1              0.000003     syn match rustCommentBlockDocStar /^\s*\*\s\?/ contained
+    1              0.000003     syn match rustCommentLineDocLeader "^\s*//\%(//\@!\|!\)" contained
+    2              0.000002 endif
+                            
+                            " Default highlighting {{{1
+    2              0.000005 hi def link rustDecNumber       rustNumber
+    2              0.000002 hi def link rustHexNumber       rustNumber
+    2              0.000002 hi def link rustOctNumber       rustNumber
+    2              0.000002 hi def link rustBinNumber       rustNumber
+    2              0.000002 hi def link rustIdentifierPrime rustIdentifier
+    2              0.000002 hi def link rustTrait           rustType
+    2              0.000002 hi def link rustDeriveTrait     rustTrait
+                            
+    2              0.000002 hi def link rustMacroRepeatDelimiters   Macro
+    2              0.000002 hi def link rustMacroVariable Define
+    2              0.000002 hi def link rustSigil         StorageClass
+    2              0.000002 hi def link rustEscape        Special
+    2              0.000002 hi def link rustEscapeUnicode rustEscape
+    2              0.000002 hi def link rustEscapeError   Error
+    2              0.000002 hi def link rustStringContinuation Special
+    2              0.000002 hi def link rustString        String
+    2              0.000002 hi def link rustStringDelimiter String
+    2              0.000002 hi def link rustCharacterInvalid Error
+    2              0.000002 hi def link rustCharacterInvalidUnicode rustCharacterInvalid
+    2              0.000002 hi def link rustCharacter     Character
+    2              0.000002 hi def link rustNumber        Number
+    2              0.000002 hi def link rustBoolean       Boolean
+    2              0.000002 hi def link rustEnum          rustType
+    2              0.000002 hi def link rustEnumVariant   rustConstant
+    2              0.000002 hi def link rustConstant      Constant
+    2              0.000001 hi def link rustSelf          Constant
+    2              0.000002 hi def link rustFloat         Float
+    2              0.000002 hi def link rustArrowCharacter rustOperator
+    2              0.000002 hi def link rustOperator      Operator
+    2              0.000002 hi def link rustKeyword       Keyword
+    2              0.000002 hi def link rustDynKeyword    rustKeyword
+    2              0.000002 hi def link rustTypedef       Keyword " More precise is Typedef, but it doesn't feel right for Rust
+    2              0.000002 hi def link rustStructure     Keyword " More precise is Structure
+    2              0.000002 hi def link rustUnion         rustStructure
+    2              0.000002 hi def link rustExistential   rustKeyword
+    2              0.000002 hi def link rustPubScopeDelim Delimiter
+    2              0.000002 hi def link rustPubScopeCrate rustKeyword
+    2              0.000002 hi def link rustSuper         rustKeyword
+    2              0.000002 hi def link rustUnsafeKeyword Exception
+    2              0.000002 hi def link rustReservedKeyword Error
+    2              0.000002 hi def link rustRepeat        Conditional
+    2              0.000002 hi def link rustConditional   Conditional
+    2              0.000002 hi def link rustIdentifier    Identifier
+    2              0.000002 hi def link rustCapsIdent     rustIdentifier
+    2              0.000002 hi def link rustModPath       Include
+    2              0.000002 hi def link rustModPathSep    Delimiter
+    2              0.000002 hi def link rustFunction      Function
+    2              0.000002 hi def link rustFuncName      Function
+    2              0.000002 hi def link rustFuncCall      Function
+    2              0.000001 hi def link rustShebang       Comment
+    2              0.000002 hi def link rustCommentLine   Comment
+    2              0.000002 hi def link rustCommentLineDoc SpecialComment
+    2              0.000002 hi def link rustCommentLineDocLeader rustCommentLineDoc
+    2              0.000002 hi def link rustCommentLineDocError Error
+    2              0.000002 hi def link rustCommentBlock  rustCommentLine
+    2              0.000002 hi def link rustCommentBlockDoc rustCommentLineDoc
+    2              0.000002 hi def link rustCommentBlockDocStar rustCommentBlockDoc
+    2              0.000002 hi def link rustCommentBlockDocError Error
+    2              0.000002 hi def link rustCommentDocCodeFence rustCommentLineDoc
+    2              0.000002 hi def link rustAssert        PreCondit
+    2              0.000002 hi def link rustPanic         PreCondit
+    2              0.000001 hi def link rustMacro         Macro
+    2              0.000002 hi def link rustType          Type
+    2              0.000001 hi def link rustTodo          Todo
+    2              0.000002 hi def link rustAttribute     PreProc
+    2              0.000002 hi def link rustDerive        PreProc
+    2              0.000002 hi def link rustDefault       StorageClass
+    2              0.000002 hi def link rustStorage       StorageClass
+    2              0.000002 hi def link rustObsoleteStorage Error
+    2              0.000002 hi def link rustLifetime      Special
+    2              0.000002 hi def link rustLabel         Label
+    2              0.000002 hi def link rustExternCrate   rustKeyword
+    2              0.000002 hi def link rustObsoleteExternMod Error
+    2              0.000002 hi def link rustQuestionMark  Special
+    2              0.000001 hi def link rustAsync         rustKeyword
+    2              0.000002 hi def link rustAwait         rustKeyword
+    2              0.000002 hi def link rustAsmDirSpec    rustKeyword
+    2              0.000002 hi def link rustAsmSym        rustKeyword
+    2              0.000002 hi def link rustAsmOptions    rustKeyword
+    2              0.000002 hi def link rustAsmOptionsKey rustAttribute
+                            
+                            " Other Suggestions:
+                            " hi rustAttribute ctermfg=cyan
+                            " hi rustDerive ctermfg=cyan
+                            " hi rustAssert ctermfg=yellow
+                            " hi rustPanic ctermfg=red
+                            " hi rustMacro ctermfg=magenta
+                            
+    2              0.000003 syn sync minlines=200
+    2              0.000002 syn sync maxlines=500
+                            
+    2              0.000006 let b:current_syntax = "rust"
+                            
+                            " vim: set et sw=4 sts=4 ts=8:
+
+FUNCTION  <SNR>1_LoadFTPlugin()
+    Defined: /nix/store/a96v7ma6k0fwzmrrqn1fqb8flyddakj4-neovim-unwrapped-0.12.3/share/nvim/runtime/ftplugin.vim:15
+Called 2 times
+Total time:   0.100449
+ Self time:   0.057016
+
+count  total (s)   self (s)
+    2              0.000017     if exists("b:undo_ftplugin")
+    1   0.005090   0.005035       exe b:undo_ftplugin
+    1              0.000001       unlet! b:undo_ftplugin b:did_ftplugin
+    2              0.000001     endif
+                            
+    2              0.000010     let s = expand("<amatch>")
+    2              0.000003     if s != ""
+    2              0.000015       if &cpo =~# "S" && exists("b:did_ftplugin")
+                            	" In compatible mode options are reset to the global values, need to
+                            	" set the local values also when a plugin was already used.
+                            	unlet b:did_ftplugin
+    2              0.000001       endif
+                            
+                                  " When there is a dot it is used to separate filetype names.  Thus for
+                                  " "aaa.bbb" load "aaa" and then "bbb".
+    4              0.000015       for name in split(s, '\.')
+                                    " Load Lua ftplugins after Vim ftplugins _per directory_
+                                    " TODO(clason): use nvim__get_runtime when supports globs and modeline
+                                    " XXX: "[.]" in the first pattern makes it a wildcard on Windows
+    2   0.095258   0.051879         exe $'runtime! ftplugin/{name}[.]{{vim,lua}} ftplugin/{name}_*.{{vim,lua}} ftplugin/{name}/*.{{vim,lua}}'
+    4              0.000008       endfor
+    2              0.000002     endif
+
+FUNCTION  <SNR>11_Remove_Matches()
+    Defined: /nix/store/a96v7ma6k0fwzmrrqn1fqb8flyddakj4-neovim-unwrapped-0.12.3/share/nvim/runtime/plugin/matchparen.vim:203
+Called 3 times
+Total time:   0.000041
+ Self time:   0.000041
+
+count  total (s)   self (s)
+    3              0.000018   if exists('w:paren_hl_on') && w:paren_hl_on
+                                while !empty(w:matchparen_ids)
+                                  silent! call remove(w:matchparen_ids, 0)->matchdelete()
+                                endwhile
+                                let w:paren_hl_on = 0
+    3              0.000001   endif
+
+FUNCTION  <SNR>23_SynSet()
+    Defined: /nix/store/a96v7ma6k0fwzmrrqn1fqb8flyddakj4-neovim-unwrapped-0.12.3/share/nvim/runtime/syntax/synload.vim:27
+Called 5 times
+Total time:   0.027853
+ Self time:   0.020144
+
+count  total (s)   self (s)
+                              " clear syntax for :set syntax=OFF  and any syntax name that doesn't exist
+    5              0.000068   syn clear
+    5              0.000019   if exists("b:current_syntax")
+                                unlet b:current_syntax
+    5              0.000003   endif
+                            
+    5              0.000020   0verbose let s = expand("<amatch>")
+    5              0.000007   if s == "ON"
+                                " :set syntax=ON
+                                if &filetype == ""
+                                  echohl ErrorMsg
+                                  echo "filetype unknown"
+                                  echohl None
+                                endif
+                                let s = &filetype
+    5              0.000005   elseif s == "OFF"
+    2              0.000002     let s = ""
+    5              0.000002   endif
+                            
+    5              0.000003   if s != ""
+                                " Load the syntax file(s).  When there are several, separated by dots,
+                                " load each in sequence.  Skip empty entries.
+    2              0.000007     for name in split(s, '\.')
+    1              0.000002       if !empty(name)
+                                    " XXX: "[.]" in the first pattern makes it a wildcard on Windows
+    1   0.027617   0.019908         exe $'runtime! syntax/{name}[.]{{vim,lua}} syntax/{name}/*.{{vim,lua}}'
+    1              0.000001       endif
+    2              0.000002     endfor
+    5              0.000002   endif
+
+FUNCTION  <SNR>2_LoadIndent()
+    Defined: /nix/store/a96v7ma6k0fwzmrrqn1fqb8flyddakj4-neovim-unwrapped-0.12.3/share/nvim/runtime/indent.vim:14
+Called 2 times
+Total time:   0.013189
+ Self time:   0.012959
+
+count  total (s)   self (s)
+    2              0.000008     if exists("b:undo_indent")
+    1              0.000023       exe b:undo_indent
+    1              0.000002       unlet! b:undo_indent b:did_indent
+    2              0.000001     endif
+    2              0.000007     let s = expand("<amatch>")
+    2              0.000003     if s != ""
+    2              0.000003       if exists("b:did_indent")
+                            	unlet b:did_indent
+    2              0.000001       endif
+                            
+                                  " When there is a dot it is used to separate filetype names.  Thus for
+                                  " "aaa.bbb" load "indent/aaa.vim" and then "indent/bbb.vim".
+    4              0.000012       for name in split(s, '\.')
+                                    " XXX: "[.]" in the pattern makes it a wildcard on Windows
+    2   0.013110   0.012880         exe $'runtime! indent/{name}[.]{{vim,lua}}'
+    4              0.000005       endfor
+    2              0.000001     endif
+
+FUNCTION  <SNR>11_Highlight_Matching_Pair()
+    Defined: /nix/store/a96v7ma6k0fwzmrrqn1fqb8flyddakj4-neovim-unwrapped-0.12.3/share/nvim/runtime/plugin/matchparen.vim:45
+Called 3 times
+Total time:   0.000231
+ Self time:   0.000190
+
+count  total (s)   self (s)
+    3              0.000014   if !exists("w:matchparen_ids")
+                                let w:matchparen_ids = []
+    3              0.000002   endif
+                              " Remove any previous match.
+    3   0.000058   0.000017   call s:Remove_Matches()
+                            
+                              " Avoid that we remove the popup menu.
+                              " Return when there are no colors (looks like the cursor jumps).
+    3              0.000009   if pumvisible() || (&t_Co < 8 && !has("gui_running"))
+                                return
+    3              0.000001   endif
+                            
+                              " Get the character under the cursor and check if it's in 'matchpairs'.
+    3              0.000006   let c_lnum = line('.')
+    3              0.000005   let c_col = col('.')
+    3              0.000002   let before = 0
+                            
+    3              0.000006   let text = getline(c_lnum)
+    3              0.000014   let c_before = text->strpart(0, c_col - 1)->slice(-1)
+    3              0.000013   let c = text->strpart(c_col - 1)->slice(0, 1)
+    3              0.000047   let plist = split(&matchpairs, '.\zs[:,]')
+    3              0.000008   let i = index(plist, c)
+    3              0.000002   if i < 0
+                                " not found, in Insert mode try character before the cursor
+    3              0.000008     if c_col > 1 && (mode() == 'i' || mode() == 'R')
+                                  let before = strlen(c_before)
+                                  let c = c_before
+                                  let i = index(plist, c)
+    3              0.000001     endif
+    3              0.000002     if i < 0
+                                  " not found, nothing to do
+    3              0.000002       return
+                                endif
+                              endif
+                            
+                              " Figure out the arguments for searchpairpos().
+                              if i % 2 == 0
+                                let s_flags = 'nW'
+                                let c2 = plist[i + 1]
+                              else
+                                let s_flags = 'nbW'
+                                let c2 = c
+                                let c = plist[i - 1]
+                              endif
+                              if c == '['
+                                let c = '\['
+                                let c2 = '\]'
+                              endif
+                            
+                              " Find the match.  When it was just before the cursor move it there for a
+                              " moment.
+                              if before > 0
+                                let save_cursor = getcurpos()
+                                call cursor(c_lnum, c_col - before)
+                                defer setpos('.', save_cursor)
+                              endif
+                            
+                              if !has("syntax") || !exists("g:syntax_on")
+                                let s_skip = "0"
+                              elseif exists("b:ts_highlight") && &syntax != 'on'
+                                let s_skip = "match(v:lua.vim.treesitter.get_captures_at_cursor(), '" .. 'string\|character\|singlequote\|escape\|symbol\|comment' .. "') != -1"
+                              else
+                                " do not attempt to match when the syntax item where the cursor is
+                                " indicates there does not exist a matching parenthesis, e.g. for shells
+                                " case statement: "case $var in foobar)"
+                                "
+                                " add the check behind a filetype check, so it only needs to be
+                                " evaluated for certain filetypes
+                                if ['sh']->index(&filetype) >= 0 && synstack(".", col("."))->indexof({_, id -> synIDattr(id, "name") =~? "shSnglCase"}) >= 0
+                                  return
+                                endif
+                                " Build an expression that detects whether the current cursor position is
+                                " in certain syntax types (string, comment, etc.), for use as
+                                " searchpairpos()'s skip argument.
+                                " We match "escape" for special items, such as lispEscapeSpecial, and
+                                " match "symbol" for lispBarSymbol.
+                                let s_skip = 'synstack(".", col("."))' . '->indexof({_, id -> synIDattr(id, "name") =~? ' . '"string\\|character\\|singlequote\\|escape\\|symbol\\|comment"}) >= 0'
+                                " If executing the expression determines that the cursor is currently in
+                                " one of the syntax types, then we want searchpairpos() to find the pair
+                                " within those syntax types (i.e., not skip).  Otherwise, the cursor is
+                                " outside of the syntax types and s_skip should keep its value so we skip
+                                " any matching pair inside the syntax types.
+                                " Catch if this throws E363: pattern uses more memory than 'maxmempattern'.
+                                try
+                                  execute 'if ' . s_skip . ' | let s_skip = "0" | endif'
+                                catch /^Vim\%((\a\+)\)\=:E363/
+                                  " We won't find anything, so skip searching, should keep Vim responsive.
+                                  return
+                                endtry
+                              endif
+                            
+                              " Limit the search to lines visible in the window.
+                              let stoplinebottom = line('w$')
+                              let stoplinetop = line('w0')
+                              if i % 2 == 0
+                                let stopline = stoplinebottom
+                              else
+                                let stopline = stoplinetop
+                              endif
+                            
+                              " Limit the search time to 300 msec to avoid a hang on very long lines.
+                              " This fails when a timeout is not supported.
+                              if mode() == 'i' || mode() == 'R'
+                                let timeout = exists("b:matchparen_insert_timeout") ? b:matchparen_insert_timeout : g:matchparen_insert_timeout
+                              else
+                                let timeout = exists("b:matchparen_timeout") ? b:matchparen_timeout : g:matchparen_timeout
+                              endif
+                              try
+                                let [m_lnum, m_col] = searchpairpos(c, '', c2, s_flags, s_skip, stopline, timeout)
+                              catch /E118/
+                                " Can't use the timeout, restrict the stopline a bit more to avoid taking
+                                " a long time on closed folds and long lines.
+                                " The "viewable" variables give a range in which we can scroll while
+                                " keeping the cursor at the same position.
+                                " adjustedScrolloff accounts for very large numbers of scrolloff.
+                                let adjustedScrolloff = min([&scrolloff, (line('w$') - line('w0')) / 2])
+                                let bottom_viewable = min([line('$'), c_lnum + &lines - adjustedScrolloff - 2])
+                                let top_viewable = max([1, c_lnum-&lines+adjustedScrolloff + 2])
+                                " one of these stoplines will be adjusted below, but the current values are
+                                " minimal boundaries within the current window
+                                if i % 2 == 0
+                                  if has("byte_offset") && has("syntax_items") && &smc > 0
+                            	let stopbyte = min([line2byte("$"), line2byte(".") + col(".") + &smc * 2])
+                            	let stopline = min([bottom_viewable, byte2line(stopbyte)])
+                                  else
+                            	let stopline = min([bottom_viewable, c_lnum + 100])
+                                  endif
+                                  let stoplinebottom = stopline
+                                else
+                                  if has("byte_offset") && has("syntax_items") && &smc > 0
+                            	let stopbyte = max([1, line2byte(".") + col(".") - &smc * 2])
+                            	let stopline = max([top_viewable, byte2line(stopbyte)])
+                                  else
+                            	let stopline = max([top_viewable, c_lnum - 100])
+                                  endif
+                                  let stoplinetop = stopline
+                                endif
+                                let [m_lnum, m_col] = searchpairpos(c, '', c2, s_flags, s_skip, stopline)
+                              endtry
+                            
+                              " If a match is found setup match highlighting.
+                              if m_lnum > 0 && m_lnum >= stoplinetop && m_lnum <= stoplinebottom
+                                if !g:matchparen_disable_cursor_hl
+                                  call add(w:matchparen_ids, matchaddpos('MatchParen', [[c_lnum, c_col - before], [m_lnum, m_col]], 10))
+                                else
+                                  call add(w:matchparen_ids, matchaddpos('MatchParen', [[m_lnum, m_col]], 10))
+                                endif
+                                let w:paren_hl_on = 1
+                              endif
+
+FUNCTIONS SORTED ON TOTAL TIME
+count  total (s)   self (s)  function
+    2   0.100449   0.057016  <SNR>1_LoadFTPlugin()
+    5   0.027853   0.020144  <SNR>23_SynSet()
+    2   0.013189   0.012959  <SNR>2_LoadIndent()
+    3   0.000231   0.000190  <SNR>11_Highlight_Matching_Pair()
+    3   0.000041             <SNR>11_Remove_Matches()
+
+FUNCTIONS SORTED ON SELF TIME
+count  total (s)   self (s)  function
+    2   0.100449   0.057016  <SNR>1_LoadFTPlugin()
+    5   0.027853   0.020144  <SNR>23_SynSet()
+    2   0.013189   0.012959  <SNR>2_LoadIndent()
+    3   0.000231   0.000190  <SNR>11_Highlight_Matching_Pair()
+    3              0.000041  <SNR>11_Remove_Matches()
+

@@ -1,6 +1,9 @@
+local Logger = require("common.Logger")
 local LspTool = require("backend.shared.LspTool")
 
 local root_markers = { "Cargo.toml", ".git" }
+
+local logger = Logger.new("LSP")
 
 ---@type Adapter
 return {
@@ -36,6 +39,13 @@ return {
 			for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
 				if vim.lsp.buf_is_attached(bufnr, client.id) then
 					if vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }) then
+						logger:info(function()
+							return string.format(
+								"%s quiescent: refreshing inlay hints for bufnr=%d",
+								client.name,
+								bufnr
+							)
+						end)
 						vim.lsp.inlay_hint.enable(false, { bufnr = bufnr })
 						vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
 					end

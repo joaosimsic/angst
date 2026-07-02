@@ -11,6 +11,8 @@ return {
 	virtual = true,
 	event = { "BufReadPre", "BufNewFile" },
 	config = function()
+		vim.api.nvim_create_augroup("syntaxset", { clear = true })
+
 		local AdapterScanner = require("backend.shared.AdapterScanner")
 		local treesitter_opts = { check_executable = false }
 		local logger = Logger.new("TREESITTER")
@@ -41,6 +43,20 @@ return {
 		end
 
 		local group = vim.api.nvim_create_augroup("TreesitterInit", { clear = true })
+
+		vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
+			group = group,
+			pattern = "*",
+			callback = function(event)
+				local ft = vim.bo[event.buf].filetype
+				if ft == "" then
+					return
+				end
+				if AdapterScanner:supports_filetype("treesitter", ft, treesitter_opts) then
+					vim.bo[event.buf].syntax = "OFF"
+				end
+			end,
+		})
 
 		vim.api.nvim_create_autocmd("FileType", {
 			group = group,
@@ -107,20 +123,24 @@ return {
 					end
 				end
 
-				local ok, err = pcall(vim.treesitter.start, event.buf, lang)
+			local ok, err = pcall(vim.treesitter.start, event.buf, lang)
 
-				if not ok then
-					logger:error(function()
-						return string.format("Treesitter failed to start for [%s]: %s", filetype, err)
-					end)
-				end
+			if not ok then
+				logger:error(function()
+					return string.format("Treesitter failed to start for [%s]: %s", filetype, err)
+				end)
+			else
+				logger:info(function()
+					return string.format("Highlighting started for [%s] on bufnr=%d", lang, event.buf)
+				end)
+			end
 
-				if ok and not fold_disabled_filetypes[filetype] then
-					vim.wo.foldmethod = "expr"
-					vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
-					vim.wo.foldlevel = 99
-				end
-			end,
+			if ok and not fold_disabled_filetypes[filetype] then
+				vim.wo.foldmethod = "expr"
+				vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+				vim.wo.foldlevel = 99
+			end
+		end,
 		})
 
 		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
