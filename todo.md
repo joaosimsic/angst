@@ -7,7 +7,7 @@
 - [x] auto closing enter bug
 - [x] paste and copy without overriding registers
 - [x] break distance based either on tab space or formatters
-- [ ] leave yazi returns heirline in terminal mode
+- [x] leave yazi returns heirline in terminal mode
 - [ ] Doktor at root
 
 # nu
@@ -22,7 +22,7 @@
 - [x] dev shell vm bin doesnt get updated
 - [x] deprecating vm scripts to let rust tool handles it
 - [x] add a headless mode for launching the vm without gui
-- [ ] ci tests
+- [x] ci tests
 
 # zellij
 

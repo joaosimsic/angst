@@ -4,7 +4,7 @@ local root_markers = { "composer.json", ".phpactor.json", ".phpactor.yml", ".git
 
 ---@type Adapter
 return {
-	filetypes = { "php" },
+	filetypes = { "php", "blade" },
 	lsp = "phpactor",
 	lsp_cmd = { "phpactor", "language-server" },
 	lsp_root_markers = root_markers,
