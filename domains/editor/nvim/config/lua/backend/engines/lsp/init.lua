@@ -7,7 +7,7 @@ return {
 	virtual = true,
 	event = { "BufReadPre", "BufNewFile" },
 	config = function()
-		local logger = Logger.new("LSP", "debug")
+		local logger = Logger.new("LSP")
 		require("backend.engines.lsp.autocmd").setup(logger)
 		require("backend.engines.lsp.config").setup(logger)
 	end,
