@@ -45,7 +45,7 @@ M.get = function(p)
 		LspReferenceRead = { bg = e.surface },
 		LspReferenceWrite = { bg = e.surface },
 		LspReferenceTarget = { fg = d.warn, bold = true },
-		LspInlayHint = { link = "Comment" },
+		LspInlayHint = { fg = e.dim, italic = true },
 		LspCodeLens = { fg = e.comment },
 		LspCodeLensSeparator = { fg = e.dim },
 		LspSignatureActiveParameter = { fg = d.warn, bold = true },

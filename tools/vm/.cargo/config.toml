@@ -1,0 +1,2 @@
+[env]
+PKG_CONFIG_PATH = "/run/current-system/sw/lib/pkgconfig"

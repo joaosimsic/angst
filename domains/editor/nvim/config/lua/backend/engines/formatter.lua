@@ -1,12 +1,11 @@
-local AdapterScanner = require("backend.shared.AdapterScanner")
-local formatter_opts = { check_executable = true }
-
 ---@type Plugin
 return {
 	"stevearc/conform.nvim",
-	ft = AdapterScanner:supported_filetypes("formatter", formatter_opts),
+	event = { "BufReadPre", "BufNewFile" },
 	cmd = { "ConformInfo" },
 	opts = function()
+		local AdapterScanner = require("backend.shared.AdapterScanner")
+		local formatter_opts = { check_executable = true }
 		return {
 			formatters_by_ft = AdapterScanner:by_filetype("formatter", formatter_opts),
 			notify_on_error = true,
@@ -19,6 +18,8 @@ return {
 		local binder = Keybinder.new(nil, "Formatter")
 
 		binder:map({ "n", "v" }, "<leader>f", function()
+			local AdapterScanner = require("backend.shared.AdapterScanner")
+			local formatter_opts = { check_executable = true }
 			if not AdapterScanner:supports_filetype("formatter", vim.bo.filetype, formatter_opts) then
 				return
 			end

@@ -8,3 +8,4 @@ tools/vm-mcp/dist/
 a.out
 target/
 debug-*
+nvim-profile.log
