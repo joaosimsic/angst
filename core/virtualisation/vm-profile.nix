@@ -67,6 +67,37 @@ in
       };
     };
 
+    systemd.services.home-manager-upgrade = {
+      description = "Activate latest Home Manager generation not baked into the system closure";
+      after = [ "home-manager-joao.service" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        User = userConfig.username;
+      };
+      script = ''
+        active=""
+        if [ -L "/etc/profiles/per-user/${userConfig.username}" ]; then
+          active="$(readlink -f "/etc/profiles/per-user/${userConfig.username}")"
+        fi
+
+        latest=""
+        for gen in /nix/store/*-home-manager-generation/activate; do
+          [ -f "$gen" ] || continue
+          dir="$(dirname "$gen")"
+          hp="$(readlink "$dir/home-path" 2>/dev/null || true)"
+          [ -n "$hp" ] || continue
+          [ "$hp" = "$active" ] && continue
+          latest="$dir"
+        done
+
+        if [ -n "$latest" ]; then
+          exec "$latest/activate" --driver-version 1
+        fi
+      '';
+    };
+
     systemd.services.vm-authorized-keys = {
       description = "Install runtime SSH authorized_keys for VM access";
       wantedBy = [ "multi-user.target" ];

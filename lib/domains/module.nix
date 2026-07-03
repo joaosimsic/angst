@@ -57,18 +57,15 @@ let
     customModule = if hasCustomModule then import modulePath else { };
 
     activationModule =
-      if hasCustomModule then
-        { }
-      else if hasConfigDir then
+      if hasConfigDir then
         {
-          config = lib.mkIf config.domains.${category}.${name}.enable (
-            mkDomainActivation {
+          config = lib.mkIf config.domains.${category}.${name}.enable
+            (mkDomainActivation {
               configDir = configSubdir;
               inherit meta category name;
               inherit (config.home) homeDirectory;
               inherit lib;
-            }
-          );
+            });
         }
       else
         { };
