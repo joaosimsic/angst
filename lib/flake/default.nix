@@ -37,6 +37,7 @@ let
         inherit lib themesLib themeName hostConfig;
         fontFamily = fontsLib.defaultFamily;
         monitors = hostConfig.monitors or { };
+        homeDirectory = hostConfig.user.homeDirectory;
       };
     in
     lib.concatLists (map (path: import path args) domainRendererPaths);

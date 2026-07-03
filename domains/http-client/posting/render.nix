@@ -1,4 +1,4 @@
-{ themesLib, themeName, ... }:
+{ themesLib, themeName, homeDirectory, ... }:
 
 let
   t = themesLib.get themeName;
@@ -9,7 +9,7 @@ in
     text = ''
       theme: angst
       load_user_themes: true
-      theme_directory: "~/.config/posting/themes"
+      theme_directory: "${homeDirectory}/.config/posting/themes"
       layout: horizontal
       response:
         prettify_json: true
@@ -30,6 +30,7 @@ in
       primary: '#${t.BLUE}'
       secondary: '#${t.MAGENTA}'
       accent: '#${t.BRIGHT}'
+      foreground: '#${t.FG}'
       background: '#${t.BG}'
       surface: '#${t.SURFACE}'
       error: '#${t.ERROR}'

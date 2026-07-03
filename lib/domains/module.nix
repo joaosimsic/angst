@@ -1,17 +1,45 @@
 { lib, mkDomainActivation }:
 
 let
-  mkDomainModule = entry: { config, lib, pkgs, ... }:
+  mkDomainModule = entry: { config, lib, pkgs, themesLib, ... }:
   let
     inherit (entry) category name meta path;
     modulePath = "${path}/module.nix";
     hasCustomModule = builtins.pathExists modulePath;
     configSubdir = "${path}/config";
-    configDir =
-      if builtins.pathExists configSubdir then
-        configSubdir
+    hasConfigDir = builtins.pathExists configSubdir;
+    hasRender = builtins.pathExists "${path}/render.nix";
+
+    renderedHomeFiles =
+      if hasConfigDir || !hasRender then
+        { }
       else
-        path;
+        let
+          render = import "${path}/render.nix";
+          outputs = render {
+            inherit themesLib;
+            themeName = config.theme;
+            homeDirectory = config.home.homeDirectory;
+          };
+          prefix = "domains/${category}/${name}/config/";
+          entryForOutput = output:
+            let
+              relPath = lib.removePrefix prefix output.path;
+            in
+            lib.optional (
+              meta ? xdg || (meta ? xdgFile && relPath == meta.xdgFile)
+            ) (
+              lib.nameValuePair
+                (
+                  if meta ? xdg then
+                    ".config/${meta.xdg}/${relPath}"
+                  else
+                    ".config/${meta.xdgFile}"
+                )
+                { text = output.text; }
+            );
+        in
+        lib.listToAttrs (lib.concatMap entryForOutput outputs);
 
     baseModule = {
       options.domains.${category}.${name} = {
@@ -23,10 +51,12 @@ let
           home.packages = lib.optionals (meta ? package) [
             pkgs.${meta.package}
           ];
+          home.file = renderedHomeFiles;
         }
-        // lib.optionalAttrs (!(meta.customXdg or false)) (
+        // lib.optionalAttrs (!(meta.customXdg or false) && hasConfigDir) (
           mkDomainActivation {
-            inherit configDir meta category name;
+            configDir = configSubdir;
+            inherit meta category name;
             inherit (config.home) homeDirectory;
             inherit lib;
           }
