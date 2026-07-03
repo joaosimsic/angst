@@ -9,7 +9,6 @@ return {
 		local lint = require("lint")
 		lint.linters_by_ft = AdapterScanner:by_filetype("linter", linter_opts)
 
-		-- cargo exits 101 when clippy finds issues; diagnostics still show
 		local clippy = lint.linters.clippy
 		if clippy then
 			clippy.ignore_exitcode = true

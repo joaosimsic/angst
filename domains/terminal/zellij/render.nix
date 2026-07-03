@@ -302,7 +302,6 @@ in
           children
           pane size=1 borderless=true {
             plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
-                      _allow_exec_host_cmd true
                       format_left   "{mode}"
                       format_center "#[${standard}]{command_cwd}"
                       format_right  "{tabs}"
