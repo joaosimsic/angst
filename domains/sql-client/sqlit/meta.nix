@@ -1,5 +1,5 @@
 {
   package = "sqlit-tui";
-  xdgFile = "sqlit/settings.json";
+  xdg = "sqlit";
   description = "Terminal SQL database browser";
 }

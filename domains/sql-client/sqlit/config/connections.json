@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "connections": [
+    {
+      "name": "ezIntelligence",
+      "db_type": "postgresql",
+      "source": null,
+      "connection_url": null,
+      "folder_path": "",
+      "extra_options": {},
+      "options": {
+        "tls_mode": "default",
+        "tls_ca": "",
+        "tls_cert": "",
+        "tls_key": "",
+        "tls_key_password": "",
+        "ssh_host": "",
+        "ssh_port": "22",
+        "ssh_username": "",
+        "ssh_auth_type": "key",
+        "ssh_key_path": "~/.ssh/id_rsa",
+        "ssh_password": ""
+      },
+      "endpoint": {
+        "kind": "tcp",
+        "host": "200.152.183.112",
+        "port": "5432",
+        "database": "postgres",
+        "username": "postgres",
+        "password": null
+      },
+      "tunnel": {
+        "enabled": false
+      }
+    }
+  ]
+}

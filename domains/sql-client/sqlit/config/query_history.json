@@ -1,0 +1,8 @@
+[
+  {
+    "query": "SELECT * FROM \"public\".\"users\" LIMIT 100",
+    "timestamp": "2026-07-03T16:46:09.806556",
+    "connection_name": "ezIntelligence",
+    "database": "postgres"
+  }
+]
