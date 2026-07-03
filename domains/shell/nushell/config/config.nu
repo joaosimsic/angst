@@ -38,6 +38,14 @@ $env.config = {
 
     highlight_resolved_externals: true
 
+    hooks: {
+        env_change: {
+            PWD: [
+                { || try { direnv export json | from json | load-env } catch { } }
+            ]
+        }
+    }
+
     keybindings: [
         {
             name: ctrl_c_to_normal
@@ -93,3 +101,5 @@ alias z = zellij
 alias c = clear
 alias q = exit
 alias reload = exec nu
+
+

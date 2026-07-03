@@ -9,3 +9,4 @@ a.out
 target/
 debug-*
 nvim-profile.log
+.direnv
