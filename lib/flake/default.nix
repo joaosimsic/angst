@@ -25,6 +25,8 @@ let
     ../../domains/shell/starship/render.nix
     ../../domains/terminal/zellij/render.nix
     ../../domains/files/yazi/render.nix
+    ../../domains/http-client/posting/render.nix
+    ../../domains/sql-client/sqlit/render.nix
   ];
 
   renderDomainOutputsFor =
