@@ -46,28 +46,35 @@ let
         enable = lib.mkEnableOption "Enable ${meta.description or name}";
       };
 
-      config = lib.mkIf config.domains.${category}.${name}.enable (
-        {
-          home.packages = lib.optionals (meta ? package) [
-            pkgs.${meta.package}
-          ];
-          home.file = renderedHomeFiles;
-        }
-        // lib.optionalAttrs (!(meta.customXdg or false) && hasConfigDir) (
-          mkDomainActivation {
-            configDir = configSubdir;
-            inherit meta category name;
-            inherit (config.home) homeDirectory;
-            inherit lib;
-          }
-        )
-      );
+      config = lib.mkIf config.domains.${category}.${name}.enable {
+        home.packages = lib.optionals (meta ? package) [
+          pkgs.${meta.package}
+        ];
+        home.file = renderedHomeFiles;
+      };
     };
 
     customModule = if hasCustomModule then import modulePath else { };
+
+    activationModule =
+      if hasCustomModule then
+        { }
+      else if hasConfigDir then
+        {
+          config = lib.mkIf config.domains.${category}.${name}.enable (
+            mkDomainActivation {
+              configDir = configSubdir;
+              inherit meta category name;
+              inherit (config.home) homeDirectory;
+              inherit lib;
+            }
+          );
+        }
+      else
+        { };
   in
   {
-    imports = [ baseModule customModule ];
+    imports = [ baseModule activationModule customModule ];
   };
 
   mkNixosDomainModule = entry:
