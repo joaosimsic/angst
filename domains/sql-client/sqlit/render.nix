@@ -43,24 +43,4 @@ in
       }
     '';
   }
-  {
-    path = "domains/sql-client/sqlit/config/keymap.json";
-    text = ''
-      {
-        "keymap": {
-          "action_keys": {
-            "query_insert": {
-              "exit_insert_mode": ["escape", "ctrl+c"]
-            },
-            "query_visual": {
-              "exit_visual_mode": ["escape", "v", "ctrl+c"]
-            },
-            "query_visual_line": {
-              "exit_visual_line_mode": ["escape", "V", "ctrl+c"]
-            }
-          }
-        }
-      }
-    '';
-  }
 ]
