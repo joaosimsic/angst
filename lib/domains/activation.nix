@@ -85,7 +85,7 @@ let
     else
       {
         home.activation."domain-${category}-${name}" =
-          lib.hm.dag.entryAfter [ "seedAngstRepo" "writeBoundary" ] activationScript;
+          lib.mkDefault (lib.hm.dag.entryAfter [ "seedAngstRepo" "writeBoundary" ] activationScript);
       };
 in
 {

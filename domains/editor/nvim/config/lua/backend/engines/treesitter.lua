@@ -42,6 +42,14 @@ return {
 			vim.treesitter.language.register(grammar, filetype)
 		end
 
+		vim.treesitter.query.add_predicate('is-not?', function(match, pattern, source, predicate)
+			local nodes = match[predicate[2]]
+			if not nodes or #nodes == 0 then
+				return true
+			end
+			return true
+		end)
+
 		local group = vim.api.nvim_create_augroup("TreesitterInit", { clear = true })
 
 		vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {

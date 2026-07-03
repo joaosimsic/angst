@@ -25,6 +25,8 @@ let
     ../../domains/shell/starship/render.nix
     ../../domains/terminal/zellij/render.nix
     ../../domains/files/yazi/render.nix
+    ../../domains/http-client/posting/render.nix
+    ../../domains/sql-client/sqlit/render.nix
   ];
 
   renderDomainOutputsFor =
@@ -35,6 +37,7 @@ let
         inherit lib themesLib themeName hostConfig;
         fontFamily = fontsLib.defaultFamily;
         monitors = hostConfig.monitors or { };
+        homeDirectory = hostConfig.user.homeDirectory;
       };
     in
     lib.concatLists (map (path: import path args) domainRendererPaths);

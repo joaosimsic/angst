@@ -13,6 +13,8 @@ let
   nushell = renderDomainOutputFor "personal" themeName "domains/shell/nushell/config/colors.nu";
   zellijConfig = renderDomainOutputFor "personal" themeName "domains/terminal/zellij/config/config.kdl";
   zellijLayout = renderDomainOutputFor "personal" themeName "domains/terminal/zellij/config/layouts/default.kdl";
+  sqlit = renderDomainOutputFor "personal" themeName "domains/sql-client/sqlit/config/settings.json";
+  sqlitTheme = renderDomainOutputFor "personal" themeName "domains/sql-client/sqlit/config/themes/${themeName}.json";
 
   checks = [
     (requireDistinct "palette tokens" [
@@ -61,6 +63,42 @@ let
       "zellij inactive frame must differ from background in ${themeName}")
     (require (theme.diagnostic.warning != theme.ui.bg)
       "zellij highlighted frame must differ from background in ${themeName}")
+    (requireInfix sqlit ''"theme": "${themeName}"''
+      "sqlit settings theme name should be ${themeName}")
+    (requireInfix sqlit ''"custom_themes": ["${themeName}"]''
+      "sqlit custom_themes should reference ${themeName}")
+    (requireInfix sqlitTheme ''"name": "${themeName}"''
+      "sqlit theme file name should be ${themeName}")
+    (requireInfix sqlitTheme ''"dark": true''
+      "sqlit theme should be dark")
+    (requireInfix sqlitTheme ''"primary": "#${theme.ui.border}"''
+      "sqlit primary should render ${themeName} ui.border")
+    (requireInfix sqlitTheme ''"secondary": "#${theme.MAGENTA}"''
+      "sqlit secondary should render ${themeName} MAGENTA")
+    (requireInfix sqlitTheme ''"accent": "#${theme.ui.bright}"''
+      "sqlit accent should render ${themeName} ui.bright")
+    (requireInfix sqlitTheme ''"warning": "#${theme.WARNING}"''
+      "sqlit warning should render ${themeName} WARNING")
+    (requireInfix sqlitTheme ''"error": "#${theme.ERROR}"''
+      "sqlit error should render ${themeName} ERROR")
+    (requireInfix sqlitTheme ''"success": "#${theme.SUCCESS}"''
+      "sqlit success should render ${themeName} SUCCESS")
+    (requireInfix sqlitTheme ''"foreground": "#${theme.FG}"''
+      "sqlit foreground should render ${themeName} FG")
+    (requireInfix sqlitTheme ''"background": "#${theme.BG}"''
+      "sqlit background should render ${themeName} BG")
+    (requireInfix sqlitTheme ''"surface": "#${theme.BG}"''
+      "sqlit surface should render ${themeName} BG")
+    (requireInfix sqlitTheme ''"panel": "#${theme.BG}"''
+      "sqlit panel should render ${themeName} BG")
+    (requireInfix sqlitTheme ''"border": "#${theme.BLUE}"''
+      "sqlit border variable should render ${themeName} BLUE")
+    (require (theme.BLUE != theme.MAGENTA)
+      "sqlit primary BLUE and secondary MAGENTA must differ in ${themeName}")
+    (require (theme.BG != theme.SURFACE)
+      "sqlit background and surface must differ in ${themeName}")
+    (require (theme.ERROR != theme.SUCCESS)
+      "sqlit ERROR and SUCCESS must differ in ${themeName}")
     (requireInfix zellijLayout "mode_default_to_mode \"normal\""
       "zjstatus should fall back to normal mode formatting")
     (requireInfix zellijLayout "mode_normal        \"#[bg=#${theme.ui.accent},fg=#${theme.ui.bg},bold]"

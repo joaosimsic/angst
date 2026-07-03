@@ -13,63 +13,83 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, vm, ... }@inputs:
-  let
-    hosts = import ./lib/build/scanHosts.nix inputs;
+  outputs =
+    {
+      self,
+      nixpkgs,
+      home-manager,
+      vm,
+      ...
+    }@inputs:
+    let
+      hosts = import ./lib/build/scanHosts.nix inputs;
 
-    env = {
-      inherit inputs;
+      env = {
+        inherit inputs;
 
-      flakeSelf = self;
+        flakeSelf = self;
 
-      loadHost = hostname: import (./hosts + "/${hostname}");
-    };
+        loadHost = hostname: import (./hosts + "/${hostname}");
+      };
 
-    system = "x86_64-linux";
+      system = "x86_64-linux";
 
-    pkgs = import nixpkgs {
-      inherit system;
-      config.allowUnfree = true; 
-    };
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
 
-    vmOutputs = vm.mkOutputs self;
+      vmOutputs = vm.mkOutputs self;
 
-    homeLib = import ./lib/build/mkHome.nix (env // {
-      vmTool = vmOutputs.packages.${system}.default;
-    });
+      homeLib = import ./lib/build/mkHome.nix (
+        env
+        // {
+          vmTool = vmOutputs.packages.${system}.default;
+        }
+      );
 
-    mkHost = import ./lib/build/mkHost.nix (env // {
-      mkHomeProfile = homeLib.mkHomeProfile;
-      flakeSelf = self;
-    });
+      mkHost = import ./lib/build/mkHost.nix (
+        env
+        // {
+          mkHomeProfile = homeLib.mkHomeProfile;
+          flakeSelf = self;
+        }
+      );
 
-    inherit (homeLib) mkHome mkHomeWithExtraModules;
+      inherit (homeLib) mkHome mkHomeWithExtraModules;
 
-    flakeLib = import ./lib/flake/default.nix {
-      inherit self system pkgs hosts mkHome mkHomeWithExtraModules;
-      vmOutputs = vmOutputs; 
-      loadHost = env.loadHost;
-      lib = pkgs.lib;
-    };
-  in
-  {
-    nixosConfigurations = nixpkgs.lib.genAttrs hosts mkHost;
+      flakeLib = import ./lib/flake/default.nix {
+        inherit
+          self
+          system
+          pkgs
+          hosts
+          mkHome
+          mkHomeWithExtraModules
+          ;
+        vmOutputs = vmOutputs;
+        loadHost = env.loadHost;
+        lib = pkgs.lib;
+      };
+    in
+    {
+      nixosConfigurations = nixpkgs.lib.genAttrs hosts mkHost;
 
-    inherit (flakeLib)
-      homeConfigurations
-      checks
-      packages
-      apps
-      devShells
-      ;
-
-    lib = {
       inherit (flakeLib)
-        themeLint
-        renderDomainOutputsFor
-        renderDomainOutputPathsFor
-        renderDomainOutputFor
+        homeConfigurations
+        checks
+        packages
+        apps
+        devShells
         ;
+
+      lib = {
+        inherit (flakeLib)
+          themeLint
+          renderDomainOutputsFor
+          renderDomainOutputPathsFor
+          renderDomainOutputFor
+          ;
+      };
     };
-  };
 }
