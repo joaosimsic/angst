@@ -158,4 +158,11 @@ function Keybinder:vmap(lhs, rhs, opts)
 	self:_bind("v", lhs, rhs, opts)
 end
 
+---@param lhs string
+---@param rhs fun(...: any): any
+---@param opts? table
+function Keybinder:tmap(lhs, rhs, opts)
+	self:_bind("t", lhs, rhs, opts)
+end
+
 return Keybinder
