@@ -33,8 +33,13 @@ let
     hostName: themeName:
     let
       hostConfig = loadHost hostName;
+      checkHelpers = import ../../lib/checks/theme/assertions.nix {
+        inherit lib;
+        inherit themeName;
+        theme = themesLib.get themeName;
+      };
       args = {
-        inherit lib themesLib themeName hostConfig;
+        inherit lib themesLib themeName hostConfig checkHelpers;
         fontFamily = fontsLib.defaultFamily;
         monitors = hostConfig.monitors or { };
         homeDirectory = hostConfig.user.homeDirectory;
@@ -73,7 +78,7 @@ let
   };
 
   themeRenderedChecks = import ../checks/theme/rendered.nix {
-    inherit lib pkgs themesLib renderDomainOutputFor;
+    inherit lib pkgs themesLib renderDomainOutputsFor;
     themeName = themeContext.hostTheme;
   };
 

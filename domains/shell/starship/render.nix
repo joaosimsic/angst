@@ -1,4 +1,4 @@
-{ lib, themesLib, themeName, ... }:
+{ lib, themesLib, themeName, checkHelpers, ... }:
 
 let
   t = themesLib.get themeName;
@@ -147,57 +147,69 @@ let
     '';
 
   formatLine = "$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
+
+  inherit (checkHelpers) requireInfix require;
+
+  starshipText = ''
+    format = """
+    ${formatLine}
+
+    """
+
+    add_newline = true
+
+    [directory]
+    format = "[$path]($style)[$read_only]($read_only_style)"
+    style = "bold #${t.ACCENT}"
+    read_only = " RO"
+    read_only_style = "bold #${t.ERROR}"
+    truncation_length = 3
+    truncate_to_repo = false
+
+    [git_branch]
+    format = "*[$branch]($style)"
+    style = "#${t.COMMENT}"
+    symbol = ""
+
+    [git_status]
+    format = ' [\[$all_status$ahead_behind\]]($style) '
+    style = "#${t.WARNING}"
+    conflicted = "!"
+    ahead = "+"
+    behind = "-"
+    diverged = "+-"
+    untracked = "?"
+    stashed = "*"
+    modified = "~"
+    staged = "+"
+    renamed = "r"
+    deleted = "x"
+
+    [username]
+    format = "[$user]($style) "
+    style_user = "bold #${t.BRIGHT}"
+    style_root = "bold #${t.ERROR}"
+    show_always = true
+
+    [hostname]
+    format = "[@$hostname]($style) "
+    style = "bold #${t.COMMENT}"
+    ssh_only = true
+
+    ${lib.concatStringsSep "\n" (map renderModule modules)}
+  '';
 in
 [
   {
     path = "domains/shell/starship/config/starship.toml";
-    text = ''
-      format = """
-      ${formatLine}
-
-      """
-
-      add_newline = true
-
-      [directory]
-      format = "[$path]($style)[$read_only]($read_only_style)"
-      style = "bold #${t.ACCENT}"
-      read_only = " RO"
-      read_only_style = "bold #${t.ERROR}"
-      truncation_length = 3
-      truncate_to_repo = false
-
-      [git_branch]
-      format = "*[$branch]($style)"
-      style = "#${t.COMMENT}"
-      symbol = ""
-
-      [git_status]
-      format = ' [\[$all_status$ahead_behind\]]($style) '
-      style = "#${t.WARNING}"
-      conflicted = "!"
-      ahead = "+"
-      behind = "-"
-      diverged = "+-"
-      untracked = "?"
-      stashed = "*"
-      modified = "~"
-      staged = "+"
-      renamed = "r"
-      deleted = "x"
-
-      [username]
-      format = "[$user]($style) "
-      style_user = "bold #${t.BRIGHT}"
-      style_root = "bold #${t.ERROR}"
-      show_always = true
-
-      [hostname]
-      format = "[@$hostname]($style) "
-      style = "bold #${t.COMMENT}"
-      ssh_only = true
-
-      ${lib.concatStringsSep "\n" (map renderModule modules)}
-    '';
+    text = starshipText;
+    checks = [
+      (requireInfix starshipText "bold #${t.ACCENT}"
+        "starship directory style should render ${themeName} ACCENT")
+      (requireInfix starshipText "bold #${t.ERROR}"
+        "starship error_symbol should render ${themeName} ERROR")
+      (require (t.SUCCESS != t.ERROR)
+        "starship semantic SUCCESS and ERROR must differ in ${themeName}")
+    ];
   }
 ]
