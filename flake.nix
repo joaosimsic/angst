@@ -83,6 +83,8 @@
         devShells
         ;
 
+      formatter.${system} = pkgs.nixfmt;
+
       lib = {
         inherit (flakeLib)
           themeLint

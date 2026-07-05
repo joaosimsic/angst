@@ -1,15 +1,18 @@
-{ lib, hosts, mkHome, mkHomeWithExtraModules, themeContext }:
+{ lib, hosts, loadHost, mkHome, mkHomeWithExtraModules, themeContext }:
 
 let
   inherit (themeContext) overrideTheme testHostname;
 
-  perHost = lib.genAttrs
-    (map (h: "joao@${h}") hosts)
-    (name: mkHome (lib.removePrefix "joao@" name));
+  perHost = lib.listToAttrs (map (h:
+    let user = (loadHost h).user; in {
+      name = "${user.username}@${h}";
+      value = mkHome h;
+    }
+  ) hosts);
 in
 perHost // {
-  joao = mkHome testHostname;
-  joao-theme-override-test = mkHomeWithExtraModules testHostname [
+  "${(loadHost testHostname).user.username}" = mkHome testHostname;
+  "${(loadHost testHostname).user.username}-theme-override-test" = mkHomeWithExtraModules testHostname [
     { theme = overrideTheme; }
   ];
 }

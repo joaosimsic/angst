@@ -1,7 +1,7 @@
 { lib, mkDomainActivation }:
 
 let
-  mkDomainModule = entry: { config, lib, pkgs, themesLib, ... }:
+    mkDomainModule = entry@{ ... }: { config, lib, pkgs, themesLib, ... }:
   let
     inherit (entry) category name meta path;
     modulePath = "${path}/module.nix";

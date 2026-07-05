@@ -112,7 +112,7 @@ let
   withRgb =
     theme:
     let
-      colorKeys = filter (k: builtins.elem k legacyTokens && theme ? ${k}) (attrNames theme);
+      colorKeys = filter (k: builtins.isString theme.${k}) (attrNames theme);
     in
     theme
     // genAttrs (map (k: "${k}_RGB") colorKeys) (name:

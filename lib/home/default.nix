@@ -5,7 +5,7 @@
     ./font.nix
     ./treesitter.nix
     ./ssh.nix
-    ../../lib/domains/domain-config.nix
+    ../domains/domain-config.nix
   ];
 
   programs.home-manager.enable = true;

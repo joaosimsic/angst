@@ -2,16 +2,16 @@
 
 let
   cfg = config.capabilities.graphical;
-
-  themesLib = import ../themes/default.nix { inherit lib; };
-  themeColors = themesLib.get theme;
 in
 {
   options.capabilities.graphical = {
     enable = lib.mkEnableOption "Graphical desktop with X11";
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (let
+    themesLib = import ../themes/default.nix { inherit lib; };
+    themeColors = themesLib.get theme;
+  in {
     services.xserver.enable = true;
     services.libinput.enable = true;
 
@@ -38,5 +38,5 @@ in
       xrandr
       xset
     ];
-  };
+  });
 }

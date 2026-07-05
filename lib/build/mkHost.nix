@@ -25,7 +25,7 @@ inputs.nixpkgs.lib.nixosSystem {
 
   modules = [
     { nixpkgs.hostPlatform = hostConfig.system; }
-    ../../core/system
+    ../../lib/nixos
     ../../hosts/${hostname}/configuration.nix
     inputs.home-manager.nixosModules.home-manager
     {

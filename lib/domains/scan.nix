@@ -36,9 +36,10 @@ let
                   rawMeta = import (domainPath + "/meta.nix");
                   meta = validateMeta { inherit category name; meta = rawMeta; };
                   building = meta.building or "home";
+                  hasRender = builtins.pathExists "${domainPath}/render.nix";
                 in
                 optional (buildingFilter building) {
-                  inherit category name;
+                  inherit category name hasRender;
                   path = domainPath;
                   meta = meta // { inherit building; };
                 }

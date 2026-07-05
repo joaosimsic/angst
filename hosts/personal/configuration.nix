@@ -3,6 +3,7 @@
 {
   imports = [
     ./hardware.nix
+    ../../common/capabilities.nix
   ];
 
   networking.hostName = hostname;
@@ -13,7 +14,6 @@
   boot.initrd.kernelModules = [ "amdgpu" ];
 
   services.xserver.videoDrivers = [ "amdgpu" ];
-  services.fstrim.enable = true;
 
   hardware.graphics = {
     enable = true;
@@ -23,15 +23,8 @@
 
   hardware.cpu.amd.updateMicrocode = true;
 
-  zramSwap.enable = true;
-
   capabilities.audio.enable = true;
   capabilities.graphical.enable = true;
-  capabilities.network.enable = true;
-  capabilities.container.enable = true;
-  capabilities.git.enable = true;
-  capabilities.search.enable = true;
   capabilities.ssh.enable = true;
   capabilities.clipboard.enable = true;
-  capabilities.monitoring.enable = true;
 }

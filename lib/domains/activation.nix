@@ -80,7 +80,7 @@ let
         else
           "";
     in
-    if !hasConfigDir || (!hasXdg && !hasXdgFile) then
+    if !hasConfigDir || (!hasXdg && !hasXdgFile) || (meta.customXdg or false) then
       { }
     else
       {
