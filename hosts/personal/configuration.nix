@@ -4,6 +4,7 @@
   imports = [
     ./hardware.nix
     ../../common/capabilities.nix
+    ../../lib/virtualisation
   ];
 
   networking.hostName = hostname;

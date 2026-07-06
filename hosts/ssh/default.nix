@@ -1,5 +1,5 @@
 {
   system = "x86_64-linux";
-  theme = "monochrome";
+  theme = "miasma";
   user = import ../../common/user.nix;
 }
