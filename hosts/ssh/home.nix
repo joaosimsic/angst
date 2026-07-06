@@ -31,9 +31,11 @@
         '';
 
         postInstall = ''
-          installShellCompletion --cmd opencode \
-            --bash <($out/bin/opencode completion) \
-            --zsh <(SHELL=/bin/zsh $out/bin/opencode completion)
+          if [ -n "$($out/bin/opencode completion 2>/dev/null)" ]; then
+            installShellCompletion --cmd opencode \
+              --bash <($out/bin/opencode completion) \
+              --zsh <(SHELL=/bin/zsh $out/bin/opencode completion)
+          fi
         '';
 
         meta = prev.opencode.meta // {
