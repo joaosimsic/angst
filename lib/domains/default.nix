@@ -5,7 +5,7 @@ let
   activation = import ./activation.nix { inherit lib; };
   module = import ./module.nix {
     inherit lib;
-    mkDomainActivation = activation.mkDomainActivation;
+    inherit (activation) mkDomainActivation;
   };
 in
 scan // module

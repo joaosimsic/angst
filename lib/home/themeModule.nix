@@ -1,4 +1,9 @@
-{ lib, themesLib, hostTheme, ... }:
+{
+  lib,
+  themesLib,
+  hostTheme,
+  ...
+}:
 
 {
   options.theme = lib.mkOption {

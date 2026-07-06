@@ -43,7 +43,9 @@ local Git = {
 
 	{
 		provider = function(self)
-			if not self.status_dict then return "" end
+			if not self.status_dict then
+				return ""
+			end
 			return "* " .. (self.status_dict.head or "")
 		end,
 		hl = git_hl("HeirlineGit", c.git.branch),

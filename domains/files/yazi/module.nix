@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.domains.files.yazi;
@@ -8,4 +13,3 @@ in
     home.packages = [ pkgs.yazi ];
   };
 }
-

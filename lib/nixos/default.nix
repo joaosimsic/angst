@@ -1,4 +1,9 @@
-{ config, lib, pkgs, userConfig, ... }:
+{
+  lib,
+  pkgs,
+  userConfig,
+  ...
+}:
 
 {
   system.stateVersion = "25.11";
@@ -15,18 +20,29 @@
 
   networking.networkmanager.enable = true;
 
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
   nixpkgs.config.allowUnfree = true;
 
   users.users.${userConfig.username} = {
     isNormalUser = true;
     description = userConfig.username;
-    extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
+    extraGroups = [
+      "wheel"
+      "networkmanager"
+      "video"
+      "audio"
+    ];
     initialPassword = lib.mkDefault "changeme";
     shell = pkgs.nushell;
   };
 
-  environment.shells = [ pkgs.bash pkgs.nushell ];
+  environment.shells = [
+    pkgs.bash
+    pkgs.nushell
+  ];
 
   users.users.root.initialPassword = "changeme";
 

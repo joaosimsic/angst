@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.capabilities.audio;
@@ -17,7 +22,7 @@ in
       alsa.support32Bit = true;
       pulse.enable = true;
     };
-    
+
     environment.systemPackages = [ pkgs.pavucontrol ];
   };
 }

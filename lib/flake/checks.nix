@@ -20,7 +20,13 @@ let
   };
 
   themeOverrideCheck = import ../checks/theme/override.nix {
-    inherit lib pkgs themesLib overrideTheme renderDomainOutputFor;
+    inherit
+      lib
+      pkgs
+      themesLib
+      overrideTheme
+      renderDomainOutputFor
+      ;
     homeConfiguration = self.homeConfigurations.joao-theme-override-test;
   };
 in
@@ -35,8 +41,7 @@ in
 
   theme-override = themeOverrideCheck;
 
-  home-theme-override-test =
-    self.homeConfigurations.joao-theme-override-test.activationPackage;
+  home-theme-override-test = self.homeConfigurations.joao-theme-override-test.activationPackage;
 
   theme-semantic-distinct = themeSemanticDistinct;
 }

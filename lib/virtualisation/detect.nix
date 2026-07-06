@@ -1,4 +1,9 @@
-{ lib, flakeSelf ? null, userConfig ? null, ... }:
+{
+  lib,
+  flakeSelf ? null,
+  userConfig ? null,
+  ...
+}:
 
 let
   isQemuVm = import ./is-qemu-vm.nix { inherit lib flakeSelf userConfig; };

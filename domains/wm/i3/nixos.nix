@@ -1,4 +1,9 @@
-{ config, lib, userConfig, ... }:
+{
+  config,
+  lib,
+  userConfig,
+  ...
+}:
 
 let
   hmUser = config.home-manager.users.${userConfig.username} or { };

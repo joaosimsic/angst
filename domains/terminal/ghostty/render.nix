@@ -1,4 +1,10 @@
-{ themesLib, themeName, lib, checkHelpers, fontFamily, ... }:
+{
+  themesLib,
+  themeName,
+  checkHelpers,
+  fontFamily,
+  ...
+}:
 
 let
   t = themesLib.get themeName;
@@ -68,11 +74,14 @@ in
     text = colorsText;
     checks = [
       (requireInfix colorsText "palette = 5=#${t.BLUE}"
-        "ghostty palette slot 5 should render ${themeName} BLUE")
+        "ghostty palette slot 5 should render ${themeName} BLUE"
+      )
       (requireInfix colorsText "palette = 13=#${t.MAGENTA}"
-        "ghostty palette slot 13 should render ${themeName} MAGENTA")
+        "ghostty palette slot 13 should render ${themeName} MAGENTA"
+      )
       (requireInfix colorsText "palette = 1=#${t.RED}"
-        "ghostty palette slot 1 should render ${themeName} RED")
+        "ghostty palette slot 1 should render ${themeName} RED"
+      )
     ];
   }
 ]

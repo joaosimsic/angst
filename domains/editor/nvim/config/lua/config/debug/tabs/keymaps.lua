@@ -120,10 +120,14 @@ local function add_table_header(view, card_width, natural, widths)
 	end
 	local header = "| "
 		.. R.str_pad("MODES", widths.modes)
-		.. " " .. R.str_pad("LHS", widths.lhs)
-		.. " " .. R.str_pad("SCOPE", widths.scope)
-		.. " " .. R.str_pad("DESC/RHS", widths.desc)
-		.. "  " .. R.str_pad("SOURCE", widths.source)
+		.. " "
+		.. R.str_pad("LHS", widths.lhs)
+		.. " "
+		.. R.str_pad("SCOPE", widths.scope)
+		.. " "
+		.. R.str_pad("DESC/RHS", widths.desc)
+		.. "  "
+		.. R.str_pad("SOURCE", widths.source)
 		.. " |"
 	local header_nr = R.add_line(view, header)
 
@@ -156,8 +160,16 @@ local function add_table_row(view, modes, lhs, scope, desc, source, conflict, ca
 	local col_source = R.str_pad(source, widths.source)
 
 	local line = "| "
-		.. col_modes .. " " .. col_lhs .. " " .. col_scope .. " " .. col_desc
-		.. "  " .. col_source .. " |"
+		.. col_modes
+		.. " "
+		.. col_lhs
+		.. " "
+		.. col_scope
+		.. " "
+		.. col_desc
+		.. "  "
+		.. col_source
+		.. " |"
 	local line_nr = R.add_line(view, line)
 
 	local modes_start = 2

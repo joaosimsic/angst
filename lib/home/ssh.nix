@@ -9,25 +9,24 @@ in
     enable = true;
     enableDefaultConfig = false;
 
-    settings =
-      {
-        "*" = {
-          AddKeysToAgent = "yes";
-        }
-        // lib.optionalAttrs (defaultIdentity != null) {
-          IdentityFile = defaultIdentity;
-        };
+    settings = {
+      "*" = {
+        AddKeysToAgent = "yes";
       }
-      // lib.mapAttrs (
-        host: cfg:
-        {
-          Host = host;
-          User = cfg.user or "git";
-          StrictHostKeyChecking = cfg.strictHostKeyChecking or "accept-new";
-        }
-        // lib.optionalAttrs ((cfg.identityFile or defaultIdentity) != null) {
-          IdentityFile = cfg.identityFile or defaultIdentity;
-        }
-      ) gitSshHosts;
+      // lib.optionalAttrs (defaultIdentity != null) {
+        IdentityFile = defaultIdentity;
+      };
+    }
+    // lib.mapAttrs (
+      host: cfg:
+      {
+        Host = host;
+        User = cfg.user or "git";
+        StrictHostKeyChecking = cfg.strictHostKeyChecking or "accept-new";
+      }
+      // lib.optionalAttrs ((cfg.identityFile or defaultIdentity) != null) {
+        IdentityFile = cfg.identityFile or defaultIdentity;
+      }
+    ) gitSshHosts;
   };
 }

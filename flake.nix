@@ -17,7 +17,6 @@
     {
       self,
       nixpkgs,
-      home-manager,
       vm,
       ...
     }@inputs:
@@ -51,7 +50,7 @@
       mkHost = import ./lib/build/mkHost.nix (
         env
         // {
-          mkHomeProfile = homeLib.mkHomeProfile;
+          inherit (homeLib) mkHomeProfile;
           flakeSelf = self;
         }
       );
@@ -67,9 +66,9 @@
           mkHome
           mkHomeWithExtraModules
           ;
-        vmOutputs = vmOutputs;
-        loadHost = env.loadHost;
-        lib = pkgs.lib;
+        inherit vmOutputs;
+        inherit (env) loadHost;
+        inherit (pkgs) lib;
       };
     in
     {

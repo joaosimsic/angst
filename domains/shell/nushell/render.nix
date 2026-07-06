@@ -1,4 +1,9 @@
-{ themesLib, themeName, checkHelpers, ... }:
+{
+  themesLib,
+  themeName,
+  checkHelpers,
+  ...
+}:
 
 let
   t = themesLib.get themeName;
@@ -114,11 +119,12 @@ in
     text = colorsText;
     checks = [
       (requireInfix colorsText "shape_garbage:               { fg: \"#${t.ERROR}\""
-        "nushell shape_garbage should render ${themeName} ERROR")
+        "nushell shape_garbage should render ${themeName} ERROR"
+      )
       (requireInfix colorsText "shape_globpattern:           \"#${t.INFO}\""
-        "nushell shape_globpattern should render ${themeName} INFO")
-      (require (t.ERROR != t.INFO)
-        "nushell semantic ERROR and INFO must differ in ${themeName}")
+        "nushell shape_globpattern should render ${themeName} INFO"
+      )
+      (require (t.ERROR != t.INFO) "nushell semantic ERROR and INFO must differ in ${themeName}")
     ];
   }
 ]

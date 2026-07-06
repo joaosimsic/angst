@@ -1,18 +1,34 @@
-{ lib, hosts, loadHost, mkHome, mkHomeWithExtraModules, themeContext }:
+{
+  lib,
+  hosts,
+  loadHost,
+  mkHome,
+  mkHomeWithExtraModules,
+  themeContext,
+}:
 
 let
   inherit (themeContext) overrideTheme testHostname;
 
-  perHost = lib.listToAttrs (map (h:
-    let user = (loadHost h).user; in {
-      name = "${user.username}@${h}";
-      value = mkHome h;
-    }
-  ) hosts);
+  perHost = lib.listToAttrs (
+    map (
+      h:
+      let
+        user = (loadHost h).user;
+      in
+      {
+        name = "${user.username}@${h}";
+        value = mkHome h;
+      }
+    ) hosts
+  );
 in
-perHost // {
+perHost
+// {
   "${(loadHost testHostname).user.username}" = mkHome testHostname;
-  "${(loadHost testHostname).user.username}-theme-override-test" = mkHomeWithExtraModules testHostname [
-    { theme = overrideTheme; }
-  ];
+  "${(loadHost testHostname).user.username}-theme-override-test" =
+    mkHomeWithExtraModules testHostname
+      [
+        { theme = overrideTheme; }
+      ];
 }

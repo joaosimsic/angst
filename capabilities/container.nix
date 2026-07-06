@@ -1,4 +1,10 @@
-{ config, lib, pkgs, userConfig, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  userConfig,
+  ...
+}:
 
 let
   cfg = config.capabilities.container;
@@ -23,7 +29,10 @@ in
       defaultNetwork.settings.dns_enabled = true;
     };
 
-    users.users.${userConfig.username}.extraGroups = [ "docker" "podman" ];
+    users.users.${userConfig.username}.extraGroups = [
+      "docker"
+      "podman"
+    ];
 
     environment.systemPackages = with pkgs; [
       lazydocker

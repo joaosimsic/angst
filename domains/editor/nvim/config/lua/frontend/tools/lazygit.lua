@@ -4,7 +4,7 @@ local Keybinder = require("common.Keybinder")
 ---@type Plugin
 return {
 	"kdheepak/lazygit.nvim",
-  event = "VeryLazy",
+	event = "VeryLazy",
 	cmd = {
 		"LazyGit",
 		"LazyGitConfig",

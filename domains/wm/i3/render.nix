@@ -1,11 +1,22 @@
-{ lib, themesLib, themeName, fontFamily, monitors ? { }, ... }:
+{
+  lib,
+  themesLib,
+  themeName,
+  fontFamily,
+  monitors ? { },
+  ...
+}:
 
 let
   t = themesLib.get themeName;
 
   monitorOrder = lib.unique (
     lib.filter (n: lib.hasAttr n monitors) (
-      [ "primary" "secondary" ] ++ lib.attrNames monitors
+      [
+        "primary"
+        "secondary"
+      ]
+      ++ lib.attrNames monitors
     )
   );
 

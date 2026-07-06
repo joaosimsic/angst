@@ -6,5 +6,4 @@ return {
 	formatter = "black",
 	linter = "pylint",
 	treesitter = "python",
-
 }

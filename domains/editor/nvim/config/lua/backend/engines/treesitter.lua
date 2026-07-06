@@ -42,7 +42,7 @@ return {
 			vim.treesitter.language.register(grammar, filetype)
 		end
 
-		vim.treesitter.query.add_predicate('is-not?', function(match, pattern, source, predicate)
+		vim.treesitter.query.add_predicate("is-not?", function(match, pattern, source, predicate)
 			local nodes = match[predicate[2]]
 			if not nodes or #nodes == 0 then
 				return true
@@ -135,25 +135,25 @@ return {
 					end
 				end
 
-			local ok, err = pcall(vim.treesitter.start, event.buf, lang)
+				local ok, err = pcall(vim.treesitter.start, event.buf, lang)
 
-			if not ok then
-				logger:error(function()
-					return string.format("Treesitter failed to start for [%s]: %s", filetype, err)
-				end)
-			else
-				vim.b[event.buf].ts_highlight_started = true
-				logger:info(function()
-					return string.format("Highlighting started for [%s] on bufnr=%d", lang, event.buf)
-				end)
-			end
+				if not ok then
+					logger:error(function()
+						return string.format("Treesitter failed to start for [%s]: %s", filetype, err)
+					end)
+				else
+					vim.b[event.buf].ts_highlight_started = true
+					logger:info(function()
+						return string.format("Highlighting started for [%s] on bufnr=%d", lang, event.buf)
+					end)
+				end
 
-			if ok and not fold_disabled_filetypes[filetype] then
-				vim.wo.foldmethod = "expr"
-				vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
-				vim.wo.foldlevel = 99
-			end
-		end,
+				if ok and not fold_disabled_filetypes[filetype] then
+					vim.wo.foldmethod = "expr"
+					vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+					vim.wo.foldlevel = 99
+				end
+			end,
 		})
 
 		for _, buf in ipairs(vim.api.nvim_list_bufs()) do

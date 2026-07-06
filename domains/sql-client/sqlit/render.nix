@@ -1,4 +1,9 @@
-{ themesLib, themeName, checkHelpers, ... }:
+{
+  themesLib,
+  themeName,
+  checkHelpers,
+  ...
+}:
 
 let
   t = themesLib.get themeName;
@@ -45,9 +50,11 @@ in
     text = settingsText;
     checks = [
       (requireInfix settingsText ''"theme": "${themeName}"''
-        "sqlit settings theme name should be ${themeName}")
+        "sqlit settings theme name should be ${themeName}"
+      )
       (requireInfix settingsText ''"custom_themes": ["${themeName}"]''
-        "sqlit custom_themes should reference ${themeName}")
+        "sqlit custom_themes should reference ${themeName}"
+      )
     ];
   }
   {
@@ -55,37 +62,43 @@ in
     text = themeFileText;
     checks = [
       (requireInfix themeFileText ''"name": "${themeName}"''
-        "sqlit theme file name should be ${themeName}")
-      (requireInfix themeFileText ''"dark": true''
-        "sqlit theme should be dark")
+        "sqlit theme file name should be ${themeName}"
+      )
+      (requireInfix themeFileText ''"dark": true'' "sqlit theme should be dark")
       (requireInfix themeFileText ''"primary": "#${t.ui.border}"''
-        "sqlit primary should render ${themeName} ui.border")
+        "sqlit primary should render ${themeName} ui.border"
+      )
       (requireInfix themeFileText ''"secondary": "#${t.MAGENTA}"''
-        "sqlit secondary should render ${themeName} MAGENTA")
+        "sqlit secondary should render ${themeName} MAGENTA"
+      )
       (requireInfix themeFileText ''"accent": "#${t.ui.bright}"''
-        "sqlit accent should render ${themeName} ui.bright")
+        "sqlit accent should render ${themeName} ui.bright"
+      )
       (requireInfix themeFileText ''"warning": "#${t.WARNING}"''
-        "sqlit warning should render ${themeName} WARNING")
+        "sqlit warning should render ${themeName} WARNING"
+      )
       (requireInfix themeFileText ''"error": "#${t.ERROR}"''
-        "sqlit error should render ${themeName} ERROR")
+        "sqlit error should render ${themeName} ERROR"
+      )
       (requireInfix themeFileText ''"success": "#${t.SUCCESS}"''
-        "sqlit success should render ${themeName} SUCCESS")
+        "sqlit success should render ${themeName} SUCCESS"
+      )
       (requireInfix themeFileText ''"foreground": "#${t.FG}"''
-        "sqlit foreground should render ${themeName} FG")
+        "sqlit foreground should render ${themeName} FG"
+      )
       (requireInfix themeFileText ''"background": "#${t.BG}"''
-        "sqlit background should render ${themeName} BG")
-      (requireInfix themeFileText ''"surface": "#${t.BG}"''
-        "sqlit surface should render ${themeName} BG")
-      (requireInfix themeFileText ''"panel": "#${t.BG}"''
-        "sqlit panel should render ${themeName} BG")
+        "sqlit background should render ${themeName} BG"
+      )
+      (requireInfix themeFileText ''"surface": "#${t.BG}"'' "sqlit surface should render ${themeName} BG")
+      (requireInfix themeFileText ''"panel": "#${t.BG}"'' "sqlit panel should render ${themeName} BG")
       (requireInfix themeFileText ''"border": "#${t.BLUE}"''
-        "sqlit border variable should render ${themeName} BLUE")
-      (require (t.BLUE != t.MAGENTA)
-        "sqlit primary BLUE and secondary MAGENTA must differ in ${themeName}")
-      (require (t.BG != t.SURFACE)
-        "sqlit background and surface must differ in ${themeName}")
-      (require (t.ERROR != t.SUCCESS)
-        "sqlit ERROR and SUCCESS must differ in ${themeName}")
+        "sqlit border variable should render ${themeName} BLUE"
+      )
+      (require (
+        t.BLUE != t.MAGENTA
+      ) "sqlit primary BLUE and secondary MAGENTA must differ in ${themeName}")
+      (require (t.BG != t.SURFACE) "sqlit background and surface must differ in ${themeName}")
+      (require (t.ERROR != t.SUCCESS) "sqlit ERROR and SUCCESS must differ in ${themeName}")
     ];
   }
 ]

@@ -50,8 +50,8 @@ local function redraw_window()
 	}
 
 	local content_width = state.win
-		and vim.api.nvim_win_is_valid(state.win)
-		and vim.api.nvim_win_get_width(state.win) - 2
+			and vim.api.nvim_win_is_valid(state.win)
+			and vim.api.nvim_win_get_width(state.win) - 2
 		or 84
 
 	if state.current_tab == 1 then

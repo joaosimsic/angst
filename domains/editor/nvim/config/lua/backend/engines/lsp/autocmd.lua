@@ -28,7 +28,7 @@ M.setup = function(logger)
 			local bufnr = event.buf
 			local client_id = event.data.client_id
 
-	lsp_keys.setup(bufnr)
+			lsp_keys.setup(bufnr)
 
 			local client = vim.lsp.get_client_by_id(client_id)
 

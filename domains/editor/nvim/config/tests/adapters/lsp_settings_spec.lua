@@ -2,7 +2,10 @@ local describe = rawget(_G, "describe")
 local it = rawget(_G, "it")
 
 local function bool_value(value, path, server_name)
-	assert(type(value) == "boolean", string.format("LSP '%s' inlay hint setting '%s' must be boolean", server_name, path))
+	assert(
+		type(value) == "boolean",
+		string.format("LSP '%s' inlay hint setting '%s' must be boolean", server_name, path)
+	)
 end
 
 local function enum_value(values)
@@ -14,12 +17,7 @@ local function enum_value(values)
 	return function(value, path, server_name)
 		assert(
 			allowed[value],
-			string.format(
-				"LSP '%s' inlay hint setting '%s' must be one of %s",
-				server_name,
-				path,
-				vim.inspect(values)
-			)
+			string.format("LSP '%s' inlay hint setting '%s' must be one of %s", server_name, path, vim.inspect(values))
 		)
 	end
 end
@@ -216,7 +214,10 @@ return function(t)
 			for server_name, expected_options in pairs(expected_inlay_hint_init_options) do
 				local server = lsp_servers[server_name]
 				assert(server, string.format("LSP '%s' should be registered for inlay hints", server_name))
-				assert(server.init_options, string.format("LSP '%s' should declare inlay hint init_options", server_name))
+				assert(
+					server.init_options,
+					string.format("LSP '%s' should declare inlay hint init_options", server_name)
+				)
 
 				for path, validate in pairs(expected_options) do
 					validate(server.init_options[path], path, server_name)
@@ -224,11 +225,8 @@ return function(t)
 			end
 
 			for server_name, server in pairs(lsp_servers) do
-				local leaves = vim.tbl_extend(
-					"force",
-					inlay_hint_leaves(server.settings),
-					inlay_hint_leaves(server.init_options)
-				)
+				local leaves =
+					vim.tbl_extend("force", inlay_hint_leaves(server.settings), inlay_hint_leaves(server.init_options))
 				local expected_settings = vim.tbl_extend(
 					"force",
 					expected_inlay_hint_settings[server_name] or {},

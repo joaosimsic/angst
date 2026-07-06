@@ -7,7 +7,7 @@
   loadHost,
   mkHome,
   mkHomeWithExtraModules,
-  vmOutputs, 
+  vmOutputs,
 }:
 
 let
@@ -18,8 +18,9 @@ let
   themesLib = import ../../themes/default.nix { inherit lib; };
   fontsLib = import ../home/fonts.nix;
 
-  domainRendererPaths = map (e: "${e.path}/render.nix")
-    (lib.filter (e: e.hasRender or false) domainsLib.homeEntries);
+  domainRendererPaths = map (e: "${e.path}/render.nix") (
+    lib.filter (e: e.hasRender or false) domainsLib.homeEntries
+  );
 
   renderDomainOutputsFor =
     hostName: themeName:
@@ -31,7 +32,13 @@ let
         theme = themesLib.get themeName;
       };
       args = {
-        inherit lib themesLib themeName hostConfig checkHelpers;
+        inherit
+          lib
+          themesLib
+          themeName
+          hostConfig
+          checkHelpers
+          ;
         fontFamily = fontsLib.defaultFamily;
         monitors = hostConfig.monitors or { };
         homeDirectory = hostConfig.user.homeDirectory;
@@ -46,7 +53,9 @@ let
   renderDomainOutputFor =
     hostName: themeName: outputPath:
     let
-      matches = lib.filter (output: output.path == outputPath) (renderDomainOutputsFor hostName themeName);
+      matches = lib.filter (output: output.path == outputPath) (
+        renderDomainOutputsFor hostName themeName
+      );
     in
     if matches == [ ] then
       builtins.throw "Unknown domain render output: ${outputPath}"
@@ -62,41 +71,86 @@ let
   };
 
   lintDesktop = import ../checks/desktop.nix {
-    inherit lib pkgs themesLib renderDomainOutputFor;
+    inherit
+      lib
+      pkgs
+      themesLib
+      renderDomainOutputFor
+      ;
   };
 
   lintShell = import ../checks/shell.nix {
-    inherit lib pkgs themesLib renderDomainOutputFor;
+    inherit
+      lib
+      pkgs
+      themesLib
+      renderDomainOutputFor
+      ;
   };
 
   themeRenderedChecks = import ../checks/theme/rendered.nix {
-    inherit lib pkgs themesLib renderDomainOutputsFor;
+    inherit
+      lib
+      pkgs
+      themesLib
+      renderDomainOutputsFor
+      ;
     themeName = themeContext.hostTheme;
   };
 
   homeConfigurations = import ./homeConfigurations.nix {
-    inherit lib hosts loadHost mkHome mkHomeWithExtraModules themeContext;
+    inherit
+      lib
+      hosts
+      loadHost
+      mkHome
+      mkHomeWithExtraModules
+      themeContext
+      ;
   };
 
   checks = import ./checks.nix {
-    inherit self pkgs lib themesLib themeContext themeLint lintDesktop lintShell themeRenderedChecks renderDomainOutputFor;
+    inherit
+      self
+      pkgs
+      lib
+      themesLib
+      themeContext
+      themeLint
+      lintDesktop
+      lintShell
+      themeRenderedChecks
+      renderDomainOutputFor
+      ;
   };
 
   toolchainDir = ../../toolchains;
-  toolchainFiles = builtins.attrNames (lib.filterAttrs
-    (name: type: type == "regular" && lib.hasSuffix ".nix" name && name != "default.nix")
-    (builtins.readDir toolchainDir));
+  toolchainFiles = builtins.attrNames (
+    lib.filterAttrs (
+      name: type: type == "regular" && lib.hasSuffix ".nix" name && name != "default.nix"
+    ) (builtins.readDir toolchainDir)
+  );
 
   evaluatedToolchains = map (f: import (toolchainDir + "/${f}") { inherit lib pkgs; }) toolchainFiles;
 
-  allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or []) evaluatedToolchains);
-  allGrammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or []) evaluatedToolchains);
+  allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or [ ]) evaluatedToolchains);
+  allGrammars = lib.unique (
+    lib.concatMap (t: t.toolchains.treesitterGrammars or [ ]) evaluatedToolchains
+  );
 
-  treesitter = import ../treesitter.nix { inherit lib pkgs; grammars = allGrammars; };
+  treesitter = import ../treesitter.nix {
+    inherit lib pkgs;
+    grammars = allGrammars;
+  };
 
   devShells = {
     nvim-test = pkgs.mkShell {
-      packages = [ pkgs.neovim pkgs.git angstCli ] ++ allToolchainPackages;
+      packages = [
+        pkgs.neovim
+        pkgs.git
+        angstCli
+      ]
+      ++ allToolchainPackages;
       shellHook = ''
         mkdir -p ~/.local/share/tree-sitter
         rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
@@ -311,9 +365,9 @@ in
     ${system} = {
       default = self.homeConfigurations.joao.activationPackage;
       angst = angstCli;
-      
+
       vm-cli = vmOutputs.packages.${system}.default;
-      vm     = vmOutputs.packages.${system}.vm;
+      vm = vmOutputs.packages.${system}.vm;
       vm-run = vmOutputs.packages.${system}.vm-run;
     };
   };
@@ -328,73 +382,73 @@ in
   };
 
   apps = {
-      ${system} = {
-        vm = {
-          type = "app";
-          program = "${vmOutputs.packages.${system}.default}/bin/vm";
-          meta.description = "Run a test virtual machine environment.";
-        }; 
-
-        angst = {
-          type = "app";
-          program = "${angstCli}/bin/angst";
-          meta.description = "Render and watch hot-reloadable desktop configuration.";
-        };
-
-        render = {
-          type = "app";
-          program = "${pkgs.writeShellScript "angst-render" ''
-            exec ${angstCli}/bin/angst render "$@"
-          ''}";
-          meta.description = "Render hot-reloadable domain configuration.";
-        };
-
-        watch = {
-          type = "app";
-          program = "${pkgs.writeShellScript "angst-watch" ''
-            exec ${angstCli}/bin/angst watch "$@"
-          ''}";
-          meta.description = "Watch domain configs and themes, then render and reload.";
-        };
-
-        check = {
-          type = "app";
-          program = "${pkgs.writeShellScript "check" ''
-            set -euo pipefail
-            ${pkgs.nix}/bin/nix flake check --print-build-logs
-          ''}";
-          meta.description = "Run all internal sanity checks and evaluation evaluations.";
-        };
-
-        lint-themes = {
-          type = "app";
-          program = "${pkgs.writeShellScript "lint-themes" ''
-            set -euo pipefail
-            ${pkgs.nix}/bin/nix eval ${self}#lib.themeLint --raw
-          ''}";
-          meta.description = "Validate domain theme renderers.";
-        };
-
-        lint-desktop = {
-          type = "app";
-          program = "${pkgs.writeShellScript "lint-desktop" ''
-            set -euo pipefail
-            ${pkgs.nix}/bin/nix build ${self}#checks.${system}.lint-desktop --no-link --print-build-logs
-            echo "All desktop config checks passed."
-          ''}";
-          meta.description = "Lint system window manager and desktop configurations.";
-        };
-
-        lint-shell = {
-          type = "app";
-          program = "${pkgs.writeShellScript "lint-shell" ''
-            set -euo pipefail
-            ${pkgs.nix}/bin/nix build ${self}#checks.${system}.lint-shell --no-link --print-build-logs
-            echo "All shell config checks passed."
-          ''}";
-          meta.description = "Lint shell script configuration profiles.";
-        };
-
+    ${system} = {
+      vm = {
+        type = "app";
+        program = "${vmOutputs.packages.${system}.default}/bin/vm";
+        meta.description = "Run a test virtual machine environment.";
       };
+
+      angst = {
+        type = "app";
+        program = "${angstCli}/bin/angst";
+        meta.description = "Render and watch hot-reloadable desktop configuration.";
+      };
+
+      render = {
+        type = "app";
+        program = "${pkgs.writeShellScript "angst-render" ''
+          exec ${angstCli}/bin/angst render "$@"
+        ''}";
+        meta.description = "Render hot-reloadable domain configuration.";
+      };
+
+      watch = {
+        type = "app";
+        program = "${pkgs.writeShellScript "angst-watch" ''
+          exec ${angstCli}/bin/angst watch "$@"
+        ''}";
+        meta.description = "Watch domain configs and themes, then render and reload.";
+      };
+
+      check = {
+        type = "app";
+        program = "${pkgs.writeShellScript "check" ''
+          set -euo pipefail
+          ${pkgs.nix}/bin/nix flake check --print-build-logs
+        ''}";
+        meta.description = "Run all internal sanity checks and evaluation evaluations.";
+      };
+
+      lint-themes = {
+        type = "app";
+        program = "${pkgs.writeShellScript "lint-themes" ''
+          set -euo pipefail
+          ${pkgs.nix}/bin/nix eval ${self}#lib.themeLint --raw
+        ''}";
+        meta.description = "Validate domain theme renderers.";
+      };
+
+      lint-desktop = {
+        type = "app";
+        program = "${pkgs.writeShellScript "lint-desktop" ''
+          set -euo pipefail
+          ${pkgs.nix}/bin/nix build ${self}#checks.${system}.lint-desktop --no-link --print-build-logs
+          echo "All desktop config checks passed."
+        ''}";
+        meta.description = "Lint system window manager and desktop configurations.";
+      };
+
+      lint-shell = {
+        type = "app";
+        program = "${pkgs.writeShellScript "lint-shell" ''
+          set -euo pipefail
+          ${pkgs.nix}/bin/nix build ${self}#checks.${system}.lint-shell --no-link --print-build-logs
+          echo "All shell config checks passed."
+        ''}";
+        meta.description = "Lint shell script configuration profiles.";
+      };
+
     };
+  };
 }

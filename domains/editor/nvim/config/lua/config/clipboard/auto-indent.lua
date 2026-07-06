@@ -39,7 +39,5 @@ return {
 		binder:nmap("P", function()
 			paste_inside_block(false)
 		end, { desc = "Paste before with block-aware indent" })
-
-
 	end,
 }

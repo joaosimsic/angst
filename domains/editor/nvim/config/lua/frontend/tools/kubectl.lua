@@ -4,7 +4,7 @@ local Keybinder = require("common.Keybinder")
 ---@type Plugin
 return {
 	"ramilito/kubectl.nvim",
-  enabled = false,
+	enabled = false,
 	event = "VeryLazy",
 	dependencies = "saghen/blink.download",
 	config = function()

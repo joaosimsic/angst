@@ -1,4 +1,4 @@
-{ config, lib, pkgs, modulesPath, ... }:
+{ lib, modulesPath, ... }:
 
 {
   imports = [
@@ -6,8 +6,14 @@
   ];
 
   boot.initrd.availableKernelModules = [
-    "virtio_pci" "virtio_blk" "virtio_scsi" "virtio_net" "virtio_console"
-    "ata_piix" "ahci" "sd_mod"
+    "virtio_pci"
+    "virtio_blk"
+    "virtio_scsi"
+    "virtio_net"
+    "virtio_console"
+    "ata_piix"
+    "ahci"
+    "sd_mod"
   ];
 
   boot.kernelModules = [ ];

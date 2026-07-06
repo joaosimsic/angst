@@ -203,7 +203,12 @@ local function add_current_buffer_section(view, bufnr, card_width)
 	R.add_section(view, "Current Buffer", card_width)
 	R.add_row(view, "Filetype", ft, ft == "unsupported" and "DebugWarn" or "DebugOk")
 	R.add_row(view, "LSP", R.join_or_none(tools_for_filetype("lsp", ft, false), "none configured"), "DebugValue")
-	R.add_row(view, "Formatters", R.join_or_none(tools_for_filetype("formatter", ft, false), "none configured"), "DebugValue")
+	R.add_row(
+		view,
+		"Formatters",
+		R.join_or_none(tools_for_filetype("formatter", ft, false), "none configured"),
+		"DebugValue"
+	)
 	R.add_row(view, "Linters", R.join_or_none(tools_for_filetype("linter", ft, false), "none configured"), "DebugValue")
 	R.add_row(view, "Tree-sitter", lang, lang ~= "unsupported" and "DebugInfo" or "DebugWarn")
 	R.add_row(view, "Highlighter", parser and "active" or "inactive", parser and "DebugOk" or "DebugWarn")
@@ -239,7 +244,7 @@ function M.render(bufnr, card_width)
 	add_engines_section(view, card_width)
 	R.add_gap(view)
 	add_current_buffer_section(view, bufnr, card_width)
-		return view
+	return view
 end
 
 return M

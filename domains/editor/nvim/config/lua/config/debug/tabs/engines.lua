@@ -228,7 +228,12 @@ function M.render(bufnr, card_width)
 		local parts, detail = query_summary(query_lang)
 
 		R.add_row(view, "Language", query_lang, "DebugInfo")
-		R.add_row(view, "Groups", R.join_or_none(parts, "no query files found"), #parts > 0 and "DebugOk" or "DebugWarn")
+		R.add_row(
+			view,
+			"Groups",
+			R.join_or_none(parts, "no query files found"),
+			#parts > 0 and "DebugOk" or "DebugWarn"
+		)
 
 		for _, item in ipairs(detail) do
 			for i, source in ipairs(item.sources) do

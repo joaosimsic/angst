@@ -18,10 +18,8 @@ return {
 				if vim.fn.mode() ~= "c" then
 					vim.cmd("checktime")
 				end
-
 			end,
 			pattern = { "*" },
 		})
 	end,
 }
-

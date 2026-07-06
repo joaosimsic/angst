@@ -1,4 +1,10 @@
-{ lib, pkgs, themesLib, renderDomainOutputsFor, themeName }:
+{
+  lib,
+  pkgs,
+  themesLib,
+  renderDomainOutputsFor,
+  themeName,
+}:
 
 let
   theme = themesLib.get themeName;

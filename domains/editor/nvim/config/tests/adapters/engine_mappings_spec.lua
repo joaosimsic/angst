@@ -11,7 +11,10 @@ return function(t)
 				assert(type(server_name) == "string", "LSP server name must be a string.")
 
 				local cmd = t.resolve_cmd(server_opts.cmd)
-				assert(type(cmd) == "table", string.format("LSP '%s' has an invalid or missing 'cmd' array.", server_name))
+				assert(
+					type(cmd) == "table",
+					string.format("LSP '%s' has an invalid or missing 'cmd' array.", server_name)
+				)
 				assert(#cmd > 0, string.format("LSP '%s' cmd array cannot be empty.", server_name))
 
 				assert(
