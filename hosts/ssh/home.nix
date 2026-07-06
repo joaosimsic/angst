@@ -9,7 +9,7 @@
 
         src = fetchurl {
           url = "https://github.com/anomalyco/opencode/releases/download/v${prev.opencode.version}/opencode-linux-x64-baseline.tar.gz";
-          hash = "sha256-MBwkXdgbqA7ft9bu51V/WP4PUXRUH7iRQLdl5VTrxf0=";
+          hash = "sha256-JshWl3IPExni13BD0n5ozRtAjWDRNcterJ8+CBfvazA=";
         };
 
         nativeBuildInputs = [ installShellFiles makeBinaryWrapper ];
