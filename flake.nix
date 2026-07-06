@@ -72,7 +72,9 @@
       };
     in
     {
-      nixosConfigurations = nixpkgs.lib.genAttrs hosts mkHost;
+      nixosConfigurations = nixpkgs.lib.genAttrs
+        (builtins.filter (h: builtins.pathExists (./hosts + "/${h}/configuration.nix")) hosts)
+        mkHost;
 
       inherit (flakeLib)
         homeConfigurations
