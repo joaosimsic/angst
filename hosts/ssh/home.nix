@@ -14,12 +14,14 @@
 
         nativeBuildInputs = [ installShellFiles makeBinaryWrapper ];
 
+        dontUnpack = true;
         dontConfigure = true;
         dontBuild = true;
 
         installPhase = ''
           runHook preInstall
 
+          tar -xzf $src
           install -Dm755 opencode $out/bin/opencode
           wrapProgram $out/bin/opencode \
             --prefix PATH : ${lib.makeBinPath [ ripgrep ]} \
