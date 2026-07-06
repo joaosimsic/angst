@@ -48,7 +48,7 @@ let
         ../../hosts/${hostname}/home.nix
 
         ({ ... }: {
-          home.packages = [ vmTool ];
+          home.packages = lib.optionals (hostConfig.enableVmTool or true) [ vmTool ];
         })
         ({ ... }: {
           home.file.".ssh/config".force = true;
