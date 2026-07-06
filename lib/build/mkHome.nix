@@ -50,9 +50,7 @@ let
         ({ ... }: {
           home.packages = lib.optionals (hostConfig.enableVmTool or true) [ vmTool ];
         })
-        ({ ... }: {
-          home.file.".ssh/config".force = true;
-        })
+
       ]
       ++ homeModules;
     };

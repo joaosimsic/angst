@@ -4,7 +4,6 @@
   imports = [
     ./font.nix
     ./treesitter.nix
-    ./ssh.nix
     ../domains/domain-config.nix
   ];
 
