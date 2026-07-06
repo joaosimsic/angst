@@ -13,7 +13,10 @@ return function(t)
 
 			assert(type(lua_tools) == "table", "Scanner should return a table of tools for a filetype.")
 			assert(#lua_tools > 0, "Lua should have at least one configured treesitter parser.")
-			assert(t.AdapterScanner:supports_filetype("treesitter", "lua", opts), "Lua should be supported by treesitter.")
+			assert(
+				t.AdapterScanner:supports_filetype("treesitter", "lua", opts),
+				"Lua should be supported by treesitter."
+			)
 			assert(
 				not t.AdapterScanner:supports_filetype("treesitter", "definitely-not-a-filetype", opts),
 				"Unknown filetypes should not be reported as supported."

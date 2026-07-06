@@ -67,10 +67,7 @@ return function(t)
 				config_module.setup()
 			end)
 
-			assert(
-				package.loaded["backend.adapters"],
-				"backend.adapters should be loaded after config.setup() runs"
-			)
+			assert(package.loaded["backend.adapters"], "backend.adapters should be loaded after config.setup() runs")
 		end)
 
 		it("should not enable any LSP for an unknown filetype", function()
@@ -215,10 +212,7 @@ return function(t)
 					table.insert(unexpected, name)
 				end
 			end
-			assert(
-				#unexpected == 0,
-				"only ts_ls should be enabled for 'typescript', got: " .. vim.inspect(unexpected)
-			)
+			assert(#unexpected == 0, "only ts_ls should be enabled for 'typescript', got: " .. vim.inspect(unexpected))
 		end)
 
 		it("should use event instead of ft in formatter.lua", function()

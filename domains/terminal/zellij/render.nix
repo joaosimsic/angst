@@ -1,4 +1,9 @@
-{ themesLib, themeName, checkHelpers, ... }:
+{
+  themesLib,
+  themeName,
+  checkHelpers,
+  ...
+}:
 
 let
   t = themesLib.get themeName;
@@ -8,18 +13,18 @@ let
   inactiveTab = "bg=#${t.ui.subtle},fg=#${t.ui.bg}";
   activeTab = "bg=#${t.ui.bg},fg=#${t.ui.subtle},bold";
 
-  modeNormal   = "bg=#${t.ui.subtle},fg=#${t.ui.bg},bold";
-  modeLocked   = "bg=#${t.ansi.normal.red},fg=#${t.ui.bg},bold";
-  modePane     = "bg=#${t.ansi.normal.green},fg=#${t.ui.bg},bold";
-  modeTab      = "bg=#${t.ansi.bright.magenta},fg=#${t.ui.bg},bold";
-  modeScroll   = "bg=#${t.ansi.normal.yellow},fg=#${t.ui.bg},bold";
-  modeSearch   = "bg=#${t.ansi.normal.magenta},fg=#${t.ui.bg},bold";
-  modeResize   = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
-  modeRename   = "bg=#${t.ansi.normal.cyan},fg=#${t.ui.bg},bold";
-  modeMove     = "bg=#${t.ansi.bright.yellow},fg=#${t.ui.bg},bold";
-  modeSession  = "bg=#${t.ansi.normal.blue},fg=#${t.ui.bg},bold";
-  modePrompt   = "bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold";
-  modeTmux     = "bg=#${t.ansi.bright.cyan},fg=#${t.ui.bg},bold";
+  modeNormal = "bg=#${t.ui.subtle},fg=#${t.ui.bg},bold";
+  modeLocked = "bg=#${t.ansi.normal.red},fg=#${t.ui.bg},bold";
+  modePane = "bg=#${t.ansi.normal.green},fg=#${t.ui.bg},bold";
+  modeTab = "bg=#${t.ansi.bright.magenta},fg=#${t.ui.bg},bold";
+  modeScroll = "bg=#${t.ansi.normal.yellow},fg=#${t.ui.bg},bold";
+  modeSearch = "bg=#${t.ansi.normal.magenta},fg=#${t.ui.bg},bold";
+  modeResize = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
+  modeRename = "bg=#${t.ansi.normal.cyan},fg=#${t.ui.bg},bold";
+  modeMove = "bg=#${t.ansi.bright.yellow},fg=#${t.ui.bg},bold";
+  modeSession = "bg=#${t.ansi.normal.blue},fg=#${t.ui.bg},bold";
+  modePrompt = "bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold";
+  modeTmux = "bg=#${t.ansi.bright.cyan},fg=#${t.ui.bg},bold";
 
   configText = ''
     plugins {
@@ -340,10 +345,10 @@ in
     path = "domains/terminal/zellij/config/config.kdl";
     text = configText;
     checks = [
-      (requireInfix configText "theme \"angst\""
-        "zellij config should select the generated angst theme")
+      (requireInfix configText "theme \"angst\"" "zellij config should select the generated angst theme")
       (requireInfix configText "default_layout \"default\""
-        "zellij config should select the custom default layout")
+        "zellij config should select the custom default layout"
+      )
     ];
   }
   {
@@ -351,21 +356,30 @@ in
     text = themeText;
     checks = [
       (requireInfix themeText "text_unselected {\n                  base \"#${t.ui.fg}\""
-        "zellij native text should render ${themeName} ui.fg")
-      (requireInfix themeText "ribbon_selected {\n                  base \"#${t.ui.bg}\"\n                  background \"#${t.ui.accent}\""
-        "zellij selected ribbon should render ${themeName} ui.accent")
+        "zellij native text should render ${themeName} ui.fg"
+      )
+      (requireInfix themeText
+        "ribbon_selected {\n                  base \"#${t.ui.bg}\"\n                  background \"#${t.ui.accent}\""
+        "zellij selected ribbon should render ${themeName} ui.accent"
+      )
       (requireInfix themeText "frame_unselected {\n                  base \"#${t.ui.border}\""
-        "zellij inactive frame should render ${themeName} ui.border")
+        "zellij inactive frame should render ${themeName} ui.border"
+      )
       (requireInfix themeText "frame_selected {\n                  base \"#${t.ui.accent}\""
-        "zellij active frame should render ${themeName} ui.accent")
+        "zellij active frame should render ${themeName} ui.accent"
+      )
       (requireInfix themeText "frame_highlight {\n                  base \"#${t.diagnostic.warning}\""
-        "zellij highlighted frame should render ${themeName} diagnostic.warning")
-      (require (t.ui.accent != t.ui.bg)
-        "zellij selected ribbon must differ from background in ${themeName}")
-      (require (t.ui.border != t.ui.bg)
-        "zellij inactive frame must differ from background in ${themeName}")
-      (require (t.diagnostic.warning != t.ui.bg)
-        "zellij highlighted frame must differ from background in ${themeName}")
+        "zellij highlighted frame should render ${themeName} diagnostic.warning"
+      )
+      (require (
+        t.ui.accent != t.ui.bg
+      ) "zellij selected ribbon must differ from background in ${themeName}")
+      (require (
+        t.ui.border != t.ui.bg
+      ) "zellij inactive frame must differ from background in ${themeName}")
+      (require (
+        t.diagnostic.warning != t.ui.bg
+      ) "zellij highlighted frame must differ from background in ${themeName}")
     ];
   }
   {
@@ -373,23 +387,33 @@ in
     text = layoutText;
     checks = [
       (requireInfix layoutText "mode_default_to_mode \"normal\""
-        "zjstatus should fall back to normal mode formatting")
+        "zjstatus should fall back to normal mode formatting"
+      )
       (requireInfix layoutText "mode_normal        \"#[bg=#${t.ui.accent},fg=#${t.ui.bg},bold]"
-        "zellij normal mode should render ${themeName} ui.accent on ui.bg")
+        "zellij normal mode should render ${themeName} ui.accent on ui.bg"
+      )
       (requireInfix layoutText "mode_prompt        \"#[bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold]"
-        "zjstatus prompt mode should render ${themeName} diagnostic.success on ui.bg")
+        "zjstatus prompt mode should render ${themeName} diagnostic.success on ui.bg"
+      )
       (requireInfix layoutText "format_left  \" {mode}  {tabs}\""
-        "zellij format should use uniform bar background")
-      (requireInfix layoutText "format_right \"#[bg=#${t.ui.surface},fg=#${t.ui.comment}] {command_cwd} \""
-        "zellij cwd should render ${themeName} ui.comment on ui.surface")
+        "zellij format should use uniform bar background"
+      )
+      (requireInfix layoutText
+        "format_right \"#[bg=#${t.ui.surface},fg=#${t.ui.comment}] {command_cwd} \""
+        "zellij cwd should render ${themeName} ui.comment on ui.surface"
+      )
       (requireInfix layoutText "tab_active              \"#[bg=#${t.ui.accent},fg=#${t.ui.bg},bold]"
-        "zellij active tab should render ${themeName} ui.accent")
+        "zellij active tab should render ${themeName} ui.accent"
+      )
       (requireInfix layoutText "tab_normal              \"#[bg=#${t.ui.surface},fg=#${t.ui.subtle}]"
-        "zellij inactive tab should render ${themeName} ui.subtle on ui.surface")
-      (require (t.ui.accent != t.ui.surface)
-        "zellij active tab and bar surface must differ in ${themeName}")
-      (require (t.ui.subtle != t.ui.surface)
-        "zellij inactive tab text and bar surface must differ in ${themeName}")
+        "zellij inactive tab should render ${themeName} ui.subtle on ui.surface"
+      )
+      (require (
+        t.ui.accent != t.ui.surface
+      ) "zellij active tab and bar surface must differ in ${themeName}")
+      (require (
+        t.ui.subtle != t.ui.surface
+      ) "zellij inactive tab text and bar surface must differ in ${themeName}")
     ];
   }
 ]

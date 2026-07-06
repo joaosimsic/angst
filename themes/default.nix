@@ -24,15 +24,26 @@ let
     legacyTokens
     ;
 
-  layerPaths = layer: tokens: map (token: {
-    path = [ layer token ];
-    label = "${layer}.${token}";
-  }) tokens;
+  layerPaths =
+    layer: tokens:
+    map (token: {
+      path = [
+        layer
+        token
+      ];
+      label = "${layer}.${token}";
+    }) tokens;
 
-  ansiPaths = variant: tokens: map (token: {
-    path = [ "ansi" variant token ];
-    label = "ansi.${variant}.${token}";
-  }) tokens;
+  ansiPaths =
+    variant: tokens:
+    map (token: {
+      path = [
+        "ansi"
+        variant
+        token
+      ];
+      label = "ansi.${variant}.${token}";
+    }) tokens;
 
   requiredColorPaths =
     (layerPaths "palette" paletteTokens)
@@ -42,13 +53,10 @@ let
     ++ (layerPaths "syntax" syntaxTokens)
     ++ (layerPaths "diagnostic" diagnosticTokens);
 
-  stripHash = hex:
-    if lib.hasPrefix "#" hex then
-      lib.removePrefix "#" hex
-    else
-      hex;
+  stripHash = hex: if lib.hasPrefix "#" hex then lib.removePrefix "#" hex else hex;
 
-  hexToRgb = hex:
+  hexToRgb =
+    hex:
     let
       h = stripHash hex;
       hexValues = {
@@ -69,7 +77,8 @@ let
         "e" = 14;
         "f" = 15;
       };
-      hexByte = offset:
+      hexByte =
+        offset:
         let
           hi = lib.toLower (lib.substring offset 1 h);
           lo = lib.toLower (lib.substring (offset + 1) 1 h);
@@ -84,7 +93,8 @@ let
 
   normalizeThemeColors =
     theme:
-    theme // {
+    theme
+    // {
       palette = normalizeLayer theme.palette;
       ansi = {
         normal = normalizeLayer theme.ansi.normal;
@@ -103,33 +113,33 @@ let
       invalid = filter (entry: !isValidHex (attrByPath entry.path "" theme)) present;
     in
     if missing != [ ] then
-      builtins.throw "Theme '${name}' missing tokens: ${concatStringsSep ", " (map (entry: entry.label) missing)}"
+      builtins.throw "Theme '${name}' missing tokens: ${
+        concatStringsSep ", " (map (entry: entry.label) missing)
+      }"
     else if invalid != [ ] then
-      builtins.throw "Theme '${name}' has invalid hex for: ${concatStringsSep ", " (map (entry: entry.label) invalid)}"
+      builtins.throw "Theme '${name}' has invalid hex for: ${
+        concatStringsSep ", " (map (entry: entry.label) invalid)
+      }"
     else
       theme;
 
   withRgb =
     theme:
     let
-      colorKeys = filter (k: builtins.elem k legacyTokens && theme ? ${k}) (attrNames theme);
+      colorKeys = filter (k: builtins.isString theme.${k}) (attrNames theme);
     in
     theme
-    // genAttrs (map (k: "${k}_RGB") colorKeys) (name:
-      hexToRgb theme.${lib.removeSuffix "_RGB" name}
-    );
+    // genAttrs (map (k: "${k}_RGB") colorKeys) (name: hexToRgb theme.${lib.removeSuffix "_RGB" name});
 
   withAliases =
     theme:
     let
-      palette = theme.palette;
-      normal = theme.ansi.normal;
-      bright = theme.ansi.bright;
-      ui = theme.ui;
-      syntax = theme.syntax;
-      diagnostic = theme.diagnostic;
+      inherit (theme) palette;
+      inherit (theme.ansi) normal bright;
+      inherit (theme) ui syntax diagnostic;
     in
-    theme // {
+    theme
+    // {
       FG = ui.fg;
       BG = ui.bg;
       BRIGHT = ui.bright;
@@ -162,28 +172,34 @@ let
     };
 
   themesDir = ./.;
-  themeFiles =
-    lib.filterAttrs
-      (filename: type:
-        type == "regular"
-        && hasSuffix ".nix" filename
-        && filename != "default.nix"
-        && filename != "schema.nix"
-      )
-      (builtins.readDir themesDir);
+  themeFiles = lib.filterAttrs (
+    filename: type:
+    type == "regular"
+    && hasSuffix ".nix" filename
+    && filename != "default.nix"
+    && filename != "schema.nix"
+  ) (builtins.readDir themesDir);
 
-  themes =
-    mapAttrs'
-      (filename: _:
-        let
-          name = removeSuffix ".nix" filename;
-        in
-        nameValuePair name (import (themesDir + "/${filename}"))
-      )
-      themeFiles;
+  themes = mapAttrs' (
+    filename: _:
+    let
+      name = removeSuffix ".nix" filename;
+    in
+    nameValuePair name (import (themesDir + "/${filename}"))
+  ) themeFiles;
 in
 {
-  inherit themes schema ansiTokens paletteTokens uiTokens syntaxTokens diagnosticTokens legacyTokens requiredColorPaths;
+  inherit
+    themes
+    schema
+    ansiTokens
+    paletteTokens
+    uiTokens
+    syntaxTokens
+    diagnosticTokens
+    legacyTokens
+    requiredColorPaths
+    ;
 
   default = "monochrome";
 

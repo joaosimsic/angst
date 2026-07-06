@@ -44,7 +44,7 @@ function M.create_diagnostics(bufnr)
 				end,
 				"Next Diagnostic",
 			},
-		{
+			{
 				"k",
 				function()
 					local can_go_up, _ = check_edges(bufnr)
@@ -62,7 +62,6 @@ function M.create_diagnostics(bufnr)
 				"Diagnostics History",
 			},
 		},
-	
 	}, bufnr)
 end
 

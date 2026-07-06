@@ -6,5 +6,8 @@ in
 mkToolchain {
   runtime = with pkgs; [ gcc ];
   tools = with pkgs; [ clang-tools ];
-  treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-c tree-sitter-cpp ];
+  treesitter = with pkgs.tree-sitter-grammars; [
+    tree-sitter-c
+    tree-sitter-cpp
+  ];
 }

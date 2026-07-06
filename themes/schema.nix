@@ -58,7 +58,13 @@ let
   ];
 in
 {
-  inherit ansiTokens paletteTokens uiTokens syntaxTokens diagnosticTokens;
+  inherit
+    ansiTokens
+    paletteTokens
+    uiTokens
+    syntaxTokens
+    diagnosticTokens
+    ;
 
   legacyTokens = [
     "FG"

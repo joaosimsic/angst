@@ -1,6 +1,6 @@
 return {
 	"echasnovski/mini.nvim",
-  event = "VeryLazy",
+	event = "VeryLazy",
 	config = function()
 		require("mini.cmdline").setup()
 	end,

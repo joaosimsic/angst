@@ -38,7 +38,15 @@ end
 local function copy_item(item)
 	local label = severity_labels[item.severity] or "?"
 	local bufname = vim.api.nvim_buf_get_name(item.bufnr)
-	local text = string.format("[%s] %s:%d:%d  %s  %s", label, bufname, item.lnum + 1, item.col + 1, item.source or "", item.message)
+	local text = string.format(
+		"[%s] %s:%d:%d  %s  %s",
+		label,
+		bufname,
+		item.lnum + 1,
+		item.col + 1,
+		item.source or "",
+		item.message
+	)
 	vim.fn.setreg("+", text)
 	vim.notify(string.format("Copied: %s", text), vim.log.levels.INFO)
 end
@@ -49,7 +57,18 @@ local function copy_all(items)
 	for _, item in ipairs(items) do
 		local label = severity_labels[item.severity] or "?"
 		local bufname = vim.api.nvim_buf_get_name(item.bufnr)
-		table.insert(lines, string.format("[%s] %s:%d:%d  %s  %s", label, bufname, item.lnum + 1, item.col + 1, item.source or "", item.message))
+		table.insert(
+			lines,
+			string.format(
+				"[%s] %s:%d:%d  %s  %s",
+				label,
+				bufname,
+				item.lnum + 1,
+				item.col + 1,
+				item.source or "",
+				item.message
+			)
+		)
 	end
 	local text = table.concat(lines, "\n")
 	vim.fn.setreg("+", text)
@@ -107,7 +126,10 @@ function M.toggle(state)
 	for _, item in ipairs(items) do
 		local icon = severity_icons[item.severity] or "?"
 		local bufname = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(item.bufnr), ":.")
-		table.insert(lines, string.format("%s %s:%d:%d  %s", icon, bufname, item.lnum + 1, item.col + 1, sanitize(item.message)))
+		table.insert(
+			lines,
+			string.format("%s %s:%d:%d  %s", icon, bufname, item.lnum + 1, item.col + 1, sanitize(item.message))
+		)
 	end
 
 	vim.api.nvim_buf_set_lines(buf_handle, 0, -1, false, lines)

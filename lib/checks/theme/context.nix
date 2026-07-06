@@ -1,11 +1,17 @@
-{ loadHost, themesLib, lib, testHostname ? "personal" }:
+{
+  loadHost,
+  themesLib,
+  lib,
+  testHostname ? "personal",
+}:
 
 let
   hostConfig = loadHost testHostname;
   hostTheme = hostConfig.theme or themesLib.default;
 
-  alternateThemes =
-    lib.sort lib.lessThan (lib.filter (name: name != hostTheme) (lib.attrNames themesLib.themes));
+  alternateThemes = lib.sort lib.lessThan (
+    lib.filter (name: name != hostTheme) (lib.attrNames themesLib.themes)
+  );
 in
 {
   inherit testHostname hostTheme;

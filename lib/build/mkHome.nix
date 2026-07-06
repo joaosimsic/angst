@@ -1,11 +1,16 @@
-{ inputs, loadHost, flakeSelf, vmTool, ... }:
+{
+  inputs,
+  loadHost,
+  flakeSelf,
+  vmTool,
+  ...
+}:
 
 let
-  mkHomeProfile = hostname:
+  mkHomeProfile =
+    hostname:
     let
       hostConfig = loadHost hostname;
-
-      system = hostConfig.system;
 
       pkgs = import inputs.nixpkgs {
         system = hostConfig.system;
@@ -26,30 +31,37 @@ let
       inherit pkgs;
 
       extraSpecialArgs = {
-        inherit inputs flakeSelf themesLib hostTheme;
+        inherit
+          inputs
+          flakeSelf
+          themesLib
+          hostTheme
+          ;
         userConfig = hostConfig.user;
-        monitors = hostConfig.monitors or {};
+        monitors = hostConfig.monitors or { };
       };
 
       modules = [
-        ../../core/home
+        ../../lib/home
         (import ../home/themeModule.nix { inherit lib themesLib hostTheme; })
         ../home/i3Fragments.nix
         ../../hosts/${hostname}/home.nix
 
-        ({ pkgs, ...}: {
+        ({ ... }: {
           home.packages = [ vmTool ];
         })
         ({ ... }: {
           home.file.".ssh/config".force = true;
         })
-      ] ++ homeModules;
+      ]
+      ++ homeModules;
     };
 in
 rec {
   inherit mkHomeProfile;
 
-  mkHomeWithExtraModules = hostname: extraModules:
+  mkHomeWithExtraModules =
+    hostname: extraModules:
     let
       profile = mkHomeProfile hostname;
     in

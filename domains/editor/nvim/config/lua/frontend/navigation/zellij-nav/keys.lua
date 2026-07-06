@@ -3,11 +3,7 @@ local Keybinder = require("common.Keybinder")
 local M = {}
 
 local function terminal_escape()
-	vim.api.nvim_feedkeys(
-		vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true),
-		"n",
-		true
-	)
+	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", true)
 end
 
 local function tn(fn)

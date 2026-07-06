@@ -1,4 +1,10 @@
-{ inputs, loadHost, mkHomeProfile, flakeSelf, ... }:
+{
+  inputs,
+  loadHost,
+  mkHomeProfile,
+  flakeSelf,
+  ...
+}:
 
 hostname:
 let
@@ -7,25 +13,30 @@ let
   profile = mkHomeProfile hostname;
 
   domainsLib = import ../domains/default.nix {
-    lib = inputs.nixpkgs.lib;
+    inherit (inputs.nixpkgs) lib;
     domainsPath = ../../domains;
   };
   domainNixosModules = map domainsLib.mkNixosDomainModule domainsLib.nixosEntries;
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
-    inherit inputs hostname capabilities flakeSelf;
+    inherit
+      inputs
+      hostname
+      capabilities
+      flakeSelf
+      ;
 
     userConfig = hostConfig.user;
 
-    monitors = hostConfig.monitors or {};
+    monitors = hostConfig.monitors or { };
 
     theme = hostConfig.theme or "monochrome";
   };
 
   modules = [
     { nixpkgs.hostPlatform = hostConfig.system; }
-    ../../core/system
+    ../../lib/nixos
     ../../hosts/${hostname}/configuration.nix
     inputs.home-manager.nixosModules.home-manager
     {
@@ -37,11 +48,12 @@ inputs.nixpkgs.lib.nixosSystem {
         imports = profile.modules;
       };
 
-      
       systemd.services."home-manager-${hostConfig.user.username}".before = [
         "getty@.service"
         "serial-getty@.service"
       ];
     }
-  ] ++ builtins.attrValues capabilities ++ domainNixosModules;
+  ]
+  ++ builtins.attrValues capabilities
+  ++ domainNixosModules;
 }

@@ -1,4 +1,9 @@
-{ config, lib, flakeSelf, ... }:
+{
+  config,
+  lib,
+  flakeSelf,
+  ...
+}:
 
 let
   cfg = config.domainConfig;
@@ -6,7 +11,7 @@ let
   angstSrc = lib.cleanSourceWith {
     src = flakeSelf;
     filter =
-      path: type:
+      path: _:
       let
         base = builtins.baseNameOf path;
       in

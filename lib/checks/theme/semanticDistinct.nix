@@ -1,4 +1,9 @@
-{ lib, pkgs, themesLib, themeName }:
+{
+  lib,
+  pkgs,
+  themesLib,
+  themeName,
+}:
 
 let
   theme = themesLib.get themeName;

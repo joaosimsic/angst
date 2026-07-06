@@ -1,12 +1,11 @@
-{ lib, themeName, theme }:
+{
+  lib,
+  themeName,
+  theme,
+}:
 
 let
-  require =
-    condition: message:
-    if condition then
-      null
-    else
-      throw message;
+  require = condition: message: if condition then null else throw message;
 
   requireDistinct =
     label: tokens:

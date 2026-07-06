@@ -101,7 +101,13 @@ local function add_entry(view, entry)
 	local lines = message_lines(entry.message)
 	local first_message = strip_logger_prefix(entry, lines[1])
 
-	local line = string.format("%-8s  %-" .. LEVEL_WIDTH .. "s  %-" .. TAG_WIDTH .. "s  %s", time_label(entry), level, tag, first_message)
+	local line = string.format(
+		"%-8s  %-" .. LEVEL_WIDTH .. "s  %-" .. TAG_WIDTH .. "s  %s",
+		time_label(entry),
+		level,
+		tag,
+		first_message
+	)
 	local line_nr = R.add_line(view, line)
 	local level_start = 10
 	local tag_start = level_start + LEVEL_WIDTH + 2
@@ -136,7 +142,8 @@ function M.render(card_width)
 		return view
 	end
 
-	local header = string.format("%-8s  %-" .. LEVEL_WIDTH .. "s  %-" .. TAG_WIDTH .. "s  %s", "Time", "Level", "Tag", "Message")
+	local header =
+		string.format("%-8s  %-" .. LEVEL_WIDTH .. "s  %-" .. TAG_WIDTH .. "s  %s", "Time", "Level", "Tag", "Message")
 	local header_nr = R.add_line(view, header)
 	R.add_highlight(view, header_nr, "DebugHeader", 0, -1)
 	local separator_nr = R.add_line(view, string.rep("-", #header))
