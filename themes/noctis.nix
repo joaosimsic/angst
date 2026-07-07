@@ -58,6 +58,7 @@
     constant = "#df769b";
     operator = "#4c767b";
     type = "#49d6e9";
+    property = "#49d6e9";
     number = "#e4b781";
     punctuation = "#4c767b";
   };

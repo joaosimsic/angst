@@ -46,6 +46,7 @@ let
     "operator"
     "type"
     "number"
+    "property"
     "punctuation"
   ];
 

@@ -39,6 +39,7 @@
 ---@field variable string
 ---@field constant string
 ---@field operator string
+---@field property string
 ---@field type string
 ---@field number string
 ---@field punctuation string
