@@ -11,6 +11,11 @@
       url = "./tools/vm";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    shell = {
+      url = "./tools/shell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -18,6 +23,7 @@
       self,
       nixpkgs,
       vm,
+      shell,
       ...
     }@inputs:
     let
@@ -39,11 +45,18 @@
       };
 
       vmOutputs = vm.mkOutputs self;
+      shellOutputs = shell.mkOutputs self;
+
+      shared = import ./lib/flake/shared.nix {
+        inherit pkgs shellOutputs vmOutputs system;
+        lib = pkgs.lib;
+      };
 
       homeLib = import ./lib/build/mkHome.nix (
         env
         // {
           vmTool = vmOutputs.packages.${system}.default;
+          shellTool = shared.shellTool;
         }
       );
 
@@ -66,7 +79,7 @@
           mkHome
           mkHomeWithExtraModules
           ;
-        inherit vmOutputs;
+        inherit vmOutputs shellOutputs;
         inherit (env) loadHost;
         inherit (pkgs) lib;
       };

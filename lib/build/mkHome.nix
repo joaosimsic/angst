@@ -3,6 +3,7 @@
   loadHost,
   flakeSelf,
   vmTool,
+  shellTool,
   ...
 }:
 
@@ -48,7 +49,9 @@ let
         ../../hosts/${hostname}/home.nix
 
         ({ ... }: {
-          home.packages = lib.optionals (hostConfig.enableVmTool or true) [ vmTool ];
+          home.packages =
+            lib.optionals (hostConfig.enableVmTool or true) [ vmTool ]
+            ++ lib.optionals (hostConfig.enableShellTool or true) [ shellTool ];
         })
 
       ]

@@ -34,14 +34,10 @@ the system's glibc version.
 
 ```nix
 devShells.${system} = {
-  # Default — entered via `nix develop`.
-  # Provides a working neovim with parsers, LSPs, runtimes, and formatters.
-  default = pkgs.mkShell {
-    packages = [
-      pkgs.neovim
-      pkgs.git
-      angstCli
-    ] ++ allToolchainPackages;
+  # safe — entered via `nix develop .#safe` or `shell safe`.
+  # Provides neovim with parsers, LSPs, runtimes, and formatters.
+  safe = pkgs.mkShell {
+    packages = [ pkgs.neovim pkgs.git ] ++ allToolchainPackages;
 
     shellHook = ''
       mkdir -p ~/.local/share/tree-sitter
@@ -51,11 +47,15 @@ devShells.${system} = {
     '';
   };
 
-  # CI — inherits from default, adds CI-specific overrides.
-  nvim-test = pkgs.mkShell {
-    inputsFrom = [ self.devShells.${system}.default ];
-    packages = [ pkgs.git ];
-    # CI-specific shellHook additions…
+  # dev — entered via `nix develop .#dev` or `shell dev`.
+  # Full development environment: safe packages + angst CLI, VM CLI, Rust, QEMU.
+  dev = pkgs.mkShell {
+    packages = [
+      pkgs.neovim pkgs.git angstCli
+    ] ++ allToolchainPackages
+    ++ (with pkgs; [ openssh qemu cargo rustc rust-analyzer ])
+    ++ [ vmOutputs.packages.${system}.default vmOutputs.packages.${system}.vm-run ];
+    shellHook = /* same as safe */ '';
   };
 };
 ```
@@ -63,29 +63,40 @@ devShells.${system} = {
 ## Usage
 
 ```bash
-# Enter the controlled shell
-nix develop
+# Via nix develop (from within the repo)
+nix develop .#safe   # safe editing environment
+nix develop .#dev    # full development environment
 
-# Neovim works with all parsers, LSPs, tools
-nvim somefile.php
-nvim somefile.py
+# Via the shell CLI (standalone — no nix at runtime)
+nix run .#shell -- safe
+nix run .#shell -- dev
 
-# Exit returns to the bare host shell
-exit
+# Or install globally
+nix profile install .#shell
+shell safe
+shell dev
+
+# Inside either shell:
+nvim somefile.php    # parsers, LSPs, tools all work
+exit                 # back to host shell
 ```
 
 ## How it works
 
-1. `nix develop` evaluates the default dev shell, which includes
-   `pkgs.neovim` — built by Nix against Nix's glibc.
-2. The `shellHook` symlinks the Nix-built tree-sitter parsers and
-   queries into `~/.local/share/tree-sitter/`, where neovim expects
-   them.
+1. The `shell` CLI binary is built by Nix and wrapped with the store
+   paths of all packages baked into `SHELL_SAFE_PATH`, `SHELL_DEV_PATH`,
+   `SHELL_TS_PARSERS`, and `SHELL_TS_QUERIES` env vars.
+2. At runtime, the binary prepends the appropriate PATH, symlinks the
+   tree-sitter parsers and queries into `~/.local/share/tree-sitter/`,
+   and `exec`s the user's shell — no `nix` invocation needed.
 3. When neovim starts inside the shell, its process loads Nix's glibc.
    Any subsequent `dlopen` of a parser `.so` finds the already-loaded
    Nix glibc, so all symbol versions match.
 4. All toolchain packages (LSPs, formatters, linters, runtimes) are
    on `PATH` and also resolve against Nix's glibc.
+
+The same environment can also be entered directly via `nix develop .#safe`
+or `nix develop .#dev`, which use the traditional `shellHook` approach.
 
 ## Benefits
 
@@ -97,11 +108,11 @@ exit
 
 ## SSH host setup (Debian/Ubuntu VM)
 
-On the remote VM, just enter the shell as usual:
+On the remote VM, just enter the safe shell:
 
 ```bash
 cd ~/proj/angst
-nix develop
+nix develop .#safe
 nvim
 ```
 
