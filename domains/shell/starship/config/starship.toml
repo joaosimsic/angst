@@ -1,5 +1,5 @@
 format = """
-$username$hostname$env_var$directory $git_branch$git_status$buf$bun$c$cpp$cmake$cobol$crystal$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$gleam$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$maven$meson$mojo$nim$nodejs$ocaml$odin$opa$perl$php$pixi$purescript$python$quarto$raku$red$rlang$ruby$rust$scala$solidity$spack$swift$terraform$typst$vlang$xmake$zig$conda$nix_shell$guix_shell$docker_context$package
+$username$hostname $env_var$directory $git_branch$git_status$buf$bun$c$cpp$cmake$cobol$crystal$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$gleam$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$maven$meson$mojo$nim$nodejs$ocaml$odin$opa$perl$php$pixi$purescript$python$quarto$raku$red$rlang$ruby$rust$scala$solidity$spack$swift$terraform$typst$vlang$xmake$zig$conda$nix_shell$guix_shell$docker_context$package
 
 """
 
@@ -33,13 +33,13 @@ renamed = "r"
 deleted = "x"
 
 [username]
-format = "[$user]($style) "
+format = "[$user]($style)"
 style_user = "bold #5f7a5f"
 style_root = "bold #685742"
 show_always = true
 
 [hostname]
-format = "[@$hostname]($style) "
+format = "[@$hostname]($style)"
 style = "bold #5f7a5f"
 ssh_only = true
 
