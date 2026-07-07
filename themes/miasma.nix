@@ -51,8 +51,11 @@
 
   syntax = {
     comment = "#685742";
-    keyword = "#d7c483";
-    string = "#5f875f";
+    keyword = "#b36d43";
+    #keyword = "#d7c483";
+    #string = "#5f875f";
+    string = "#d7c483";
+    property = "#78824b";
     function = "#c9a554";
     variable = "#c2c2b0";
     constant = "#bb7744";

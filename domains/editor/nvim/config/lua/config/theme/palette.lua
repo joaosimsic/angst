@@ -31,6 +31,7 @@ local palette = {
 		keyword = "#d7c483",
 		string = "#5f875f",
 		["function"] = "#c9a554",
+		property = "#78824b",
 		variable = "#c2c2b0",
 		constant = "#bb7744",
 		operator = "#e5c47b",

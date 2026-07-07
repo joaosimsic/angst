@@ -45,6 +45,7 @@ in
           operator = "#${t.syntax.operator}",
           type = "#${t.syntax.type}",
           number = "#${t.syntax.number}",
+          property = "#${t.syntax.property}",
           punctuation = "#${t.syntax.punctuation}",
         },
         diagnostic = {
