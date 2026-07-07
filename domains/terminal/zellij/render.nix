@@ -355,20 +355,20 @@ in
     path = "domains/terminal/zellij/config/themes/angst.kdl";
     text = themeText;
     checks = [
-      (requireInfix themeText "text_unselected {\n                  base \"#${t.ui.fg}\""
+      (requireInfix themeText "text_unselected {\n            base \"#${t.ui.fg}\""
         "zellij native text should render ${themeName} ui.fg"
       )
       (requireInfix themeText
-        "ribbon_selected {\n                  base \"#${t.ui.bg}\"\n                  background \"#${t.ui.accent}\""
+        "ribbon_selected {\n            base \"#${t.ui.bg}\"\n            background \"#${t.ui.accent}\""
         "zellij selected ribbon should render ${themeName} ui.accent"
       )
-      (requireInfix themeText "frame_unselected {\n                  base \"#${t.ui.border}\""
+      (requireInfix themeText "frame_unselected {\n            base \"#${t.ui.border}\""
         "zellij inactive frame should render ${themeName} ui.border"
       )
-      (requireInfix themeText "frame_selected {\n                  base \"#${t.ui.accent}\""
+      (requireInfix themeText "frame_selected {\n            base \"#${t.ui.accent}\""
         "zellij active frame should render ${themeName} ui.accent"
       )
-      (requireInfix themeText "frame_highlight {\n                  base \"#${t.diagnostic.warning}\""
+      (requireInfix themeText "frame_highlight {\n            base \"#${t.diagnostic.warning}\""
         "zellij highlighted frame should render ${themeName} diagnostic.warning"
       )
       (require (

@@ -410,7 +410,7 @@ let
       ${extra}
     '';
 
-  formatLine = "$env_var$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
+  formatLine = "$username$hostname $env_var$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
 
   inherit (checkHelpers) requireInfix require;
 
@@ -450,14 +450,14 @@ let
     deleted = "x"
 
     [username]
-    format = "[$user]($style) "
-    style_user = "bold #${t.BRIGHT}"
+    format = "[$user]($style)"
+    style_user = "bold #5f7a5f"
     style_root = "bold #${t.ERROR}"
     show_always = true
 
     [hostname]
-    format = "[@$hostname]($style) "
-    style = "bold #${t.COMMENT}"
+    format = "[@$hostname]($style)"
+    style = "bold #5f7a5f"
     ssh_only = true
 
     ${lib.concatStringsSep "\n" (map renderModule modules)}
