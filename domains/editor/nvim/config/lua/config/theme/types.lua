@@ -98,6 +98,7 @@
 ---@field ["function"] string
 ---@field variable string
 ---@field constant string
+---@field property string
 ---@field operator string
 ---@field type string
 ---@field number string

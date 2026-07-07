@@ -33,6 +33,7 @@ local colors = {
 		variable = syntax.variable,
 		constant = syntax.constant,
 		operator = syntax.operator,
+		property = syntax.property,
 		type = syntax.type,
 		number = syntax.number,
 		punctuation = syntax.punctuation,

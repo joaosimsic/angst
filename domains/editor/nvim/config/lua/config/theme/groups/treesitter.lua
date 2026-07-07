@@ -46,7 +46,7 @@ M.get = function(p)
 		["@variable.builtin"] = { fg = d.error },
 		["@variable.parameter"] = { fg = s.variable, italic = true },
 		["@variable.member"] = { fg = s.variable },
-		["@property"] = { fg = s.variable },
+		["@property"] = { fg = s.property },
 		["@field"] = { fg = s.variable },
 
 		["@type"] = { link = "Type" },
