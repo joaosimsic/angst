@@ -4,6 +4,17 @@ use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+fn resolve_host_shell() -> String {
+    if let Ok(shells) = env::var("SHELL_ENABLED_SHELLS") {
+        for path in shells.split(':') {
+            if !path.is_empty() && Path::new(path).is_file() {
+                return path.to_string();
+            }
+        }
+    }
+    env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string())
+}
+
 fn home() -> PathBuf {
     env::var("HOME")
         .map(PathBuf::from)
@@ -58,7 +69,7 @@ pub fn enter(mode: super::commands::Commands) -> ! {
     let current_path = env::var("PATH").unwrap_or_default();
     let new_path = format!("{}:{}", extra_path, current_path);
 
-    let shell = env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string());
+    let shell = resolve_host_shell();
 
     let err = Command::new(&shell)
         .env("PATH", &new_path)

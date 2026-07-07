@@ -9,6 +9,7 @@
   mkHomeWithExtraModules,
   vmOutputs,
   shellOutputs,
+  hostShellBinPaths,
 }:
 
 let
@@ -126,7 +127,7 @@ let
   };
 
   shared = import ./shared.nix {
-    inherit pkgs lib shellOutputs vmOutputs system;
+    inherit pkgs lib shellOutputs vmOutputs system hostShellBinPaths;
   };
 
   inherit (shared) allToolchainPackages treesitter angstCli shellWrapped;

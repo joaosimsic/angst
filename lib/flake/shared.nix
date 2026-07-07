@@ -4,6 +4,7 @@
   shellOutputs,
   vmOutputs,
   system,
+  hostShellBinPaths ? "",
 }:
 
 let
@@ -229,7 +230,8 @@ let
         --set SHELL_SAFE_PATH "${safeBinPath}" \
         --set SHELL_DEV_PATH "${devBinPath}" \
         --set SHELL_TS_PARSERS "${treesitter.treesitterParsers}" \
-        --set SHELL_TS_QUERIES "${treesitter.treesitterQueries}"
+        --set SHELL_TS_QUERIES "${treesitter.treesitterQueries}" \
+        ${lib.optionalString (hostShellBinPaths != "") "--set SHELL_ENABLED_SHELLS \"${hostShellBinPaths}\""}
     '';
   };
 in

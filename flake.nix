@@ -47,8 +47,22 @@
       vmOutputs = vm.mkOutputs self;
       shellOutputs = shell.mkOutputs self;
 
+      domainsLib = import ./lib/domains/default.nix {
+        lib = pkgs.lib;
+        domainsPath = ./domains;
+      };
+      shellEntries = builtins.filter (e: e.category == "shell") domainsLib.homeEntries;
+      commonHomeEnables = import ./common/home.nix { };
+      enabledShellEntries = builtins.filter (e:
+        (e.meta.interactive or false)
+        && pkgs.lib.attrByPath [ "domains" "shell" e.name "enable" ] false commonHomeEnables
+      ) shellEntries;
+      hostShellBinPaths = pkgs.lib.concatStringsSep ":" (
+        map (e: "${pkgs.${e.meta.package}}/bin/${e.meta.binary}") enabledShellEntries
+      );
+
       shared = import ./lib/flake/shared.nix {
-        inherit pkgs shellOutputs vmOutputs system;
+        inherit pkgs shellOutputs vmOutputs system hostShellBinPaths;
         lib = pkgs.lib;
       };
 
@@ -78,6 +92,7 @@
           hosts
           mkHome
           mkHomeWithExtraModules
+          hostShellBinPaths
           ;
         inherit vmOutputs shellOutputs;
         inherit (env) loadHost;
