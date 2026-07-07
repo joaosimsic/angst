@@ -43,9 +43,9 @@ fn setup_treesitter() {
 }
 
 pub fn enter(mode: super::commands::Commands) -> ! {
-    let path_key = match mode {
-        super::commands::Commands::Dev => "SHELL_DEV_PATH",
-        super::commands::Commands::Safe => "SHELL_SAFE_PATH",
+    let (path_key, nix_shell) = match mode {
+        super::commands::Commands::Dev => ("SHELL_DEV_PATH", "dev"),
+        super::commands::Commands::Safe => ("SHELL_SAFE_PATH", "safe"),
     };
 
     let extra_path = env::var(path_key).unwrap_or_else(|_| {
@@ -62,6 +62,8 @@ pub fn enter(mode: super::commands::Commands) -> ! {
 
     let err = Command::new(&shell)
         .env("PATH", &new_path)
+        .env("IN_NIX_SHELL", nix_shell)
+        .env("SHELL_MODE", nix_shell)
         .exec();
 
     eprintln!(
