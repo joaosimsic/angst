@@ -16,6 +16,7 @@ let
       in
       ''
         cp ${grammar}/parser $out/${lang}.so
+        chmod +w $out/${lang}.so
         patchelf --remove-rpath $out/${lang}.so
       ''
     ) grammars}
