@@ -246,8 +246,13 @@ nix run .#vm-run         # Script-based VM launcher
 nix run .#vm -- --headless  # headless mode for CI
 
 # Development shells
-nix develop .#nvim-test  # all language toolchains + neovim
-nix develop .#vm         # Rust tooling for the VM workspace
+nix develop .#safe  # safe environment (neovim, LSPs, formatters, no dev tools)
+nix develop .#dev   # full development environment (adds VM CLI, angst, Rust)
+nix develop .#vm    # Rust tooling for the VM workspace
+
+# Shell CLI (standalone — no nix needed at runtime)
+nix run .#shell -- safe  # enter safe environment
+nix run .#shell -- dev   # enter development environment
 ```
 
 ### CI

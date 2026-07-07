@@ -24,7 +24,13 @@ in
   config = {
     home.packages = [ pkgs.tree-sitter ];
 
-    xdg.dataFile."tree-sitter/parser".source = treesitter.treesitterParsers;
-    xdg.dataFile."tree-sitter/queries".source = treesitter.treesitterQueries;
+    xdg.dataFile."tree-sitter/parser" = {
+      source = treesitter.treesitterParsers;
+      force = true;
+    };
+    xdg.dataFile."tree-sitter/queries" = {
+      source = treesitter.treesitterQueries;
+      force = true;
+    };
   };
 }

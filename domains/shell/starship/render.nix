@@ -10,6 +10,7 @@ let
   t = themesLib.get themeName;
 
   moduleNames = [
+    "env_var"
     "directory"
     "git_branch"
     "git_status"
@@ -364,6 +365,16 @@ let
       format = "[$symbol](#5277C3)[$state]($style) ";
     }
     {
+      name = "env_var.SHELL_MODE";
+      symbol = " ";
+      color = "5277C3";
+      format = "[$symbol](#5277C3)[$env_value]($style) ";
+      extra = ''
+        style = "bold white"
+        variable = "SHELL_MODE"
+      '';
+    }
+    {
       name = "guix_shell";
       symbol = " ";
       color = "FFCC00";
@@ -399,7 +410,7 @@ let
       ${extra}
     '';
 
-  formatLine = "$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
+  formatLine = "$env_var$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
 
   inherit (checkHelpers) requireInfix require;
 

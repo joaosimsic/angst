@@ -11,6 +11,11 @@
       url = "./tools/vm";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    shell = {
+      url = "./tools/shell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -18,6 +23,7 @@
       self,
       nixpkgs,
       vm,
+      shell,
       ...
     }@inputs:
     let
@@ -39,11 +45,32 @@
       };
 
       vmOutputs = vm.mkOutputs self;
+      shellOutputs = shell.mkOutputs self;
+
+      domainsLib = import ./lib/domains/default.nix {
+        lib = pkgs.lib;
+        domainsPath = ./domains;
+      };
+      shellEntries = builtins.filter (e: e.category == "shell") domainsLib.homeEntries;
+      commonHomeEnables = import ./common/home.nix { };
+      enabledShellEntries = builtins.filter (e:
+        (e.meta.interactive or false)
+        && pkgs.lib.attrByPath [ "domains" "shell" e.name "enable" ] false commonHomeEnables
+      ) shellEntries;
+      hostShellBinPaths = pkgs.lib.concatStringsSep ":" (
+        map (e: "${pkgs.${e.meta.package}}/bin/${e.meta.binary}") enabledShellEntries
+      );
+
+      shared = import ./lib/flake/shared.nix {
+        inherit pkgs shellOutputs vmOutputs system hostShellBinPaths;
+        lib = pkgs.lib;
+      };
 
       homeLib = import ./lib/build/mkHome.nix (
         env
         // {
           vmTool = vmOutputs.packages.${system}.default;
+          shellTool = shared.shellTool;
         }
       );
 
@@ -65,8 +92,9 @@
           hosts
           mkHome
           mkHomeWithExtraModules
+          hostShellBinPaths
           ;
-        inherit vmOutputs;
+        inherit vmOutputs shellOutputs;
         inherit (env) loadHost;
         inherit (pkgs) lib;
       };

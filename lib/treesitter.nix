@@ -5,7 +5,9 @@
 }:
 
 let
-  treesitterParsers = pkgs.runCommand "treesitter-parsers" { } ''
+  treesitterParsers = pkgs.runCommand "treesitter-parsers" {
+    nativeBuildInputs = [ pkgs.patchelf ];
+  } ''
     mkdir -p $out
     ${lib.concatMapStringsSep "\n" (
       grammar:
@@ -13,7 +15,9 @@ let
         lang = lib.replaceStrings [ "-" ] [ "_" ] (lib.removePrefix "tree-sitter-" grammar.pname);
       in
       ''
-        ln -s ${grammar}/parser $out/${lang}.so
+        cp ${grammar}/parser $out/${lang}.so
+        chmod +w $out/${lang}.so
+        patchelf --remove-rpath $out/${lang}.so
       ''
     ) grammars}
   '';
