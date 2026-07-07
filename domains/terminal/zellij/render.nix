@@ -10,11 +10,12 @@ let
   inherit (checkHelpers) requireInfix require;
 
   standard = "bg=#${t.ui.subtle},fg=#${t.ui.bg}";
-  inactiveTab = "bg=#${t.ui.subtle},fg=#${t.ui.bg}";
-  activeTab = "bg=#${t.ui.bg},fg=#${t.ui.subtle},bold";
+  inactiveTab = "bg=#${t.ui.surface},fg=#${t.ui.subtle}";
+  activeTab = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
 
-  modeNormal = "bg=#${t.ui.subtle},fg=#${t.ui.bg},bold";
+  modeNormal = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
   modeLocked = "bg=#${t.ansi.normal.red},fg=#${t.ui.bg},bold";
+  cwdStyle = "bg=#${t.ui.surface},fg=#${t.ui.comment}";
   modePane = "bg=#${t.ansi.normal.green},fg=#${t.ui.bg},bold";
   modeTab = "bg=#${t.ansi.bright.magenta},fg=#${t.ui.bg},bold";
   modeScroll = "bg=#${t.ansi.normal.yellow},fg=#${t.ui.bg},bold";
@@ -302,10 +303,10 @@ let
         children
         pane size=1 borderless=true {
           plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
-                    format_left   "{mode}"
-                    format_center "#[${standard}]{command_cwd}"
-                    format_right  "{tabs}"
-                    format_space  "#[${standard}]"
+                    format_left  " {mode}  {tabs}"
+                    format_center ""
+                    format_right "#[${cwdStyle}] {command_cwd} "
+                    format_space "#[${cwdStyle}]"
 
                     mode_default_to_mode "normal"
                     mode_normal        "#[${modeNormal}] NORMAL "
