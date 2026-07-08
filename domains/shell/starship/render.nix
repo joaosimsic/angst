@@ -399,12 +399,13 @@ let
     let
       format = module.format or "[$symbol](#${module.color})[($version)]($style) ";
       extra = module.extra or "";
+      styleValue = module.style or "#${t.COMMENT}";
     in
     ''
       [${module.name}]
       format = "${format}"
       symbol = "${module.symbol}"
-      style = module.style or "#${t.COMMENT}"
+      style = "${styleValue}"
     ''
     + lib.optionalString (extra != "") ''
       ${extra}
