@@ -369,8 +369,8 @@ let
       symbol = " ";
       color = "5277C3";
       format = "[$symbol](#5277C3)[$env_value]($style) ";
+      style = "bold white";
       extra = ''
-        style = "bold white"
         variable = "SHELL_MODE"
       '';
     }
@@ -404,7 +404,7 @@ let
       [${module.name}]
       format = "${format}"
       symbol = "${module.symbol}"
-      style = "#${t.COMMENT}"
+      style = module.style or "#${t.COMMENT}"
     ''
     + lib.optionalString (extra != "") ''
       ${extra}
