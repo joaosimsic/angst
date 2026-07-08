@@ -10,27 +10,14 @@
   };
 
   ansi = {
-    normal = {
-      black = "#03191b";
-      red = "#e66533";
-      green = "#49e9a6";
-      yellow = "#e4b781";
-      blue = "#49ace9";
-      magenta = "#df769b";
-      cyan = "#49d6e9";
-      white = "#b2cacd";
-    };
-
-    bright = {
-      black = "#083d44";
-      red = "#e66533";
-      green = "#49e9a6";
-      yellow = "#e4b781";
-      blue = "#49ace9";
-      magenta = "#df769b";
-      cyan = "#49d6e9";
-      white = "#c1d4d7";
-    };
+    black = "#03191b";
+    red = "#e66533";
+    green = "#49e9a6";
+    yellow = "#e4b781";
+    blue = "#49ace9";
+    magenta = "#df769b";
+    cyan = "#49d6e9";
+    white = "#b2cacd";
   };
 
   ui = {

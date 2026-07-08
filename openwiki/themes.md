@@ -107,8 +107,8 @@ The default theme name: `"monochrome"`.
    [{
      path = "domains/terminal/ghostty/config/config";
      text = ''
-       palette = 0=${t.ansi.normal.black}
-       palette = 1=${t.ansi.normal.red}
+       palette = 0=${t.ansi.black}
+       palette = 1=${t.ansi.red}
        ...
        background = ${t.ui.bg}
        foreground = ${t.ui.fg}

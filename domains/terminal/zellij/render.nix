@@ -9,23 +9,22 @@ let
   t = themesLib.get themeName;
   inherit (checkHelpers) requireInfix require;
 
-  standard = "bg=#${t.ui.subtle},fg=#${t.ui.bg}";
   inactiveTab = "bg=#${t.ui.surface},fg=#${t.ui.subtle}";
   activeTab = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
 
   modeNormal = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
-  modeLocked = "bg=#${t.ansi.normal.red},fg=#${t.ui.bg},bold";
-  cwdStyle = "bg=#${t.ui.surface},fg=#${t.ui.comment}";
-  modePane = "bg=#${t.ansi.normal.green},fg=#${t.ui.bg},bold";
-  modeTab = "bg=#${t.ansi.bright.magenta},fg=#${t.ui.bg},bold";
-  modeScroll = "bg=#${t.ansi.normal.yellow},fg=#${t.ui.bg},bold";
-  modeSearch = "bg=#${t.ansi.normal.magenta},fg=#${t.ui.bg},bold";
+  modeLocked = "bg=#${t.ansi.red},fg=#${t.ui.bg},bold";
+  standard = "bg=#${t.ui.surface},fg=#${t.ui.comment}";
+  modePane = "bg=#${t.ansi.green},fg=#${t.ui.bg},bold";
+  modeTab = "bg=#${t.ansi.magenta},fg=#${t.ui.bg},bold";
+  modeScroll = "bg=#${t.ansi.yellow},fg=#${t.ui.bg},bold";
+  modeSearch = "bg=#${t.ansi.magenta},fg=#${t.ui.bg},bold";
   modeResize = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
-  modeRename = "bg=#${t.ansi.normal.cyan},fg=#${t.ui.bg},bold";
-  modeMove = "bg=#${t.ansi.bright.yellow},fg=#${t.ui.bg},bold";
-  modeSession = "bg=#${t.ansi.normal.blue},fg=#${t.ui.bg},bold";
+  modeRename = "bg=#${t.ansi.cyan},fg=#${t.ui.bg},bold";
+  modeMove = "bg=#${t.ansi.yellow},fg=#${t.ui.bg},bold";
+  modeSession = "bg=#${t.ansi.blue},fg=#${t.ui.bg},bold";
   modePrompt = "bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold";
-  modeTmux = "bg=#${t.ansi.bright.cyan},fg=#${t.ui.bg},bold";
+  modeTmux = "bg=#${t.ansi.cyan},fg=#${t.ui.bg},bold";
 
   configText = ''
     plugins {
@@ -64,6 +63,8 @@ let
         }
 
         tab {
+            bind "h" { GoToPreviousTab; }
+            bind "l" { GoToNextTab; }
             bind "n" { NewTab; }
             bind "x" { CloseTab; }
             bind "1" { GoToTab 1; }
@@ -281,16 +282,16 @@ let
             }
 
             multiplayer_user_colors {
-                player_1 "#${t.ansi.normal.magenta}"
-                player_2 "#${t.ansi.normal.cyan}"
-                player_3 "#${t.ansi.normal.yellow}"
-                player_4 "#${t.ansi.normal.green}"
-                player_5 "#${t.ansi.normal.blue}"
-                player_6 "#${t.ansi.normal.red}"
-                player_7 "#${t.ansi.bright.magenta}"
-                player_8 "#${t.ansi.bright.cyan}"
-                player_9 "#${t.ansi.bright.yellow}"
-                player_10 "#${t.ansi.bright.green}"
+                player_1 "#${t.ansi.magenta}"
+                player_2 "#${t.ansi.cyan}"
+                player_3 "#${t.ansi.yellow}"
+                player_4 "#${t.ansi.green}"
+                player_5 "#${t.ansi.blue}"
+                player_6 "#${t.ansi.red}"
+                player_7 "#${t.ansi.magenta}"
+                player_8 "#${t.ansi.cyan}"
+                player_9 "#${t.ansi.yellow}"
+                player_10 "#${t.ansi.green}"
             }
         }
     }
@@ -303,10 +304,10 @@ let
         children
         pane size=1 borderless=true {
           plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
-                    format_left  " {mode}  {tabs}"
-                    format_center ""
-                    format_right "#[${cwdStyle}] {command_cwd} "
-                    format_space "#[${cwdStyle}]"
+                    format_left  "{mode}"
+                    format_center "{command_cwd}"
+                    format_right "#[${standard}]{tabs}"
+                    format_space "#[${standard}]"
 
                     mode_default_to_mode "normal"
                     mode_normal        "#[${modeNormal}] NORMAL "

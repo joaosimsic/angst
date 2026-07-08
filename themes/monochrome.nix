@@ -10,27 +10,14 @@
   };
 
   ansi = {
-    normal = {
-      black = "#0a0a0a";
-      red = "#9b9b9b";
-      green = "#a7a7a7";
-      yellow = "#b3b3b3";
-      blue = "#858585";
-      magenta = "#919191";
-      cyan = "#8f8f8f";
-      white = "#eeeeee";
-    };
-
-    bright = {
-      black = "#6b6b6b";
-      red = "#9b9b9b";
-      green = "#a7a7a7";
-      yellow = "#b3b3b3";
-      blue = "#858585";
-      magenta = "#919191";
-      cyan = "#8f8f8f";
-      white = "#ebebeb";
-    };
+    black = "#0a0a0a";
+    red = "#9b9b9b";
+    green = "#a7a7a7";
+    yellow = "#b3b3b3";
+    blue = "#858585";
+    magenta = "#919191";
+    cyan = "#8f8f8f";
+    white = "#eeeeee";
   };
 
   ui = {

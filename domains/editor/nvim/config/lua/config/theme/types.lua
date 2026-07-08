@@ -52,10 +52,6 @@
 ---@field success string
 
 ---@class ThemePaletteAnsi
----@field normal ThemePaletteAnsiColors
----@field bright ThemePaletteAnsiColors
-
----@class ThemePaletteAnsiColors
 ---@field black string
 ---@field red string
 ---@field green string

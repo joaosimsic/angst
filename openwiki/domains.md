@@ -53,7 +53,7 @@ t: themesLib.get themeName;  # Get all theme tokens
     ...
   '';
   checks = [
-    { name = "ghostty-magenta"; require = [ "palette 5 = ${t.ansi.normal.magenta}" ]; }
+    { name = "ghostty-magenta"; require = [ "palette 5 = ${t.ansi.magenta}" ]; }
   ];
 }
 ```

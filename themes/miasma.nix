@@ -1,6 +1,6 @@
 {
   palette = {
-    black = "#222222";
+    black = "#000000";
     base = "#c2c2b0";
     dim = "#666666";
     subtle = "#e5c47b";
@@ -10,27 +10,14 @@
   };
 
   ansi = {
-    normal = {
-      black = "#222222";
-      red = "#685742";
-      green = "#5f875f";
-      yellow = "#b36d43";
-      blue = "#78824b";
-      magenta = "#bb7744";
-      cyan = "#c9a554";
-      white = "#d7c483";
-    };
-
-    bright = {
-      black = "#666666";
-      red = "#685742";
-      green = "#5f875f";
-      yellow = "#b36d43";
-      blue = "#78824b";
-      magenta = "#bb7744";
-      cyan = "#c9a554";
-      white = "#d7c483";
-    };
+    black = "#000000";
+    red = "#685742";
+    green = "#5f875f";
+    yellow = "#b36d43";
+    blue = "#78824b";
+    magenta = "#bb7744";
+    cyan = "#c9a554";
+    white = "#d7c483";
   };
 
   ui = {
@@ -52,8 +39,6 @@
   syntax = {
     comment = "#685742";
     keyword = "#b36d43";
-    #keyword = "#d7c483";
-    #string = "#5f875f";
     string = "#d7c483";
     property = "#78824b";
     function = "#c9a554";

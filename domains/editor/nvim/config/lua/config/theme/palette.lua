@@ -3,7 +3,7 @@ local M = {}
 ---@type ThemePalette
 local palette = {
   palette = {
-    black = "#222222",
+    black = "#000000",
     base = "#c2c2b0",
     dim = "#666666",
     subtle = "#e5c47b",
@@ -47,26 +47,14 @@ local palette = {
     success = "#5f875f",
   },
   ansi = {
-    normal = {
-      black = "#222222",
-      red = "#685742",
-      green = "#5f875f",
-      yellow = "#b36d43",
-      blue = "#78824b",
-      magenta = "#bb7744",
-      cyan = "#c9a554",
-      white = "#d7c483",
-    },
-    bright = {
-      black = "#666666",
-      red = "#685742",
-      green = "#5f875f",
-      yellow = "#b36d43",
-      blue = "#78824b",
-      magenta = "#bb7744",
-      cyan = "#c9a554",
-      white = "#d7c483",
-    },
+    black = "#000000",
+    red = "#685742",
+    green = "#5f875f",
+    yellow = "#b36d43",
+    blue = "#78824b",
+    magenta = "#bb7744",
+    cyan = "#c9a554",
+    white = "#d7c483",
   },
 }
 
