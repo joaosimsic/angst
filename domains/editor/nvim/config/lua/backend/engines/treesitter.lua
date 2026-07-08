@@ -22,6 +22,11 @@ return {
 			vim.opt.runtimepath:prepend(ts_path)
 		end
 
+		local ts_fixed = vim.fn.expand("~/.local/share/tree-sitter-fixed")
+		if vim.fn.isdirectory(ts_fixed) == 1 and not vim.tbl_contains(vim.opt.runtimepath:get(), ts_fixed) then
+			vim.opt.runtimepath:prepend(ts_fixed)
+		end
+
 		local ts_queries_base = vim.fn.expand("~/.local/share/tree-sitter")
 		if not vim.tbl_contains(vim.opt.runtimepath:get(), ts_queries_base) then
 			vim.opt.runtimepath:prepend(ts_queries_base)
