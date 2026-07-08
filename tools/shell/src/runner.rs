@@ -71,15 +71,25 @@ pub fn enter(mode: super::commands::Commands) -> ! {
 
     let shell = resolve_host_shell();
 
-    let err = Command::new(&shell)
+    // For dev mode, exec the dev entry wrapper if available.
+    // It sources the dev hook (aliases, env vars, ssh-agent) and then execs the user's shell.
+    let entry = env::var("SHELL_DEV_ENTRY").ok();
+    let cmd = if nix_shell == "dev" && entry.is_some() {
+        entry.unwrap()
+    } else {
+        shell.clone()
+    };
+
+    let err = Command::new(&cmd)
         .env("PATH", &new_path)
         .env("IN_NIX_SHELL", nix_shell)
         .env("SHELL_MODE", nix_shell)
+        .env("ORIGINAL_SHELL", &shell)
         .exec();
 
     eprintln!(
         "error: failed to exec {}: {}",
-        shell,
+        cmd,
         err
     );
     std::process::exit(1);

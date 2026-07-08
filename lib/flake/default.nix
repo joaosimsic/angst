@@ -130,7 +130,27 @@ let
     inherit pkgs lib shellOutputs vmOutputs system hostShellBinPaths;
   };
 
-  inherit (shared) allToolchainPackages treesitter angstCli shellWrapped;
+  inherit (shared) allToolchainPackages treesitter angstCli shellWrapped shellDevHook;
+
+  treesitterShellHook = ''
+    mkdir -p ~/.local/share/tree-sitter
+    rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
+    ln -sf ${treesitter.treesitterParsers} ~/.local/share/tree-sitter/parser
+    ln -sf ${treesitter.treesitterQueries} ~/.local/share/tree-sitter/queries
+    export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
+  '';
+
+  fullDevPackages = [
+    pkgs.neovim
+    pkgs.git
+    angstCli
+  ]
+  ++ allToolchainPackages
+  ++ (with pkgs; [ openssh qemu cargo rustc rust-analyzer ])
+  ++ [
+    vmOutputs.packages.${system}.default
+    vmOutputs.packages.${system}.res
+  ];
 
   devShells = {
     safe = pkgs.mkShell {
@@ -139,33 +159,14 @@ let
         pkgs.git
       ]
       ++ allToolchainPackages;
-      shellHook = ''
-        mkdir -p ~/.local/share/tree-sitter
-        rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
-        ln -sf ${treesitter.treesitterParsers} ~/.local/share/tree-sitter/parser
-        ln -sf ${treesitter.treesitterQueries} ~/.local/share/tree-sitter/queries
-        export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
-      '';
+      shellHook = treesitterShellHook;
     };
 
     dev = pkgs.mkShell {
-      packages = [
-        pkgs.neovim
-        pkgs.git
-        angstCli
-      ]
-      ++ allToolchainPackages
-      ++ (with pkgs; [ openssh qemu cargo rustc rust-analyzer ])
-      ++ [
-        vmOutputs.packages.${system}.default
-        vmOutputs.packages.${system}.vm-run
-      ];
+      packages = fullDevPackages;
       shellHook = ''
-        mkdir -p ~/.local/share/tree-sitter
-        rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
-        ln -sf ${treesitter.treesitterParsers} ~/.local/share/tree-sitter/parser
-        ln -sf ${treesitter.treesitterQueries} ~/.local/share/tree-sitter/queries
-        export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
+        ${treesitterShellHook}
+        . ${shellDevHook}
       '';
     };
   };
@@ -194,6 +195,7 @@ in
       vm-cli = vmOutputs.packages.${system}.default;
       vm = vmOutputs.packages.${system}.vm;
       vm-run = vmOutputs.packages.${system}.vm-run;
+      res = vmOutputs.packages.${system}.res;
 
       shell = shellWrapped;
     };
@@ -203,7 +205,11 @@ in
     ${system} = devShells // {
       vm = pkgs.mkShell {
         inputsFrom = [ vmOutputs.devShells.${system}.default ];
-        packages = [ angstCli ];
+        packages = fullDevPackages;
+        shellHook = ''
+          ${treesitterShellHook}
+          . ${shellDevHook}
+        '';
       };
     };
   };
@@ -280,6 +286,22 @@ in
           echo "All shell config checks passed."
         ''}";
         meta.description = "Lint shell script configuration profiles.";
+      };
+
+      ssh = {
+        type = "app";
+        program = "${pkgs.writeShellScript "angst-ssh-deploy" ''
+          set -euo pipefail
+          echo "==> Building & activating joao@ssh..."
+          nix build ${self}#homeConfigurations.joao@ssh.activationPackage --print-build-logs
+          echo "==> Activating..."
+          ./result/activate
+          echo "==> Cleaning old Nix store..."
+          nix-collect-garbage -d
+          nix store gc
+          echo "==> Done."
+        ''}";
+        meta.description = "Deploy ssh host config and prune old Nix store entries.";
       };
 
     };

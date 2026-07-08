@@ -133,6 +133,28 @@
               esac
             '';
 
+            res-script = pkgs.writeShellScriptBin "res" ''
+              TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
+              FLAKE_DIR="''${ANGST_REPO:-$PWD}"
+
+              echo "Building VM for host '$TARGET_HOST' (cached after first build)..."
+              nix build "path:$FLAKE_DIR#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --no-link 2>&1 || true
+
+              echo "Starting VM..."
+              vm restart -l
+
+              echo "Waiting for VM to be ready..."
+              for i in $(seq 1 60); do
+                if vm ssh "echo ready" 2>/dev/null; then
+                  echo "VM is ready!"
+                  break
+                fi
+                sleep 1
+              done
+
+              exec vm ssh
+            '';
+
             vm-wrapped = pkgs.symlinkJoin {
               name = "vm-wrapped";
               paths = [ vm-package ];
@@ -145,12 +167,13 @@
 
           in
           {
-            packages = {
+              packages = {
               default = vm-package;
               vm = vm-package;
 
               wrapped = vm-wrapped;
               vm-run = vm-run-script;
+              res = res-script;
             };
 
             devShells.default = pkgs.mkShell {
@@ -173,8 +196,6 @@
                 export NIX_VM_HOSTS_MAP='${builtins.toJSON allHostVms}'
 
                 export PATH="${vm-run-script}/bin:$PATH"
-
-                alias res="vm restart -l && sleep 0.5 && vm ssh"
 
                 if [ -z "$SSH_AUTH_SOCK" ]; then
                   echo "Initializing local shell-bound SSH Agent..."

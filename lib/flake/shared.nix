@@ -214,12 +214,96 @@ let
   shellBin = shellOutputs.packages.${system}.default;
 
   safeBinPath = pkgs.lib.makeBinPath ([ pkgs.neovim pkgs.git ] ++ allToolchainPackages);
+
+  # Lightweight vm-run shim that defers host resolution to runtime via nix,
+  # avoiding the allHostVms → nixosConfigurations evaluation recursion.
+  vmRunShim = pkgs.writeShellScriptBin "vm-run" ''
+    TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-personal}}"
+    KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
+    KEY_FILE="$KEY_DIR/authorized_keys"
+
+    mkdir -p "$KEY_DIR"
+
+    TMP_KEYS="$(mktemp)"
+    trap 'rm -f "$TMP_KEYS"' EXIT
+
+    if ssh-add -L > /dev/null 2>&1; then
+      ssh-add -L >> "$TMP_KEYS"
+    fi
+
+    for pubkey in "$HOME"/.ssh/*.pub; do
+      if [ -r "$pubkey" ]; then
+        cat "$pubkey" >> "$TMP_KEYS"
+      fi
+    done
+
+    awk '/^(ssh-rsa|ssh-ed25519|ecdsa-sha2-|sk-ssh-|sk-ecdsa-)/ { print }' "$TMP_KEYS" | sort -u > "$KEY_FILE"
+    chmod 600 "$KEY_FILE"
+
+    if [ ! -s "$KEY_FILE" ]; then
+      echo "Error: no SSH public keys found in ssh-agent or ~/.ssh/*.pub for VM access." >&2
+      echo "Run ssh-add ~/.ssh/id_ed25519 or create a public key file before starting the VM." >&2
+      exit 1
+    fi
+
+    HEADLESS=0
+    NEW_ARGS=()
+    for arg in "$@"; do
+      if [ "$arg" = "--headless" ]; then
+        HEADLESS=1
+      else
+        NEW_ARGS+=("$arg")
+      fi
+    done
+
+    if [ "$HEADLESS" -eq 1 ]; then
+      export QEMU_OPTS="''${QEMU_OPTS:-} -display none -vga none"
+    fi
+
+    FLAKE_DIR="''${ANGST_REPO:-$PWD}"
+    export NIX_DISK_IMAGE="''${NIX_DISK_IMAGE:-$PWD/$TARGET_HOST.qcow2}"
+    export SHARED_DIR="$KEY_DIR"
+    export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
+
+    exec nix run "path:$FLAKE_DIR#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" -- "''${NEW_ARGS[@]}"
+  '';
+
   devBinPath = pkgs.lib.makeBinPath (
     [ pkgs.neovim pkgs.git angstCli ]
     ++ allToolchainPackages
     ++ (with pkgs; [ openssh qemu cargo rustc rust-analyzer ])
-    ++ [ vmOutputs.packages.${system}.default ]
+    ++ [
+      vmOutputs.packages.${system}.default
+      vmOutputs.packages.${system}.res
+      vmRunShim
+    ]
   );
+
+  shellDevHook = pkgs.writeText "shell-dev-hook" ''
+    export VM_SSH_PORT=2222
+    export VM_SSH_USER=joao
+    export NIX_DEFAULT_TARGET_HOST=personal
+    export CARGO_BUILD_TARGET_DIR="$PWD/target"
+
+    if [ -z "$SSH_AUTH_SOCK" ]; then
+      echo "Initializing local shell-bound SSH Agent..."
+      eval $(ssh-agent -s) > /dev/null
+      trap "ssh-agent -k > /dev/null" EXIT
+    fi
+
+    if [ -f "$HOME/.ssh/id_ed25519" ]; then
+      ssh-add "$HOME/.ssh/id_ed25519" 2>/dev/null
+    elif [ -f "$HOME/.ssh/id_rsa" ]; then
+      ssh-add "$HOME/.ssh/id_rsa" 2>/dev/null
+    fi
+
+    # res available as a command on PATH via devBinPath
+  '';
+
+  devEntryScript = pkgs.writeShellScript "shell-dev-entry" ''
+    . ${shellDevHook}
+    exec "$ORIGINAL_SHELL"
+  '';
 
   shellWrapped = pkgs.symlinkJoin {
     name = "shell-wrapped";
@@ -229,6 +313,7 @@ let
       wrapProgram $out/bin/shell \
         --set SHELL_SAFE_PATH "${safeBinPath}" \
         --set SHELL_DEV_PATH "${devBinPath}" \
+        --set SHELL_DEV_ENTRY "${devEntryScript}" \
         --set SHELL_TS_PARSERS "${treesitter.treesitterParsers}" \
         --set SHELL_TS_QUERIES "${treesitter.treesitterQueries}" \
         ${lib.optionalString (hostShellBinPaths != "") "--set SHELL_ENABLED_SHELLS \"${hostShellBinPaths}\""}
@@ -243,7 +328,10 @@ in
     angstCli
     safeBinPath
     devBinPath
+    vmRunShim
     shellWrapped
+    shellDevHook
+    devEntryScript
     ;
   shellTool = shellWrapped;
 }
