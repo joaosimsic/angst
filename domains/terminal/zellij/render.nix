@@ -298,16 +298,21 @@ let
 
   '';
 
+  fmtLeft = "{mode}";
+  fmtCenter = "#[${standard}]{command_cwd}";
+  fmtRight = "#[${standard}]{tabs}";
+  fmtSpace = "#[${standard}]";
+
   layoutText = ''
     layout {
       default_tab_template {
         children
         pane size=1 borderless=true {
           plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
-                    format_left  "{mode}"
-                    format_center "{command_cwd}"
-                    format_right "#[${standard}]{tabs}"
-                    format_space "#[${standard}]"
+                    format_left   "${fmtLeft}"
+                    format_center "${fmtCenter}"
+                    format_right  "${fmtRight}"
+                    format_space  "${fmtSpace}"
 
                     mode_default_to_mode "normal"
                     mode_normal        "#[${modeNormal}] NORMAL "
@@ -397,12 +402,12 @@ in
       (requireInfix layoutText "mode_prompt        \"#[bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold]"
         "zjstatus prompt mode should render ${themeName} diagnostic.success on ui.bg"
       )
-      (requireInfix layoutText "format_left  \" {mode}  {tabs}\""
-        "zellij format should use uniform bar background"
+      (requireInfix layoutText "format_left   \"${fmtLeft}\""
+        "zellij format left should render mode"
       )
       (requireInfix layoutText
-        "format_right \"#[bg=#${t.ui.surface},fg=#${t.ui.comment}] {command_cwd} \""
-        "zellij cwd should render ${themeName} ui.comment on ui.surface"
+        "format_right  \"${fmtRight}\""
+        "zellij tabs should render on standard background"
       )
       (requireInfix layoutText "tab_active              \"#[bg=#${t.ui.accent},fg=#${t.ui.bg},bold]"
         "zellij active tab should render ${themeName} ui.accent"
