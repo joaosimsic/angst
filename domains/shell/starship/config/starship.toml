@@ -323,13 +323,14 @@ style = "#685742"
 [nix_shell]
 format = "[$symbol](#5277C3)[$state]($style) "
 symbol = " "
-style = "bold #d7c483"
+style = "#685742"
 
 [env_var.SHELL_MODE]
 format = "[$symbol](#5277C3)[$env_value]($style) "
 symbol = " "
 style = "bold white"
 variable = "SHELL_MODE"
+
 
 [guix_shell]
 format = "[$symbol](#FFCC00) "
@@ -345,7 +346,5 @@ style = "#685742"
 format = "[$symbol](#CB3837)[$version]($style) "
 symbol = "󰏗 "
 style = "#685742"
-
-
 
 

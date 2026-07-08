@@ -11,7 +11,6 @@ let
 
   moduleNames = [
     "env_var"
-    "directory"
     "git_branch"
     "git_status"
     "buf"
