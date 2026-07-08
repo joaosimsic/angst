@@ -144,6 +144,7 @@ let
         rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
         ln -sf ${treesitter.treesitterParsers} ~/.local/share/tree-sitter/parser
         ln -sf ${treesitter.treesitterQueries} ~/.local/share/tree-sitter/queries
+        export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
       '';
     };
 
@@ -164,6 +165,7 @@ let
         rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
         ln -sf ${treesitter.treesitterParsers} ~/.local/share/tree-sitter/parser
         ln -sf ${treesitter.treesitterQueries} ~/.local/share/tree-sitter/queries
+        export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
       '';
     };
   };
