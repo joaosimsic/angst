@@ -22,10 +22,10 @@ local palette = {
     dim = "#685742",
   },
   ansi = {
-    error = "#ff3333",
-    warn = "#ffaa00",
-    info = "#33b5e5",
-    success = "#00c851",
+    error = "#d9534f",
+    warn = "#df9f28",
+    info = "#5f9ea0",
+    success = "#6e9643",
   },
 }
 

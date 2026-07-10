@@ -28,14 +28,14 @@ $env.config.color_config = {
     shape_custom:                "#c9a554"
     shape_datetime:              "#d7c483"
     shape_directory:             "#b36d43"
-    shape_external:              { fg: "#ffaa00" }
-    shape_external_resolved:     { fg: "#00c851" attr: b }
+    shape_external:              { fg: "#df9f28" }
+    shape_external_resolved:     { fg: "#6e9643" attr: b }
     shape_externalarg:           "#c9a554"
     shape_filepath:              "#c9a554"
     shape_flag:                  { fg: "#b36d43" attr: b }
     shape_float:                 "#c9a554"
-    shape_garbage:               { fg: "#ff3333" attr: b }
-    shape_globpattern:           "#33b5e5"
+    shape_garbage:               { fg: "#d9534f" attr: b }
+    shape_globpattern:           "#5f9ea0"
     shape_int:                   "#c9a554"
     shape_internalcall:          { fg: "#d7c483" attr: b }
     shape_keyword:               { fg: "#c9a554" attr: b }
@@ -81,9 +81,9 @@ let _subtle = "#b36d43"
 let _accent = "#b36d43"
 let _muted = "#685742"
 let _comment = "#685742"
-let _success = "#00c851"
-let _warning = "#ffaa00"
-let _error = "#ff3333"
+let _success = "#6e9643"
+let _warning = "#df9f28"
+let _error = "#d9534f"
 let _blue = "#78824b"
 let _cyan = "#c9a554"
 let _magenta = "#bb7744"

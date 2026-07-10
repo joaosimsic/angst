@@ -9,7 +9,7 @@ add_newline = true
 format = "[$path]($style)[$read_only]($read_only_style)"
 style = "bold #b36d43"
 read_only = " RO"
-read_only_style = "bold #ff3333"
+read_only_style = "bold #d9534f"
 truncation_length = 3
 truncate_to_repo = false
 
@@ -20,7 +20,7 @@ symbol = ""
 
 [git_status]
 format = ' [\[$all_status$ahead_behind\]]($style) '
-style = "#ffaa00"
+style = "#df9f28"
 conflicted = "!"
 ahead = "+"
 behind = "-"
@@ -35,7 +35,7 @@ deleted = "x"
 [username]
 format = "[$user]($style)"
 style_user = "bold #5f7a5f"
-style_root = "bold #ff3333"
+style_root = "bold #d9534f"
 show_always = true
 
 [hostname]
