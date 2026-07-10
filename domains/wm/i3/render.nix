@@ -9,6 +9,7 @@
 
 let
   t = themesLib.get themeName;
+  p = t.palette;
 
   monitorOrder = lib.unique (
     lib.filter (n: lib.hasAttr n monitors) (
@@ -51,10 +52,10 @@ in
       hide_edge_borders smart
 
       # Theme colors: border, background, text, indicator, child_border
-      client.focused          #${t.INFO} #${t.BG} #${t.FG} #${t.INFO} #${t.INFO}
-      client.focused_inactive #${t.MUTED} #${t.BG} #${t.SUBTLE} #${t.MUTED} #${t.MUTED}
-      client.unfocused        #${t.BG} #${t.BG} #${t.SUBTLE} #${t.BG} #${t.BG}
-      client.urgent           #${t.ERROR} #${t.BG} #${t.ERROR} #${t.WARNING} #${t.WARNING}
+      client.focused          #${t.ansi.info} #${p.background.base} #${p.foreground.base} #${t.ansi.info} #${t.ansi.info}
+      client.focused_inactive #${p.dim} #${p.background.base} #${p.accent.base} #${p.dim} #${p.dim}
+      client.unfocused        #${p.background.base} #${p.background.base} #${p.accent.base} #${p.background.base} #${p.background.base}
+      client.urgent           #${t.ansi.error} #${p.background.base} #${t.ansi.error} #${t.ansi.warn} #${t.ansi.warn}
 
       set $mod Mod4
 
@@ -121,7 +122,7 @@ in
 
       bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
       bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
-      exec_always --no-startup-id hsetroot -solid '#${t.BG}'
+      exec_always --no-startup-id hsetroot -solid '#${p.background.base}'
       exec --no-startup-id dbus-update-activation-environment --systemd --all
       exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY PATH XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
       exec --no-startup-id systemctl --user start graphical-session.target
@@ -132,13 +133,13 @@ in
           position top
           font pango:${fontFamily} 10
           colors {
-              background #${t.BG}
-              statusline #${t.FG}
-              separator  #${t.SUBTLE}
-              focused_workspace  #${t.BG} #${t.BG} #${t.FG}
-              active_workspace   #${t.BG} #${t.BG} #${t.BRIGHT}
-              inactive_workspace #${t.BG} #${t.BG} #${t.SUBTLE}
-              urgent_workspace   #${t.ERROR} #${t.BG} #${t.FG}
+              background #${p.background.base}
+              statusline #${p.foreground.base}
+              separator  #${p.accent.base}
+              focused_workspace  #${p.background.base} #${p.background.base} #${p.foreground.base}
+              active_workspace   #${p.background.base} #${p.background.base} #${p.foreground.variant}
+              inactive_workspace #${p.background.base} #${p.background.base} #${p.accent.base}
+              urgent_workspace   #${t.ansi.error} #${p.background.base} #${p.foreground.base}
           }
       }
     '';

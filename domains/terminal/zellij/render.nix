@@ -7,24 +7,25 @@
 
 let
   t = themesLib.get themeName;
+  p = t.palette;
   inherit (checkHelpers) requireInfix require;
 
-  inactiveTab = "bg=#${t.ui.surface},fg=#${t.ui.subtle}";
-  activeTab = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
+  inactiveTab = "bg=#${p.background.variant},fg=#${p.accent.base}";
+  activeTab = "bg=#${p.accent.base},fg=#${p.background.base},bold";
 
-  modeNormal = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
-  modeLocked = "bg=#${t.ansi.red},fg=#${t.ui.bg},bold";
-  standard = "bg=#${t.ui.bright},fg=#${t.ui.bg}";
-  modePane = "bg=#${t.ansi.green},fg=#${t.ui.bg},bold";
-  modeTab = "bg=#${t.ansi.magenta},fg=#${t.ui.bg},bold";
-  modeScroll = "bg=#${t.ansi.yellow},fg=#${t.ui.bg},bold";
-  modeSearch = "bg=#${t.ansi.magenta},fg=#${t.ui.bg},bold";
-  modeResize = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
-  modeRename = "bg=#${t.ansi.cyan},fg=#${t.ui.bg},bold";
-  modeMove = "bg=#${t.ansi.yellow},fg=#${t.ui.bg},bold";
-  modeSession = "bg=#${t.ansi.blue},fg=#${t.ui.bg},bold";
-  modePrompt = "bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold";
-  modeTmux = "bg=#${t.ansi.cyan},fg=#${t.ui.bg},bold";
+  modeNormal = "bg=#${p.accent.base},fg=#${p.background.base},bold";
+  modeLocked = "bg=#${p.dim},fg=#${p.background.base},bold";
+  standard = "bg=#${p.foreground.variant},fg=#${p.background.base}";
+  modePane = "bg=#${p.surface.variant},fg=#${p.background.base},bold";
+  modeTab = "bg=#${p.accent.variant},fg=#${p.background.base},bold";
+  modeScroll = "bg=#${p.accent.base},fg=#${p.background.base},bold";
+  modeSearch = "bg=#${p.accent.variant},fg=#${p.background.base},bold";
+  modeResize = "bg=#${p.accent.base},fg=#${p.background.base},bold";
+  modeRename = "bg=#${p.accent.variant},fg=#${p.background.base},bold";
+  modeMove = "bg=#${p.accent.base},fg=#${p.background.base},bold";
+  modeSession = "bg=#${p.surface.base},fg=#${p.background.base},bold";
+  modePrompt = "bg=#${t.ansi.success},fg=#${p.background.base},bold";
+  modeTmux = "bg=#${p.foreground.base},fg=#${p.background.base},bold";
 
   configText = ''
     plugins {
@@ -155,142 +156,142 @@ let
         themes {
         angst {
             text_unselected {
-                base "#${t.ui.fg}"
-                background "#${t.ui.bg}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.accent}"
+                base "#${p.foreground.base}"
+                background "#${p.background.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.accent.base}"
             }
 
             text_selected {
-                base "#${t.ui.bg}"
-                background "#${t.ui.accent}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.bright}"
+                base "#${p.background.base}"
+                background "#${p.accent.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.foreground.variant}"
             }
 
             ribbon_unselected {
-                base "#${t.ui.subtle}"
-                background "#${t.ui.surface}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.fg}"
+                base "#${p.accent.base}"
+                background "#${p.background.variant}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.foreground.base}"
             }
 
             ribbon_selected {
-                base "#${t.ui.bg}"
-                background "#${t.ui.accent}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.bright}"
+                base "#${p.background.base}"
+                background "#${p.accent.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.foreground.variant}"
             }
 
             table_title {
-                base "#${t.ui.accent}"
-                background "#${t.ui.bg}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.bright}"
+                base "#${p.accent.base}"
+                background "#${p.background.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.foreground.variant}"
             }
 
             table_cell_unselected {
-                base "#${t.ui.fg}"
-                background "#${t.ui.bg}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.subtle}"
+                base "#${p.foreground.base}"
+                background "#${p.background.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.accent.base}"
             }
 
             table_cell_selected {
-                base "#${t.ui.bg}"
-                background "#${t.ui.accent}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.bright}"
+                base "#${p.background.base}"
+                background "#${p.accent.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.foreground.variant}"
             }
 
             list_unselected {
-                base "#${t.ui.fg}"
-                background "#${t.ui.bg}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.subtle}"
+                base "#${p.foreground.base}"
+                background "#${p.background.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.accent.base}"
             }
 
             list_selected {
-                base "#${t.ui.bg}"
-                background "#${t.ui.accent}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.bright}"
+                base "#${p.background.base}"
+                background "#${p.accent.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.foreground.variant}"
             }
 
             frame_unselected {
-                base "#${t.ui.border}"
-                background "#${t.ui.bg}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.subtle}"
+                base "#${p.foreground.base}"
+                background "#${p.background.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.accent.base}"
             }
 
             frame_selected {
-                base "#${t.ui.accent}"
-                background "#${t.ui.bg}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.bright}"
+                base "#${p.accent.base}"
+                background "#${p.background.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.foreground.variant}"
             }
 
             frame_highlight {
-                base "#${t.diagnostic.warning}"
-                background "#${t.ui.bg}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.accent}"
+                base "#${t.ansi.warn}"
+                background "#${p.background.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.accent.base}"
             }
 
             exit_code_success {
-                base "#${t.diagnostic.success}"
-                background "#${t.ui.bg}"
-                emphasis_0 "#${t.diagnostic.success}"
-                emphasis_1 "#${t.ui.fg}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.accent}"
+                base "#${t.ansi.success}"
+                background "#${p.background.base}"
+                emphasis_0 "#${t.ansi.success}"
+                emphasis_1 "#${p.foreground.base}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.accent.base}"
             }
 
             exit_code_error {
-                base "#${t.diagnostic.error}"
-                background "#${t.ui.bg}"
-                emphasis_0 "#${t.diagnostic.error}"
-                emphasis_1 "#${t.diagnostic.warning}"
-                emphasis_2 "#${t.diagnostic.info}"
-                emphasis_3 "#${t.ui.accent}"
+                base "#${t.ansi.error}"
+                background "#${p.background.base}"
+                emphasis_0 "#${t.ansi.error}"
+                emphasis_1 "#${t.ansi.warn}"
+                emphasis_2 "#${t.ansi.info}"
+                emphasis_3 "#${p.accent.base}"
             }
 
             multiplayer_user_colors {
-                player_1 "#${t.ansi.magenta}"
-                player_2 "#${t.ansi.cyan}"
-                player_3 "#${t.ansi.yellow}"
-                player_4 "#${t.ansi.green}"
-                player_5 "#${t.ansi.blue}"
-                player_6 "#${t.ansi.red}"
-                player_7 "#${t.ansi.magenta}"
-                player_8 "#${t.ansi.cyan}"
-                player_9 "#${t.ansi.yellow}"
-                player_10 "#${t.ansi.green}"
+                player_1 "#${p.accent.variant}"
+                player_2 "#${p.foreground.base}"
+                player_3 "#${p.accent.base}"
+                player_4 "#${p.surface.variant}"
+                player_5 "#${p.surface.base}"
+                player_6 "#${p.dim}"
+                player_7 "#${p.accent.variant}"
+                player_8 "#${p.foreground.base}"
+                player_9 "#${p.accent.base}"
+                player_10 "#${p.surface.variant}"
             }
         }
     }
@@ -361,30 +362,30 @@ in
     path = "domains/terminal/zellij/config/themes/angst.kdl";
     text = themeText;
     checks = [
-      (requireInfix themeText "text_unselected {\n            base \"#${t.ui.fg}\""
-        "zellij native text should render ${themeName} ui.fg"
+      (requireInfix themeText "text_unselected {\n            base \"#${p.foreground.base}\""
+        "zellij native text should render ${themeName} foreground.base"
       )
       (requireInfix themeText
-        "ribbon_selected {\n            base \"#${t.ui.bg}\"\n            background \"#${t.ui.accent}\""
-        "zellij selected ribbon should render ${themeName} ui.accent"
+        "ribbon_selected {\n            base \"#${p.background.base}\"\n            background \"#${p.accent.base}\""
+        "zellij selected ribbon should render ${themeName} accent.base"
       )
-      (requireInfix themeText "frame_unselected {\n            base \"#${t.ui.border}\""
-        "zellij inactive frame should render ${themeName} ui.border"
+      (requireInfix themeText "frame_unselected {\n            base \"#${p.foreground.base}\""
+        "zellij inactive frame should render ${themeName} foreground.base"
       )
-      (requireInfix themeText "frame_selected {\n            base \"#${t.ui.accent}\""
-        "zellij active frame should render ${themeName} ui.accent"
+      (requireInfix themeText "frame_selected {\n            base \"#${p.accent.base}\""
+        "zellij active frame should render ${themeName} accent.base"
       )
-      (requireInfix themeText "frame_highlight {\n            base \"#${t.diagnostic.warning}\""
-        "zellij highlighted frame should render ${themeName} diagnostic.warning"
+      (requireInfix themeText "frame_highlight {\n            base \"#${t.ansi.warn}\""
+        "zellij highlighted frame should render ${themeName} ansi.warn"
       )
       (require (
-        t.ui.accent != t.ui.bg
+        p.accent.base != p.background.base
       ) "zellij selected ribbon must differ from background in ${themeName}")
       (require (
-        t.ui.border != t.ui.bg
+        p.foreground.base != p.background.base
       ) "zellij inactive frame must differ from background in ${themeName}")
       (require (
-        t.diagnostic.warning != t.ui.bg
+        t.ansi.warn != p.background.base
       ) "zellij highlighted frame must differ from background in ${themeName}")
     ];
   }
@@ -395,27 +396,27 @@ in
       (requireInfix layoutText "mode_default_to_mode \"normal\""
         "zjstatus should fall back to normal mode formatting"
       )
-      (requireInfix layoutText "mode_normal        \"#[bg=#${t.ui.accent},fg=#${t.ui.bg},bold]"
-        "zellij normal mode should render ${themeName} ui.accent on ui.bg"
+      (requireInfix layoutText "mode_normal        \"#[bg=#${p.accent.base},fg=#${p.background.base},bold]"
+        "zellij normal mode should render ${themeName} accent.base on background.base"
       )
-      (requireInfix layoutText "mode_prompt        \"#[bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold]"
-        "zjstatus prompt mode should render ${themeName} diagnostic.success on ui.bg"
+      (requireInfix layoutText "mode_prompt        \"#[bg=#${t.ansi.success},fg=#${p.background.base},bold]"
+        "zjstatus prompt mode should render ${themeName} ansi.success on background.base"
       )
       (requireInfix layoutText "format_left   \"${fmtLeft}\"" "zellij format left should render mode")
       (requireInfix layoutText "format_right  \"${fmtRight}\""
         "zellij tabs should render on standard background"
       )
-      (requireInfix layoutText "tab_active              \"#[bg=#${t.ui.accent},fg=#${t.ui.bg},bold]"
-        "zellij active tab should render ${themeName} ui.accent"
+      (requireInfix layoutText "tab_active              \"#[bg=#${p.accent.base},fg=#${p.background.base},bold]"
+        "zellij active tab should render ${themeName} accent.base"
       )
-      (requireInfix layoutText "tab_normal              \"#[bg=#${t.ui.surface},fg=#${t.ui.subtle}]"
-        "zellij inactive tab should render ${themeName} ui.subtle on ui.surface"
+      (requireInfix layoutText "tab_normal              \"#[bg=#${p.background.variant},fg=#${p.accent.base}]"
+        "zellij inactive tab should render ${themeName} accent.base on background.variant"
       )
       (require (
-        t.ui.accent != t.ui.surface
+        p.accent.base != p.background.variant
       ) "zellij active tab and bar surface must differ in ${themeName}")
       (require (
-        t.ui.subtle != t.ui.surface
+        p.accent.base != p.background.variant
       ) "zellij inactive tab text and bar surface must differ in ${themeName}")
     ];
   }

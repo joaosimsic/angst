@@ -8,10 +8,10 @@ default_floating_border pixel 2
 hide_edge_borders smart
 
 # Theme colors: border, background, text, indicator, child_border
-client.focused          #c9a554 #222222 #c2c2b0 #c9a554 #c9a554
-client.focused_inactive #c7c7c7 #222222 #e5c47b #c7c7c7 #c7c7c7
-client.unfocused        #222222 #222222 #e5c47b #222222 #222222
-client.urgent           #685742 #222222 #685742 #b36d43 #b36d43
+client.focused          #33b5e5 #222222 #c9a554 #33b5e5 #33b5e5
+client.focused_inactive #685742 #222222 #b36d43 #685742 #685742
+client.unfocused        #222222 #222222 #b36d43 #222222 #222222
+client.urgent           #ff3333 #222222 #ff3333 #ffaa00 #ffaa00
 
 set $mod Mod4
 
@@ -90,12 +90,12 @@ bar {
     font pango:JetBrainsMono Nerd Font 10
     colors {
         background #222222
-        statusline #c2c2b0
-        separator  #e5c47b
-        focused_workspace  #222222 #222222 #c2c2b0
+        statusline #c9a554
+        separator  #b36d43
+        focused_workspace  #222222 #222222 #c9a554
         active_workspace   #222222 #222222 #d7c483
-        inactive_workspace #222222 #222222 #e5c47b
-        urgent_workspace   #685742 #222222 #c2c2b0
+        inactive_workspace #222222 #222222 #b36d43
+        urgent_workspace   #ff3333 #222222 #c9a554
     }
 }
 

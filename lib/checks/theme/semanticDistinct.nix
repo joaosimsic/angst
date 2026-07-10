@@ -10,12 +10,10 @@ let
   inherit (import ./assertions.nix { inherit lib themeName theme; }) requireDistinct;
 
   roles = [
-    "ERROR"
-    "SUCCESS"
-    "WARNING"
-    "INFO"
-    "COMMENT"
-    "MUTED"
+    "ansi.error"
+    "ansi.success"
+    "ansi.warn"
+    "ansi.info"
   ];
 
   _ = requireDistinct "semantic roles" roles;

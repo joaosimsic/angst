@@ -7,6 +7,7 @@
 
 let
   t = themesLib.get themeName;
+  p = t.palette;
 in
 [
   {
@@ -32,15 +33,15 @@ in
     path = "domains/http-client/posting/config/themes/angst.yaml";
     text = ''
       name: angst
-      primary: '#${t.BLUE}'
-      secondary: '#${t.MAGENTA}'
-      accent: '#${t.BRIGHT}'
-      foreground: '#${t.FG}'
-      background: '#${t.BG}'
-      surface: '#${t.SURFACE}'
-      error: '#${t.ERROR}'
-      success: '#${t.SUCCESS}'
-      warning: '#${t.WARNING}'
+      primary: '#${p.surface.base}'
+      secondary: '#${p.accent.variant}'
+      accent: '#${p.foreground.variant}'
+      foreground: '#${p.foreground.base}'
+      background: '#${p.background.base}'
+      surface: '#${p.background.variant}'
+      error: '#${t.ansi.error}'
+      success: '#${t.ansi.success}'
+      warning: '#${t.ansi.warn}'
     '';
   }
 ]

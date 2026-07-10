@@ -5,16 +5,16 @@
     "primary": "#c9a554",
     "secondary": "#bb7744",
     "accent": "#d7c483",
-    "warning": "#b36d43",
-    "error": "#685742",
-    "success": "#5f875f",
-    "foreground": "#c2c2b0",
+    "warning": "#ffaa00",
+    "error": "#ff3333",
+    "success": "#00c851",
+    "foreground": "#c9a554",
     "background": "#222222",
     "surface": "#222222",
     "panel": "#222222",
     "variables": {
       "border": "#78824b",
-      "block-cursor-background": "#d7c483",
+      "block-cursor-background": "#b36d43",
       "block-cursor-foreground": "#222222",
       "block-cursor-text-style": "bold"
     }

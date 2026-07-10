@@ -7,6 +7,7 @@
 
 let
   t = themesLib.get themeName;
+  p = t.palette;
   inherit (checkHelpers) requireInfix require;
 
   settingsText = ''
@@ -24,20 +25,20 @@ let
       "theme": {
         "name": "${themeName}",
         "dark": true,
-        "primary": "#${t.ui.border}",
-        "secondary": "#${t.MAGENTA}",
-        "accent": "#${t.BRIGHT}",
-        "warning": "#${t.WARNING}",
-        "error": "#${t.ERROR}",
-        "success": "#${t.SUCCESS}",
-        "foreground": "#${t.FG}",
-        "background": "#${t.BG}",
-        "surface": "#${t.BG}",
-        "panel": "#${t.BG}",
+        "primary": "#${p.foreground.base}",
+        "secondary": "#${p.accent.variant}",
+        "accent": "#${p.foreground.variant}",
+        "warning": "#${t.ansi.warn}",
+        "error": "#${t.ansi.error}",
+        "success": "#${t.ansi.success}",
+        "foreground": "#${p.foreground.base}",
+        "background": "#${p.background.base}",
+        "surface": "#${p.background.base}",
+        "panel": "#${p.background.base}",
         "variables": {
-          "border": "#${t.BLUE}",
-          "block-cursor-background": "#${t.ACCENT}",
-          "block-cursor-foreground": "#${t.BG}",
+          "border": "#${p.surface.base}",
+          "block-cursor-background": "#${p.accent.base}",
+          "block-cursor-foreground": "#${p.background.base}",
           "block-cursor-text-style": "bold"
         }
       }
@@ -65,40 +66,40 @@ in
         "sqlit theme file name should be ${themeName}"
       )
       (requireInfix themeFileText ''"dark": true'' "sqlit theme should be dark")
-      (requireInfix themeFileText ''"primary": "#${t.ui.border}"''
-        "sqlit primary should render ${themeName} ui.border"
+      (requireInfix themeFileText ''"primary": "#${p.foreground.base}"''
+        "sqlit primary should render ${themeName} foreground.base"
       )
-      (requireInfix themeFileText ''"secondary": "#${t.MAGENTA}"''
-        "sqlit secondary should render ${themeName} MAGENTA"
+      (requireInfix themeFileText ''"secondary": "#${p.accent.variant}"''
+        "sqlit secondary should render ${themeName} accent.variant"
       )
-      (requireInfix themeFileText ''"accent": "#${t.ui.bright}"''
-        "sqlit accent should render ${themeName} ui.bright"
+      (requireInfix themeFileText ''"accent": "#${p.foreground.variant}"''
+        "sqlit accent should render ${themeName} foreground.variant"
       )
-      (requireInfix themeFileText ''"warning": "#${t.WARNING}"''
-        "sqlit warning should render ${themeName} WARNING"
+      (requireInfix themeFileText ''"warning": "#${t.ansi.warn}"''
+        "sqlit warning should render ${themeName} ansi.warn"
       )
-      (requireInfix themeFileText ''"error": "#${t.ERROR}"''
-        "sqlit error should render ${themeName} ERROR"
+      (requireInfix themeFileText ''"error": "#${t.ansi.error}"''
+        "sqlit error should render ${themeName} ansi.error"
       )
-      (requireInfix themeFileText ''"success": "#${t.SUCCESS}"''
-        "sqlit success should render ${themeName} SUCCESS"
+      (requireInfix themeFileText ''"success": "#${t.ansi.success}"''
+        "sqlit success should render ${themeName} ansi.success"
       )
-      (requireInfix themeFileText ''"foreground": "#${t.FG}"''
-        "sqlit foreground should render ${themeName} FG"
+      (requireInfix themeFileText ''"foreground": "#${p.foreground.base}"''
+        "sqlit foreground should render ${themeName} foreground.base"
       )
-      (requireInfix themeFileText ''"background": "#${t.BG}"''
-        "sqlit background should render ${themeName} BG"
+      (requireInfix themeFileText ''"background": "#${p.background.base}"''
+        "sqlit background should render ${themeName} background.base"
       )
-      (requireInfix themeFileText ''"surface": "#${t.BG}"'' "sqlit surface should render ${themeName} BG")
-      (requireInfix themeFileText ''"panel": "#${t.BG}"'' "sqlit panel should render ${themeName} BG")
-      (requireInfix themeFileText ''"border": "#${t.BLUE}"''
-        "sqlit border variable should render ${themeName} BLUE"
+      (requireInfix themeFileText ''"surface": "#${p.background.base}"'' "sqlit surface should render ${themeName} background.base")
+      (requireInfix themeFileText ''"panel": "#${p.background.base}"'' "sqlit panel should render ${themeName} background.base")
+      (requireInfix themeFileText ''"border": "#${p.surface.base}"''
+        "sqlit border variable should render ${themeName} surface.base"
       )
       (require (
-        t.BLUE != t.MAGENTA
-      ) "sqlit primary BLUE and secondary MAGENTA must differ in ${themeName}")
-      (require (t.BG != t.SURFACE) "sqlit background and surface must differ in ${themeName}")
-      (require (t.ERROR != t.SUCCESS) "sqlit ERROR and SUCCESS must differ in ${themeName}")
+        p.surface.base != p.accent.variant
+      ) "sqlit primary surface.base and secondary accent.variant must differ in ${themeName}")
+      (require (p.background.base != p.background.variant) "sqlit background and variant must differ in ${themeName}")
+      (require (t.ansi.error != t.ansi.success) "sqlit ansi.error and ansi.success must differ in ${themeName}")
     ];
   }
 ]

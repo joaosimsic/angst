@@ -129,7 +129,7 @@ Managed domains:
 The theme validation system at `lib/checks/theme/` enforces correctness at evaluation time:
 
 - **`entries.nix`** — Each theme file loads without errors
-- **`semanticDistinct.nix`** — ERROR, SUCCESS, WARNING, INFO, COMMENT, MUTED all have distinct hex values
+- **`semanticDistinct.nix`** — ansi.error, ansi.success, ansi.warn, ansi.info all have distinct hex values
 - **`rendered.nix`** — Rendered ghostty, starship, nushell, zellij configs contain expected theme tokens (no stale hardcoded colors)
 - **`override.nix`** — Theme override propagates into rendered output
 - **`context.nix`** — Utility to identify the host's current theme and pick an alternate for override testing
@@ -139,22 +139,24 @@ The theme validation system at `lib/checks/theme/` enforces correctness at evalu
 
 ### `@themes/` — Color Token Definitions
 
-Each theme is a Nix attrset with ~50 color tokens across 5 layers:
+Each theme is a compact Nix attrset with 13 tokens:
 
 ```nix
 {
-  palette    = { black, base, dim, subtle, accent, surface, overlay };
-  ansi       = { normal = { black, red, ... }; bright = { ... }; };
-  ui         = { fg, bg, bright, muted, comment, surface, subtle, accent, border, selectionBg, selectionFg, overlay, prompt };
-  syntax     = { comment, keyword, string, function, variable, constant, operator, type, number, punctuation };
-  diagnostic = { error, warning, info, hint, success };
+  palette = {
+    background = { base, variant };
+    surface    = { base, variant };
+    foreground = { base, variant };
+    accent     = { base, variant };
+    dim;
+  };
+  ansi = { error, warn, info, success };
 }
 ```
 
 `themes/default.nix` normalizes (strips `#`, validates hex, checks completeness via `schema.nix`), then enriches each theme with:
 
-- Uppercase convenience aliases: `FG`, `BG`, `RED`, `GREEN`, `BASE`, `ACCENT`, `SURFACE`, etc.
-- RGB space-separated variants (`${TOKEN}_RGB`) for applications requiring integer colors (i3)
+- RGB space-separated variants (`_RGB`) for applications requiring integer colors (i3)
 
 Themes are resolved at eval time via `themesLib.get "miasma"`. Default: `monochrome`.
 

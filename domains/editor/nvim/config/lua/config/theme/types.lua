@@ -1,65 +1,25 @@
 ---@meta
 
 ---@class ThemePalette
----@field palette ThemePaletteBase
----@field ui ThemePaletteUi
----@field syntax ThemePaletteSyntax
----@field diagnostic ThemePaletteDiagnostic
----@field ansi ThemePaletteAnsi
+---@field palette ThemePaletteCompact
+---@field ansi ThemePaletteAnsiCompact
 
----@class ThemePaletteBase
----@field black string
----@field base string
+---@class ThemePaletteCompact
+---@field background ThemePalettePair
+---@field surface ThemePalettePair
+---@field foreground ThemePalettePair
+---@field accent ThemePalettePair
 ---@field dim string
----@field subtle string
----@field accent string
----@field surface string
----@field overlay string
 
----@class ThemePaletteUi
----@field fg string
----@field bg string
----@field bright string
----@field muted string
----@field comment string
----@field surface string
----@field subtle string
----@field accent string
----@field border string
----@field selectionBg string
----@field selectionFg string
----@field overlay string
----@field prompt string
+---@class ThemePalettePair
+---@field base string
+---@field variant string
 
----@class ThemePaletteSyntax
----@field comment string
----@field keyword string
----@field string string
----@field ["function"] string
----@field variable string
----@field constant string
----@field operator string
----@field property string
----@field type string
----@field number string
----@field punctuation string
-
----@class ThemePaletteDiagnostic
+---@class ThemePaletteAnsiCompact
 ---@field error string
----@field warning string
+---@field warn string
 ---@field info string
----@field hint string
 ---@field success string
-
----@class ThemePaletteAnsi
----@field black string
----@field red string
----@field green string
----@field yellow string
----@field blue string
----@field magenta string
----@field cyan string
----@field white string
 
 ---@class ThemeColors
 ---@field editor ThemeEditorColors

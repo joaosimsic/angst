@@ -1,45 +1,33 @@
 { lib }:
 
 let
-  inherit (lib)
-    attrNames
-    concatStringsSep
-    filter
-    genAttrs
-    hasAttrByPath
-    hasSuffix
-    attrByPath
-    mapAttrs'
-    nameValuePair
-    removeSuffix
-    ;
-
   schema = import ./schema.nix;
-  inherit (schema)
-    ansiTokens
-    paletteTokens
-    uiTokens
-    syntaxTokens
-    diagnosticTokens
-    legacyTokens
-    ;
+  inherit (schema) paletteTokens subTokens ansiTokens;
 
-  layerPaths =
-    layer: tokens:
-    map (token: {
-      path = [
-        layer
-        token
-      ];
-      label = "${layer}.${token}";
-    }) tokens;
+  subPaths =
+    layer: token:
+    let
+      pairs = map (sub: {
+        path = [ layer token sub ];
+        label = "${layer}.${token}.${sub}";
+      }) subTokens;
+    in
+    pairs;
+
+  dimPath = {
+    path = [ "palette" "dim" ];
+    label = "palette.dim";
+  };
+
+  ansiPaths = map (token: {
+    path = [ "ansi" token ];
+    label = "ansi.${token}";
+  }) ansiTokens;
 
   requiredColorPaths =
-    (layerPaths "palette" paletteTokens)
-    ++ (layerPaths "ansi" ansiTokens)
-    ++ (layerPaths "ui" uiTokens)
-    ++ (layerPaths "syntax" syntaxTokens)
-    ++ (layerPaths "diagnostic" diagnosticTokens);
+    (lib.concatMap (token: subPaths "palette" token) paletteTokens)
+    ++ [ dimPath ]
+    ++ ansiPaths;
 
   stripHash = hex: if lib.hasPrefix "#" hex then lib.removePrefix "#" hex else hex;
 
@@ -77,33 +65,38 @@ let
 
   isValidHex = value: builtins.match "[0-9a-fA-F]{6}" (stripHash value) != null;
 
-  normalizeLayer = layer: lib.mapAttrs (_: stripHash) layer;
+  normalizeSub = sub: lib.mapAttrs (_: stripHash) sub;
 
-  normalizeThemeColors =
+  normalizeTheme =
     theme:
-    theme
-    // {
-      palette = normalizeLayer theme.palette;
-      ansi = normalizeLayer theme.ansi;
-      ui = normalizeLayer theme.ui;
-      syntax = normalizeLayer theme.syntax;
-      diagnostic = normalizeLayer theme.diagnostic;
+    let
+      p = theme.palette;
+    in
+    {
+      palette = {
+        background = normalizeSub p.background;
+        surface = normalizeSub p.surface;
+        foreground = normalizeSub p.foreground;
+        accent = normalizeSub p.accent;
+        dim = stripHash p.dim;
+      };
+      ansi = lib.mapAttrs (_: stripHash) theme.ansi;
     };
 
   validateTheme =
     name: theme:
     let
-      missing = filter (entry: !(hasAttrByPath entry.path theme)) requiredColorPaths;
-      present = filter (entry: hasAttrByPath entry.path theme) requiredColorPaths;
-      invalid = filter (entry: !isValidHex (attrByPath entry.path "" theme)) present;
+      missing = lib.filter (entry: !(lib.hasAttrByPath entry.path theme)) requiredColorPaths;
+      present = lib.filter (entry: lib.hasAttrByPath entry.path theme) requiredColorPaths;
+      invalid = lib.filter (entry: !isValidHex (lib.attrByPath entry.path "" theme)) present;
     in
     if missing != [ ] then
       builtins.throw "Theme '${name}' missing tokens: ${
-        concatStringsSep ", " (map (entry: entry.label) missing)
+        lib.concatStringsSep ", " (map (entry: entry.label) missing)
       }"
     else if invalid != [ ] then
       builtins.throw "Theme '${name}' has invalid hex for: ${
-        concatStringsSep ", " (map (entry: entry.label) invalid)
+        lib.concatStringsSep ", " (map (entry: entry.label) invalid)
       }"
     else
       theme;
@@ -111,85 +104,42 @@ let
   withRgb =
     theme:
     let
-      colorKeys = filter (k: builtins.isString theme.${k}) (attrNames theme);
+      walk = prefix: value:
+        if builtins.isString value then
+          { "${prefix}_RGB" = hexToRgb value; }
+        else if builtins.isAttrs value then
+          lib.concatMapAttrs (key: sub: walk "${prefix}_${key}" sub) value
+        else
+          { };
     in
-    theme
-    // genAttrs (map (k: "${k}_RGB") colorKeys) (name: hexToRgb theme.${lib.removeSuffix "_RGB" name});
-
-  withAliases =
-    theme:
-    let
-      inherit (theme) palette ansi ui syntax diagnostic;
-    in
-    theme
-    // {
-      FG = ui.fg;
-      BG = ui.bg;
-      BRIGHT = ui.bright;
-      MUTED = ui.muted;
-      COMMENT = syntax.comment;
-      ERROR = diagnostic.error;
-      SUCCESS = diagnostic.success;
-      WARNING = diagnostic.warning;
-      INFO = diagnostic.info;
-
-      BLACK = ansi.black;
-      RED = ansi.red;
-      GREEN = ansi.green;
-      YELLOW = ansi.yellow;
-      CYAN = ansi.cyan;
-      BLUE = ansi.blue;
-      MAGENTA = ansi.magenta;
-      BASE = palette.base;
-      DIM = palette.dim;
-      SUBTLE = ui.subtle;
-      ACCENT = ui.accent;
-      SURFACE = ui.surface;
-
-      RED_BRIGHT = ansi.red;
-      GREEN_BRIGHT = ansi.green;
-      YELLOW_BRIGHT = ansi.yellow;
-      BLUE_BRIGHT = ansi.blue;
-      MAGENTA_BRIGHT = ansi.magenta;
-      CYAN_BRIGHT = ansi.cyan;
-    };
+    theme // walk "" theme;
 
   themesDir = ./.;
   themeFiles = lib.filterAttrs (
     filename: type:
     type == "regular"
-    && hasSuffix ".nix" filename
+    && lib.hasSuffix ".nix" filename
     && filename != "default.nix"
     && filename != "schema.nix"
   ) (builtins.readDir themesDir);
 
-  themes = mapAttrs' (
+  themes = lib.mapAttrs' (
     filename: _:
     let
-      name = removeSuffix ".nix" filename;
+      name = lib.removeSuffix ".nix" filename;
     in
-    nameValuePair name (import (themesDir + "/${filename}"))
+    lib.nameValuePair name (import (themesDir + "/${filename}"))
   ) themeFiles;
 in
 {
-  inherit
-    themes
-    schema
-    ansiTokens
-    paletteTokens
-    uiTokens
-    syntaxTokens
-    diagnosticTokens
-    legacyTokens
-    requiredColorPaths
-    ;
+  inherit themes schema;
 
   default = "monochrome";
 
   get =
     name:
     if themes ? ${name} then
-      withRgb (withAliases (validateTheme name (normalizeThemeColors themes.${name})))
+      withRgb (validateTheme name (normalizeTheme themes.${name}))
     else
       builtins.throw "Unknown theme: ${name}";
 }

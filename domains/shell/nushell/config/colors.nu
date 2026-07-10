@@ -1,55 +1,55 @@
 $env.config.color_config = {
-    separator:                   "#c7c7c7"
+    separator:                   "#685742"
     leading_trailing_space_bg:   { attr: n }
-    header:                      { fg: "#c2c2b0" attr: b }
+    header:                      { fg: "#c9a554" attr: b }
     empty:                       "#685742"
     bool:                        "#d7c483"
-    int:                         "#c2c2b0"
-    filesize:                    "#c2c2b0"
-    duration:                    "#c2c2b0"
+    int:                         "#c9a554"
+    filesize:                    "#c9a554"
+    duration:                    "#c9a554"
     date:                        "#d7c483"
-    range:                       "#c2c2b0"
-    float:                       "#c2c2b0"
-    string:                      "#c2c2b0"
+    range:                       "#c9a554"
+    float:                       "#c9a554"
+    string:                      "#c9a554"
     nothing:                     "#685742"
     binary:                      "#685742"
     cell_path:                   "#d7c483"
     row_index:                   { fg: "#685742" attr: b }
-    record:                      "#c2c2b0"
-    list:                        "#c2c2b0"
-    block:                       "#c2c2b0"
-    hints:                       "#c7c7c7"
-    search_result:               { fg: "#222222" bg: "#c2c2b0" }
+    record:                      "#c9a554"
+    list:                        "#c9a554"
+    block:                       "#c9a554"
+    hints:                       "#685742"
+    search_result:               { fg: "#222222" bg: "#c9a554" }
 
-    shape_and:                   { fg: "#c2c2b0" attr: b }
+    shape_and:                   { fg: "#c9a554" attr: b }
     shape_binary:                "#685742"
     shape_block:                 "#685742"
     shape_bool:                  "#d7c483"
-    shape_custom:                "#c2c2b0"
+    shape_custom:                "#c9a554"
     shape_datetime:              "#d7c483"
-    shape_directory:             "#d7c483"
-    shape_external:              { fg: "#b36d43" }
-    shape_external_resolved:     { fg: "#5f875f" attr: b }
-    shape_externalarg:           "#c2c2b0"
-    shape_filepath:              "#c2c2b0"
-    shape_flag:                  { fg: "#d7c483" attr: b }
-    shape_float:                 "#c2c2b0"
-    shape_garbage:               { fg: "#685742" attr: b }
-    shape_globpattern:           "#c9a554"
-    shape_int:                   "#c2c2b0"
+    shape_directory:             "#b36d43"
+    shape_external:              { fg: "#ffaa00" }
+    shape_external_resolved:     { fg: "#00c851" attr: b }
+    shape_externalarg:           "#c9a554"
+    shape_filepath:              "#c9a554"
+    shape_flag:                  { fg: "#b36d43" attr: b }
+    shape_float:                 "#c9a554"
+    shape_garbage:               { fg: "#ff3333" attr: b }
+    shape_globpattern:           "#33b5e5"
+    shape_int:                   "#c9a554"
     shape_internalcall:          { fg: "#d7c483" attr: b }
-    shape_keyword:               { fg: "#c2c2b0" attr: b }
+    shape_keyword:               { fg: "#c9a554" attr: b }
     shape_list:                  "#685742"
-    shape_literal:               "#c2c2b0"
-    shape_match_pattern:         "#c2c2b0"
+    shape_literal:               "#c9a554"
+    shape_match_pattern:         "#c9a554"
     shape_matching_brackets:     { attr: u }
     shape_nothing:               "#685742"
-    shape_operator:              "#e5c47b"
-    shape_or:                    { fg: "#c2c2b0" attr: b }
-    shape_pipe:                  { fg: "#e5c47b" attr: b }
-    shape_range:                 "#c2c2b0"
+    shape_operator:              "#b36d43"
+    shape_or:                    { fg: "#c9a554" attr: b }
+    shape_pipe:                  { fg: "#b36d43" attr: b }
+    shape_range:                 "#c9a554"
     shape_record:                "#685742"
-    shape_redirection:           { fg: "#e5c47b" attr: b }
+    shape_redirection:           { fg: "#b36d43" attr: b }
     shape_signature:             "#d7c483"
     shape_string:                "#685742"
     shape_string_interpolation:  "#d7c483"
@@ -75,15 +75,15 @@ def ls-entry [selector: string, hex: string, --bold, --underline] {
     $"($selector)=($style)"
 }
 
-let _fg = "#c2c2b0"
+let _fg = "#c9a554"
 let _bright = "#d7c483"
-let _subtle = "#e5c47b"
-let _accent = "#d7c483"
-let _muted = "#c7c7c7"
+let _subtle = "#b36d43"
+let _accent = "#b36d43"
+let _muted = "#685742"
 let _comment = "#685742"
-let _success = "#5f875f"
-let _warning = "#b36d43"
-let _error = "#685742"
+let _success = "#00c851"
+let _warning = "#ffaa00"
+let _error = "#ff3333"
 let _blue = "#78824b"
 let _cyan = "#c9a554"
 let _magenta = "#bb7744"

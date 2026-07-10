@@ -2,6 +2,8 @@
 
 let
   t = themesLib.get themeName;
+  p = t.palette;
+  a = t.ansi;
 in
 [
   {
@@ -12,58 +14,29 @@ in
       ---@type ThemePalette
       local palette = {
         palette = {
-          black = "#${t.palette.black}",
-          base = "#${t.palette.base}",
-          dim = "#${t.palette.dim}",
-          subtle = "#${t.palette.subtle}",
-          accent = "#${t.palette.accent}",
-          surface = "#${t.palette.surface}",
-          overlay = "#${t.palette.overlay}",
-        },
-        ui = {
-          fg = "#${t.ui.fg}",
-          bg = "#${t.ui.bg}",
-          bright = "#${t.ui.bright}",
-          muted = "#${t.ui.muted}",
-          comment = "#${t.ui.comment}",
-          surface = "#${t.ui.surface}",
-          subtle = "#${t.ui.subtle}",
-          accent = "#${t.ui.accent}",
-          border = "#${t.ui.border}",
-          selectionBg = "#${t.ui.selectionBg}",
-          selectionFg = "#${t.ui.selectionFg}",
-          overlay = "#${t.ui.overlay}",
-          prompt = "#${t.ui.prompt}",
-        },
-        syntax = {
-          comment = "#${t.syntax.comment}",
-          keyword = "#${t.syntax.keyword}",
-          string = "#${t.syntax.string}",
-          ["function"] = "#${t.syntax.function}",
-          variable = "#${t.syntax.variable}",
-          constant = "#${t.syntax.constant}",
-          operator = "#${t.syntax.operator}",
-          type = "#${t.syntax.type}",
-          number = "#${t.syntax.number}",
-          property = "#${t.syntax.property}",
-          punctuation = "#${t.syntax.punctuation}",
-        },
-        diagnostic = {
-          error = "#${t.diagnostic.error}",
-          warning = "#${t.diagnostic.warning}",
-          info = "#${t.diagnostic.info}",
-          hint = "#${t.diagnostic.hint}",
-          success = "#${t.diagnostic.success}",
+          background = {
+            base = "#${p.background.base}",
+            variant = "#${p.background.variant}",
+          },
+          surface = {
+            base = "#${p.surface.base}",
+            variant = "#${p.surface.variant}",
+          },
+          foreground = {
+            base = "#${p.foreground.base}",
+            variant = "#${p.foreground.variant}",
+          },
+          accent = {
+            base = "#${p.accent.base}",
+            variant = "#${p.accent.variant}",
+          },
+          dim = "#${p.dim}",
         },
         ansi = {
-          black = "#${t.ansi.black}",
-          red = "#${t.ansi.red}",
-          green = "#${t.ansi.green}",
-          yellow = "#${t.ansi.yellow}",
-          blue = "#${t.ansi.blue}",
-          magenta = "#${t.ansi.magenta}",
-          cyan = "#${t.ansi.cyan}",
-          white = "#${t.ansi.white}",
+          error = "#${a.error}",
+          warn = "#${a.warn}",
+          info = "#${a.info}",
+          success = "#${a.success}",
         },
       }
 

@@ -2,6 +2,7 @@
 
 let
   t = themesLib.get themeName;
+  p = t.palette;
 in
 [
   {
@@ -11,15 +12,15 @@ in
           colors = true
           interval = 5
           markup = pango
-          color_good = "#${t.SUCCESS}"
-          color_degraded = "#${t.WARNING}"
-          color_bad = "#${t.ERROR}"
+          color_good = "#${t.ansi.success}"
+          color_degraded = "#${t.ansi.warn}"
+          color_bad = "#${t.ansi.error}"
       }
 
       order = "tztime local"
 
       tztime "local" {
-          format = " <span color='#${t.BRIGHT}'>%Y-%m-%d %H:%M</span> "
+          format = " <span color='#${p.foreground.variant}'>%Y-%m-%d %H:%M</span> "
       }
     '';
   }
