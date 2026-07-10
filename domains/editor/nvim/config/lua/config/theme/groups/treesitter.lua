@@ -39,7 +39,7 @@ M.get = function()
 		["@function.method"] = { fg = p.foreground.base },
 		["@function.method.call"] = { fg = p.foreground.base },
 
-		["@variable"] = { fg = p.foreground.base },
+		["@variable"] = { fg = p.foreground.variant },
 		["@variable.builtin"] = { fg = a.error },
 		["@variable.parameter"] = { fg = p.foreground.base, italic = true },
 		["@variable.member"] = { fg = p.foreground.base },
@@ -65,6 +65,8 @@ M.get = function()
 		["@keyword.repeat"] = { link = "Repeat" },
 		["@keyword.return"] = { link = "Keyword" },
 		["@keyword.storage"] = { link = "Keyword" },
+
+		["@conditional"] = { link = "Conditional" },
 
 		["@operator"] = { link = "Operator" },
 		["@punctuation.bracket"] = { fg = p.accent.base },
