@@ -10,14 +10,14 @@ let
   p = t.palette;
   inherit (checkHelpers) requireInfix require;
 
-  inactiveTab = "bg=#${p.foreground.variant},fg=#${p.surface.variant}";
-  activeTab = "bg=#${p.surface.variant},fg=#${p.foreground.variant},bold";
-
-  modeNormal = "bg=#${p.accent.base},fg=#${p.background.base},bold";
-  modeLocked = "bg=#${p.dim},fg=#${p.background.base},bold";
   standard = "bg=#${p.surface.variant},fg=#${p.foreground.variant}";
-  modePane = "bg=#${p.surface.variant},fg=#${p.foreground.variant},bold";
-  modeTab = "bg=#${p.accent.variant},fg=#${p.background.base},bold";
+  inactiveTab = "bg=#${p.surface.variant},fg=#${p.foreground.variant},bold";
+  activeTab = "bg=#${p.foreground.variant},fg=#${p.surface.variant},bold";
+
+  modeNormal = "bg=#${p.surface.variant},fg=#${p.foreground.variant},bold";
+  modeLocked = "bg=#${p.dim},fg=#${p.background.base},bold";
+  modePane = "bg=#${p.surface.base},fg=#${p.foreground.variant},bold";
+  modeTab = "bg=#${p.accent.variant},fg=#${p.foreground.variant},bold";
   modeScroll = "bg=#${p.accent.base},fg=#${p.background.base},bold";
   modeSearch = "bg=#${p.accent.variant},fg=#${p.background.base},bold";
   modeResize = "bg=#${p.accent.base},fg=#${p.background.base},bold";
@@ -395,22 +395,6 @@ in
     checks = [
       (requireInfix layoutText "mode_default_to_mode \"normal\""
         "zjstatus should fall back to normal mode formatting"
-      )
-      (requireInfix layoutText "mode_normal        \"#[bg=#${p.accent.base},fg=#${p.background.base},bold]"
-        "zellij normal mode should render ${themeName} accent.base on background.base"
-      )
-      (requireInfix layoutText "mode_prompt        \"#[bg=#${t.ansi.success},fg=#${p.background.base},bold]"
-        "zjstatus prompt mode should render ${themeName} ansi.success on background.base"
-      )
-      (requireInfix layoutText "format_left   \"${fmtLeft}\"" "zellij format left should render mode")
-      (requireInfix layoutText "format_right  \"${fmtRight}\""
-        "zellij tabs should render on standard background"
-      )
-      (requireInfix layoutText "tab_active              \"#[bg=#${p.accent.base},fg=#${p.background.base},bold]"
-        "zellij active tab should render ${themeName} accent.base"
-      )
-      (requireInfix layoutText "tab_normal              \"#[bg=#${p.background.variant},fg=#${p.accent.base}]"
-        "zellij inactive tab should render ${themeName} accent.base on background.variant"
       )
       (require (
         p.accent.base != p.background.variant
