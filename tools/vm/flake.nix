@@ -135,10 +135,9 @@
 
             res-script = pkgs.writeShellScriptBin "res" ''
               TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
-              FLAKE_DIR="''${ANGST_REPO:-$PWD}"
 
-              echo "Building VM for host '$TARGET_HOST' (cached after first build)..."
-              nix build "path:$FLAKE_DIR#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --no-link 2>&1 || true
+              echo "Building VM for host '$TARGET_HOST'..."
+              nix build ".#nixosConfigurations.$TARGET_HOST.config.system.build.vm" --no-link --no-write-lock-file 2>&1
 
               echo "Starting VM..."
               vm restart -l

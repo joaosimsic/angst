@@ -14,7 +14,7 @@ let
 
   modeNormal = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
   modeLocked = "bg=#${t.ansi.red},fg=#${t.ui.bg},bold";
-  standard = "bg=#${t.ui.surface},fg=#${t.ui.comment}";
+  standard = "bg=#${t.ui.bright},fg=#${t.ui.bg}";
   modePane = "bg=#${t.ansi.green},fg=#${t.ui.bg},bold";
   modeTab = "bg=#${t.ansi.magenta},fg=#${t.ui.bg},bold";
   modeScroll = "bg=#${t.ansi.yellow},fg=#${t.ui.bg},bold";
@@ -142,10 +142,9 @@ let
 
             bind "Alt l" {
                 MessagePlugin "vim-navigator" {
-                    name "move_focus_or_tab";
+                    name "resize";
                     payload "right";
-                    move_mod "ctrl";
-                    use_arrow_keys "false";
+                    resize_mod "alt";
                 };
             }
         }
@@ -402,11 +401,8 @@ in
       (requireInfix layoutText "mode_prompt        \"#[bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold]"
         "zjstatus prompt mode should render ${themeName} diagnostic.success on ui.bg"
       )
-      (requireInfix layoutText "format_left   \"${fmtLeft}\""
-        "zellij format left should render mode"
-      )
-      (requireInfix layoutText
-        "format_right  \"${fmtRight}\""
+      (requireInfix layoutText "format_left   \"${fmtLeft}\"" "zellij format left should render mode")
+      (requireInfix layoutText "format_right  \"${fmtRight}\""
         "zellij tabs should render on standard background"
       )
       (requireInfix layoutText "tab_active              \"#[bg=#${t.ui.accent},fg=#${t.ui.bg},bold]"

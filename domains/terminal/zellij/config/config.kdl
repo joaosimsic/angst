@@ -113,10 +113,9 @@ keybinds clear-defaults=true {
 
         bind "Alt l" {
             MessagePlugin "vim-navigator" {
-                name "move_focus_or_tab";
+                name "resize";
                 payload "right";
-                move_mod "ctrl";
-                use_arrow_keys "false";
+                resize_mod "alt";
             };
         }
     }
