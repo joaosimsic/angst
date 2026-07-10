@@ -60,7 +60,10 @@ pub fn enter(mode: super::commands::Commands) -> ! {
     };
 
     let extra_path = env::var(path_key).unwrap_or_else(|_| {
-        eprintln!("error: {} not set — was this binary built by Nix?", path_key);
+        eprintln!(
+            "error: {} not set — was this binary built by Nix?",
+            path_key
+        );
         std::process::exit(1);
     });
 
@@ -71,11 +74,9 @@ pub fn enter(mode: super::commands::Commands) -> ! {
 
     let shell = resolve_host_shell();
 
-    // For dev mode, exec the dev entry wrapper if available.
-    // It sources the dev hook (aliases, env vars, ssh-agent) and then execs the user's shell.
     let entry = env::var("SHELL_DEV_ENTRY").ok();
-    let cmd = if nix_shell == "dev" && entry.is_some() {
-        entry.unwrap()
+    let cmd = if nix_shell == "dev" {
+        entry.unwrap_or_else(|| shell.clone())
     } else {
         shell.clone()
     };
@@ -87,10 +88,6 @@ pub fn enter(mode: super::commands::Commands) -> ! {
         .env("ORIGINAL_SHELL", &shell)
         .exec();
 
-    eprintln!(
-        "error: failed to exec {}: {}",
-        cmd,
-        err
-    );
+    eprintln!("error: failed to exec {}: {}", cmd, err);
     std::process::exit(1);
 }

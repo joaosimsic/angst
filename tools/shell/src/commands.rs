@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "shell", version)]
-pub struct CLI {
+pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
 }

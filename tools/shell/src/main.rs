@@ -3,6 +3,6 @@ mod runner;
 
 fn main() {
     use clap::Parser;
-    let cli = commands::CLI::parse();
+    let cli = commands::Cli::parse();
     runner::enter(cli.command);
 }
