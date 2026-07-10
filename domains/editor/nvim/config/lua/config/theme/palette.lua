@@ -4,8 +4,8 @@ local M = {}
 local palette = {
   palette = {
     background = {
-      base = "#222222",
-      variant = "#000000",
+      base = "#272727",
+      variant = "#232323",
     },
     surface = {
       base = "#78824b",

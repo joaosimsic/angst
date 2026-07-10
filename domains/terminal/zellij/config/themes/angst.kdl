@@ -2,7 +2,7 @@
     angst {
         text_unselected {
             base "#c9a554"
-            background "#222222"
+            background "#272727"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
             emphasis_2 "#33b5e5"
@@ -10,7 +10,7 @@
         }
 
         text_selected {
-            base "#222222"
+            base "#272727"
             background "#b36d43"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
@@ -20,7 +20,7 @@
 
         ribbon_unselected {
             base "#b36d43"
-            background "#000000"
+            background "#232323"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
             emphasis_2 "#33b5e5"
@@ -28,7 +28,7 @@
         }
 
         ribbon_selected {
-            base "#222222"
+            base "#272727"
             background "#b36d43"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
@@ -38,7 +38,7 @@
 
         table_title {
             base "#b36d43"
-            background "#222222"
+            background "#272727"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
             emphasis_2 "#33b5e5"
@@ -47,7 +47,7 @@
 
         table_cell_unselected {
             base "#c9a554"
-            background "#222222"
+            background "#272727"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
             emphasis_2 "#33b5e5"
@@ -55,7 +55,7 @@
         }
 
         table_cell_selected {
-            base "#222222"
+            base "#272727"
             background "#b36d43"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
@@ -65,7 +65,7 @@
 
         list_unselected {
             base "#c9a554"
-            background "#222222"
+            background "#272727"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
             emphasis_2 "#33b5e5"
@@ -73,7 +73,7 @@
         }
 
         list_selected {
-            base "#222222"
+            base "#272727"
             background "#b36d43"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
@@ -83,7 +83,7 @@
 
         frame_unselected {
             base "#c9a554"
-            background "#222222"
+            background "#272727"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
             emphasis_2 "#33b5e5"
@@ -92,7 +92,7 @@
 
         frame_selected {
             base "#b36d43"
-            background "#222222"
+            background "#272727"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
             emphasis_2 "#33b5e5"
@@ -101,7 +101,7 @@
 
         frame_highlight {
             base "#ffaa00"
-            background "#222222"
+            background "#272727"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
             emphasis_2 "#33b5e5"
@@ -110,7 +110,7 @@
 
         exit_code_success {
             base "#00c851"
-            background "#222222"
+            background "#272727"
             emphasis_0 "#00c851"
             emphasis_1 "#c9a554"
             emphasis_2 "#33b5e5"
@@ -119,7 +119,7 @@
 
         exit_code_error {
             base "#ff3333"
-            background "#222222"
+            background "#272727"
             emphasis_0 "#ff3333"
             emphasis_1 "#ffaa00"
             emphasis_2 "#33b5e5"

@@ -1,5 +1,5 @@
----@type ThemeColors
-local c = require("config.theme.colors").get()
+local palette = require("config.theme.palette").get()
+local p = palette.palette
 local utils = require("frontend.status.heirline.utils")
 
 local M = {}
@@ -15,8 +15,8 @@ M.Ruler = {
 	provider = " %l:%c | %P ",
 	hl = function(self)
 		return {
-			fg = utils.status_color(self, c.status.positionFg),
-			bg = utils.status_color(self, c.status.positionBg),
+			fg = utils.status_color(self, p.background.base),
+			bg = utils.status_color(self, p.accent.variant),
 			bold = true,
 		}
 	end,

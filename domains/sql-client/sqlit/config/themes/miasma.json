@@ -9,13 +9,13 @@
     "error": "#ff3333",
     "success": "#00c851",
     "foreground": "#c9a554",
-    "background": "#222222",
-    "surface": "#222222",
-    "panel": "#222222",
+    "background": "#272727",
+    "surface": "#272727",
+    "panel": "#272727",
     "variables": {
       "border": "#78824b",
       "block-cursor-background": "#b36d43",
-      "block-cursor-foreground": "#222222",
+      "block-cursor-foreground": "#272727",
       "block-cursor-text-style": "bold"
     }
   }

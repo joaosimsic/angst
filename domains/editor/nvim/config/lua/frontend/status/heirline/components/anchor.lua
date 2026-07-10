@@ -1,5 +1,5 @@
----@type ThemeColors
-local c = require("config.theme.colors").get()
+local palette = require("config.theme.palette").get()
+local p = palette.palette
 local utils = require("frontend.status.heirline.utils")
 
 ---@type HeirlineComponent
@@ -16,7 +16,7 @@ local Anchor = {
 		if utils.is_active(self) then
 			return "HeirlineSurface"
 		end
-		return { fg = utils.apply_dark_filter(c.status.fg, 0.65), bg = utils.status_bg(self, c.status.bg) }
+		return { fg = utils.apply_dark_filter(p.accent.base, 0.65), bg = utils.status_bg(self, p.background.variant) }
 	end,
 
 	{

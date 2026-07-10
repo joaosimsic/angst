@@ -19,7 +19,7 @@ $env.config.color_config = {
     list:                        "#c9a554"
     block:                       "#c9a554"
     hints:                       "#685742"
-    search_result:               { fg: "#222222" bg: "#c9a554" }
+    search_result:               { fg: "#272727" bg: "#c9a554" }
 
     shape_and:                   { fg: "#c9a554" attr: b }
     shape_binary:                "#685742"

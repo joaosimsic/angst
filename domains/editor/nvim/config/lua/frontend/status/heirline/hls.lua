@@ -1,4 +1,6 @@
-local c = require("config.theme.colors").get()
+local palette = require("config.theme.palette").get()
+local p = palette.palette
+local a = palette.ansi
 
 ---@param name string
 ---@param opts vim.api.keyset.highlight
@@ -9,34 +11,34 @@ end
 local M = {}
 
 M.setup_highlights = function()
-	hl("HeirlineModeNormal", { fg = c.mode.fg, bg = c.mode.normal, bold = true })
-	hl("HeirlineModeInsert", { fg = c.mode.fg, bg = c.mode.insert, bold = true })
-	hl("HeirlineModeVisual", { fg = c.mode.fg, bg = c.mode.visual, bold = true })
-	hl("HeirlineModeReplace", { fg = c.mode.fg, bg = c.mode.replace, bold = true })
-	hl("HeirlineModeCommand", { fg = c.mode.fg, bg = c.mode.command, bold = true })
-	hl("HeirlineModeTerminal", { fg = c.mode.fg, bg = c.mode.terminal, bold = true })
+	hl("HeirlineModeNormal", { fg = p.background.base, bg = p.foreground.base, bold = true })
+	hl("HeirlineModeInsert", { fg = p.background.base, bg = p.foreground.variant, bold = true })
+	hl("HeirlineModeVisual", { fg = p.background.base, bg = p.surface.variant, bold = true })
+	hl("HeirlineModeReplace", { fg = p.background.base, bg = p.accent.base, bold = true })
+	hl("HeirlineModeCommand", { fg = p.background.base, bg = p.dim, bold = true })
+	hl("HeirlineModeTerminal", { fg = p.background.base, bg = p.accent.variant, bold = true })
 
-	hl("HeirlineSurface", { fg = c.status.fg, bg = c.status.bg })
-	hl("HeirlineSurfaceBold", { fg = c.status.active, bg = c.status.bg, bold = true })
-	hl("HeirlineBlack", { fg = c.status.fg, bg = c.editor.bg })
-	hl("HeirlineBlackBright", { fg = c.status.active, bg = c.editor.bg })
+	hl("HeirlineSurface", { fg = p.accent.base, bg = p.background.variant })
+	hl("HeirlineSurfaceBold", { fg = p.foreground.variant, bg = p.background.variant, bold = true })
+	hl("HeirlineBlack", { fg = p.accent.base, bg = p.background.base })
+	hl("HeirlineBlackBright", { fg = p.foreground.variant, bg = p.background.base })
 
-	hl("HeirlineGit", { fg = c.git.branch, bg = c.status.bg })
-	hl("HeirlineGitAdd", { fg = c.git.add, bg = c.status.bg })
-	hl("HeirlineGitChange", { fg = c.git.change, bg = c.status.bg })
-	hl("HeirlineGitDelete", { fg = c.git.delete, bg = c.status.bg })
+	hl("HeirlineGit", { fg = p.foreground.variant, bg = p.background.variant })
+	hl("HeirlineGitAdd", { fg = a.success, bg = p.background.variant })
+	hl("HeirlineGitChange", { fg = a.warn, bg = p.background.variant })
+	hl("HeirlineGitDelete", { fg = a.error, bg = p.background.variant })
 
-	hl("HeirlineDiagnosticError", { fg = c.diagnostic.error, bg = c.status.bg })
-	hl("HeirlineDiagnosticWarn", { fg = c.diagnostic.warn, bg = c.status.bg })
-	hl("HeirlineDiagnosticInfo", { fg = c.diagnostic.info, bg = c.status.bg })
-	hl("HeirlineDiagnosticHint", { fg = c.diagnostic.hint, bg = c.status.bg })
+	hl("HeirlineDiagnosticError", { fg = a.error, bg = p.background.variant })
+	hl("HeirlineDiagnosticWarn", { fg = a.warn, bg = p.background.variant })
+	hl("HeirlineDiagnosticInfo", { fg = a.info, bg = p.background.variant })
+	hl("HeirlineDiagnosticHint", { fg = p.surface.base, bg = p.background.variant })
 
-	hl("HeirlineDiagnosticHistory", { fg = c.diagnostic.info, bg = c.status.bg })
+	hl("HeirlineDiagnosticHistory", { fg = a.info, bg = p.background.variant })
 
-	hl("HeirlineLspActive", { fg = c.status.active, bg = c.status.bg })
-	hl("HeirlineLspInactive", { fg = c.status.inactive, bg = c.status.bg })
+	hl("HeirlineLspActive", { fg = p.foreground.variant, bg = p.background.variant })
+	hl("HeirlineLspInactive", { fg = p.dim, bg = p.background.variant })
 
-	hl("HeirlinePosition", { fg = c.status.positionFg, bg = c.status.positionBg, bold = true })
+	hl("HeirlinePosition", { fg = p.background.base, bg = p.accent.variant, bold = true })
 end
 
 return M

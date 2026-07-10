@@ -1,57 +1,54 @@
----@class HighlightModule
+local palette = require("config.theme.palette").get()
+local p = palette.palette
+local a = palette.ansi
+
 local M = {}
 
----@param p ThemeColors
 ---@return HighlightGroups
-M.get = function(p)
-	local e = p.editor
-	local s = p.syntax
-	local d = p.diagnostic
-	local diff = p.diff
-
+M.get = function()
 	return {
-		Comment = { fg = s.comment, italic = true },
-		Constant = { fg = s.constant },
-		String = { fg = s.string },
-		Character = { fg = s.string },
-		Number = { fg = s.number },
-		Boolean = { fg = s.constant },
-		Float = { fg = s.number },
-		Identifier = { fg = s.variable },
-		Function = { fg = s["function"] },
-		Statement = { fg = s.keyword, bold = true },
-		Conditional = { fg = s.keyword, bold = true },
-		Repeat = { fg = s.keyword, bold = true },
-		Label = { fg = s.label },
-		Operator = { fg = s.operator },
-		Keyword = { fg = s.keyword, bold = true },
-		Exception = { fg = d.error },
-		PreProc = { fg = s.preproc },
-		Include = { fg = s.preproc },
-		Define = { fg = s.preproc },
-		Macro = { fg = s.preproc },
-		PreCondit = { fg = s.preproc },
-		Type = { fg = s.type },
-		StorageClass = { fg = s.type },
-		Structure = { fg = s.type },
-		Typedef = { fg = s.type },
-		Special = { fg = s.special },
-		SpecialChar = { fg = s.constant },
-		Tag = { fg = s.tag },
-		Delimiter = { fg = s.punctuation },
-		SpecialComment = { fg = s.comment, bold = true },
-		Debug = { fg = d.error },
+		Comment = { fg = p.dim, italic = true },
+		Constant = { fg = p.accent.variant },
+		String = { fg = p.foreground.variant },
+		Character = { fg = p.foreground.variant },
+		Number = { fg = p.accent.base },
+		Boolean = { fg = p.accent.variant },
+		Float = { fg = p.accent.base },
+		Identifier = { fg = p.foreground.base },
+		Function = { fg = p.foreground.base },
+		Statement = { fg = p.accent.base, bold = true },
+		Conditional = { fg = p.accent.base, bold = true },
+		Repeat = { fg = p.accent.base, bold = true },
+		Label = { fg = p.foreground.base },
+		Operator = { fg = p.accent.base },
+		Keyword = { fg = p.accent.base, bold = true },
+		Exception = { fg = a.error },
+		PreProc = { fg = p.surface.base },
+		Include = { fg = p.surface.base },
+		Define = { fg = p.surface.base },
+		Macro = { fg = p.surface.base },
+		PreCondit = { fg = p.surface.base },
+		Type = { fg = p.surface.base },
+		StorageClass = { fg = p.surface.base },
+		Structure = { fg = p.surface.base },
+		Typedef = { fg = p.surface.base },
+		Special = { fg = p.foreground.base },
+		SpecialChar = { fg = p.accent.variant },
+		Tag = { fg = p.accent.base },
+		Delimiter = { fg = p.accent.base },
+		SpecialComment = { fg = p.dim, bold = true },
+		Debug = { fg = a.error },
 		Underlined = { underline = true },
-		Ignore = { fg = e.dim },
-		Error = { fg = d.error, bold = true },
-		Todo = { fg = e.bg, bg = d.warn, bold = true },
-		Added = { fg = diff.add },
-		Changed = { fg = diff.change },
-		Removed = { fg = diff.delete },
-		DiffAdd = { fg = diff.add, bg = e.surface },
-		DiffChange = { fg = diff.change, bg = e.surface },
-		DiffDelete = { fg = diff.delete, bg = e.surface },
-		DiffText = { fg = diff.text, bg = e.dim, bold = true },
+		Ignore = { fg = p.dim },
+		Error = { fg = a.error, bold = true },
+		Todo = { fg = p.background.base, bg = a.warn, bold = true },
+		Added = { fg = a.success },
+		Changed = { fg = a.warn },
+		Removed = { fg = a.error },
+		DiffAdd = { fg = a.success, bg = p.background.variant },
+		DiffChange = { fg = a.warn, bg = p.background.variant },
+		DiffDelete = { fg = a.error, bg = p.background.variant },
+		DiffText = { fg = a.warn, bg = p.dim, bold = true },
 	}
 end
 
