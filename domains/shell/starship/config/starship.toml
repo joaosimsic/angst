@@ -1,5 +1,5 @@
 format = """
-$username$hostname $env_var$directory $git_branch$git_status$nix_shell$buf$bun$c$cpp$cmake$cobol$crystal$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$gleam$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$maven$meson$mojo$nim$nodejs$ocaml$odin$opa$perl$php$pulumi$python$r$raku$ruby$rust$scala$solidity$spack$sphinx$sql$svelte$swift$terraform$typst$vagrant$vala$verilog$vlang$zig
+$username$hostname $nix_shell$env_var$directory $git_branch$git_status$buf$bun$c$cpp$cmake$cobol$crystal$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$gleam$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$maven$meson$mojo$nim$nodejs$ocaml$odin$opa$perl$php$pulumi$python$r$raku$ruby$rust$scala$solidity$spack$sphinx$sql$svelte$swift$terraform$typst$vagrant$vala$verilog$vlang$zig
 
 """
 
@@ -15,7 +15,7 @@ truncate_to_repo = false
 
 [git_branch]
 format = "*[$branch]($style)"
-style = "#685742"
+style = "#5f875f"
 symbol = ""
 
 [git_status]
@@ -32,11 +32,6 @@ staged = "+"
 renamed = "r"
 deleted = "x"
 
-[nix_shell]
-format = "[$symbol$state( $name)]($style) "
-symbol = " "
-style = "#685742"
-
 [username]
 format = "[$user]($style)"
 style_user = "bold #5f7a5f"
@@ -47,6 +42,11 @@ show_always = true
 format = "[@$hostname]($style)"
 style = "bold #5f7a5f"
 ssh_only = true
+
+[nix_shell]
+format = "[$symbol$name]($style) "
+symbol = " "
+style = "#d7c483"
 
 [daml]
 format = "[$symbol](#BFCAA3)[($version)]($style) "

@@ -14,7 +14,6 @@ let
     "env_var"
     "git_branch"
     "git_status"
-    "nix_shell"
     "buf"
     "bun"
     "c"
@@ -76,8 +75,9 @@ let
   modules = [
     {
       name = "nix_shell";
-      symbol = " ";
-      format = "[$symbol$state( $name)]($style) ";
+      symbol = " ";
+      format = "[$symbol$name]($style) ";
+      style = "#${p.foreground.variant}";
     }
     {
       name = "daml";
@@ -378,7 +378,7 @@ let
       ${extra}
     '';
 
-  formatLine = "$username$hostname $env_var$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
+  formatLine = "$username$hostname $nix_shell$env_var$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
 
   inherit (checkHelpers) requireInfix require;
 
@@ -400,7 +400,7 @@ let
 
     [git_branch]
     format = "*[$branch]($style)"
-    style = "#${p.dim}"
+    style = "#${p.surface.variant}"
     symbol = ""
 
     [git_status]

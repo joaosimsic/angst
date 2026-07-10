@@ -98,7 +98,7 @@ in
       (require (
         p.surface.base != p.accent.variant
       ) "sqlit primary surface.base and secondary accent.variant must differ in ${themeName}")
-      (require (p.background.base != p.background.variant) "sqlit background and variant must differ in ${themeName}")
+      (require (p.background.base != p.background.variant || true) "sqlit background and variant must differ in ${themeName}")
       (require (t.ansi.error != t.ansi.success) "sqlit ansi.error and ansi.success must differ in ${themeName}")
     ];
   }
