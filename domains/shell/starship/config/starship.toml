@@ -1,5 +1,5 @@
 format = """
-$env_var$directory $git_branch$git_status$buf$bun$c$cpp$cmake$cobol$crystal$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$gleam$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$maven$meson$mojo$nim$nodejs$ocaml$odin$opa$perl$php$pixi$purescript$python$quarto$raku$red$rlang$ruby$rust$scala$solidity$spack$swift$terraform$typst$vlang$xmake$zig$conda$nix_shell$guix_shell$docker_context$package
+$username$hostname $env_var$directory $git_branch$git_status$buf$bun$c$cpp$cmake$cobol$crystal$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$gleam$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$maven$meson$mojo$nim$nodejs$ocaml$odin$opa$perl$php$pixi$purescript$python$quarto$raku$red$rlang$ruby$rust$scala$solidity$spack$swift$terraform$typst$vlang$xmake$zig$conda$nix_shell$guix_shell$docker_context$package
 
 """
 
@@ -33,14 +33,14 @@ renamed = "r"
 deleted = "x"
 
 [username]
-format = "[$user]($style) "
-style_user = "bold #d7c483"
+format = "[$user]($style)"
+style_user = "bold #5f7a5f"
 style_root = "bold #685742"
 show_always = true
 
 [hostname]
-format = "[@$hostname]($style) "
-style = "bold #685742"
+format = "[@$hostname]($style)"
+style = "bold #5f7a5f"
 ssh_only = true
 
 [buf]
@@ -323,13 +323,14 @@ style = "#685742"
 [nix_shell]
 format = "[$symbol](#5277C3)[$state]($style) "
 symbol = " "
-style = "bold #d7c483"
+style = "#685742"
 
 [env_var.SHELL_MODE]
 format = "[$symbol](#5277C3)[$env_value]($style) "
 symbol = " "
 style = "bold white"
 variable = "SHELL_MODE"
+
 
 [guix_shell]
 format = "[$symbol](#FFCC00) "
@@ -345,7 +346,5 @@ style = "#685742"
 format = "[$symbol](#CB3837)[$version]($style) "
 symbol = "󰏗 "
 style = "#685742"
-
-
 
 

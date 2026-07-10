@@ -4,12 +4,12 @@ layout {
     pane size=1 borderless=true {
       plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
                 format_left   "{mode}"
-                format_center "#[bg=#e5c47b,fg=#222222]{command_cwd}"
-                format_right  "{tabs}"
-                format_space  "#[bg=#e5c47b,fg=#222222]"
+                format_center "#[bg=#d7c483,fg=#222222]{command_cwd}"
+                format_right  "#[bg=#d7c483,fg=#222222]{tabs}"
+                format_space  "#[bg=#d7c483,fg=#222222]"
 
                 mode_default_to_mode "normal"
-                mode_normal        "#[bg=#e5c47b,fg=#222222,bold] NORMAL "
+                mode_normal        "#[bg=#d7c483,fg=#222222,bold] NORMAL "
                 mode_locked        "#[bg=#685742,fg=#222222,bold] LOCKED "
                 mode_pane          "#[bg=#5f875f,fg=#222222,bold] PANE "
                 mode_tab           "#[bg=#bb7744,fg=#222222,bold] TAB "
@@ -24,12 +24,12 @@ layout {
                 mode_prompt        "#[bg=#5f875f,fg=#222222,bold] PROMPT "
                 mode_tmux          "#[bg=#c9a554,fg=#222222,bold] TMUX "
 
-                tab_normal              "#[bg=#e5c47b,fg=#222222] {index} "
-                tab_normal_fullscreen   "#[bg=#e5c47b,fg=#222222] {index} "
-                tab_normal_sync         "#[bg=#e5c47b,fg=#222222] {index} "
-                tab_active              "#[bg=#222222,fg=#e5c47b,bold] {index} "
-                tab_active_fullscreen   "#[bg=#222222,fg=#e5c47b,bold] {index} "
-                tab_active_sync         "#[bg=#222222,fg=#e5c47b,bold] {index} "
+                tab_normal              "#[bg=#2b2b2b,fg=#e5c47b] {index} "
+                tab_normal_fullscreen   "#[bg=#2b2b2b,fg=#e5c47b] {index} "
+                tab_normal_sync         "#[bg=#2b2b2b,fg=#e5c47b] {index} "
+                tab_active              "#[bg=#d7c483,fg=#222222,bold] {index} "
+                tab_active_fullscreen   "#[bg=#d7c483,fg=#222222,bold] {index} "
+                tab_active_sync         "#[bg=#d7c483,fg=#222222,bold] {index} "
 
                 command_cwd_command    "pwd"
                 command_cwd_format     "{stdout}"

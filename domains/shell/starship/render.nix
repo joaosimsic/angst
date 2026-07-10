@@ -11,7 +11,6 @@ let
 
   moduleNames = [
     "env_var"
-    "directory"
     "git_branch"
     "git_status"
     "buf"
@@ -369,8 +368,8 @@ let
       symbol = " ";
       color = "5277C3";
       format = "[$symbol](#5277C3)[$env_value]($style) ";
+      style = "bold white";
       extra = ''
-        style = "bold white"
         variable = "SHELL_MODE"
       '';
     }
@@ -399,18 +398,19 @@ let
     let
       format = module.format or "[$symbol](#${module.color})[($version)]($style) ";
       extra = module.extra or "";
+      styleValue = module.style or "#${t.COMMENT}";
     in
     ''
       [${module.name}]
       format = "${format}"
       symbol = "${module.symbol}"
-      style = "#${t.COMMENT}"
+      style = "${styleValue}"
     ''
     + lib.optionalString (extra != "") ''
       ${extra}
     '';
 
-  formatLine = "$env_var$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
+  formatLine = "$username$hostname $env_var$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
 
   inherit (checkHelpers) requireInfix require;
 
@@ -450,14 +450,14 @@ let
     deleted = "x"
 
     [username]
-    format = "[$user]($style) "
-    style_user = "bold #${t.BRIGHT}"
+    format = "[$user]($style)"
+    style_user = "bold #5f7a5f"
     style_root = "bold #${t.ERROR}"
     show_always = true
 
     [hostname]
-    format = "[@$hostname]($style) "
-    style = "bold #${t.COMMENT}"
+    format = "[@$hostname]($style)"
+    style = "bold #5f7a5f"
     ssh_only = true
 
     ${lib.concatStringsSep "\n" (map renderModule modules)}

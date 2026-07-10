@@ -4,8 +4,7 @@ local raw = palette.palette
 local ui = palette.ui
 local syntax = palette.syntax
 local diagnostic = palette.diagnostic
-local normal = palette.ansi.normal
-local bright = palette.ansi.bright
+local ansi = palette.ansi
 
 ---@type ThemeColors
 local colors = {
@@ -33,13 +32,14 @@ local colors = {
 		variable = syntax.variable,
 		constant = syntax.constant,
 		operator = syntax.operator,
+		property = syntax.property,
 		type = syntax.type,
 		number = syntax.number,
 		punctuation = syntax.punctuation,
-		preproc = normal.blue,
-		special = normal.cyan,
-		label = normal.cyan,
-		tag = normal.yellow,
+		preproc = ansi.blue,
+		special = ansi.cyan,
+		label = ansi.cyan,
+		tag = ansi.yellow,
 	},
 	diagnostic = {
 		error = diagnostic.error,
@@ -62,17 +62,17 @@ local colors = {
 		muted = ui.muted,
 		surface = ui.surface,
 		positionFg = ui.bg,
-		positionBg = bright.magenta,
+		positionBg = ansi.magenta,
 	},
 	mode = {
 		fg = ui.bg,
 		normal = ui.fg,
 		insert = ui.bright,
-		visual = bright.green,
-		select = bright.blue,
-		replace = bright.yellow,
-		command = bright.red,
-		terminal = bright.magenta,
+		visual = ansi.green,
+		select = ansi.blue,
+		replace = ansi.yellow,
+		command = ansi.red,
+		terminal = ansi.magenta,
 		fallbackFg = ui.subtle,
 		fallbackBg = ui.surface,
 	},
@@ -117,17 +117,17 @@ local keys = {
 	surface = colors.editor.surface,
 	comment = colors.editor.comment,
 	red = colors.diagnostic.error,
-	red_bright = bright.red,
+	red_bright = ansi.red,
 	green = colors.diagnostic.ok,
-	green_bright = bright.green,
+	green_bright = ansi.green,
 	yellow = colors.diagnostic.warn,
-	yellow_bright = bright.yellow,
+	yellow_bright = ansi.yellow,
 	blue = colors.diagnostic.hint,
-	blue_bright = bright.blue,
+	blue_bright = ansi.blue,
 	magenta = colors.syntax.constant,
-	magenta_bright = bright.magenta,
+	magenta_bright = ansi.magenta,
 	cyan = colors.diagnostic.info,
-	cyan_bright = bright.cyan,
+	cyan_bright = ansi.cyan,
 }
 
 local M = {}

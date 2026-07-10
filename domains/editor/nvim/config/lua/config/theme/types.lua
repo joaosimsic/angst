@@ -39,6 +39,7 @@
 ---@field variable string
 ---@field constant string
 ---@field operator string
+---@field property string
 ---@field type string
 ---@field number string
 ---@field punctuation string
@@ -51,10 +52,6 @@
 ---@field success string
 
 ---@class ThemePaletteAnsi
----@field normal ThemePaletteAnsiColors
----@field bright ThemePaletteAnsiColors
-
----@class ThemePaletteAnsiColors
 ---@field black string
 ---@field red string
 ---@field green string
@@ -98,6 +95,7 @@
 ---@field ["function"] string
 ---@field variable string
 ---@field constant string
+---@field property string
 ---@field operator string
 ---@field type string
 ---@field number string

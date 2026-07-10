@@ -60,7 +60,10 @@ pub fn enter(mode: super::commands::Commands) -> ! {
     };
 
     let extra_path = env::var(path_key).unwrap_or_else(|_| {
-        eprintln!("error: {} not set — was this binary built by Nix?", path_key);
+        eprintln!(
+            "error: {} not set — was this binary built by Nix?",
+            path_key
+        );
         std::process::exit(1);
     });
 
@@ -71,16 +74,20 @@ pub fn enter(mode: super::commands::Commands) -> ! {
 
     let shell = resolve_host_shell();
 
-    let err = Command::new(&shell)
+    let entry = env::var("SHELL_DEV_ENTRY").ok();
+    let cmd = if nix_shell == "dev" {
+        entry.unwrap_or_else(|| shell.clone())
+    } else {
+        shell.clone()
+    };
+
+    let err = Command::new(&cmd)
         .env("PATH", &new_path)
         .env("IN_NIX_SHELL", nix_shell)
         .env("SHELL_MODE", nix_shell)
+        .env("ORIGINAL_SHELL", &shell)
         .exec();
 
-    eprintln!(
-        "error: failed to exec {}: {}",
-        shell,
-        err
-    );
+    eprintln!("error: failed to exec {}: {}", cmd, err);
     std::process::exit(1);
 }

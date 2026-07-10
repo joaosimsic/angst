@@ -1,14 +1,8 @@
 {
   "theme": "miasma",
-  "custom_themes": [
-    "miasma"
-  ],
+  "custom_themes": ["miasma"],
   "ui_stall_watchdog_ms": 0,
   "query_alert_mode": 0,
-  "allow_plaintext_credentials": true,
-  "expanded_nodes": [
-    "conn:ezIntelligence",
-    "conn:ezIntelligence/folder:tables",
-    "conn:ezIntelligence/folder:tables/table:public.users"
-  ]
+  "allow_plaintext_credentials": true
 }
+

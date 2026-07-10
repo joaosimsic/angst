@@ -9,22 +9,22 @@ let
   t = themesLib.get themeName;
   inherit (checkHelpers) requireInfix require;
 
-  standard = "bg=#${t.ui.subtle},fg=#${t.ui.bg}";
-  inactiveTab = "bg=#${t.ui.subtle},fg=#${t.ui.bg}";
-  activeTab = "bg=#${t.ui.bg},fg=#${t.ui.subtle},bold";
+  inactiveTab = "bg=#${t.ui.surface},fg=#${t.ui.subtle}";
+  activeTab = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
 
-  modeNormal = "bg=#${t.ui.subtle},fg=#${t.ui.bg},bold";
-  modeLocked = "bg=#${t.ansi.normal.red},fg=#${t.ui.bg},bold";
-  modePane = "bg=#${t.ansi.normal.green},fg=#${t.ui.bg},bold";
-  modeTab = "bg=#${t.ansi.bright.magenta},fg=#${t.ui.bg},bold";
-  modeScroll = "bg=#${t.ansi.normal.yellow},fg=#${t.ui.bg},bold";
-  modeSearch = "bg=#${t.ansi.normal.magenta},fg=#${t.ui.bg},bold";
+  modeNormal = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
+  modeLocked = "bg=#${t.ansi.red},fg=#${t.ui.bg},bold";
+  standard = "bg=#${t.ui.bright},fg=#${t.ui.bg}";
+  modePane = "bg=#${t.ansi.green},fg=#${t.ui.bg},bold";
+  modeTab = "bg=#${t.ansi.magenta},fg=#${t.ui.bg},bold";
+  modeScroll = "bg=#${t.ansi.yellow},fg=#${t.ui.bg},bold";
+  modeSearch = "bg=#${t.ansi.magenta},fg=#${t.ui.bg},bold";
   modeResize = "bg=#${t.ui.accent},fg=#${t.ui.bg},bold";
-  modeRename = "bg=#${t.ansi.normal.cyan},fg=#${t.ui.bg},bold";
-  modeMove = "bg=#${t.ansi.bright.yellow},fg=#${t.ui.bg},bold";
-  modeSession = "bg=#${t.ansi.normal.blue},fg=#${t.ui.bg},bold";
+  modeRename = "bg=#${t.ansi.cyan},fg=#${t.ui.bg},bold";
+  modeMove = "bg=#${t.ansi.yellow},fg=#${t.ui.bg},bold";
+  modeSession = "bg=#${t.ansi.blue},fg=#${t.ui.bg},bold";
   modePrompt = "bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold";
-  modeTmux = "bg=#${t.ansi.bright.cyan},fg=#${t.ui.bg},bold";
+  modeTmux = "bg=#${t.ansi.cyan},fg=#${t.ui.bg},bold";
 
   configText = ''
     plugins {
@@ -63,6 +63,8 @@ let
         }
 
         tab {
+            bind "h" { GoToPreviousTab; }
+            bind "l" { GoToNextTab; }
             bind "n" { NewTab; }
             bind "x" { CloseTab; }
             bind "1" { GoToTab 1; }
@@ -140,10 +142,9 @@ let
 
             bind "Alt l" {
                 MessagePlugin "vim-navigator" {
-                    name "move_focus_or_tab";
+                    name "resize";
                     payload "right";
-                    move_mod "ctrl";
-                    use_arrow_keys "false";
+                    resize_mod "alt";
                 };
             }
         }
@@ -280,21 +281,26 @@ let
             }
 
             multiplayer_user_colors {
-                player_1 "#${t.ansi.normal.magenta}"
-                player_2 "#${t.ansi.normal.cyan}"
-                player_3 "#${t.ansi.normal.yellow}"
-                player_4 "#${t.ansi.normal.green}"
-                player_5 "#${t.ansi.normal.blue}"
-                player_6 "#${t.ansi.normal.red}"
-                player_7 "#${t.ansi.bright.magenta}"
-                player_8 "#${t.ansi.bright.cyan}"
-                player_9 "#${t.ansi.bright.yellow}"
-                player_10 "#${t.ansi.bright.green}"
+                player_1 "#${t.ansi.magenta}"
+                player_2 "#${t.ansi.cyan}"
+                player_3 "#${t.ansi.yellow}"
+                player_4 "#${t.ansi.green}"
+                player_5 "#${t.ansi.blue}"
+                player_6 "#${t.ansi.red}"
+                player_7 "#${t.ansi.magenta}"
+                player_8 "#${t.ansi.cyan}"
+                player_9 "#${t.ansi.yellow}"
+                player_10 "#${t.ansi.green}"
             }
         }
     }
 
   '';
+
+  fmtLeft = "{mode}";
+  fmtCenter = "#[${standard}]{command_cwd}";
+  fmtRight = "#[${standard}]{tabs}";
+  fmtSpace = "#[${standard}]";
 
   layoutText = ''
     layout {
@@ -302,10 +308,10 @@ let
         children
         pane size=1 borderless=true {
           plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
-                    format_left   "{mode}"
-                    format_center "#[${standard}]{command_cwd}"
-                    format_right  "{tabs}"
-                    format_space  "#[${standard}]"
+                    format_left   "${fmtLeft}"
+                    format_center "${fmtCenter}"
+                    format_right  "${fmtRight}"
+                    format_space  "${fmtSpace}"
 
                     mode_default_to_mode "normal"
                     mode_normal        "#[${modeNormal}] NORMAL "
@@ -355,20 +361,20 @@ in
     path = "domains/terminal/zellij/config/themes/angst.kdl";
     text = themeText;
     checks = [
-      (requireInfix themeText "text_unselected {\n                  base \"#${t.ui.fg}\""
+      (requireInfix themeText "text_unselected {\n            base \"#${t.ui.fg}\""
         "zellij native text should render ${themeName} ui.fg"
       )
       (requireInfix themeText
-        "ribbon_selected {\n                  base \"#${t.ui.bg}\"\n                  background \"#${t.ui.accent}\""
+        "ribbon_selected {\n            base \"#${t.ui.bg}\"\n            background \"#${t.ui.accent}\""
         "zellij selected ribbon should render ${themeName} ui.accent"
       )
-      (requireInfix themeText "frame_unselected {\n                  base \"#${t.ui.border}\""
+      (requireInfix themeText "frame_unselected {\n            base \"#${t.ui.border}\""
         "zellij inactive frame should render ${themeName} ui.border"
       )
-      (requireInfix themeText "frame_selected {\n                  base \"#${t.ui.accent}\""
+      (requireInfix themeText "frame_selected {\n            base \"#${t.ui.accent}\""
         "zellij active frame should render ${themeName} ui.accent"
       )
-      (requireInfix themeText "frame_highlight {\n                  base \"#${t.diagnostic.warning}\""
+      (requireInfix themeText "frame_highlight {\n            base \"#${t.diagnostic.warning}\""
         "zellij highlighted frame should render ${themeName} diagnostic.warning"
       )
       (require (
@@ -395,12 +401,9 @@ in
       (requireInfix layoutText "mode_prompt        \"#[bg=#${t.diagnostic.success},fg=#${t.ui.bg},bold]"
         "zjstatus prompt mode should render ${themeName} diagnostic.success on ui.bg"
       )
-      (requireInfix layoutText "format_left  \" {mode}  {tabs}\""
-        "zellij format should use uniform bar background"
-      )
-      (requireInfix layoutText
-        "format_right \"#[bg=#${t.ui.surface},fg=#${t.ui.comment}] {command_cwd} \""
-        "zellij cwd should render ${themeName} ui.comment on ui.surface"
+      (requireInfix layoutText "format_left   \"${fmtLeft}\"" "zellij format left should render mode")
+      (requireInfix layoutText "format_right  \"${fmtRight}\""
+        "zellij tabs should render on standard background"
       )
       (requireInfix layoutText "tab_active              \"#[bg=#${t.ui.accent},fg=#${t.ui.bg},bold]"
         "zellij active tab should render ${themeName} ui.accent"

@@ -73,8 +73,8 @@ in
     path = "domains/terminal/ghostty/config/colors.conf";
     text = colorsText;
     checks = [
-      (requireInfix colorsText "palette = 5=#${t.BLUE}"
-        "ghostty palette slot 5 should render ${themeName} BLUE"
+      (requireInfix colorsText "palette = 5=#${t.MAGENTA}"
+        "ghostty palette slot 5 should render ${themeName} MAGENTA"
       )
       (requireInfix colorsText "palette = 13=#${t.MAGENTA}"
         "ghostty palette slot 13 should render ${themeName} MAGENTA"

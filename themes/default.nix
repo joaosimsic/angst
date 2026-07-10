@@ -34,21 +34,9 @@ let
       label = "${layer}.${token}";
     }) tokens;
 
-  ansiPaths =
-    variant: tokens:
-    map (token: {
-      path = [
-        "ansi"
-        variant
-        token
-      ];
-      label = "ansi.${variant}.${token}";
-    }) tokens;
-
   requiredColorPaths =
     (layerPaths "palette" paletteTokens)
-    ++ (ansiPaths "normal" ansiTokens)
-    ++ (ansiPaths "bright" ansiTokens)
+    ++ (layerPaths "ansi" ansiTokens)
     ++ (layerPaths "ui" uiTokens)
     ++ (layerPaths "syntax" syntaxTokens)
     ++ (layerPaths "diagnostic" diagnosticTokens);
@@ -96,10 +84,7 @@ let
     theme
     // {
       palette = normalizeLayer theme.palette;
-      ansi = {
-        normal = normalizeLayer theme.ansi.normal;
-        bright = normalizeLayer theme.ansi.bright;
-      };
+      ansi = normalizeLayer theme.ansi;
       ui = normalizeLayer theme.ui;
       syntax = normalizeLayer theme.syntax;
       diagnostic = normalizeLayer theme.diagnostic;
@@ -134,9 +119,7 @@ let
   withAliases =
     theme:
     let
-      inherit (theme) palette;
-      inherit (theme.ansi) normal bright;
-      inherit (theme) ui syntax diagnostic;
+      inherit (theme) palette ansi ui syntax diagnostic;
     in
     theme
     // {
@@ -150,25 +133,25 @@ let
       WARNING = diagnostic.warning;
       INFO = diagnostic.info;
 
-      BLACK = normal.black;
-      RED = normal.red;
-      GREEN = normal.green;
-      YELLOW = normal.yellow;
-      CYAN = normal.cyan;
-      BLUE = normal.blue;
-      MAGENTA = normal.magenta;
+      BLACK = ansi.black;
+      RED = ansi.red;
+      GREEN = ansi.green;
+      YELLOW = ansi.yellow;
+      CYAN = ansi.cyan;
+      BLUE = ansi.blue;
+      MAGENTA = ansi.magenta;
       BASE = palette.base;
       DIM = palette.dim;
       SUBTLE = ui.subtle;
       ACCENT = ui.accent;
       SURFACE = ui.surface;
 
-      RED_BRIGHT = bright.red;
-      GREEN_BRIGHT = bright.green;
-      YELLOW_BRIGHT = bright.yellow;
-      BLUE_BRIGHT = bright.blue;
-      MAGENTA_BRIGHT = bright.magenta;
-      CYAN_BRIGHT = bright.cyan;
+      RED_BRIGHT = ansi.red;
+      GREEN_BRIGHT = ansi.green;
+      YELLOW_BRIGHT = ansi.yellow;
+      BLUE_BRIGHT = ansi.blue;
+      MAGENTA_BRIGHT = ansi.magenta;
+      CYAN_BRIGHT = ansi.cyan;
     };
 
   themesDir = ./.;
