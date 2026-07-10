@@ -141,5 +141,7 @@ in
     if themes ? ${name} then
       withRgb (validateTheme name (normalizeTheme themes.${name}))
     else
-      builtins.throw "Unknown theme: ${name}";
+      builtins.throw "Unknown theme '${name}'. Available themes: ${
+        lib.concatStringsSep ", " (builtins.attrNames themes)
+      }";
 }

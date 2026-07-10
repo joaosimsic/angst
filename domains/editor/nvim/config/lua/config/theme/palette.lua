@@ -4,22 +4,22 @@ local M = {}
 local palette = {
   palette = {
     background = {
-      base = "#272727",
-      variant = "#232323",
+      base = "#0c1014",
+      variant = "#0c1014",
     },
     surface = {
-      base = "#78824b",
-      variant = "#5f875f",
+      base = "#33859e",
+      variant = "#2aa889",
     },
     foreground = {
-      base = "#c9a554",
-      variant = "#d7c483",
+      base = "#195466",
+      variant = "#99d1ce",
     },
     accent = {
-      base = "#b36d43",
-      variant = "#bb7744",
+      base = "#c23127",
+      variant = "#edb443",
     },
-    dim = "#685742",
+    dim = "#4e5166",
   },
   ansi = {
     error = "#d9534f",

@@ -1,15 +1,15 @@
 [mode]
-normal_main = { bg = "#d7c483", fg = "#232323", bold = true }
-normal_alt  = { fg = "#d7c483", bg = "#232323" }
+normal_main = { bg = "#99d1ce", fg = "#0c1014", bold = true }
+normal_alt  = { fg = "#99d1ce", bg = "#0c1014" }
 
 [filetype]
 rules = [
-    { mime = "image/*", fg = "#5f875f" },
-    { mime = "video/*", fg = "#bb7744" },
-    { mime = "inode/empty", fg = "#685742" },
-    { url = "*/", fg = "#78824b" }
+    { mime = "image/*", fg = "#2aa889" },
+    { mime = "video/*", fg = "#edb443" },
+    { mime = "inode/empty", fg = "#4e5166" },
+    { url = "*/", fg = "#33859e" }
 ]
 
 [overall]
-bg = "#272727"
+bg = "#0c1014"
 

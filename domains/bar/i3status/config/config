@@ -10,6 +10,6 @@ general {
 order = "tztime local"
 
 tztime "local" {
-    format = " <span color='#d7c483'>%Y-%m-%d %H:%M</span> "
+    format = " <span color='#99d1ce'>%Y-%m-%d %H:%M</span> "
 }
 

@@ -389,13 +389,13 @@ let
 
     [username]
     format = "[$user]($style)"
-    style_user = "bold #5f7a5f"
+    style_user = "bold #${p.surface.variant}"
     style_root = "bold #${t.ansi.error}"
     show_always = true
 
     [hostname]
     format = "[@$hostname]($style)"
-    style = "bold #5f7a5f"
+    style = "bold #${p.surface.variant}"
     ssh_only = true
 
     ${lib.concatStringsSep "\n" (map renderModule modules)}

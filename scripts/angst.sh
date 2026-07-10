@@ -82,6 +82,30 @@ render_cmd() {
     return 1
   fi
 
+  local theme_found=
+  for f in "$repo_root/themes/"*.nix; do
+    [ -f "$f" ] || continue
+    local base
+    base="$(basename "$f" .nix)"
+    [ "$base" = "default" ] || [ "$base" = "schema" ] && continue
+    if [ "$base" = "$theme_name" ]; then
+      theme_found=1
+      break
+    fi
+  done
+
+  if [ -z "$theme_found" ]; then
+    echo "Unknown theme '$theme_name'. Available themes:" >&2
+    for f in "$repo_root/themes/"*.nix; do
+      [ -f "$f" ] || continue
+      local base
+      base="$(basename "$f" .nix)"
+      [ "$base" = "default" ] || [ "$base" = "schema" ] && continue
+      echo "  $base" >&2
+    done
+    return 1
+  fi
+
   echo "Evaluating templates in a single optimized batch..."
   local json_data
   json_data=$(nix eval --impure "$repo_root#lib.renderDomainOutputsFor" \
