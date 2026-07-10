@@ -13,7 +13,7 @@ let
       warning = "#${t.ansi.warn}";
       success = "#${t.ansi.success}";
       info = "#${t.ansi.info}";
-      text = "#${p.foreground.base}";
+      text = "#${p.foreground.variant}";
       textMuted = "#${p.dim}";
       background = "#${p.background.base}";
       backgroundPanel = "#${p.background.variant}";
@@ -33,7 +33,7 @@ let
       diffLineNumber = "#${p.dim}";
       diffAddedLineNumberBg = "#${p.background.variant}";
       diffRemovedLineNumberBg = "#${p.background.variant}";
-      markdownText = "#${p.foreground.base}";
+      markdownText = "#${p.foreground.variant}";
       markdownHeading = "#${p.accent.base}";
       markdownLink = "#${p.foreground.variant}";
       markdownLinkText = "#${p.accent.base}";
@@ -46,11 +46,11 @@ let
       markdownListEnumeration = "#${p.accent.base}";
       markdownImage = "#${p.foreground.variant}";
       markdownImageText = "#${p.accent.base}";
-      markdownCodeBlock = "#${p.foreground.base}";
+      markdownCodeBlock = "#${p.foreground.variant}";
       syntaxComment = "#${p.dim}";
       syntaxKeyword = "#${p.accent.base}";
-      syntaxFunction = "#${p.foreground.base}";
-      syntaxVariable = "#${p.foreground.base}";
+      syntaxFunction = "#${p.foreground.variant}";
+      syntaxVariable = "#${p.foreground.variant}";
       syntaxString = "#${p.foreground.variant}";
       syntaxNumber = "#${p.accent.base}";
       syntaxType = "#${p.surface.base}";

@@ -71,6 +71,7 @@
         // {
           vmTool = vmOutputs.packages.${system}.default;
           shellTool = shared.shellTool;
+          angstTool = shared.angstCli;
         }
       );
 
