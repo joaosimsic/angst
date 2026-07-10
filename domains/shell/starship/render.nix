@@ -52,22 +52,17 @@ let
     "php"
     "pulumi"
     "python"
-    "r"
+    "rlang"
     "raku"
     "ruby"
     "rust"
     "scala"
     "solidity"
     "spack"
-    "sphinx"
-    "sql"
-    "svelte"
     "swift"
     "terraform"
     "typst"
     "vagrant"
-    "vala"
-    "verilog"
     "vlang"
     "zig"
   ];
@@ -270,7 +265,7 @@ let
       color = "F5D87B";
     }
     {
-      name = "r";
+      name = "rlang";
       symbol = "󰟔 ";
       color = "3A80B9";
     }
@@ -305,21 +300,6 @@ let
       color = "66A1B7";
     }
     {
-      name = "sphinx";
-      symbol = " ";
-      color = "97BBD9";
-    }
-    {
-      name = "sql";
-      symbol = " ";
-      color = "B3BAC5";
-    }
-    {
-      name = "svelte";
-      symbol = " ";
-      color = "CF897B";
-    }
-    {
       name = "swift";
       symbol = "�刀 ";
       color = "E77656";
@@ -338,16 +318,6 @@ let
       name = "vagrant";
       symbol = " ";
       color = "4173B7";
-    }
-    {
-      name = "vala";
-      symbol = " ";
-      color = "99405C";
-    }
-    {
-      name = "verilog";
-      symbol = "󰍛 ";
-      color = "286887";
     }
     {
       name = "vlang";

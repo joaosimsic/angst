@@ -1,5 +1,5 @@
 format = """
-$username$hostname $nix_shell$env_var$directory $git_branch$git_status$buf$bun$c$cpp$cmake$cobol$crystal$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$gleam$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$maven$meson$mojo$nim$nodejs$ocaml$odin$opa$perl$php$pulumi$python$r$raku$ruby$rust$scala$solidity$spack$sphinx$sql$svelte$swift$terraform$typst$vagrant$vala$verilog$vlang$zig
+$username$hostname $nix_shell$env_var$directory $git_branch$git_status$buf$bun$c$cpp$cmake$cobol$crystal$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$gleam$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$maven$meson$mojo$nim$nodejs$ocaml$odin$opa$perl$php$pulumi$python$rlang$raku$ruby$rust$scala$solidity$spack$swift$terraform$typst$vagrant$vlang$zig
 
 """
 
@@ -238,7 +238,7 @@ format = "[$symbol](#F5D87B)[($version)]($style) "
 symbol = " "
 style = "#685742"
 
-[r]
+[rlang]
 format = "[$symbol](#3A80B9)[($version)]($style) "
 symbol = "󰟔 "
 style = "#685742"
@@ -273,21 +273,6 @@ format = "[$symbol](#66A1B7)[($version)]($style) "
 symbol = " "
 style = "#685742"
 
-[sphinx]
-format = "[$symbol](#97BBD9)[($version)]($style) "
-symbol = " "
-style = "#685742"
-
-[sql]
-format = "[$symbol](#B3BAC5)[($version)]($style) "
-symbol = " "
-style = "#685742"
-
-[svelte]
-format = "[$symbol](#CF897B)[($version)]($style) "
-symbol = " "
-style = "#685742"
-
 [swift]
 format = "[$symbol](#E77656)[($version)]($style) "
 symbol = "�刀 "
@@ -306,16 +291,6 @@ style = "#685742"
 [vagrant]
 format = "[$symbol](#4173B7)[($version)]($style) "
 symbol = " "
-style = "#685742"
-
-[vala]
-format = "[$symbol](#99405C)[($version)]($style) "
-symbol = " "
-style = "#685742"
-
-[verilog]
-format = "[$symbol](#286887)[($version)]($style) "
-symbol = "󰍛 "
 style = "#685742"
 
 [vlang]
