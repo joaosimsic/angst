@@ -1,62 +1,62 @@
 $env.config.color_config = {
-    separator:                   "#597b75"
+    separator:                   "#685742"
     leading_trailing_space_bg:   { attr: n }
-    header:                      { fg: "#4d699b" attr: b }
-    empty:                       "#597b75"
-    bool:                        "#545464"
-    int:                         "#4d699b"
-    filesize:                    "#4d699b"
-    duration:                    "#4d699b"
-    date:                        "#545464"
-    range:                       "#4d699b"
-    float:                       "#4d699b"
-    string:                      "#4d699b"
-    nothing:                     "#597b75"
-    binary:                      "#597b75"
-    cell_path:                   "#545464"
-    row_index:                   { fg: "#597b75" attr: b }
-    record:                      "#4d699b"
-    list:                        "#4d699b"
-    block:                       "#4d699b"
-    hints:                       "#597b75"
-    search_result:               { fg: "#f2ecbc" bg: "#4d699b" }
+    header:                      { fg: "#c9a554" attr: b }
+    empty:                       "#685742"
+    bool:                        "#d7c483"
+    int:                         "#c9a554"
+    filesize:                    "#c9a554"
+    duration:                    "#c9a554"
+    date:                        "#d7c483"
+    range:                       "#c9a554"
+    float:                       "#c9a554"
+    string:                      "#c9a554"
+    nothing:                     "#685742"
+    binary:                      "#685742"
+    cell_path:                   "#d7c483"
+    row_index:                   { fg: "#685742" attr: b }
+    record:                      "#c9a554"
+    list:                        "#c9a554"
+    block:                       "#c9a554"
+    hints:                       "#685742"
+    search_result:               { fg: "#272727" bg: "#c9a554" }
 
-    shape_and:                   { fg: "#4d699b" attr: b }
-    shape_binary:                "#597b75"
-    shape_block:                 "#597b75"
-    shape_bool:                  "#545464"
-    shape_custom:                "#4d699b"
-    shape_datetime:              "#545464"
-    shape_directory:             "#c84053"
-    shape_external:              { fg: "#d9822b" }
-    shape_external_resolved:     { fg: "#528c38" attr: b }
-    shape_externalarg:           "#4d699b"
-    shape_filepath:              "#4d699b"
-    shape_flag:                  { fg: "#c84053" attr: b }
-    shape_float:                 "#4d699b"
-    shape_garbage:               { fg: "#d62839" attr: b }
-    shape_globpattern:           "#2b5c8f"
-    shape_int:                   "#4d699b"
-    shape_internalcall:          { fg: "#545464" attr: b }
-    shape_keyword:               { fg: "#4d699b" attr: b }
-    shape_list:                  "#597b75"
-    shape_literal:               "#4d699b"
-    shape_match_pattern:         "#4d699b"
+    shape_and:                   { fg: "#c9a554" attr: b }
+    shape_binary:                "#685742"
+    shape_block:                 "#685742"
+    shape_bool:                  "#d7c483"
+    shape_custom:                "#c9a554"
+    shape_datetime:              "#d7c483"
+    shape_directory:             "#b36d43"
+    shape_external:              { fg: "#df9f28" }
+    shape_external_resolved:     { fg: "#6e9643" attr: b }
+    shape_externalarg:           "#c9a554"
+    shape_filepath:              "#c9a554"
+    shape_flag:                  { fg: "#b36d43" attr: b }
+    shape_float:                 "#c9a554"
+    shape_garbage:               { fg: "#d9534f" attr: b }
+    shape_globpattern:           "#5f9ea0"
+    shape_int:                   "#c9a554"
+    shape_internalcall:          { fg: "#d7c483" attr: b }
+    shape_keyword:               { fg: "#c9a554" attr: b }
+    shape_list:                  "#685742"
+    shape_literal:               "#c9a554"
+    shape_match_pattern:         "#c9a554"
     shape_matching_brackets:     { attr: u }
-    shape_nothing:               "#597b75"
-    shape_operator:              "#c84053"
-    shape_or:                    { fg: "#4d699b" attr: b }
-    shape_pipe:                  { fg: "#c84053" attr: b }
-    shape_range:                 "#4d699b"
-    shape_record:                "#597b75"
-    shape_redirection:           { fg: "#c84053" attr: b }
-    shape_signature:             "#545464"
-    shape_string:                "#597b75"
-    shape_string_interpolation:  "#545464"
-    shape_table:                 "#597b75"
-    shape_variable:              "#545464"
-    shape_vardecl:               "#545464"
-    shape_raw_string:            "#597b75"
+    shape_nothing:               "#685742"
+    shape_operator:              "#b36d43"
+    shape_or:                    { fg: "#c9a554" attr: b }
+    shape_pipe:                  { fg: "#b36d43" attr: b }
+    shape_range:                 "#c9a554"
+    shape_record:                "#685742"
+    shape_redirection:           { fg: "#b36d43" attr: b }
+    shape_signature:             "#d7c483"
+    shape_string:                "#685742"
+    shape_string_interpolation:  "#d7c483"
+    shape_table:                 "#685742"
+    shape_variable:              "#d7c483"
+    shape_vardecl:               "#d7c483"
+    shape_raw_string:            "#685742"
 }
 
 def ls-entry [selector: string, hex: string, --bold, --underline] {
@@ -75,18 +75,18 @@ def ls-entry [selector: string, hex: string, --bold, --underline] {
     $"($selector)=($style)"
 }
 
-let _fg = "#4d699b"
-let _bright = "#545464"
-let _subtle = "#c84053"
-let _accent = "#c84053"
-let _muted = "#597b75"
-let _comment = "#597b75"
-let _success = "#528c38"
-let _warning = "#d9822b"
-let _error = "#d62839"
-let _blue = "#77713f"
-let _cyan = "#4d699b"
-let _magenta = "#b35b79"
+let _fg = "#c9a554"
+let _bright = "#d7c483"
+let _subtle = "#b36d43"
+let _accent = "#b36d43"
+let _muted = "#685742"
+let _comment = "#685742"
+let _success = "#6e9643"
+let _warning = "#df9f28"
+let _error = "#d9534f"
+let _blue = "#78824b"
+let _cyan = "#c9a554"
+let _magenta = "#bb7744"
 
 $env.LS_COLORS = [
     "rs=0"
