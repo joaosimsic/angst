@@ -8,10 +8,10 @@ default_floating_border pixel 2
 hide_edge_borders smart
 
 # Theme colors: border, background, text, indicator, child_border
-client.focused          #5f9ea0 #0c1014 #195466 #5f9ea0 #5f9ea0
+client.focused          #26b9db #0c1014 #195466 #26b9db #26b9db
 client.focused_inactive #4e5166 #0c1014 #c23127 #4e5166 #4e5166
 client.unfocused        #0c1014 #0c1014 #c23127 #0c1014 #0c1014
-client.urgent           #d9534f #0c1014 #d9534f #df9f28 #df9f28
+client.urgent           #e6392e #0c1014 #e6392e #fcae1e #fcae1e
 
 set $mod Mod4
 
@@ -95,7 +95,7 @@ bar {
         focused_workspace  #0c1014 #0c1014 #195466
         active_workspace   #0c1014 #0c1014 #99d1ce
         inactive_workspace #0c1014 #0c1014 #c23127
-        urgent_workspace   #d9534f #0c1014 #195466
+        urgent_workspace   #e6392e #0c1014 #195466
     }
 }
 

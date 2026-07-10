@@ -2,9 +2,9 @@ general {
     colors = true
     interval = 5
     markup = pango
-    color_good = "#6e9643"
-    color_degraded = "#df9f28"
-    color_bad = "#d9534f"
+    color_good = "#26cf9c"
+    color_degraded = "#fcae1e"
+    color_bad = "#e6392e"
 }
 
 order = "tztime local"

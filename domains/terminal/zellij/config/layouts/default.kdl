@@ -21,7 +21,7 @@ layout {
                 mode_rename_pane   "#[bg=#edb443,fg=#0c1014,bold] RENAME "
                 mode_move          "#[bg=#c23127,fg=#0c1014,bold] MOVE "
                 mode_session       "#[bg=#33859e,fg=#0c1014,bold] SESSION "
-                mode_prompt        "#[bg=#6e9643,fg=#0c1014,bold] PROMPT "
+                mode_prompt        "#[bg=#26cf9c,fg=#0c1014,bold] PROMPT "
                 mode_tmux          "#[bg=#195466,fg=#0c1014,bold] TMUX "
 
                 tab_normal              "#[bg=#2aa889,fg=#99d1ce,bold] {index} "
