@@ -14,6 +14,7 @@ let
     "env_var"
     "git_branch"
     "git_status"
+    "nix_shell"
     "buf"
     "bun"
     "c"
@@ -73,6 +74,11 @@ let
   ];
 
   modules = [
+    {
+      name = "nix_shell";
+      symbol = " ";
+      format = "[$symbol$state( $name)]($style) ";
+    }
     {
       name = "daml";
       symbol = " ";

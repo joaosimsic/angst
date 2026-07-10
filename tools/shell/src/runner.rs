@@ -83,7 +83,8 @@ pub fn enter(mode: super::commands::Commands) -> ! {
 
     let err = Command::new(&cmd)
         .env("PATH", &new_path)
-        .env("IN_NIX_SHELL", nix_shell)
+        .env("IN_NIX_SHELL", "impure")
+        .env("name", nix_shell)
         .env("SHELL_MODE", nix_shell)
         .env("ORIGINAL_SHELL", &shell)
         .exec();

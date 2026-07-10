@@ -1,5 +1,5 @@
 format = """
-$username$hostname $env_var$directory $git_branch$git_status$buf$bun$c$cpp$cmake$cobol$crystal$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$gleam$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$maven$meson$mojo$nim$nodejs$ocaml$odin$opa$perl$php$pulumi$python$r$raku$ruby$rust$scala$solidity$spack$sphinx$sql$svelte$swift$terraform$typst$vagrant$vala$verilog$vlang$zig
+$username$hostname $env_var$directory $git_branch$git_status$nix_shell$buf$bun$c$cpp$cmake$cobol$crystal$daml$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$gleam$golang$gradle$haskell$haxe$helm$java$julia$kotlin$lua$maven$meson$mojo$nim$nodejs$ocaml$odin$opa$perl$php$pulumi$python$r$raku$ruby$rust$scala$solidity$spack$sphinx$sql$svelte$swift$terraform$typst$vagrant$vala$verilog$vlang$zig
 
 """
 
@@ -31,6 +31,11 @@ modified = "~"
 staged = "+"
 renamed = "r"
 deleted = "x"
+
+[nix_shell]
+format = "[$symbol$state( $name)]($style) "
+symbol = " "
+style = "#685742"
 
 [username]
 format = "[$user]($style)"
