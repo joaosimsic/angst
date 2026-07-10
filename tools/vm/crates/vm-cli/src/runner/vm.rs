@@ -22,11 +22,22 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
         }
     }
 
-    VmProcessController::start("vm", headless)?;
+    match VmProcessController::start("vm", headless) {
+        Ok(()) => {}
+        Err(e) if e.contains("already running") => {
+            if ssh.exec("true").is_ok() {
+                return Err("VM is already running.".to_string());
+            }
+            eprintln!("Warning: VM process is running but not accepting SSH connections.");
+            eprintln!("Run 'vm logs' to check for errors, or 'vm restart' to restart.");
+            return Err("VM process is running but SSH is not available. Try 'vm restart'.".to_string());
+        }
+        Err(e) => return Err(e),
+    }
 
     println!("VM Started! Validating connection status...");
 
-    for _ in 0..30 {
+    for _ in 0..120 {
         if ssh.exec("true").is_ok() {
             println!("VM was initialized and ready via SSH");
             return Ok(());
@@ -38,17 +49,16 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
     Err("VM started but SSH connection timed out.".to_string())
 }
 
-pub fn status_message() -> Result<String, String> {
+pub fn status_message(ssh: &SshEngine) -> Result<String, String> {
     match VmProcessController::is_active("vm") {
-        Ok(state) => {
-            if state == "active" {
+        Ok(state) if state == "active" => {
+            if ssh.exec("true").is_ok() {
                 Ok("VM Status: Running".to_string())
-            } else if state == "inactive" {
-                Ok("VM Status: Stopped (No VM is currently running)".to_string())
             } else {
-                Ok(format!("VM Status: {}", state))
+                Ok("VM Status: Running (not accepting connections)".to_string())
             }
         }
+        Ok(_) => Ok("VM Status: Stopped (No VM is currently running)".to_string()),
         Err(e) => {
             if e.contains("not found") || e.contains("failed to load") {
                 return Err("VM service units are not installed. Run './scripts/setup-tools.sh --skip-vm-build' to install them.".to_string());
@@ -58,8 +68,8 @@ pub fn status_message() -> Result<String, String> {
     }
 }
 
-pub fn status() -> Result<(), String> {
-    println!("{}", status_message()?);
+pub fn status(ssh: &SshEngine) -> Result<(), String> {
+    println!("{}", status_message(ssh)?);
     Ok(())
 }
 
@@ -91,6 +101,7 @@ pub fn ssh(args: Vec<String>) -> Result<(), String> {
     let status = cmd.status().map_err(|e| e.to_string())?;
 
     if !status.success() {
+        println!("Tip: Check 'vm status' and 'vm logs' for VM health.");
         return Err("Interactive SSH session closed with error status".to_string());
     }
 
@@ -118,7 +129,11 @@ mod tests {
         sync::{Mutex, OnceLock},
         time::{SystemTime, UNIX_EPOCH},
     };
-    use vm_core::{VmProcessController, process::io::StateManager, process::state::VmState};
+    use vm_core::{
+        SshEngine, VmProcessController,
+        process::io::StateManager,
+        process::state::VmState,
+    };
 
     static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
@@ -148,8 +163,9 @@ mod tests {
     #[test]
     fn status_message_reports_stopped_without_real_vm() {
         with_temp_state_dir(|_| {
+            let ssh = SshEngine::new();
             assert_eq!(
-                status_message().unwrap(),
+                status_message(&ssh).unwrap(),
                 "VM Status: Stopped (No VM is currently running)"
             );
         });
@@ -158,6 +174,8 @@ mod tests {
     #[test]
     fn status_message_reports_running_for_live_pid_state() {
         with_temp_state_dir(|_| {
+            let ssh = SshEngine::new();
+
             StateManager::write(
                 "vm",
                 &VmState {
@@ -169,7 +187,8 @@ mod tests {
             .unwrap();
 
             assert_eq!(VmProcessController::is_active("vm").unwrap(), "active");
-            assert_eq!(status_message().unwrap(), "VM Status: Running");
+            let msg = status_message(&ssh).unwrap();
+            assert!(msg.starts_with("VM Status: Running"));
         });
     }
 }

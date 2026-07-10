@@ -1,6 +1,6 @@
 {
-  "theme": "gotham",
-  "custom_themes": ["gotham"],
+  "theme": "lotus",
+  "custom_themes": ["lotus"],
   "ui_stall_watchdog_ms": 0,
   "query_alert_mode": 0,
   "allow_plaintext_credentials": true

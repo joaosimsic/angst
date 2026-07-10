@@ -1,7 +1,7 @@
 {
   system = "x86_64-linux";
 
-  theme = "gotham";
+  theme = "lotus";
 
   user = import ../../common/user.nix;
 
