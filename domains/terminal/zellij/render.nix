@@ -10,13 +10,13 @@ let
   p = t.palette;
   inherit (checkHelpers) requireInfix require;
 
-  inactiveTab = "bg=#${p.background.variant},fg=#${p.accent.base}";
-  activeTab = "bg=#${p.accent.base},fg=#${p.background.base},bold";
+  inactiveTab = "bg=#${p.foreground.variant},fg=#${p.surface.variant}";
+  activeTab = "bg=#${p.surface.variant},fg=#${p.foreground.variant},bold";
 
   modeNormal = "bg=#${p.accent.base},fg=#${p.background.base},bold";
   modeLocked = "bg=#${p.dim},fg=#${p.background.base},bold";
-  standard = "bg=#${p.foreground.variant},fg=#${p.background.base}";
-  modePane = "bg=#${p.surface.variant},fg=#${p.background.base},bold";
+  standard = "bg=#${p.surface.variant},fg=#${p.foreground.variant}";
+  modePane = "bg=#${p.surface.variant},fg=#${p.foreground.variant},bold";
   modeTab = "bg=#${p.accent.variant},fg=#${p.background.base},bold";
   modeScroll = "bg=#${p.accent.base},fg=#${p.background.base},bold";
   modeSearch = "bg=#${p.accent.variant},fg=#${p.background.base},bold";
