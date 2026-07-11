@@ -30,7 +30,9 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
             }
             eprintln!("Warning: VM process is running but not accepting SSH connections.");
             eprintln!("Run 'vm logs' to check for errors, or 'vm restart' to restart.");
-            return Err("VM process is running but SSH is not available. Try 'vm restart'.".to_string());
+            return Err(
+                "VM process is running but SSH is not available. Try 'vm restart'.".to_string(),
+            );
         }
         Err(e) => return Err(e),
     }
@@ -130,9 +132,7 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
     use vm_core::{
-        SshEngine, VmProcessController,
-        process::io::StateManager,
-        process::state::VmState,
+        SshEngine, VmProcessController, process::io::StateManager, process::state::VmState,
     };
 
     static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
