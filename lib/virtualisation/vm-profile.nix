@@ -61,6 +61,7 @@ in
     ];
 
     environment.sessionVariables = {
+      ANGST_REPO = hostAngstPath;
       PKG_CONFIG_PATH = "/run/current-system/sw/lib/pkgconfig";
     };
 

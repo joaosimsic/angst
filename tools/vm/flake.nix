@@ -135,23 +135,58 @@
 
             res-script = pkgs.writeShellScriptBin "res" ''
               TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
+              SSH_PORT="''${VM_SSH_PORT:-2222}"
+              SSH_USER="''${VM_SSH_USER:-joao}"
 
               echo "Building VM for host '$TARGET_HOST'..."
-              nix build ".#nixosConfigurations.$TARGET_HOST.config.system.build.vm" --no-link --no-write-lock-file 2>&1
+              nix build ".#nixosConfigurations.$TARGET_HOST.config.system.build.vm" --no-write-lock-file 2>&1
+
+              RUNNER="result/bin/run-$TARGET_HOST-vm"
+              if [ ! -f "$RUNNER" ]; then
+                echo "Error: VM runner not found at $RUNNER"
+                exit 1
+              fi
 
               echo "Starting VM..."
-              vm restart -l
+              pkill -f "run-$TARGET_HOST-vm" 2>/dev/null || true
+              sleep 1
 
+              KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
+              KEY_FILE="$KEY_DIR/authorized_keys"
+              mkdir -p "$KEY_DIR"
+              TMP_KEYS="$(mktemp)"
+              trap 'rm -f "$TMP_KEYS"' EXIT
+              if ssh-add -L > /dev/null 2>&1; then
+                ssh-add -L >> "$TMP_KEYS"
+              fi
+              for pubkey in "$HOME"/.ssh/*.pub; do
+                if [ -r "$pubkey" ]; then
+                  cat "$pubkey" >> "$TMP_KEYS"
+                fi
+              done
+              awk '/^(ssh-rsa|ssh-ed25519|ecdsa-sha2-|sk-ssh-|sk-ecdsa-)/ { print }' "$TMP_KEYS" | sort -u > "$KEY_FILE"
+              chmod 600 "$KEY_FILE"
+
+              if [ ! -s "$KEY_FILE" ]; then
+                echo "Error: no SSH public keys found in ssh-agent or ~/.ssh/*.pub for VM access."
+                exit 1
+              fi
+
+              export QEMU_OPTS="-display none -vga none"
+              export SHARED_DIR="$KEY_DIR"
+              nohup "$RUNNER" > /tmp/vm-boot.log 2>&1 &
+
+              SSH_OPTS="-p $SSH_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=1 -o LogLevel=ERROR -o ForwardAgent=yes"
               echo "Waiting for VM to be ready..."
               for i in $(seq 1 60); do
-                if vm ssh "echo ready" 2>/dev/null; then
+                if ssh $SSH_OPTS "$SSH_USER@localhost" "echo ready" 2>/dev/null; then
                   echo "VM is ready!"
                   break
                 fi
                 sleep 1
               done
 
-              exec vm ssh
+              exec ssh $SSH_OPTS "$SSH_USER@localhost"
             '';
 
             vm-wrapped = pkgs.symlinkJoin {

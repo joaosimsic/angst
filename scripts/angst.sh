@@ -9,11 +9,44 @@ EOF
 repo_root_default() {
   if [ -n "${ANGST_REPO:-}" ]; then
     printf '%s\n' "$ANGST_REPO"
-  elif git rev-parse --show-toplevel >/dev/null 2>&1; then
-    git rev-parse --show-toplevel
-  else
-    pwd
+    return
   fi
+
+  local dir
+  dir="$PWD"
+  while [ "$dir" != "/" ]; do
+    if [ -f "$dir/flake.nix" ] && [ -d "$dir/hosts" ]; then
+      printf '%s\n' "$dir"
+      return
+    fi
+    dir="$(dirname "$dir")"
+  done
+
+  if git rev-parse --show-toplevel >/dev/null 2>&1; then
+    local git_root
+    git_root="$(git rev-parse --show-toplevel 2>/dev/null)"
+    if [ -f "$git_root/flake.nix" ] && [ -d "$git_root/hosts" ]; then
+      printf '%s\n' "$git_root"
+      return
+    fi
+  fi
+
+  for candidate in "$HOME/angst" "$HOME/proj/angst"; do
+    if [ -f "$candidate/flake.nix" ] && [ -d "$candidate/hosts" ]; then
+      printf '%s\n' "$candidate"
+      return
+    fi
+  done
+
+  if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/angst/repo" ]; then
+    read -r configured < "${XDG_CONFIG_HOME:-$HOME/.config}/angst/repo"
+    if [ -f "$configured/flake.nix" ] && [ -d "$configured/hosts" ]; then
+      printf '%s\n' "$configured"
+      return
+    fi
+  fi
+
+  pwd
 }
 
 theme_default() {

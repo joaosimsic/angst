@@ -1,8 +1,8 @@
 * {
-    bg:       #232323;
-    fg:       #d7c483;
-    accent:   #d7c483;
-    subtle:   #b36d43;
+    bg:       #0d1117;
+    fg:       #b1bac4;
+    accent:   #b1bac4;
+    subtle:   #ff7b72;
 
     background-color: transparent;
     text-color:       @fg;

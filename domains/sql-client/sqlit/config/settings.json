@@ -1,6 +1,6 @@
 {
-  "theme": "miasma",
-  "custom_themes": ["miasma"],
+  "theme": "github",
+  "custom_themes": ["github"],
   "ui_stall_watchdog_ms": 0,
   "query_alert_mode": 0,
   "allow_plaintext_credentials": true
