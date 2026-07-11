@@ -159,8 +159,8 @@ let
     keybinding:
       universal:
         quit: q
-        quit-alt1: <c-c>
-        suspendApp: <c-z>
+        quit-alt1: <ctrl+c>
+        suspendApp: <ctrl+z>
         return: <esc>
         quitWithoutChangingDirectory: Q
         togglePanel: <tab>
@@ -177,8 +177,8 @@ let
         gotoTop-alt: <home>
         gotoBottom-alt: <end>
         toggleRangeSelect: v
-        rangeSelectDown: <s-down>
-        rangeSelectUp: <s-up>
+        rangeSelectDown: <shift+down>
+        rangeSelectUp: <shift+up>
         prevBlock: <left>
         nextBlock: <right>
         prevBlock-alt: h
@@ -195,15 +195,14 @@ let
         nextMatch: "n"
         prevMatch: "N"
         startSearch: /
-        optionMenu: <disabled>
-        optionMenu-alt1: '?'
+        optionMenu: '?'
         select: <space>
         goInto: <enter>
         confirm: <enter>
         confirmMenu: <enter>
         confirmSuggestion: <enter>
-        confirmInEditor: <a-enter>
-        confirmInEditor-alt: <c-s>
+        confirmInEditor: <ctrl+enter>
+        confirmInEditor-alt: <ctrl+s>
         remove: d
         new: "n"
         edit: e
@@ -212,14 +211,14 @@ let
         scrollDownMain: <pgdown>
         scrollUpMain-alt1: K
         scrollDownMain-alt1: J
-        scrollUpMain-alt2: <c-u>
-        scrollDownMain-alt2: <c-d>
+        scrollUpMain-alt2: <ctrl+u>
+        scrollDownMain-alt2: <ctrl+d>
         executeShellCommand: ':'
         createRebaseOptionsMenu: m
         pushFiles: P
         pullFiles: p
         refresh: R
-        createPatchOptionsMenu: <c-p>
+        createPatchOptionsMenu: <ctrl+p>
         nextTab: ']'
         prevTab: '['
         nextScreenMode: +
@@ -227,19 +226,19 @@ let
         cyclePagers: '|'
         undo: z
         redo: Z
-        filteringMenu: <c-s>
+        filteringMenu: <ctrl+s>
         diffingMenu: W
-        diffingMenu-alt: <c-e>
-        copyToClipboard: <c-o>
-        openRecentRepos: <c-r>
+        diffingMenu-alt: <ctrl+e>
+        copyToClipboard: <ctrl+o>
+        openRecentRepos: <ctrl+r>
         submitEditorText: <enter>
         extrasMenu: '@'
-        toggleWhitespaceInDiffView: <c-w>
+        toggleWhitespaceInDiffView: <ctrl+w>
         increaseContextInDiffView: '}'
         decreaseContextInDiffView: '{'
         increaseRenameSimilarityThreshold: )
         decreaseRenameSimilarityThreshold: (
-        openDiffTool: <c-t>
+        openDiffTool: <ctrl+t>
       status:
         checkForUpdate: u
         recentRepos: <enter>
@@ -250,7 +249,7 @@ let
         commitChangesWithoutHook: w
         amendLastCommit: A
         commitChangesWithEditor: C
-        findBaseCommitForFixup: <c-f>
+        findBaseCommitForFixup: <ctrl+f>
         confirmDiscard: x
         ignoreFile: i
         refreshFiles: r
@@ -261,14 +260,14 @@ let
         fetch: f
         toggleTreeView: '`'
         openMergeOptions: M
-        openStatusFilter: <c-b>
+        openStatusFilter: <ctrl+b>
         copyFileInfoToClipboard: "y"
         collapseAll: '-'
         expandAll: =
       branches:
         createPullRequest: o
         viewPullRequestOptions: O
-        copyPullRequestURL: <c-y>
+        copyPullRequestURL: <ctrl+y>
         checkoutBranchByName: c
         forceCheckoutBranch: F
         checkoutPreviousBranch: '-'
@@ -295,8 +294,8 @@ let
         setFixupMessage: c
         createFixupCommit: F
         squashAboveCommits: S
-        moveDownCommit: <c-j>
-        moveUpCommit: <c-k>
+        moveDownCommit: [<ctrl+j>, <alt-down>]
+        moveUpCommit: [<ctrl+k>, <alt-up>]
         amendToCommit: A
         resetCommitAuthor: a
         pickCommit: p
@@ -306,9 +305,9 @@ let
         markCommitAsBaseForRebase: B
         tagCommit: T
         checkoutCommit: <space>
-        resetCherryPick: <c-R>
+        resetCherryPick: <ctrl+r>
         copyCommitAttributeToClipboard: "y"
-        openLogMenu: <c-l>
+        openLogMenu: <ctrl+l>
         openInBrowser: o
         viewBisectOptions: b
         startInteractiveRebase: i
@@ -331,7 +330,7 @@ let
         update: u
         bulkMenu: b
       commitMessage:
-        commitMenu: <c-o>
+        commitMenu: <ctrl+o>
   '';
 in
 [
