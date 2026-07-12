@@ -8,6 +8,7 @@ let
       lib,
       pkgs,
       themesLib,
+      repoPath,
       ...
     }:
     let
@@ -70,7 +71,7 @@ let
               configDir = configSubdir;
               inherit meta category name;
               inherit (config.home) homeDirectory;
-              inherit lib;
+              inherit lib repoPath;
             });
           }
         else

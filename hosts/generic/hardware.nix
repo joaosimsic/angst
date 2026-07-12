@@ -25,12 +25,12 @@
   hardware.enableRedistributableFirmware = true;
 
   fileSystems."/" = {
-    device = "/dev/disk/by-label/nixos";
+    device = lib.mkDefault "/dev/disk/by-label/nixos";
     fsType = "ext4";
   };
 
   fileSystems."/boot" = lib.mkIf (!config.angst.isQemuVm) {
-    device = "/dev/disk/by-label/BOOT";
+    device = lib.mkDefault "/dev/disk/by-label/BOOT";
     fsType = "vfat";
   };
 }

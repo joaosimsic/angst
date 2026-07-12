@@ -3,5 +3,7 @@
 
   theme = "monochrome";
 
+  repoPath = "proj/angst";
+
   user = import ./user.nix;
 }

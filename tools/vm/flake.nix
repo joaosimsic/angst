@@ -38,7 +38,7 @@
               rustc = rustToolchain;
             };
 
-            defaultHost = "personal";
+            defaultHost = builtins.head (builtins.attrNames (rootFlake.nixosConfigurations or { }));
 
             vm-package = rustPlatform.buildRustPackage {
               pname = "vm";
@@ -136,7 +136,7 @@
             res-script = pkgs.writeShellScriptBin "res" ''
               TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
               SSH_PORT="''${VM_SSH_PORT:-2222}"
-              SSH_USER="''${VM_SSH_USER:-joao}"
+              SSH_USER="''${VM_SSH_USER:-$USER}"
 
               echo "Building VM for host '$TARGET_HOST'..."
               nix build ".#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --no-write-lock-file 2>&1
@@ -227,7 +227,7 @@
               shellHook = ''
                 export CARGO_BUILD_TARGET_DIR="$PWD/target"
                 export VM_SSH_PORT="2222"
-                export VM_SSH_USER="joao"
+                export VM_SSH_USER="$USER"
 
                 export NIX_DEFAULT_TARGET_HOST="${defaultHost}"
                 export NIX_VM_HOSTS_MAP='${builtins.toJSON allHostVms}'

@@ -5,6 +5,7 @@
   overrideTheme,
   homeConfiguration,
   renderDomainOutputFor,
+  testHostname,
 }:
 
 let
@@ -12,7 +13,7 @@ let
   expected = themesLib.get overrideTheme;
 
   ghosttyColors =
-    renderDomainOutputFor "personal" overrideTheme
+    renderDomainOutputFor testHostname overrideTheme
       "domains/terminal/ghostty/config/colors.conf";
 in
 if theme != overrideTheme then

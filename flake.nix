@@ -64,6 +64,7 @@
       shared = import ./lib/flake/shared.nix {
         inherit pkgs shellOutputs vmOutputs system hostShellBinPaths;
         lib = pkgs.lib;
+        defaultHost = builtins.head hosts;
       };
 
       homeLib = import ./lib/build/mkHome.nix (

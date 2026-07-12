@@ -32,6 +32,8 @@ inputs.nixpkgs.lib.nixosSystem {
     monitors = hostConfig.monitors or { };
 
     theme = hostConfig.theme or "monochrome";
+
+    repoPath = hostConfig.repoPath or "proj/angst";
   };
 
   modules = [

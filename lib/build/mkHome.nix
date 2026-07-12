@@ -41,6 +41,7 @@ let
           ;
         userConfig = hostConfig.user;
         monitors = hostConfig.monitors or { };
+        repoPath = hostConfig.repoPath or "proj/angst";
       };
 
       modules = [

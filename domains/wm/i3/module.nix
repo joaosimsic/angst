@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, lib, repoPath, ... }:
 
 let
   cfg = config.domains.wm.i3;
@@ -12,8 +12,8 @@ in
           "writeBoundary"
         ]
         ''
-          if [ -d "/host${config.home.homeDirectory}/proj/angst" ]; then
-            CFG_SRC="/host${config.home.homeDirectory}/proj/angst"
+          if [ -d "/host${config.home.homeDirectory}/${repoPath}" ]; then
+            CFG_SRC="/host${config.home.homeDirectory}/${repoPath}"
           else
             CFG_SRC="${config.home.homeDirectory}/.config/angst"
           fi

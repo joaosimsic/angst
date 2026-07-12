@@ -13,6 +13,8 @@
 }:
 
 let
+  testHostname = builtins.head hosts;
+
   domainsLib = import ../domains/default.nix {
     inherit lib;
     domainsPath = ../../domains;
@@ -65,11 +67,11 @@ let
       (builtins.head matches).text;
 
   themeContext = import ../checks/theme/context.nix {
-    inherit loadHost themesLib lib;
+    inherit loadHost themesLib lib testHostname;
   };
 
   themeLint = import ../checks/theme {
-    inherit lib themesLib renderDomainOutputsFor;
+    inherit lib themesLib renderDomainOutputsFor testHostname;
   };
 
   lintDesktop = import ../checks/desktop.nix {
@@ -78,6 +80,7 @@ let
       pkgs
       themesLib
       renderDomainOutputFor
+      testHostname
       ;
   };
 
@@ -87,6 +90,7 @@ let
       pkgs
       themesLib
       renderDomainOutputFor
+      testHostname
       ;
   };
 
@@ -96,6 +100,7 @@ let
       pkgs
       themesLib
       renderDomainOutputsFor
+      testHostname
       ;
     themeName = themeContext.hostTheme;
   };
@@ -123,6 +128,8 @@ let
       lintShell
       themeRenderedChecks
       renderDomainOutputFor
+      testHostname
+      loadHost
       ;
   };
 
@@ -170,6 +177,7 @@ let
       '';
     };
   };
+  firstHostUser = (loadHost testHostname).user.username;
 in
 {
   inherit
@@ -189,7 +197,7 @@ in
 
   packages = {
     ${system} = {
-      default = self.homeConfigurations.joao.activationPackage;
+      default = self.homeConfigurations."${firstHostUser}@${testHostname}".activationPackage;
       angst = angstCli;
 
       vm-cli = vmOutputs.packages.${system}.default;
@@ -288,21 +296,25 @@ in
         meta.description = "Lint shell script configuration profiles.";
       };
 
-      ssh = {
-        type = "app";
-        program = "${pkgs.writeShellScript "angst-ssh-deploy" ''
-          set -euo pipefail
-          echo "==> Building & activating joao@ssh..."
-          nix build ${self}#homeConfigurations.joao@ssh.activationPackage --print-build-logs
-          echo "==> Activating..."
-          ./result/activate
-          echo "==> Cleaning old Nix store..."
-          nix-collect-garbage -d
-          nix store gc
-          echo "==> Done."
-        ''}";
-        meta.description = "Deploy ssh host config and prune old Nix store entries.";
-      };
+      ssh =
+        let
+          sshHostUser = (loadHost "ssh").user.username;
+        in
+        {
+          type = "app";
+          program = "${pkgs.writeShellScript "angst-ssh-deploy" ''
+            set -euo pipefail
+            echo "==> Building & activating ${sshHostUser}@ssh..."
+            nix build ${self}#homeConfigurations.${sshHostUser}@ssh.activationPackage --print-build-logs
+            echo "==> Activating..."
+            ./result/activate
+            echo "==> Cleaning old Nix store..."
+            nix-collect-garbage -d
+            nix store gc
+            echo "==> Done."
+          ''}";
+          meta.description = "Deploy ssh host config and prune old Nix store entries.";
+        };
 
     };
   };

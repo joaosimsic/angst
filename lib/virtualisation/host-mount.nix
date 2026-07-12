@@ -1,7 +1,7 @@
-{ lib, userConfig, ... }:
+{ lib, userConfig, repoPath, ... }:
 
 let
-  hostAngstPath = "/host${userConfig.homeDirectory}/proj/angst";
+  hostAngstPath = "/host${userConfig.homeDirectory}/${repoPath}";
   angstConfigLink = "/home/${userConfig.username}/.config/angst";
   configDir = builtins.dirOf angstConfigLink;
   angstConfigSymlink = lib.stringAfter [ "users" ] ''

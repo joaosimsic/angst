@@ -44,7 +44,7 @@
     pkgs.nushell
   ];
 
-  users.users.root.initialPassword = "changeme";
+  users.users.root.initialPassword = lib.mkDefault "changeme";
 
   programs.nix-ld.enable = true;
 }

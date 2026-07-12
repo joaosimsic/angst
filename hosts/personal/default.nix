@@ -3,6 +3,8 @@
 
   theme = "github";
 
+  repoPath = "proj/angst";
+
   user = import ../../common/user.nix;
 
   monitors = {

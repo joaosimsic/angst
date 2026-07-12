@@ -5,6 +5,7 @@
   vmOutputs,
   system,
   hostShellBinPaths ? "",
+  defaultHost ? "generic",
 }:
 
 let
@@ -47,7 +48,7 @@ let
   # Lightweight vm-run shim that defers host resolution to runtime via nix,
   # avoiding the allHostVms → nixosConfigurations evaluation recursion.
   vmRunShim = pkgs.writeShellScriptBin "vm-run" ''
-    TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-personal}}"
+    TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
     KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
     KEY_FILE="$KEY_DIR/authorized_keys"
 
@@ -110,8 +111,8 @@ let
 
   shellDevHook = pkgs.writeText "shell-dev-hook" ''
     export VM_SSH_PORT=2222
-    export VM_SSH_USER=joao
-    export NIX_DEFAULT_TARGET_HOST=personal
+    export VM_SSH_USER="''${VM_SSH_USER:-$USER}"
+    export NIX_DEFAULT_TARGET_HOST=${defaultHost}
     export CARGO_BUILD_TARGET_DIR="$PWD/target"
 
     if [ -z "$SSH_AUTH_SOCK" ]; then
