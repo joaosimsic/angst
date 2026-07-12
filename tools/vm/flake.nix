@@ -139,7 +139,7 @@
               SSH_USER="''${VM_SSH_USER:-joao}"
 
               echo "Building VM for host '$TARGET_HOST'..."
-              nix build ".#nixosConfigurations.$TARGET_HOST.config.system.build.vm" --no-write-lock-file 2>&1
+              nix build ".#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --no-write-lock-file 2>&1
 
               RUNNER="result/bin/run-$TARGET_HOST-vm"
               if [ ! -f "$RUNNER" ]; then
@@ -149,7 +149,9 @@
 
               echo "Starting VM..."
               pkill -f "run-$TARGET_HOST-vm" 2>/dev/null || true
-              sleep 1
+              pkill -f "qemu-system.*qcow2" 2>/dev/null || true
+              rm -f "$HOME/.local/state/vm/vm.json" "$HOME/.local/state/vm/vm-mcp.json" 2>/dev/null || true
+              sleep 2
 
               KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
               KEY_FILE="$KEY_DIR/authorized_keys"
@@ -174,6 +176,7 @@
 
               export QEMU_OPTS="-display none -vga none"
               export SHARED_DIR="$KEY_DIR"
+              export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
               nohup "$RUNNER" > /tmp/vm-boot.log 2>&1 &
 
               SSH_OPTS="-p $SSH_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=1 -o LogLevel=ERROR -o ForwardAgent=yes"

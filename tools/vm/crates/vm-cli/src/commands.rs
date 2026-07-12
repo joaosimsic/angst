@@ -39,6 +39,7 @@ pub enum Commands {
         src: String,
         dest: String,
     },
+    Health,
     Mcp {
         #[command(subcommand)]
         action: McpCommands,

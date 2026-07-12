@@ -8,7 +8,7 @@
 let
   t = themesLib.get themeName;
   p = t.palette;
-  inherit (checkHelpers) requireInfix require;
+  inherit (checkHelpers) requireInfix;
 
   colorsText = ''
     $env.config.color_config = {
@@ -41,14 +41,14 @@ let
         shape_custom:                "#${p.foreground.base}"
         shape_datetime:              "#${p.foreground.variant}"
         shape_directory:             "#${p.accent.base}"
-        shape_external:              { fg: "#${t.ansi.warn}" }
-        shape_external_resolved:     { fg: "#${t.ansi.success}" attr: b }
+        shape_external:              { fg: "#${p.accent.base}" }
+        shape_external_resolved:     { fg: "#${p.surface.variant}" attr: b }
         shape_externalarg:           "#${p.foreground.base}"
         shape_filepath:              "#${p.foreground.base}"
         shape_flag:                  { fg: "#${p.accent.base}" attr: b }
         shape_float:                 "#${p.foreground.base}"
-        shape_garbage:               { fg: "#${t.ansi.error}" attr: b }
-        shape_globpattern:           "#${t.ansi.info}"
+        shape_garbage:               { fg: "#${p.accent.base}" attr: b }
+        shape_globpattern:           "#${p.surface.base}"
         shape_int:                   "#${p.foreground.base}"
         shape_internalcall:          { fg: "#${p.foreground.variant}" attr: b }
         shape_keyword:               { fg: "#${p.foreground.base}" attr: b }
@@ -94,9 +94,9 @@ let
     let _accent = "#${p.accent.base}"
     let _muted = "#${p.dim}"
     let _comment = "#${p.dim}"
-    let _success = "#${t.ansi.success}"
-    let _warning = "#${t.ansi.warn}"
-    let _error = "#${t.ansi.error}"
+    let _success = "#${p.surface.variant}"
+    let _warning = "#${p.accent.base}"
+    let _error = "#${p.accent.base}"
     let _blue = "#${p.surface.base}"
     let _cyan = "#${p.foreground.base}"
     let _magenta = "#${p.accent.variant}"
@@ -119,13 +119,12 @@ in
     path = "domains/shell/nushell/config/colors.nu";
     text = colorsText;
     checks = [
-      (requireInfix colorsText "shape_garbage:               { fg: \"#${t.ansi.error}\""
-        "nushell shape_garbage should render ${themeName} ansi.error"
+      (requireInfix colorsText "shape_garbage:               { fg: \"#${p.accent.base}\""
+        "nushell shape_garbage should render ${themeName} palette.accent.base"
       )
-      (requireInfix colorsText "shape_globpattern:           \"#${t.ansi.info}\""
-        "nushell shape_globpattern should render ${themeName} ansi.info"
+      (requireInfix colorsText "shape_globpattern:           \"#${p.surface.base}\""
+        "nushell shape_globpattern should render ${themeName} palette.surface.base"
       )
-      (require (t.ansi.error != t.ansi.info) "nushell semantic ansi.error and ansi.info must differ in ${themeName}")
     ];
   }
 ]

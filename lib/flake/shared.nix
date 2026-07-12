@@ -94,11 +94,6 @@ let
     export SHARED_DIR="$KEY_DIR"
     export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
 
-    VM_BINARY="result/bin/run-''${TARGET_HOST}-vm"
-    if [ -x "$VM_BINARY" ]; then
-      exec "$VM_BINARY" "''${NEW_ARGS[@]}"
-    fi
-
     exec nix run "path:$FLAKE_DIR#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" -- "''${NEW_ARGS[@]}"
   '';
 

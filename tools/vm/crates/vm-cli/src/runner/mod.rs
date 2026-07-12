@@ -20,6 +20,7 @@ pub async fn run_cli() -> Result<(), String> {
         Commands::Logs { lines } => vm_core::VmProcessController::stream_logs("vm", lines),
         Commands::Ssh { args } => vm::ssh(args),
         Commands::Exec { command } => vm::exec(&ssh, command),
+        Commands::Health => vm::health(&ssh),
         Commands::CopyTo { src, dest } => ssh.copy_to(&src, &dest),
         Commands::CopyFrom { src, dest } => ssh.copy_from(&src, &dest),
         Commands::Mcp { action } => mcp::handle(action).await,

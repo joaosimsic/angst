@@ -1,8 +1,157 @@
+use std::fmt;
 use std::{path::Path, time::Duration};
+use std::process::Stdio;
 use tokio::{process::Command, time};
 use vm_core::{SshEngine, VmConfig, VmProcessController};
+use vm_core::process::io::StateManager;
+
+fn kill_stale_qemu(disk: &str) {
+    let output = std::process::Command::new("sh")
+        .args([
+            "-c",
+            &format!(
+                "pids=$(pgrep -f 'qemu-system.*\\b{disk}' 2>/dev/null || true); \
+                 [ -n \"$pids\" ] && kill -TERM $pids 2>/dev/null; \
+                 echo \"$pids\""
+            ),
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output();
+
+    let killed = output
+        .ok()
+        .and_then(|o| {
+            std::str::from_utf8(&o.stdout)
+                .ok()
+                .map(|s| s.trim().to_string())
+        })
+        .filter(|s| !s.is_empty());
+
+    if let Some(pids) = killed {
+        eprintln!("Killed stale QEMU process(es): {}", pids);
+        StateManager::clear("vm");
+        StateManager::clear("vm-mcp");
+        std::thread::sleep(Duration::from_secs(2));
+    }
+}
+
+fn any_qemu_running() -> bool {
+    std::process::Command::new("pgrep")
+        .args(["-f", "qemu-system"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+fn qemu_pid() -> Option<u32> {
+    let output = std::process::Command::new("pgrep")
+        .args(["-f", "qemu-system.*qcow2"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    let pid_str = std::str::from_utf8(&output.stdout).ok()?.trim().to_string();
+    if pid_str.is_empty() { None } else { pid_str.parse().ok() }
+}
+
+fn pid_has_hostfwd(pid: u32) -> bool {
+    std::fs::read_to_string(format!("/proc/{pid}/cmdline"))
+        .ok()
+        .map(|c| c.contains("hostfwd"))
+        .unwrap_or(false)
+}
+
+fn port_listens(port: u16) -> bool {
+    let hex = format!("{:04X}", port);
+    std::fs::read_to_string("/proc/net/tcp")
+        .ok()
+        .map(|c| c.lines().any(|l| l.contains(&hex)))
+        .unwrap_or(false)
+}
+
+pub struct HealthReport {
+    pub qemu_running: bool,
+    pub qemu_pid: Option<u32>,
+    pub hostfwd_present: Option<bool>,
+    pub port_listening: Option<bool>,
+    pub ssh_reachable: Option<bool>,
+}
+
+impl fmt::Display for HealthReport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut check = |ok: bool, label: &str, detail: &str| {
+            if ok {
+                writeln!(f, "\x1b[32m\u{2713}\x1b[0m {label}  {detail}")
+            } else {
+                writeln!(f, "\x1b[31m\u{2717}\x1b[0m {label}  {detail}")
+            }
+        };
+
+        check(self.qemu_running, "QEMU running", &match self.qemu_pid {
+            Some(pid) => format!("(PID {pid})"),
+            None => "no process found".into(),
+        })?;
+
+        if let Some(ok) = self.hostfwd_present {
+            check(ok, "SSH port forwarding",
+                if ok { "hostfwd present" } else { "hostfwd MISSING" }
+            )?;
+        }
+
+        if let Some(ok) = self.port_listening {
+            check(ok, "Port 2222 listening",
+                if ok { "0.0.0.0:2222" } else { "not listening" }
+            )?;
+        }
+
+        if let Some(ok) = self.ssh_reachable {
+            check(ok, "SSH reachable",
+                if ok { "exec true ok" } else { "connection refused" }
+            )?;
+        }
+
+        Ok(())
+    }
+}
+
+pub fn check_health(ssh: &SshEngine) -> HealthReport {
+    let qemu_running = any_qemu_running();
+    let qemu_pid = if qemu_running { qemu_pid() } else { None };
+
+    let hostfwd_present = qemu_pid.map(|pid| pid_has_hostfwd(pid));
+
+    let port_listening = if qemu_running {
+        Some(port_listens(2222))
+    } else {
+        None
+    };
+
+    let ssh_reachable = if port_listening == Some(true) {
+        ssh.exec("true").ok().map(|(code, _, _)| code == 0)
+    } else {
+        None
+    };
+
+    HealthReport { qemu_running, qemu_pid, hostfwd_present, port_listening, ssh_reachable }
+}
+
+pub fn health(ssh: &SshEngine) -> Result<(), String> {
+    let report = check_health(ssh);
+    println!("{}", report);
+    if report.ssh_reachable == Some(true) {
+        Ok(())
+    } else {
+        Err("VM is not fully healthy".to_string())
+    }
+}
 
 pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
+    let disk = "personal.qcow2";
+    kill_stale_qemu(disk);
+
     let disk_exists = Path::new("result/bin/run-personal-vm").exists();
 
     if !disk_exists {
@@ -11,7 +160,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
         let build_status = Command::new("nix")
             .args([
                 "build",
-                ".#nixosConfigurations.personal.config.system.build.vm",
+                ".#nixosConfigurations.personal.config.specialisation.vm.configuration.system.build.vm",
             ])
             .status()
             .await
@@ -48,7 +197,14 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
         time::sleep(Duration::from_secs(1)).await;
     }
 
-    Err("VM started but SSH connection timed out.".to_string())
+    let extra = if any_qemu_running() {
+        "\n  QEMU is running but SSH port 2222 is not accepting connections. \
+         Check 'vm logs' for boot errors."
+    } else {
+        "\n  No QEMU process found. Run 'vm logs' for details."
+    };
+
+    Err(format!("VM started but SSH connection timed out.{}", extra))
 }
 
 pub fn status_message(ssh: &SshEngine) -> Result<String, String> {
@@ -158,6 +314,59 @@ mod tests {
             std::env::remove_var("VM_STATE_DIR");
         }
         let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn health_report_formatting_with_all_ok() {
+        let report = super::HealthReport {
+            qemu_running: true,
+            qemu_pid: Some(12345),
+            hostfwd_present: Some(true),
+            port_listening: Some(true),
+            ssh_reachable: Some(true),
+        };
+        let out = report.to_string();
+        assert!(out.contains("QEMU running"), "should show qemu check:\n{out}");
+        assert!(out.contains("12345"), "should show pid:\n{out}");
+        assert!(out.contains("hostfwd present"), "should show hostfwd:\n{out}");
+        assert!(out.contains("0.0.0.0:2222"), "should show port:\n{out}");
+        assert!(out.contains("exec true ok"), "should show ssh:\n{out}");
+    }
+
+    #[test]
+    fn health_report_formatting_with_failures() {
+        let report = super::HealthReport {
+            qemu_running: false,
+            qemu_pid: None,
+            hostfwd_present: None,
+            port_listening: None,
+            ssh_reachable: None,
+        };
+        let out = report.to_string();
+        assert!(out.contains("no process found"), "should show no process:\n{out}");
+    }
+
+    #[test]
+    fn health_report_stops_at_qemu_not_running() {
+        let ssh = SshEngine::new();
+        let report = super::check_health(&ssh);
+        if !report.qemu_running {
+            assert!(report.qemu_pid.is_none());
+            assert!(report.hostfwd_present.is_none());
+            assert!(report.port_listening.is_none());
+            assert!(report.ssh_reachable.is_none());
+        }
+    }
+
+    #[test]
+    fn health_returns_ok_when_ssh_reachable() {
+        let ssh = SshEngine::new();
+        let report = super::check_health(&ssh);
+        let result = super::health(&ssh);
+        match report.ssh_reachable {
+            Some(true) => assert!(result.is_ok(), "health should pass when ssh is reachable"),
+            _ => assert!(result.is_err(), "health should fail when ssh is unreachable"),
+        }
     }
 
     #[test]
