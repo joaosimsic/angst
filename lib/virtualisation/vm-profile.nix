@@ -11,6 +11,14 @@ let
 
   hostAngstPath = "/host${userConfig.homeDirectory}/proj/angst";
 
+  angstCli = pkgs.writeShellApplication {
+    name = "angst";
+    runtimeInputs = with pkgs; [
+      coreutils findutils git nix watchexec jq
+    ];
+    text = builtins.readFile ../../scripts/angst.sh;
+  };
+
   p9Options = [
     "trans=virtio"
     "version=9p2000.L"
@@ -49,9 +57,11 @@ in
       spice-vdagent
       pkg-config
       openssl.dev
+      angstCli
     ];
 
     environment.sessionVariables = {
+      ANGST_REPO = hostAngstPath;
       PKG_CONFIG_PATH = "/run/current-system/sw/lib/pkgconfig";
     };
 

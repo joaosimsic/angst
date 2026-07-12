@@ -18,12 +18,12 @@ let
 
   themeChecks = [
     (requireDistinct "palette tokens" [
-      "RED"
-      "GREEN"
-      "YELLOW"
-      "CYAN"
-      "BLUE"
-      "MAGENTA"
+      "palette.dim"
+      "palette.surface.variant"
+      "palette.accent.base"
+      "palette.foreground.base"
+      "palette.surface.base"
+      "palette.accent.variant"
     ])
   ];
 

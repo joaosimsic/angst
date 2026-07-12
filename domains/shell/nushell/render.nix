@@ -7,68 +7,69 @@
 
 let
   t = themesLib.get themeName;
-  inherit (checkHelpers) requireInfix require;
+  p = t.palette;
+  inherit (checkHelpers) requireInfix;
 
   colorsText = ''
     $env.config.color_config = {
-        separator:                   "#${t.MUTED}"
+        separator:                   "#${p.dim}"
         leading_trailing_space_bg:   { attr: n }
-        header:                      { fg: "#${t.FG}" attr: b }
-        empty:                       "#${t.COMMENT}"
-        bool:                        "#${t.BRIGHT}"
-        int:                         "#${t.FG}"
-        filesize:                    "#${t.FG}"
-        duration:                    "#${t.FG}"
-        date:                        "#${t.BRIGHT}"
-        range:                       "#${t.FG}"
-        float:                       "#${t.FG}"
-        string:                      "#${t.FG}"
-        nothing:                     "#${t.COMMENT}"
-        binary:                      "#${t.COMMENT}"
-        cell_path:                   "#${t.BRIGHT}"
-        row_index:                   { fg: "#${t.COMMENT}" attr: b }
-        record:                      "#${t.FG}"
-        list:                        "#${t.FG}"
-        block:                       "#${t.FG}"
-        hints:                       "#${t.MUTED}"
-        search_result:               { fg: "#${t.BG}" bg: "#${t.FG}" }
+        header:                      { fg: "#${p.foreground.base}" attr: b }
+        empty:                       "#${p.dim}"
+        bool:                        "#${p.foreground.variant}"
+        int:                         "#${p.foreground.base}"
+        filesize:                    "#${p.foreground.base}"
+        duration:                    "#${p.foreground.base}"
+        date:                        "#${p.foreground.variant}"
+        range:                       "#${p.foreground.base}"
+        float:                       "#${p.foreground.base}"
+        string:                      "#${p.foreground.base}"
+        nothing:                     "#${p.dim}"
+        binary:                      "#${p.dim}"
+        cell_path:                   "#${p.foreground.variant}"
+        row_index:                   { fg: "#${p.dim}" attr: b }
+        record:                      "#${p.foreground.base}"
+        list:                        "#${p.foreground.base}"
+        block:                       "#${p.foreground.base}"
+        hints:                       "#${p.dim}"
+        search_result:               { fg: "#${p.background.base}" bg: "#${p.foreground.base}" }
 
-        shape_and:                   { fg: "#${t.FG}" attr: b }
-        shape_binary:                "#${t.COMMENT}"
-        shape_block:                 "#${t.COMMENT}"
-        shape_bool:                  "#${t.BRIGHT}"
-        shape_custom:                "#${t.FG}"
-        shape_datetime:              "#${t.BRIGHT}"
-        shape_directory:             "#${t.ACCENT}"
-        shape_external:              { fg: "#${t.WARNING}" }
-        shape_external_resolved:     { fg: "#${t.SUCCESS}" attr: b }
-        shape_externalarg:           "#${t.FG}"
-        shape_filepath:              "#${t.FG}"
-        shape_flag:                  { fg: "#${t.ACCENT}" attr: b }
-        shape_float:                 "#${t.FG}"
-        shape_garbage:               { fg: "#${t.ERROR}" attr: b }
-        shape_globpattern:           "#${t.INFO}"
-        shape_int:                   "#${t.FG}"
-        shape_internalcall:          { fg: "#${t.BRIGHT}" attr: b }
-        shape_keyword:               { fg: "#${t.FG}" attr: b }
-        shape_list:                  "#${t.COMMENT}"
-        shape_literal:               "#${t.FG}"
-        shape_match_pattern:         "#${t.FG}"
+        shape_and:                   { fg: "#${p.foreground.base}" attr: b }
+        shape_binary:                "#${p.dim}"
+        shape_block:                 "#${p.dim}"
+        shape_bool:                  "#${p.foreground.variant}"
+        shape_custom:                "#${p.foreground.base}"
+        shape_datetime:              "#${p.foreground.variant}"
+        shape_directory:             "#${p.accent.base}"
+        shape_external:              { fg: "#${p.accent.base}" }
+        shape_external_resolved:     { fg: "#${p.surface.variant}" attr: b }
+        shape_externalarg:           "#${p.foreground.base}"
+        shape_filepath:              "#${p.foreground.base}"
+        shape_flag:                  { fg: "#${p.accent.base}" attr: b }
+        shape_float:                 "#${p.foreground.base}"
+        shape_garbage:               { fg: "#${p.accent.base}" attr: b }
+        shape_globpattern:           "#${p.surface.base}"
+        shape_int:                   "#${p.foreground.base}"
+        shape_internalcall:          { fg: "#${p.foreground.variant}" attr: b }
+        shape_keyword:               { fg: "#${p.foreground.base}" attr: b }
+        shape_list:                  "#${p.dim}"
+        shape_literal:               "#${p.foreground.base}"
+        shape_match_pattern:         "#${p.foreground.base}"
         shape_matching_brackets:     { attr: u }
-        shape_nothing:               "#${t.COMMENT}"
-        shape_operator:              "#${t.SUBTLE}"
-        shape_or:                    { fg: "#${t.FG}" attr: b }
-        shape_pipe:                  { fg: "#${t.SUBTLE}" attr: b }
-        shape_range:                 "#${t.FG}"
-        shape_record:                "#${t.COMMENT}"
-        shape_redirection:           { fg: "#${t.SUBTLE}" attr: b }
-        shape_signature:             "#${t.BRIGHT}"
-        shape_string:                "#${t.COMMENT}"
-        shape_string_interpolation:  "#${t.BRIGHT}"
-        shape_table:                 "#${t.COMMENT}"
-        shape_variable:              "#${t.BRIGHT}"
-        shape_vardecl:               "#${t.BRIGHT}"
-        shape_raw_string:            "#${t.COMMENT}"
+        shape_nothing:               "#${p.dim}"
+        shape_operator:              "#${p.accent.base}"
+        shape_or:                    { fg: "#${p.foreground.base}" attr: b }
+        shape_pipe:                  { fg: "#${p.accent.base}" attr: b }
+        shape_range:                 "#${p.foreground.base}"
+        shape_record:                "#${p.dim}"
+        shape_redirection:           { fg: "#${p.accent.base}" attr: b }
+        shape_signature:             "#${p.foreground.variant}"
+        shape_string:                "#${p.dim}"
+        shape_string_interpolation:  "#${p.foreground.variant}"
+        shape_table:                 "#${p.dim}"
+        shape_variable:              "#${p.foreground.variant}"
+        shape_vardecl:               "#${p.foreground.variant}"
+        shape_raw_string:            "#${p.dim}"
     }
 
     def ls-entry [selector: string, hex: string, --bold, --underline] {
@@ -87,18 +88,18 @@ let
         $"($selector)=($style)"
     }
 
-    let _fg = "#${t.FG}"
-    let _bright = "#${t.BRIGHT}"
-    let _subtle = "#${t.SUBTLE}"
-    let _accent = "#${t.ACCENT}"
-    let _muted = "#${t.MUTED}"
-    let _comment = "#${t.COMMENT}"
-    let _success = "#${t.SUCCESS}"
-    let _warning = "#${t.WARNING}"
-    let _error = "#${t.ERROR}"
-    let _blue = "#${t.BLUE}"
-    let _cyan = "#${t.CYAN}"
-    let _magenta = "#${t.MAGENTA}"
+    let _fg = "#${p.foreground.base}"
+    let _bright = "#${p.foreground.variant}"
+    let _subtle = "#${p.accent.base}"
+    let _accent = "#${p.accent.base}"
+    let _muted = "#${p.dim}"
+    let _comment = "#${p.dim}"
+    let _success = "#${p.surface.variant}"
+    let _warning = "#${p.accent.base}"
+    let _error = "#${p.accent.base}"
+    let _blue = "#${p.surface.base}"
+    let _cyan = "#${p.foreground.base}"
+    let _magenta = "#${p.accent.variant}"
 
     $env.LS_COLORS = [
         "rs=0"
@@ -118,13 +119,12 @@ in
     path = "domains/shell/nushell/config/colors.nu";
     text = colorsText;
     checks = [
-      (requireInfix colorsText "shape_garbage:               { fg: \"#${t.ERROR}\""
-        "nushell shape_garbage should render ${themeName} ERROR"
+      (requireInfix colorsText "shape_garbage:               { fg: \"#${p.accent.base}\""
+        "nushell shape_garbage should render ${themeName} palette.accent.base"
       )
-      (requireInfix colorsText "shape_globpattern:           \"#${t.INFO}\""
-        "nushell shape_globpattern should render ${themeName} INFO"
+      (requireInfix colorsText "shape_globpattern:           \"#${p.surface.base}\""
+        "nushell shape_globpattern should render ${themeName} palette.surface.base"
       )
-      (require (t.ERROR != t.INFO) "nushell semantic ERROR and INFO must differ in ${themeName}")
     ];
   }
 ]

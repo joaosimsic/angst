@@ -25,7 +25,7 @@ in
 
       services.xserver.displayManager.lightdm = {
         enable = true;
-        background = "#${themeColors.BG}";
+        background = "#${themeColors.palette.background.base}";
         greeters.gtk = {
           enable = true;
           extraConfig = ''

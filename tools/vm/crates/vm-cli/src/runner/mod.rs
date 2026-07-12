@@ -12,11 +12,15 @@ pub async fn run_cli() -> Result<(), String> {
     match cli.command {
         Commands::Start { headless } => vm::start(&ssh, headless).await,
         Commands::Stop => vm_core::VmProcessController::stop("vm"),
-        Commands::Restart { headless } => vm_core::VmProcessController::restart("vm", headless),
-        Commands::Status => vm::status(),
+        Commands::Restart { headless } => {
+            let _ = vm_core::VmProcessController::stop("vm");
+            vm::start(&ssh, headless).await
+        }
+        Commands::Status => vm::status(&ssh),
         Commands::Logs { lines } => vm_core::VmProcessController::stream_logs("vm", lines),
         Commands::Ssh { args } => vm::ssh(args),
         Commands::Exec { command } => vm::exec(&ssh, command),
+        Commands::Health => vm::health(&ssh),
         Commands::CopyTo { src, dest } => ssh.copy_to(&src, &dest),
         Commands::CopyFrom { src, dest } => ssh.copy_from(&src, &dest),
         Commands::Mcp { action } => mcp::handle(action).await,

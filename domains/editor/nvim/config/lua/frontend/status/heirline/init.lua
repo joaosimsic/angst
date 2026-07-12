@@ -11,8 +11,8 @@ return {
 		local utils = require("frontend.status.heirline.utils")
 		local conditions = require("heirline.conditions")
 
-		---@type ThemeColors
-		local c = require("config.theme.colors").get()
+		local palette = require("config.theme.palette").get()
+		local p = palette.palette
 
 		hls.setup_highlights()
 
@@ -30,8 +30,8 @@ return {
 				local is_term_active = vim.g.terminal_focused ~= false
 				self.is_active = is_nvim_active and is_term_active
 
-				self.bg = utils.status_color(self, c.status.bg)
-				self.fg = utils.status_color(self, c.status.fg)
+				self.bg = utils.status_color(self, p.background.variant)
+				self.fg = utils.status_color(self, p.accent.base)
 			end,
 
 			hl = function(self)

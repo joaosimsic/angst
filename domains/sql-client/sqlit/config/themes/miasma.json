@@ -5,17 +5,17 @@
     "primary": "#c9a554",
     "secondary": "#bb7744",
     "accent": "#d7c483",
-    "warning": "#b36d43",
-    "error": "#685742",
-    "success": "#5f875f",
-    "foreground": "#c2c2b0",
-    "background": "#222222",
-    "surface": "#222222",
-    "panel": "#222222",
+    "warning": "#df9f28",
+    "error": "#d9534f",
+    "success": "#6e9643",
+    "foreground": "#c9a554",
+    "background": "#272727",
+    "surface": "#272727",
+    "panel": "#272727",
     "variables": {
       "border": "#78824b",
-      "block-cursor-background": "#d7c483",
-      "block-cursor-foreground": "#222222",
+      "block-cursor-background": "#b36d43",
+      "block-cursor-foreground": "#272727",
       "block-cursor-text-style": "bold"
     }
   }

@@ -8,6 +8,7 @@
 
 let
   t = themesLib.get themeName;
+  p = t.palette;
 
   moduleNames = [
     "env_var"
@@ -49,13 +50,10 @@ let
     "opa"
     "perl"
     "php"
-    "pixi"
-    "purescript"
+    "pulumi"
     "python"
-    "quarto"
-    "raku"
-    "red"
     "rlang"
+    "raku"
     "ruby"
     "rust"
     "scala"
@@ -64,332 +62,272 @@ let
     "swift"
     "terraform"
     "typst"
+    "vagrant"
     "vlang"
-    "xmake"
     "zig"
-    "conda"
-    "nix_shell"
-    "guix_shell"
-    "docker_context"
-    "package"
   ];
 
   modules = [
     {
+      name = "nix_shell";
+      symbol = " ";
+      format = "[$symbol$name]($style) ";
+      style = "#${p.foreground.variant}";
+    }
+    {
+      name = "daml";
+      symbol = " ";
+      color = "BFCAA3";
+    }
+    {
       name = "buf";
-      symbol = " ";
-      color = "00A1E0";
+      symbol = " ";
+      color = "C8916C";
     }
     {
       name = "bun";
       symbol = " ";
-      color = "FBF0DF";
+      color = "F9C1B1";
     }
     {
       name = "c";
-      symbol = " ";
-      color = "A8B9CC";
-    }
-    {
-      name = "cpp";
-      symbol = " ";
-      color = "00599C";
-      extra = "disabled = false";
+      symbol = " ";
+      color = "599BF5";
     }
     {
       name = "cmake";
-      symbol = " ";
-      color = "064F8C";
+      symbol = " ";
+      color = "75AADB";
     }
     {
       name = "cobol";
-      symbol = " ";
+      symbol = "⚙ ";
       color = "005CA5";
+    }
+    {
+      name = "cpp";
+      symbol = " ";
+      color = "599BF5";
     }
     {
       name = "crystal";
       symbol = " ";
-      color = "FFFFFF";
-    }
-    {
-      name = "daml";
-      symbol = "󰚩 ";
-      color = "4477AA";
+      color = "FAE2AF";
     }
     {
       name = "dart";
       symbol = " ";
-      color = "0175C2";
+      color = "66B9F0";
     }
     {
       name = "deno";
-      symbol = " ";
-      color = "70FFAF";
+      symbol = " ";
+      color = "A7D192";
     }
     {
       name = "dotnet";
       symbol = " ";
-      color = "512BD4";
+      color = "A77EDB";
     }
     {
       name = "elixir";
       symbol = " ";
-      color = "4B275F";
+      color = "A076B5";
     }
     {
       name = "elm";
       symbol = " ";
-      color = "1293D8";
+      color = "5CC1D5";
     }
     {
       name = "erlang";
       symbol = " ";
-      color = "A90533";
+      color = "CA274A";
     }
     {
       name = "fennel";
       symbol = " ";
-      color = "FFF3D7";
-      extra = "disabled = false";
+      color = "C2D48B";
     }
     {
       name = "fortran";
-      symbol = " ";
-      color = "734F96";
+      symbol = "󱈚 ";
+      color = "815AA4";
     }
     {
       name = "gleam";
       symbol = " ";
-      color = "FFAFF3";
+      color = "F6C8B5";
     }
     {
       name = "golang";
-      symbol = " ";
-      color = "00ADD8";
+      symbol = " ";
+      color = "6AD0E0";
     }
     {
       name = "gradle";
       symbol = " ";
-      color = "02303A";
+      color = "86CD82";
     }
     {
       name = "haskell";
-      symbol = " ";
-      color = "5E5086";
+      symbol = " ";
+      color = "9B6CCE";
     }
     {
       name = "haxe";
-      symbol = " ";
-      color = "EA8220";
+      symbol = " ";
+      color = "EAA56F";
     }
     {
       name = "helm";
-      symbol = "󰠳 ";
-      color = "0F1689";
+      symbol = "⎈ ";
+      color = "5880BE";
     }
     {
       name = "java";
       symbol = " ";
-      color = "ED8B00";
+      color = "E76F54";
     }
     {
       name = "julia";
       symbol = " ";
-      color = "9558B2";
+      color = "3EB886";
     }
     {
       name = "kotlin";
-      symbol = " ";
-      color = "7F52FF";
+      symbol = " ";
+      color = "7B60B5";
     }
     {
       name = "lua";
       symbol = " ";
-      color = "000080";
+      color = "519ABC";
     }
     {
       name = "maven";
-      symbol = " ";
-      color = "C71A36";
+      symbol = " ";
+      color = "C64A36";
     }
     {
       name = "meson";
-      symbol = "󰔷 ";
-      color = "007800";
-      format = "[$symbol](#007800)[$project]($style) ";
+      symbol = "󰔿 ";
+      color = "6DB48D";
     }
     {
       name = "mojo";
-      symbol = " ";
-      color = "FF4C1F";
+      symbol = " ";
+      color = "EAA56F";
     }
     {
       name = "nim";
-      symbol = "󰆥 ";
-      color = "FFC200";
+      symbol = " ";
+      color = "C9D17E";
     }
     {
       name = "nodejs";
       symbol = " ";
-      color = "339933";
+      color = "6DA55F";
     }
     {
       name = "ocaml";
-      symbol = " ";
-      color = "EC6813";
+      symbol = " ";
+      color = "E67E4C";
     }
     {
       name = "odin";
-      symbol = "󰟢 ";
-      color = "3882D2";
+      symbol = " ";
+      color = "3884D9";
     }
     {
       name = "opa";
-      symbol = "󰟓 ";
-      color = "7D9199";
+      symbol = " ";
+      color = "87D0D0";
     }
     {
       name = "perl";
       symbol = " ";
-      color = "39457E";
+      color = "A0BADA";
     }
     {
       name = "php";
       symbol = " ";
-      color = "777BB4";
+      color = "7C8FC3";
     }
     {
-      name = "pixi";
-      symbol = "󰏗 ";
-      color = "F5C542";
-    }
-    {
-      name = "purescript";
-      symbol = " ";
-      color = "FFFFFF";
+      name = "pulumi";
+      symbol = " ";
+      color = "C17776";
     }
     {
       name = "python";
-      symbol = " ";
-      color = "3776AB";
-      format = "[$symbol](#3776AB)[$version]($style) ";
-    }
-    {
-      name = "quarto";
-      symbol = "󰧮 ";
-      color = "39729E";
-    }
-    {
-      name = "raku";
-      symbol = "󰛓 ";
-      color = "0000FB";
-    }
-    {
-      name = "red";
-      symbol = "󰝤 ";
-      color = "D91E18";
+      symbol = " ";
+      color = "F5D87B";
     }
     {
       name = "rlang";
       symbol = "󰟔 ";
-      color = "276DC3";
+      color = "3A80B9";
+    }
+    {
+      name = "raku";
+      symbol = " ";
+      color = "B5C0D1";
     }
     {
       name = "ruby";
       symbol = " ";
-      color = "CC342D";
+      color = "C7383E";
     }
     {
       name = "rust";
-      symbol = "󱘗 ";
-      color = "DEA584";
+      symbol = " ";
+      color = "E8AF4C";
     }
     {
       name = "scala";
-      symbol = " ";
-      color = "DC322F";
+      symbol = " ";
+      color = "C53B2D";
     }
     {
       name = "solidity";
-      symbol = " ";
-      color = "8A8A8A";
+      symbol = "ﲹ ";
+      color = "C0C9D7";
     }
     {
       name = "spack";
-      symbol = "󰆼 ";
-      color = "0F70B7";
-      format = "[$symbol](#0F70B7)[$environment]($style) ";
+      symbol = " ";
+      color = "66A1B7";
     }
     {
       name = "swift";
-      symbol = " ";
-      color = "F05138";
+      symbol = "�刀 ";
+      color = "E77656";
     }
     {
       name = "terraform";
-      symbol = "󱁢 ";
-      color = "844FBA";
-      format = "[$symbol](#844FBA)[$workspace]($style) ";
+      symbol = " ";
+      color = "7C91BE";
     }
     {
       name = "typst";
-      symbol = " ";
-      color = "239DAD";
+      symbol = " ";
+      color = "435C73";
+    }
+    {
+      name = "vagrant";
+      symbol = " ";
+      color = "4173B7";
     }
     {
       name = "vlang";
-      symbol = " ";
-      color = "5D87BF";
-    }
-    {
-      name = "xmake";
-      symbol = " ";
-      color = "22A079";
+      symbol = "󰍛 ";
+      color = "86AACB";
     }
     {
       name = "zig";
       symbol = " ";
-      color = "F7A41D";
-    }
-    {
-      name = "conda";
-      symbol = " ";
-      color = "44A833";
-      format = "[$symbol](#44A833)[$environment]($style) ";
-    }
-    {
-      name = "nix_shell";
-      symbol = " ";
-      color = "5277C3";
-      format = "[$symbol](#5277C3)[$state]($style) ";
-    }
-    {
-      name = "env_var.SHELL_MODE";
-      symbol = " ";
-      color = "5277C3";
-      format = "[$symbol](#5277C3)[$env_value]($style) ";
-      style = "bold white";
-      extra = ''
-        variable = "SHELL_MODE"
-      '';
-    }
-    {
-      name = "guix_shell";
-      symbol = " ";
-      color = "FFCC00";
-      format = "[$symbol](#FFCC00) ";
-    }
-    {
-      name = "docker_context";
-      symbol = " ";
-      color = "2496ED";
-      format = "[$symbol](#2496ED)[$context]($style) ";
-    }
-    {
-      name = "package";
-      symbol = "󰏗 ";
-      color = "CB3837";
-      format = "[$symbol](#CB3837)[$version]($style) ";
+      color = "DF9169";
     }
   ];
 
@@ -398,7 +336,7 @@ let
     let
       format = module.format or "[$symbol](#${module.color})[($version)]($style) ";
       extra = module.extra or "";
-      styleValue = module.style or "#${t.COMMENT}";
+      styleValue = module.style or "#${p.dim}";
     in
     ''
       [${module.name}]
@@ -410,7 +348,7 @@ let
       ${extra}
     '';
 
-  formatLine = "$username$hostname $env_var$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
+  formatLine = "$username$hostname $nix_shell$env_var$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
 
   inherit (checkHelpers) requireInfix require;
 
@@ -424,20 +362,20 @@ let
 
     [directory]
     format = "[$path]($style)[$read_only]($read_only_style)"
-    style = "bold #${t.ACCENT}"
+    style = "bold #${p.accent.base}"
     read_only = " RO"
-    read_only_style = "bold #${t.ERROR}"
+    read_only_style = "bold #${t.ansi.error}"
     truncation_length = 3
     truncate_to_repo = false
 
     [git_branch]
     format = "*[$branch]($style)"
-    style = "#${t.COMMENT}"
+    style = "#${p.surface.variant}"
     symbol = ""
 
     [git_status]
     format = ' [\[$all_status$ahead_behind\]]($style) '
-    style = "#${t.WARNING}"
+    style = "#${t.ansi.warn}"
     conflicted = "!"
     ahead = "+"
     behind = "-"
@@ -451,13 +389,13 @@ let
 
     [username]
     format = "[$user]($style)"
-    style_user = "bold #5f7a5f"
-    style_root = "bold #${t.ERROR}"
+    style_user = "bold #${p.surface.variant}"
+    style_root = "bold #${t.ansi.error}"
     show_always = true
 
     [hostname]
     format = "[@$hostname]($style)"
-    style = "bold #5f7a5f"
+    style = "bold #${p.surface.variant}"
     ssh_only = true
 
     ${lib.concatStringsSep "\n" (map renderModule modules)}
@@ -468,13 +406,13 @@ in
     path = "domains/shell/starship/config/starship.toml";
     text = starshipText;
     checks = [
-      (requireInfix starshipText "bold #${t.ACCENT}"
-        "starship directory style should render ${themeName} ACCENT"
+      (requireInfix starshipText "bold #${p.accent.base}"
+        "starship directory style should render ${themeName} accent.base"
       )
-      (requireInfix starshipText "bold #${t.ERROR}"
-        "starship error_symbol should render ${themeName} ERROR"
+      (requireInfix starshipText "bold #${t.ansi.error}"
+        "starship error_symbol should render ${themeName} ansi.error"
       )
-      (require (t.SUCCESS != t.ERROR) "starship semantic SUCCESS and ERROR must differ in ${themeName}")
+      (require (t.ansi.success != t.ansi.error) "starship semantic ansi.success and ansi.error must differ in ${themeName}")
     ];
   }
 ]

@@ -1,5 +1,6 @@
----@type ThemeColors
-local c = require("config.theme.colors").get()
+local palette = require("config.theme.palette").get()
+local p = palette.palette
+local a = palette.ansi
 local utils = require("frontend.status.heirline.utils")
 
 ---@param active_hl_name string
@@ -9,7 +10,7 @@ local function git_hl(active_hl_name, fallback_color)
 		if utils.is_active(self) then
 			return active_hl_name
 		end
-		return { fg = utils.apply_dark_filter(fallback_color, 0.65), bg = utils.status_bg(self, c.status.bg) }
+		return { fg = utils.apply_dark_filter(fallback_color, 0.65), bg = utils.status_bg(self, p.background.variant) }
 	end
 end
 
@@ -34,7 +35,7 @@ local Git = {
 	update = { "User", "BufEnter", "WinEnter", "WinLeave", "FocusGained", "FocusLost" },
 
 	hl = function(self)
-		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, c.status.bg) }
+		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, p.background.variant) }
 	end,
 
 	{
@@ -48,7 +49,7 @@ local Git = {
 			end
 			return "* " .. (self.status_dict.head or "")
 		end,
-		hl = git_hl("HeirlineGit", c.git.branch),
+		hl = git_hl("HeirlineGit", p.foreground.variant),
 	},
 
 	{
@@ -63,7 +64,7 @@ local Git = {
 			local count = self.status_dict.added or 0
 			return count > 0 and ("+" .. count .. " ") or ""
 		end,
-		hl = git_hl("HeirlineGitAdd", c.git.add),
+		hl = git_hl("HeirlineGitAdd", a.success),
 	},
 
 	{
@@ -71,7 +72,7 @@ local Git = {
 			local count = self.status_dict.changed or 0
 			return count > 0 and ("~" .. count .. " ") or ""
 		end,
-		hl = git_hl("HeirlineGitChange", c.git.change),
+		hl = git_hl("HeirlineGitChange", a.warn),
 	},
 
 	{
@@ -79,7 +80,7 @@ local Git = {
 			local count = self.status_dict.removed or 0
 			return count > 0 and ("-" .. count) or ""
 		end,
-		hl = git_hl("HeirlineGitDelete", c.git.delete),
+		hl = git_hl("HeirlineGitDelete", a.error),
 	},
 
 	{

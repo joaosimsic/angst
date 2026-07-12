@@ -21,11 +21,12 @@ return {
 			},
 		}
 
-		local ok, colors_mod = pcall(require, "config.theme.colors")
+		local ok, pal = pcall(require, "config.theme.palette")
 		if not ok then
 			return
 		end
-		local rainbow = colors_mod.get().rainbow
+		local p = pal.get().palette
+		local rainbow = { p.accent.base, p.accent.base, p.foreground.variant, p.foreground.base, p.surface.base }
 
 		local semantic_colors = {
 			RainbowDelimiter1 = { fg = rainbow[1] },

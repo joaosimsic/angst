@@ -7,8 +7,6 @@ return {
 	config = function()
 		vim.g.colors_name = "angst"
 
-		local colors = require("config.theme.colors").get()
-
-		require("config.theme.groups").apply(colors)
+		require("config.theme.groups").apply()
 	end,
 }

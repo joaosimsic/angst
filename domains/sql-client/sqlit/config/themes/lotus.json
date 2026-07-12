@@ -1,0 +1,23 @@
+{
+  "theme": {
+    "name": "lotus",
+    "dark": true,
+    "primary": "#4d699b",
+    "secondary": "#b35b79",
+    "accent": "#545464",
+    "warning": "#d9822b",
+    "error": "#d62839",
+    "success": "#528c38",
+    "foreground": "#4d699b",
+    "background": "#f2ecbc",
+    "surface": "#f2ecbc",
+    "panel": "#f2ecbc",
+    "variables": {
+      "border": "#77713f",
+      "block-cursor-background": "#c84053",
+      "block-cursor-foreground": "#f2ecbc",
+      "block-cursor-text-style": "bold"
+    }
+  }
+}
+

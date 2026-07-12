@@ -1,5 +1,6 @@
----@type ThemeColors
-local c = require("config.theme.colors").get()
+local palette = require("config.theme.palette").get()
+local p = palette.palette
+local a = palette.ansi
 local utils = require("frontend.status.heirline.utils")
 
 ---@type HeirlineComponent
@@ -26,7 +27,7 @@ local DiagnosticsHistory = {
 	},
 
 	hl = function(self)
-		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, c.status.bg) }
+		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, p.background.variant) }
 	end,
 
 	{
@@ -40,7 +41,7 @@ local DiagnosticsHistory = {
 			if utils.is_active(self) then
 				return "HeirlineDiagnosticHistory"
 			end
-			return { fg = utils.apply_dark_filter(c.diagnostic.info, 0.65), bg = utils.status_bg(self, c.status.bg) }
+			return { fg = utils.apply_dark_filter(a.info, 0.65), bg = utils.status_bg(self, p.background.variant) }
 		end,
 	},
 	{

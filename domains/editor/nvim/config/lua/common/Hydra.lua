@@ -1,6 +1,6 @@
 local Keybinder = require("common.Keybinder")
 local Logger = require("common.Logger")
-local colors = require("config.theme.colors")
+local resolve = require("config.theme.resolve").resolve
 
 ---@class HydraHead
 ---@field [1] string
@@ -69,8 +69,8 @@ function Hydra.new(cfg, bufnr)
 	local fg_color_key = cfg.fg_color or "fg"
 	local bg_color_key = cfg.bg_color or "bg"
 
-	self.fg_color_hex = colors.resolve(fg_color_key)
-	self.bg_color_hex = colors.resolve(bg_color_key)
+	self.fg_color_hex = resolve(fg_color_key)
+	self.bg_color_hex = resolve(bg_color_key)
 
 	self.heads = cfg.heads
 	self.exit_keys = cfg.exit_keys or { "<Esc>", "<C-c>" }

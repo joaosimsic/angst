@@ -42,18 +42,19 @@ A custom home-manager module for domains needing special logic beyond the auto-g
 The heart of the theme system. A function that takes `{ themesLib, themeName, homeDirectory, ... }` and returns a list of `{ path, text, checks? }` objects.
 
 ```nix
-t: themesLib.get themeName;  # Get all theme tokens
+t = themesLib.get themeName;  # Get all theme tokens
+p = t.palette;
 
 {
   path = "domains/terminal/ghostty/config/config";
   text = ''
-    theme = ${t.palette.base}
-    background = ${t.ui.bg}
-    foreground = ${t.ui.fg}
+    theme = ${p.foreground.base}
+    background = ${p.background.base}
+    foreground = ${p.foreground.variant}
     ...
   '';
   checks = [
-    { name = "ghostty-magenta"; require = [ "palette 5 = ${t.ansi.magenta}" ]; }
+    { name = "ghostty-magenta"; require = [ "palette 5 = ${p.accent.variant}" ]; }
   ];
 }
 ```

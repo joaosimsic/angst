@@ -1,4 +1,5 @@
-local c = require("config.theme.colors").get()
+local palette = require("config.theme.palette").get()
+local p = palette.palette
 
 ---@meta
 
@@ -11,25 +12,25 @@ local M = {}
 
 ---@type table<string, ModeConfig>
 M.mode_colors = {
-	n = { fg = c.mode.fg, bg = c.mode.normal, label = "NORMAL" },
-	o = { fg = c.mode.fg, bg = c.mode.normal, label = "OP-PENDING" },
-	i = { fg = c.mode.fg, bg = c.mode.insert, label = "INSERT" },
-	v = { fg = c.mode.fg, bg = c.mode.visual, label = "VISUAL" },
-	V = { fg = c.mode.fg, bg = c.mode.visual, label = "V-LINE" },
-	["\22"] = { fg = c.mode.fg, bg = c.mode.visual, label = "V-BLOCK" },
-	s = { fg = c.mode.fg, bg = c.mode.select, label = "SELECT" },
-	S = { fg = c.mode.fg, bg = c.mode.select, label = "S-LINE" },
-	["\19"] = { fg = c.mode.fg, bg = c.mode.select, label = "S-BLOCK" },
-	r = { fg = c.mode.fg, bg = c.mode.replace, label = "REPLACE" },
-	R = { fg = c.mode.fg, bg = c.mode.replace, label = "REPLACE" },
-	c = { fg = c.mode.fg, bg = c.mode.command, label = "COMMAND" },
-	t = { fg = c.mode.fg, bg = c.mode.terminal, label = "TERMINAL" },
+	n = { fg = p.background.base, bg = p.foreground.base, label = "NORMAL" },
+	o = { fg = p.background.base, bg = p.foreground.base, label = "OP-PENDING" },
+	i = { fg = p.background.base, bg = p.foreground.variant, label = "INSERT" },
+	v = { fg = p.background.base, bg = p.surface.variant, label = "VISUAL" },
+	V = { fg = p.background.base, bg = p.surface.variant, label = "V-LINE" },
+	["\22"] = { fg = p.background.base, bg = p.surface.variant, label = "V-BLOCK" },
+	s = { fg = p.background.base, bg = p.surface.base, label = "SELECT" },
+	S = { fg = p.background.base, bg = p.surface.base, label = "S-LINE" },
+	["\19"] = { fg = p.background.base, bg = p.surface.base, label = "S-BLOCK" },
+	r = { fg = p.background.base, bg = p.accent.base, label = "REPLACE" },
+	R = { fg = p.background.base, bg = p.accent.base, label = "REPLACE" },
+	c = { fg = p.background.base, bg = p.dim, label = "COMMAND" },
+	t = { fg = p.background.base, bg = p.accent.variant, label = "TERMINAL" },
 }
 
 ---@type ModeConfig
 M.mode_fallback = {
-	fg = c.mode.fallbackFg,
-	bg = c.mode.fallbackBg,
+	fg = p.accent.base,
+	bg = p.background.variant,
 	label = "UNKNOWN",
 }
 

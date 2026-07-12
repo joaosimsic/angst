@@ -1,5 +1,6 @@
----@type ThemeColors
-local c = require("config.theme.colors").get()
+local palette = require("config.theme.palette").get()
+local p = palette.palette
+local a = palette.ansi
 local icons = require("common.icons")
 local utils = require("frontend.status.heirline.utils")
 
@@ -10,7 +11,7 @@ local function diagnostic_hl(active_hl_name, fallback_color)
 		if utils.is_active(self) then
 			return active_hl_name
 		end
-		return { fg = utils.apply_dark_filter(fallback_color, 0.65), bg = utils.status_bg(self, c.status.bg) }
+		return { fg = utils.apply_dark_filter(fallback_color, 0.65), bg = utils.status_bg(self, p.background.variant) }
 	end
 end
 
@@ -50,7 +51,7 @@ local Diagnostics = {
 	},
 
 	hl = function(self)
-		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, c.status.bg) }
+		return utils.is_active(self) and "HeirlineSurface" or { bg = utils.status_bg(self, p.background.variant) }
 	end,
 
 	{
@@ -60,25 +61,25 @@ local Diagnostics = {
 		provider = function(self)
 			return self.errors > 0 and (self.error_icon .. self.errors) or ""
 		end,
-		hl = diagnostic_hl("HeirlineDiagnosticError", c.diagnostic.error),
+		hl = diagnostic_hl("HeirlineDiagnosticError", a.error),
 	},
 	{
 		provider = function(self)
 			return self.warnings > 0 and (self.warn_icon .. self.warnings) or ""
 		end,
-		hl = diagnostic_hl("HeirlineDiagnosticWarn", c.diagnostic.warn),
+		hl = diagnostic_hl("HeirlineDiagnosticWarn", a.warn),
 	},
 	{
 		provider = function(self)
 			return self.info > 0 and (self.info_icon .. self.info) or ""
 		end,
-		hl = diagnostic_hl("HeirlineDiagnosticInfo", c.diagnostic.info),
+		hl = diagnostic_hl("HeirlineDiagnosticInfo", a.info),
 	},
 	{
 		provider = function(self)
 			return self.hints > 0 and (self.hint_icon .. self.hints) or ""
 		end,
-		hl = diagnostic_hl("HeirlineDiagnosticHint", c.diagnostic.hint),
+		hl = diagnostic_hl("HeirlineDiagnosticHint", p.surface.base),
 	},
 	{
 		provider = " ",

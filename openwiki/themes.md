@@ -1,66 +1,67 @@
 # Themes
 
-angst has a **strict, layered color-theme system** that powers consistent theming across 15+ applications. Themes are validated at build time and provide color tokens via a simple Nix interface.
+angst has a **compact color-theme system** that powers consistent theming across 15+ applications. Themes are validated at build time and provide color tokens via a simple Nix interface.
 
-## Token Layers
+## Compact Token Format (v2)
 
-The theme schema (`/themes/schema.nix`) defines 5 color layers with 44 tokens total:
+The theme schema (`/themes/schema.nix`) defines only 13 tokens total:
 
-### Palette (7 tokens)
-`black`, `base`, `dim`, `subtle`, `accent`, `surface`, `overlay`
+### Palette (9 values)
 
-Foundational color swatches.
+Four color roles, each with `base` and `variant`, plus a standalone `dim`:
 
-### ANSI (16 tokens)
-8 colors × 2 variants (`normal`, `bright`):
-`black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`
+| Token | Role |
+|-------|------|
+| `palette.background.base` | Main UI background |
+| `palette.background.variant` | Darkest background (panels, surfaces) |
+| `palette.surface.base` | Surface/accent blue |
+| `palette.surface.variant` | Surface accent green |
+| `palette.foreground.base` | Main text / foreground accent |
+| `palette.foreground.variant` | Bright text / highlighted foreground |
+| `palette.accent.base` | Primary accent (yellow/orange) |
+| `palette.accent.variant` | Secondary accent (magenta) |
+| `palette.dim` | Muted / dim / comment / error-red |
 
-Terminal emulator ANSI color slots.
+### ANSI (4 values)
 
-### UI (13 tokens)
-`fg`, `bg`, `bright`, `muted`, `comment`, `surface`, `subtle`, `accent`, `border`, `selectionBg`, `selectionFg`, `overlay`, `prompt`
+Semantic diagnostic colors:
 
-Interface element colors used by window managers, bars, launchers, and terminal UIs.
-
-### Syntax (11 tokens)
-`comment`, `keyword`, `string`, `function`, `variable`, `constant`, `operator`, `type`, `number`, `property`, `punctuation`
-
-Syntax highlighting colors for editor and code-related tooling.
-
-### Diagnostic (5 tokens)
-`error`, `warning`, `info`, `hint`, `success`
-
-LSP and diagnostic feedback colors.
-
-### Legacy Aliases (21 tokens)
-
-For backward compatibility and ergonomic access, 21 uppercase aliases are automatically added:
-`FG`, `BG`, `BRIGHT`, `MUTED`, `COMMENT`, `ERROR`, `SUCCESS`, `WARNING`, `INFO`, `BLACK`, `RED`, `GREEN`, `YELLOW`, `CYAN`, `BLUE`, `MAGENTA`, `BASE`, `DIM`, `SUBTLE`, `ACCENT`, `SURFACE`
+| Token | Role |
+|-------|------|
+| `ansi.error` | Error / danger |
+| `ansi.warn` | Warning |
+| `ansi.info` | Information |
+| `ansi.success` | Success / confirmation |
 
 ## Available Themes
 
 All 5 themes are defined in `/themes/*.nix`:
 
-| Theme | Style | Base | FG |
-|-------|-------|------|----|
-| `monochrome` **(default)** | Pure grayscale | `#0a0a0a` | `#eeeeee` |
-| `catppuccin-mocha` | Rich purples/blues | `#1e1e2e` | `#cdd6f4` |
-| `kanagawa` | Warm earthy hues | `#181616` | `#c5c9c5` |
-| `miasma` | Earthy/desert tones | `#222222` | `#c2c2b0` |
-| `noctis` | Dark teal/blue | `#03191b` | `#b2cacd` |
+| Theme | Style | Background | Accent |
+|-------|-------|------------|--------|
+| `monochrome` **(default)** | Pure grayscale | `#0a0a0a` | `#b3b3b3` |
+| `catppuccin-mocha` | Rich purples/blues | `#1e1e2e` | `#f9e2af` |
+| `kanagawa` | Warm earthy hues | `#181616` | `#c4b28a` |
+| `miasma` | Earthy/desert tones | `#222222` | `#b36d43` |
+| `noctis` | Dark teal/blue | `#03191b` | `#e4b781` |
 
-Each theme file exports an attrset matching the schema:
+Each theme file exports a compact attrset matching the schema:
 
 ```nix
 {
-  palette = { base = "#..."; dim = "#..."; ... };
-  ansi = {
-    normal = { black = "#..."; red = "#..."; ... };
-    bright = { black = "#..."; red = "#..."; ... };
+  palette = {
+    background = { base = "#222222"; variant = "#000000"; };
+    surface    = { base = "#78824b"; variant = "#5f875f"; };
+    foreground = { base = "#c9a554"; variant = "#d7c483"; };
+    accent     = { base = "#b36d43"; variant = "#bb7744"; };
+    dim        = "#685742";
   };
-  ui = { fg = "#..."; bg = "#..."; ... };
-  syntax = { comment = "#..."; keyword = "#..."; ... };
-  diagnostic = { error = "#..."; warning = "#..."; ... };
+  ansi = {
+    error   = "#ff3333";
+    warn    = "#ffaa00";
+    info    = "#33b5e5";
+    success = "#00c851";
+  };
 }
 ```
 
@@ -74,14 +75,13 @@ The main access function:
 
 ```nix
 themesLib.get = name:
-  withRgb (withAliases (validateTheme name (normalizeThemeColors themes.${name})))
+  withRgb (validateTheme name (normalizeTheme themes.${name}))
 ```
 
 Processing chain:
-1. **`normalizeThemeColors`** — Strips `#` prefix from all hex values
+1. **`normalizeTheme`** — Strips `#` prefix from all hex values
 2. **`validateTheme`** — Checks every required token exists and is a valid 6-digit hex; fails at build time if invalid
-3. **`withAliases`** — Adds 21 legacy uppercase aliases as top-level keys
-4. **`withRgb`** — Generates `_RGB` suffixed attributes (e.g., `ui.fg_RGB`) with space-separated decimal RGB values for applications that need them
+3. **`withRgb`** — Generates `_RGB` suffixed attributes (e.g., `palette_background_base_RGB`) with space-separated decimal RGB values for applications that need them
 
 ### `themesLib.themes`
 
@@ -103,15 +103,18 @@ The default theme name: `"monochrome"`.
 3. **Domain renderer** (e.g., `/domains/terminal/ghostty/render.nix`):
    ```nix
    { themesLib, themeName, ... }:
-   let t = themesLib.get themeName; in
+   let
+     t = themesLib.get themeName;
+     p = t.palette;
+   in
    [{
-     path = "domains/terminal/ghostty/config/config";
+     path = "domains/terminal/ghostty/config/colors.conf";
      text = ''
-       palette = 0=${t.ansi.black}
-       palette = 1=${t.ansi.red}
+       background = ${p.background.base}
+       foreground = ${p.foreground.variant}
+       palette = 0=#${p.background.variant}
+       palette = 1=#${p.dim}
        ...
-       background = ${t.ui.bg}
-       foreground = ${t.ui.fg}
      '';
    }]
    ```
@@ -129,7 +132,7 @@ The theme system has robust validation:
 | **lint-shell** | starship + nushell configs render and parse for every theme |
 | **theme-rendered** | Rendered output contains expected theme tokens for the host theme |
 | **theme-override** | Changing `theme` option propagates into rendered configs |
-| **theme-semantic-distinct** | All semantic role colors are distinct (no accidental duplicates) |
+| **theme-semantic-distinct** | All ANSI semantic colors are distinct (error, warn, info, success) |
 | **home-theme-override-test** | Full home-manager activation with an overridden theme |
 
 The assertion library (`/lib/checks/theme/assertions.nix`) provides `require`, `requireDistinct`, and `requireInfix` helpers. Many domain render files embed inline checks.
@@ -138,8 +141,8 @@ The assertion library (`/lib/checks/theme/assertions.nix`) provides `require`, `
 
 | File | Role |
 |------|------|
-| `/themes/schema.nix` | Token layer definitions (44 tokens + 21 legacy) |
-| `/themes/default.nix` | Theme library: import, normalize, validate, alias, RGB |
+| `/themes/schema.nix` | Compact token schema (13 tokens) |
+| `/themes/default.nix` | Theme library: import, normalize, validate, RGB |
 | `/themes/monochrome.nix` | Default grayscale theme |
 | `/themes/catppuccin-mocha.nix` | Catppuccin Mocha theme |
 | `/themes/kanagawa.nix` | Kanagawa theme |
@@ -151,7 +154,7 @@ The assertion library (`/lib/checks/theme/assertions.nix`) provides `require`, `
 
 ## Changing or Adding a Theme
 
-1. Create a new theme file in `/themes/<name>.nix` following the schema
+1. Create a new theme file in `/themes/<name>.nix` following the compact schema
 2. It will be auto-discovered by `/themes/default.nix`
 3. Run `nix run .#lint-themes` to validate
 4. Run `nix run .#lint-desktop` and `nix run .#lint-shell` to test renders
@@ -160,26 +163,26 @@ The assertion library (`/lib/checks/theme/assertions.nix`) provides `require`, `
 ## Change Guidance
 
 ### Modifying theme system internals
-- **`/themes/schema.nix`** — Defines the required token layers and fields. Adding a new token here requires updating all 5 theme files (`/themes/*.nix`) and potentially every `render.nix` that consumes them.
-- **`/themes/default.nix`** — Theme library with normalization, validation, alias generation, and RGB conversion. Changes here affect all theme consumers and may break the existing 5 themes.
-  - **`normalizeThemeColors`** strips `#` prefixes; be careful when changing this — some consumers expect bare hex.
-  - **`withAliases`** generates uppercase legacy aliases (`FG`, `BG`, `RED`, etc.) used by many `render.nix` files. Adding new aliases here propagates everywhere.
-  - **`withRgb`** generates `_RGB` suffixed space-separated decimal variants used by i3.
+- **`/themes/schema.nix`** — Defines the required token structure. Adding a new token here requires updating all 5 theme files (`/themes/*.nix`) and potentially every `render.nix` that consumes them.
+- **`/themes/default.nix`** — Theme library with normalization, validation, and RGB conversion. Changes here affect all theme consumers and may break the existing 5 themes.
+  - `normalizeTheme` strips `#` prefixes; consumers receive bare hex values and must add `#` themselves.
+  - `withRgb` generates `_RGB` suffixed space-separated decimal variants recursively for all leaf values.
 - **`/lib/home/themeModule.nix`** — The `theme` option definition. The option type is `enum` constrained to `lib.attrNames themesLib.themes`. Adding a theme updates this automatically.
 
 ### Modifying theme validation
-- **`/lib/checks/theme/assertions.nix`** — Provides `require`, `requireDistinct`, `requireInfix` helpers used by many domain `render.nix` files for inline checks.
-- **`/lib/checks/theme/semanticDistinct.nix`** — Ensures ERROR, SUCCESS, WARNING, INFO, COMMENT, MUTED are all distinct. Adding a new semantic role here requires updating the check.
+- **`/lib/checks/theme/assertions.nix`** — Provides `require`, `requireDistinct`, `requireInfix` helpers used by many domain `render.nix` files for inline checks. Token paths use dot-separated notation (e.g., `"palette.dim"`, `"ansi.error"`).
+- **`/lib/checks/theme/semanticDistinct.nix`** — Ensures `ansi.error`, `ansi.success`, `ansi.warn`, `ansi.info` are all distinct.
 - **`/lib/checks/theme/rendered.nix`** — Verifies rendered domain configs contain expected theme tokens. Update when adding domains or changing render output paths.
 - **`/lib/checks/theme/override.nix`** — Tests theme override propagation. Works by picking an alternate theme (first alphabetically different from the host's theme) and verifying the rendered output changes.
 
 ### When adding a new domain that consumes themes
 1. Create `render.nix` that uses `themesLib.get themeName` to access theme tokens
-2. Optionally add `checks` in the render output list for built-in validation
-3. The domain's rendered output is automatically included in `lint-desktop`/`lint-shell` if the domain has a `render.nix`
-4. Run `nix run .#lint-themes` to verify
+2. Use `t.palette.*` and `t.ansi.*` paths for all color references
+3. Optionally add `checks` in the render output list for built-in validation
+4. The domain's rendered output is automatically included in `lint-desktop`/`lint-shell` if the domain has a `render.nix`
+5. Run `nix run .#lint-themes` to verify
 
 ### Important constraints
 - All 5 themes must always define the same tokens. Adding a token to the schema breaks all themes until they're updated.
-- Legacy aliases (`FG`, `BG`, etc.) are computed from structured tokens in `withAliases`. If you deprecate a structured token, remove it from `withAliases` too.
-- `_RGB` variants are generated for every string color value. Applications that consume these (i3) expect space-separated decimal `R G B` format.
+- There are no legacy uppercase aliases (`FG`, `BG`, etc.) — consumers use full paths like `t.palette.background.base`.
+- `_RGB` variants are generated for every leaf string color value. Applications that consume these (i3) expect space-separated decimal `R G B` format.

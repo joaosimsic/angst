@@ -8,10 +8,10 @@ default_floating_border pixel 2
 hide_edge_borders smart
 
 # Theme colors: border, background, text, indicator, child_border
-client.focused          #c9a554 #222222 #c2c2b0 #c9a554 #c9a554
-client.focused_inactive #c7c7c7 #222222 #e5c47b #c7c7c7 #c7c7c7
-client.unfocused        #222222 #222222 #e5c47b #222222 #222222
-client.urgent           #685742 #222222 #685742 #b36d43 #b36d43
+client.focused          #58a6ff #010409 #bc8cff #58a6ff #58a6ff
+client.focused_inactive #484f58 #010409 #ff7b72 #484f58 #484f58
+client.unfocused        #010409 #010409 #ff7b72 #010409 #010409
+client.urgent           #ff6e6e #010409 #ff6e6e #f2b134 #f2b134
 
 set $mod Mod4
 
@@ -78,7 +78,7 @@ for_window [class=".*"] title_format %title
 
 bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
 bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
-exec_always --no-startup-id hsetroot -solid '#222222'
+exec_always --no-startup-id hsetroot -solid '#010409'
 exec --no-startup-id dbus-update-activation-environment --systemd --all
 exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY PATH XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
 exec --no-startup-id systemctl --user start graphical-session.target
@@ -89,13 +89,13 @@ bar {
     position top
     font pango:JetBrainsMono Nerd Font 10
     colors {
-        background #222222
-        statusline #c2c2b0
-        separator  #e5c47b
-        focused_workspace  #222222 #222222 #c2c2b0
-        active_workspace   #222222 #222222 #d7c483
-        inactive_workspace #222222 #222222 #e5c47b
-        urgent_workspace   #685742 #222222 #c2c2b0
+        background #010409
+        statusline #bc8cff
+        separator  #ff7b72
+        focused_workspace  #010409 #010409 #bc8cff
+        active_workspace   #010409 #010409 #b1bac4
+        inactive_workspace #010409 #010409 #ff7b72
+        urgent_workspace   #ff6e6e #010409 #bc8cff
     }
 }
 

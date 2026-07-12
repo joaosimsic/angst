@@ -1,0 +1,23 @@
+{
+  "theme": {
+    "name": "gotham",
+    "dark": true,
+    "primary": "#195466",
+    "secondary": "#edb443",
+    "accent": "#99d1ce",
+    "warning": "#fcae1e",
+    "error": "#e6392e",
+    "success": "#26cf9c",
+    "foreground": "#195466",
+    "background": "#0c1014",
+    "surface": "#0c1014",
+    "panel": "#0c1014",
+    "variables": {
+      "border": "#33859e",
+      "block-cursor-background": "#c23127",
+      "block-cursor-foreground": "#0c1014",
+      "block-cursor-text-style": "bold"
+    }
+  }
+}
+

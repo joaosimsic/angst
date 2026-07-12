@@ -1,6 +1,7 @@
+local palette = require("config.theme.palette").get()
+local p = palette.palette
 local modes = require("frontend.status.heirline.modes")
 local utils = require("frontend.status.heirline.utils")
-local c = require("config.theme.colors").get()
 
 ---@type HeirlineComponent
 local Mode = {
@@ -9,8 +10,8 @@ local Mode = {
 			self.mode = modes.get_mode_data()
 		else
 			self.mode = {
-				fg = c.mode.fallbackFg,
-				bg = c.mode.fallbackBg,
+				fg = p.accent.base,
+				bg = p.background.variant,
 				label = "INACTIVE",
 			}
 		end

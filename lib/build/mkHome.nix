@@ -4,6 +4,7 @@
   flakeSelf,
   vmTool,
   shellTool,
+  angstTool,
   ...
 }:
 
@@ -51,7 +52,8 @@ let
         ({ ... }: {
           home.packages =
             lib.optionals (hostConfig.enableVmTool or true) [ vmTool ]
-            ++ lib.optionals (hostConfig.enableShellTool or true) [ shellTool ];
+            ++ lib.optionals (hostConfig.enableShellTool or true) [ shellTool ]
+            ++ lib.optionals (hostConfig.enableAngstTool or true) [ angstTool ];
         })
 
       ]

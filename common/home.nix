@@ -9,4 +9,5 @@
   domains.files.yazi.enable = true;
   domains.sql-client.sqlit.enable = true;
   domains.http-client.posting.enable = true;
+  domains.git.lazygit.enable = true;
 }

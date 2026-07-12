@@ -7,6 +7,7 @@
 
 let
   t = themesLib.get themeName;
+  p = t.palette;
 in
 [
   {
@@ -28,10 +29,10 @@ in
     path = "domains/launcher/rofi/config/theme.rasi";
     text = ''
       * {
-          bg:       #${t.BLACK};
-          fg:       #${t.BASE};
-          accent:   #${t.BRIGHT};
-          subtle:   #${t.SUBTLE};
+          bg:       #${p.background.variant};
+          fg:       #${p.foreground.variant};
+          accent:   #${p.foreground.variant};
+          subtle:   #${p.accent.base};
 
           background-color: transparent;
           text-color:       @fg;
