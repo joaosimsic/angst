@@ -67,7 +67,12 @@ nix run .#lint-shell     # starship + nushell per theme
 
 ### CI
 
-GitHub Actions runs `nix flake check` on every push to `main` and on pull requests (`.github/workflows/checks.yml`). The first CI run builds the full NixOS closure and takes a while; subsequent runs reuse the Nix store cache.
+GitHub Actions runs two workflows on every push and pull request:
+
+1. **checks** (`.github/workflows/checks.yml`): Runs the full `nix flake check` suite as separate parallel jobs — `lint-themes`, `lint-desktop`, `lint-shell`, `theme-rendered`, `theme-override`, `theme-semantic-distinct`, plus a `vm-tests` job that runs `cargo fmt --check && cargo test --workspace --locked` for the VM Rust workspace.
+2. **OpenWiki** (`.github/workflows/openwiki-update.yml`): Scheduled daily job that regenerates the `/openwiki/` documentation.
+
+Note: The first CI run builds the full NixOS closure and takes a while; subsequent runs reuse the Nix store cache.
 
 ## VM Workflow
 

@@ -129,6 +129,11 @@ Creates home-manager activation scripts that symlink the domain's `config/` dire
 |--------|-------------|------------|------------|-----------|
 | `files/yazi` | `yazi` | Yes | Yes | — |
 
+### Git
+| Domain | meta.package | render.nix | module.nix | nixos.nix |
+|--------|-------------|------------|------------|-----------|
+| `git/lazygit` | `lazygit` | Yes | — | — |
+
 ### LLM
 | Domain | meta.package | render.nix | module.nix | nixos.nix |
 |--------|-------------|------------|------------|-----------|
@@ -193,6 +198,7 @@ Toolchains are consumed by:
 - `editor/nvim`
 - `files/yazi`
 - `sql-client/sqlit`
+- `git/lazygit`
 - `http-client/posting`
 
 Host-specific `home.nix` files add domain enables on top (e.g., `wm/i3`, `bar/i3status`, `launcher/rofi`, `session/x11` for the personal workstation).

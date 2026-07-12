@@ -10,9 +10,9 @@ It manages every layer of the system — from hardware detection and bootloader 
 |------|---------|
 | `/hosts/` | Machine definitions (pure data: system, theme, user, monitors) |
 | `/domains/` | User-space app configs — the unit of configuration |
-| `/themes/` | Color theme definitions (5 themes, strict schema) |
+| `/themes/` | Color theme definitions (8 themes, strict schema) |
 | `/capabilities/` | Opt-in NixOS system feature modules |
-| `/toolchains/` | Declarative dev language toolchains (18 languages) |
+| `/toolchains/` | Declarative dev language toolchains (17 languages) |
 | `/tools/` | Rust CLI tools: `shell` (dev shell entry), `vm` (QEMU lifecycle) |
 | `/lib/` | Build system, domain framework, theme linting, flake plumbing |
 | `/common/` | Shared config fragments (user, capabilities, home imports) |
@@ -22,7 +22,7 @@ It manages every layer of the system — from hardware detection and bootloader 
 ## Key Concepts
 
 - **Domains** — The unit of user-space configuration. Each `domains/<category>/<name>/` describes one application with `meta.nix` (package info), `render.nix` (theme-aware config generator), and optionally `module.nix`, `config/` directory, and `nixos.nix`.
-- **Themes** — A compact color token system (palette + ansi) with 13 tokens. All 5 themes are validated at build time.
+- **Themes** — A compact color token system (palette + ansi) with 13 tokens. All 8 themes are validated at build time.
 - **Capabilities** — Opt-in NixOS modules auto-discovered from `/capabilities/`. System-level analogue of domains.
 - **Hosts** — Pure-data machine descriptors in `/hosts/<name>/`. Each defines system arch, theme, user info, monitors. No logic.
 - **Toolchains** — Declarative language environment definitions (runtime, LSP, formatter, linter, tree-sitter grammar).
@@ -87,7 +87,7 @@ nix run .#lint-shell
 
 | Host | Type | Theme | Config |
 |------|------|-------|--------|
-| `personal` | Physical workstation (AMD, dual monitor, i3) | miasma | `/hosts/personal/` |
+| `personal` | Physical workstation (AMD, dual monitor, i3) | github | `/hosts/personal/` |
 | `ssh` | Headless server (SSH-only) | miasma | `/hosts/ssh/` |
 
 ## Quick Links

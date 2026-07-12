@@ -80,31 +80,67 @@ A Rust CLI + MCP server (`/tools/vm/`) for managing NixOS development VMs.
 ### Architecture
 
 Three crates in a Cargo workspace:
-- **`vm-core`** — Core types and VM lifecycle logic
-- **`vm-cli`** — CLI interface (`vm start`, `vm stop`, `vm ssh`, etc.)
-- **`vm-mcp`** — MCP server for AI agent integration
+- **`vm-core`** — Core types and VM lifecycle logic. Provides `SshEngine` (libssh2 wrapper), `VmConfig` (env-var-based), `VmProcessController` (background process lifecycle with PID state files in `~/.local/state/vm/`).
+- **`vm-cli`** — CLI interface with clap-derived subcommands: `start`, `stop`, `restart`, `status`, `ssh`, `exec`, `copy-to`, `copy-from`, `health`, `logs`, and `mcp` (with its own subcommands).
+- **`vm-mcp`** — Axum HTTP server serving MCP (Model Context Protocol) on port 8765, exposing `vm_exec`, `vm_status`, and `vm_restart` tools for AI agent integration.
 
-### Commands
+### CLI Commands
 
 ```bash
-# Build VM outputs
-nix run .#vm
+# Build VM outputs from the flake
+nix build .#vm
+
+# Start the VM (builds if needed, polls SSH up to 120s)
+nix run .#vm -- start
+
+# Stop the VM (SIGTERM)
+nix run .#vm -- stop
+
+# Restart the VM
+nix run .#vm -- restart
+
+# Check VM status (process + SSH reachability)
+nix run .#vm -- status
+
+# Full health check (QEMU process → port forwarding → SSH echo)
+nix run .#vm -- health
+
+# SSH into the VM
+nix run .#vm -- ssh
+
+# Execute a command inside the VM
+nix run .#vm -- exec "systemctl status"
+
+# Copy files to/from the VM
+nix run .#vm -- copy-to /local/path /vm/path
+nix run .#vm -- copy-from /vm/path /local/path
+
+# View VM logs
+nix run .#vm -- logs
 
 # Run the VM with GUI
 nix run .#vm-run
 
 # Run headless (no QEMU window)
 nix run .#vm-run -- --headless
-
-# List all available VM specialisations
-nix run .#vm-run -- --help
 ```
 
 The `vm-run` script (`/tools/vm/flake.nix`) handles SSH key provisioning (from `ssh-add -L` and `~/.ssh/*.pub`), optionally sets `QEMU_OPTS` for headless mode, and generates VM run scripts for each NixOS configuration's `specialisation.vm`.
 
 ### MCP Server
 
-The VM CLI includes an MCP server that exposes VM lifecycle operations via the [Model Context Protocol](https://modelcontextprotocol.io/), enabling AI agents (via OpenCode) to manage VMs.
+The VM CLI includes an MCP server that exposes VM lifecycle operations via the [Model Context Protocol](https://modelcontextprotocol.io/), enabling AI agents to manage VMs:
+
+```bash
+# Start the MCP server as a background daemon
+nix run .#vm -- mcp start
+
+# Stop the MCP server
+nix run .#vm -- mcp stop
+
+# Run in foreground (for debugging)
+nix run .#vm -- mcp run-server
+```
 
 ## OpenCode MCP Integration
 

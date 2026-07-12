@@ -35,13 +35,16 @@ Semantic diagnostic colors:
 
 ## Available Themes
 
-All 5 themes are defined in `/themes/*.nix`:
+All 8 themes are defined in `/themes/*.nix`:
 
 | Theme | Style | Background | Accent |
 |-------|-------|------------|--------|
 | `monochrome` **(default)** | Pure grayscale | `#0a0a0a` | `#b3b3b3` |
 | `catppuccin-mocha` | Rich purples/blues | `#1e1e2e` | `#f9e2af` |
+| `github` | GitHub dark | `#010409` | `#ff7b72` |
+| `gotham` | Dark teal/blue-green | `#0c1014` | `#c23127` |
 | `kanagawa` | Warm earthy hues | `#181616` | `#c4b28a` |
+| `lotus` | Light/warm lotus | `#f2ecbc` | `#c84053` |
 | `miasma` | Earthy/desert tones | `#222222` | `#b36d43` |
 | `noctis` | Dark teal/blue | `#03191b` | `#e4b781` |
 
@@ -143,10 +146,13 @@ The assertion library (`/lib/checks/theme/assertions.nix`) provides `require`, `
 |------|------|
 | `/themes/schema.nix` | Compact token schema (13 tokens) |
 | `/themes/default.nix` | Theme library: import, normalize, validate, RGB |
-| `/themes/monochrome.nix` | Default grayscale theme |
 | `/themes/catppuccin-mocha.nix` | Catppuccin Mocha theme |
+| `/themes/github.nix` | GitHub dark theme |
+| `/themes/gotham.nix` | Gotham dark teal theme |
 | `/themes/kanagawa.nix` | Kanagawa theme |
+| `/themes/lotus.nix` | Lotus light theme |
 | `/themes/miasma.nix` | Miasma (earthy/desert) theme |
+| `/themes/monochrome.nix` | Default grayscale theme |
 | `/themes/noctis.nix` | Noctis (teal/blue) theme |
 | `/lib/home/themeModule.nix` | `theme` option definition for home-manager |
 | `/lib/checks/theme/` | Theme validation checks |
@@ -163,8 +169,8 @@ The assertion library (`/lib/checks/theme/assertions.nix`) provides `require`, `
 ## Change Guidance
 
 ### Modifying theme system internals
-- **`/themes/schema.nix`** — Defines the required token structure. Adding a new token here requires updating all 5 theme files (`/themes/*.nix`) and potentially every `render.nix` that consumes them.
-- **`/themes/default.nix`** — Theme library with normalization, validation, and RGB conversion. Changes here affect all theme consumers and may break the existing 5 themes.
+- **`/themes/schema.nix`** — Defines the required token structure. Adding a new token here requires updating all 8 theme files (`/themes/*.nix`) and potentially every `render.nix` that consumes them.
+- **`/themes/default.nix`** — Theme library with normalization, validation, and RGB conversion. Changes here affect all theme consumers and may break the existing 8 themes.
   - `normalizeTheme` strips `#` prefixes; consumers receive bare hex values and must add `#` themselves.
   - `withRgb` generates `_RGB` suffixed space-separated decimal variants recursively for all leaf values.
 - **`/lib/home/themeModule.nix`** — The `theme` option definition. The option type is `enum` constrained to `lib.attrNames themesLib.themes`. Adding a theme updates this automatically.
@@ -183,6 +189,6 @@ The assertion library (`/lib/checks/theme/assertions.nix`) provides `require`, `
 5. Run `nix run .#lint-themes` to verify
 
 ### Important constraints
-- All 5 themes must always define the same tokens. Adding a token to the schema breaks all themes until they're updated.
+- All 8 themes must always define the same tokens. Adding a token to the schema breaks all themes until they're updated.
 - There are no legacy uppercase aliases (`FG`, `BG`, etc.) — consumers use full paths like `t.palette.background.base`.
 - `_RGB` variants are generated for every leaf string color value. Applications that consume these (i3) expect space-separated decimal `R G B` format.
