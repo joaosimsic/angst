@@ -1,9 +1,9 @@
 use std::fmt;
-use std::{path::Path, time::Duration};
 use std::process::Stdio;
+use std::{path::Path, time::Duration};
 use tokio::{process::Command, time};
-use vm_core::{SshEngine, VmConfig, VmProcessController};
 use vm_core::process::io::StateManager;
+use vm_core::{SshEngine, VmConfig, VmProcessController};
 
 fn kill_stale_qemu(disk: &str) {
     let output = std::process::Command::new("sh")
@@ -54,7 +54,11 @@ fn qemu_pid() -> Option<u32> {
         .output()
         .ok()?;
     let pid_str = std::str::from_utf8(&output.stdout).ok()?.trim().to_string();
-    if pid_str.is_empty() { None } else { pid_str.parse().ok() }
+    if pid_str.is_empty() {
+        None
+    } else {
+        pid_str.parse().ok()
+    }
 }
 
 fn pid_has_hostfwd(pid: u32) -> bool {
@@ -90,26 +94,44 @@ impl fmt::Display for HealthReport {
             }
         };
 
-        check(self.qemu_running, "QEMU running", &match self.qemu_pid {
-            Some(pid) => format!("(PID {pid})"),
-            None => "no process found".into(),
-        })?;
+        check(
+            self.qemu_running,
+            "QEMU running",
+            &match self.qemu_pid {
+                Some(pid) => format!("(PID {pid})"),
+                None => "no process found".into(),
+            },
+        )?;
 
         if let Some(ok) = self.hostfwd_present {
-            check(ok, "SSH port forwarding",
-                if ok { "hostfwd present" } else { "hostfwd MISSING" }
+            check(
+                ok,
+                "SSH port forwarding",
+                if ok {
+                    "hostfwd present"
+                } else {
+                    "hostfwd MISSING"
+                },
             )?;
         }
 
         if let Some(ok) = self.port_listening {
-            check(ok, "Port 2222 listening",
-                if ok { "0.0.0.0:2222" } else { "not listening" }
+            check(
+                ok,
+                "Port 2222 listening",
+                if ok { "0.0.0.0:2222" } else { "not listening" },
             )?;
         }
 
         if let Some(ok) = self.ssh_reachable {
-            check(ok, "SSH reachable",
-                if ok { "exec true ok" } else { "connection refused" }
+            check(
+                ok,
+                "SSH reachable",
+                if ok {
+                    "exec true ok"
+                } else {
+                    "connection refused"
+                },
             )?;
         }
 
@@ -135,7 +157,13 @@ pub fn check_health(ssh: &SshEngine) -> HealthReport {
         None
     };
 
-    HealthReport { qemu_running, qemu_pid, hostfwd_present, port_listening, ssh_reachable }
+    HealthReport {
+        qemu_running,
+        qemu_pid,
+        hostfwd_present,
+        port_listening,
+        ssh_reachable,
+    }
 }
 
 pub fn health(ssh: &SshEngine) -> Result<(), String> {
@@ -326,9 +354,15 @@ mod tests {
             ssh_reachable: Some(true),
         };
         let out = report.to_string();
-        assert!(out.contains("QEMU running"), "should show qemu check:\n{out}");
+        assert!(
+            out.contains("QEMU running"),
+            "should show qemu check:\n{out}"
+        );
         assert!(out.contains("12345"), "should show pid:\n{out}");
-        assert!(out.contains("hostfwd present"), "should show hostfwd:\n{out}");
+        assert!(
+            out.contains("hostfwd present"),
+            "should show hostfwd:\n{out}"
+        );
         assert!(out.contains("0.0.0.0:2222"), "should show port:\n{out}");
         assert!(out.contains("exec true ok"), "should show ssh:\n{out}");
     }
@@ -343,7 +377,10 @@ mod tests {
             ssh_reachable: None,
         };
         let out = report.to_string();
-        assert!(out.contains("no process found"), "should show no process:\n{out}");
+        assert!(
+            out.contains("no process found"),
+            "should show no process:\n{out}"
+        );
     }
 
     #[test]
@@ -365,7 +402,10 @@ mod tests {
         let result = super::health(&ssh);
         match report.ssh_reachable {
             Some(true) => assert!(result.is_ok(), "health should pass when ssh is reachable"),
-            _ => assert!(result.is_err(), "health should fail when ssh is unreachable"),
+            _ => assert!(
+                result.is_err(),
+                "health should fail when ssh is unreachable"
+            ),
         }
     }
 
