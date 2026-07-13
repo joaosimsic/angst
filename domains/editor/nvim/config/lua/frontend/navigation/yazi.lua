@@ -33,17 +33,13 @@ return {
 
 		binder:nmap("<C-a>", function()
 			local current_file = vim.api.nvim_buf_get_name(0)
+			local dir = vim.fn.getcwd()
 
-			if current_file == "" then
-				logger:warn("Current buffer has no file path")
-				return
-			end
-
-			local ok, dir = pcall(vim.fs.dirname, current_file)
-
-			if not ok then
-				logger:warn("Invalid buffer directory")
-				return
+			if current_file ~= "" then
+				local ok, result = pcall(vim.fs.dirname, current_file)
+				if ok then
+					dir = result
+				end
 			end
 
 			require("yazi").yazi(nil, dir)
