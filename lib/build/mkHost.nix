@@ -70,12 +70,16 @@ inputs.nixpkgs.lib.nixosSystem {
       home-manager.users.${effectiveUsername} = {
         imports = profile.modules;
       };
+    }
 
-      systemd.services."home-manager-${effectiveUsername}".before = [
+    # Don't gate getty behind home-manager in VMs — activation can be slow
+    # and users should be able to log in before it finishes.
+    ({ config, lib, ... }: {
+      systemd.services."home-manager-${effectiveUsername}".before = lib.mkIf (!config.angst.isQemuVm) [
         "getty@.service"
         "serial-getty@.service"
       ];
-    }
+    })
   ]
   ++ builtins.attrValues capabilities
   ++ domainNixosModules;

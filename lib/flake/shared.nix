@@ -49,7 +49,7 @@ let
   # Lightweight vm-run shim that defers host resolution to runtime via nix,
   # avoiding the allHostVms → nixosConfigurations evaluation recursion.
   vmRunShim = pkgs.writeShellScriptBin "vm-run" ''
-    TARGET_HOST="''${NIX_TARGET_HOST:-}"
+    TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
     FLAKE_DIR="''${ANGST_REPO:-$PWD}"
     if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/user.env" ]; then
       ENV_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
@@ -57,7 +57,6 @@ let
         TARGET_HOST="$ENV_HOST"
       fi
     fi
-    TARGET_HOST="''${TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
     KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
     KEY_FILE="$KEY_DIR/authorized_keys"
 
@@ -85,6 +84,7 @@ let
       exit 1
     fi
 
+    export ANGST_REPO="''${ANGST_REPO:-$PWD}"
     HEADLESS=0
     NEW_ARGS=()
     for arg in "$@"; do
@@ -129,7 +129,7 @@ let
     ++ [
       vmOutputs.packages.${system}.default
       resWrapper
-      vmRunShim
+      vmOutputs.packages.${system}.vm-run
     ]
   );
 
@@ -182,7 +182,6 @@ in
     angstCli
     safeBinPath
     devBinPath
-    vmRunShim
     shellWrapped
     shellDevHook
     devEntryScript

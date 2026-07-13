@@ -172,7 +172,8 @@ let
   ++ allToolchainPackages
   ++ (with pkgs; [ openssh qemu cargo rustc rust-analyzer ])
   ++ [
-    vmOutputs.packages.${system}.default
+    vmOutputs.packages.${system}.wrapped
+    vmOutputs.packages.${system}.vm-run
     vmOutputs.packages.${system}.res
   ];
 
@@ -217,8 +218,8 @@ in
       default = self.homeConfigurations."${envUsername}@${envHost}".activationPackage;
       angst = angstCli;
 
-      vm-cli = vmOutputs.packages.${system}.default;
-      vm = vmOutputs.packages.${system}.vm;
+      vm-cli = vmOutputs.packages.${system}.wrapped;
+      vm = vmOutputs.packages.${system}.wrapped;
       vm-run = vmOutputs.packages.${system}.vm-run;
       res = vmOutputs.packages.${system}.res;
 
@@ -243,7 +244,7 @@ in
     ${system} = {
       vm = {
         type = "app";
-        program = "${vmOutputs.packages.${system}.default}/bin/vm";
+        program = "${vmOutputs.packages.${system}.wrapped}/bin/vm";
         meta.description = "Run a test virtual machine environment.";
       };
 

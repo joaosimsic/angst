@@ -1,4 +1,4 @@
-{ userConfig, ... }:
+{ lib, userConfig, ... }:
 
 {
   imports = [
@@ -9,8 +9,8 @@
 
   programs.home-manager.enable = true;
 
-  home.username = userConfig.username;
-  home.homeDirectory = userConfig.homeDirectory;
+  home.username = lib.mkDefault userConfig.username;
+  home.homeDirectory = lib.mkDefault userConfig.homeDirectory;
   home.stateVersion = "24.05";
 
   fonts.fontconfig.enable = true;

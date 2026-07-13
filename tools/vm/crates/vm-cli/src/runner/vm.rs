@@ -1,9 +1,16 @@
+use std::env;
 use std::fmt;
 use std::process::Stdio;
 use std::{path::Path, time::Duration};
 use tokio::{process::Command, time};
 use vm_core::process::io::StateManager;
 use vm_core::{SshEngine, VmConfig, VmProcessController};
+
+fn target_host() -> String {
+    env::var("NIX_TARGET_HOST")
+        .or_else(|_| env::var("NIX_DEFAULT_TARGET_HOST"))
+        .unwrap_or_else(|_| "generic".to_string())
+}
 
 fn kill_stale_qemu(disk: &str) {
     let output = std::process::Command::new("sh")
@@ -176,19 +183,34 @@ pub fn health(ssh: &SshEngine) -> Result<(), String> {
     }
 }
 
+fn detect_display() -> bool {
+    std::env::var_os("DISPLAY").is_some() || std::env::var_os("WAYLAND_DISPLAY").is_some()
+}
+
 pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
-    let disk = "personal.qcow2";
-    kill_stale_qemu(disk);
+    let host = target_host();
+    let disk = format!("{}.qcow2", host);
+    kill_stale_qemu(&disk);
 
-    let disk_exists = Path::new("result/bin/run-personal-vm").exists();
+    // Auto-enable headless when no display server is available
+    let effective_headless = headless || !detect_display();
 
-    if !disk_exists {
+    let runner_path = format!("result/bin/run-{}-vm", host);
+    let runner_exists = Path::new(&runner_path).exists();
+
+    if !runner_exists {
         println!("VM image not found. Building NixOS VM system image on host...");
 
         let build_status = Command::new("nix")
             .args([
                 "build",
-                ".#nixosConfigurations.personal.config.specialisation.vm.configuration.system.build.vm",
+                "--impure",
+                "--refresh",
+                "--no-write-lock-file",
+                &format!(
+                    ".#nixosConfigurations.{}.config.specialisation.vm.configuration.system.build.vm",
+                    host
+                ),
             ])
             .status()
             .await
@@ -199,7 +221,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
         }
     }
 
-    match VmProcessController::start("vm", headless) {
+    match VmProcessController::start("vm", effective_headless) {
         Ok(()) => {}
         Err(e) if e.contains("already running") => {
             if ssh.exec("true").is_ok() {
@@ -216,7 +238,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
 
     println!("VM Started! Validating connection status...");
 
-    for _ in 0..120 {
+    for _ in 0..300 {
         if ssh.exec("true").is_ok() {
             println!("VM was initialized and ready via SSH");
             return Ok(());

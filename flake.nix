@@ -48,12 +48,13 @@
       shellOutputs = shell.mkOutputs self;
 
       domainsLib = import ./lib/domains/default.nix {
-        lib = pkgs.lib;
+        inherit (pkgs) lib;
         domainsPath = ./domains;
       };
       shellEntries = builtins.filter (e: e.category == "shell") domainsLib.homeEntries;
       commonHomeEnables = import ./common/home.nix { };
-      enabledShellEntries = builtins.filter (e:
+      enabledShellEntries = builtins.filter (
+        e:
         (e.meta.interactive or false)
         && pkgs.lib.attrByPath [ "domains" "shell" e.name "enable" ] false commonHomeEnables
       ) shellEntries;
@@ -62,8 +63,14 @@
       );
 
       shared = import ./lib/flake/shared.nix {
-        inherit pkgs shellOutputs vmOutputs system hostShellBinPaths;
-        lib = pkgs.lib;
+        inherit
+          pkgs
+          shellOutputs
+          vmOutputs
+          system
+          hostShellBinPaths
+          ;
+        inherit (pkgs) lib;
         defaultHost = builtins.head hosts;
       };
 
@@ -71,7 +78,7 @@
         env
         // {
           vmTool = vmOutputs.packages.${system}.default;
-          shellTool = shared.shellTool;
+          inherit (shared) shellTool;
           angstTool = shared.angstCli;
         }
       );
@@ -102,23 +109,45 @@
       };
     in
     {
-      nixosConfigurations = let
-        parseEnv = import ./lib/parseEnv.nix { lib = nixpkgs.lib; };
-        envPath = ./user.env;
-        userEnv = (if builtins.pathExists envPath then parseEnv envPath else { }) // (
-          let h = builtins.getEnv "ANGST_HOST"; in if h != "" then { HOST = h; } else {}
-        );
-        configs = nixpkgs.lib.genAttrs
-          (builtins.filter (h: builtins.pathExists (./hosts + "/${h}/configuration.nix")) hosts)
-          mkHost;
-      in
-      configs // {
-        default = let
-          hostname = userEnv.HOST or (builtins.head hosts);
+      nixosConfigurations =
+        let
+          parseEnv = import ./lib/parseEnv.nix { inherit (nixpkgs) lib; };
+          envPath = ./user.env;
+          pwd = builtins.getEnv "PWD";
+          pwdEnvPath = if pwd != "" then pwd + "/user.env" else "";
+          homeEnvPath = builtins.getEnv "HOME" + "/proj/angst/user.env";
+          userEnv =
+            let
+              fromFile =
+                if builtins.pathExists envPath then
+                  parseEnv envPath
+                else if builtins.pathExists homeEnvPath then
+                  parseEnv homeEnvPath
+                else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then
+                  parseEnv pwdEnvPath
+                else
+                  { };
+            in
+            fromFile
+            // (
+              let
+                h = builtins.getEnv "ANGST_HOST";
+              in
+              if h != "" then { HOST = h; } else { }
+            );
+          configs = nixpkgs.lib.genAttrs (builtins.filter (
+            h: builtins.pathExists (./hosts + "/${h}/configuration.nix")
+          ) hosts) mkHost;
         in
-        if configs ? ${hostname} then configs.${hostname}
-        else builtins.throw "HOST '${hostname}' not found. Available: ${builtins.toString (builtins.attrNames configs)}";
-      };
+        configs
+        // {
+          default =
+            let
+              hostname = userEnv.HOST or (builtins.head hosts);
+            in
+            configs.${hostname}
+              or (throw "HOST '${hostname}' not found. Available: ${toString (builtins.attrNames configs)}");
+        };
 
       inherit (flakeLib)
         homeConfigurations
