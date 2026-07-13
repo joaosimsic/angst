@@ -36,10 +36,12 @@
       "video"
       "audio"
     ];
-    initialPassword = lib.mkDefault "changeme";
-    hashedPassword = let envPass = builtins.getEnv "ANGST_PASSWORD"; in
-      lib.mkIf ((userEnv ? PASSWORD && userEnv.PASSWORD != "") || envPass != "")
-      (if envPass != "" then envPass else userEnv.PASSWORD);
+    hashedPassword = lib.mkDefault (
+      let envPass = builtins.getEnv "ANGST_PASSWORD"; in
+      if envPass != "" then envPass
+      else if userEnv ? PASSWORD && userEnv.PASSWORD != "" then userEnv.PASSWORD
+      else null
+    );
     shell = pkgs.nushell;
   };
 

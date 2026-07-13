@@ -37,6 +37,7 @@ let
       pkgs.nix
       pkgs.watchexec
       pkgs.jq
+      pkgs.mkpasswd
     ];
     text = builtins.readFile ../../scripts/angst.sh;
   };
