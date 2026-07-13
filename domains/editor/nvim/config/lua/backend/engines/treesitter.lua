@@ -41,6 +41,7 @@ return {
 			sh = "bash",
 			bash = "bash",
 			typescriptreact = "tsx",
+			conf = "ini",
 		}
 
 		for filetype, grammar in pairs(grammar_mappings) do
