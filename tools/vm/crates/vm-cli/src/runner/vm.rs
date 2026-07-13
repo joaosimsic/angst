@@ -7,21 +7,41 @@ use vm_core::process::io::StateManager;
 use vm_core::{SshEngine, VmConfig, VmProcessController};
 
 fn read_env_value(key: &str) -> Option<String> {
-    let env_path = env::var("ANGST_REPO").ok().map(|p| Path::new(&p).join("user.env"));
-    let cwd_path = env::current_dir().ok().map(|d| d.join("user.env"));
-    for path in [env_path, cwd_path].into_iter().flatten() {
-        if let Ok(content) = std::fs::read_to_string(&path) {
-            for line in content.lines() {
-                let line = line.trim();
-                if let Some(val) = line.strip_prefix(&format!("{}=", key)).map(|v| v.trim()) {
-                    if !val.is_empty() {
-                        return Some(val.to_string());
-                    }
+    let paths = [
+        env::var("ANGST_REPO").ok().map(|p| Path::new(&p).join("user.env")),
+        env::current_dir().ok().map(|d| d.join("user.env")),
+    ];
+    for path in paths.iter().flatten() {
+        if let Some(val) = read_from_env_file(path, key) {
+            return Some(val);
+        }
+    }
+    None
+}
+
+fn read_from_env_file(path: &Path, key: &str) -> Option<String> {
+    let content = std::fs::read_to_string(path).ok()?;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        if let Some((k, v)) = trimmed.split_once('=') {
+            if k.trim() == key {
+                let val = v.trim();
+                if !val.is_empty() {
+                    return Some(strip_quotes(val).to_string());
                 }
             }
         }
     }
     None
+}
+
+fn strip_quotes(s: &str) -> &str {
+    s.strip_prefix('\'').and_then(|s| s.strip_suffix('\''))
+        .or_else(|| s.strip_prefix('"').and_then(|s| s.strip_suffix('"')))
+        .unwrap_or(s)
 }
 
 fn target_host() -> String {

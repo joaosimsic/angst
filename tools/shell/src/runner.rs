@@ -53,6 +53,44 @@ fn setup_treesitter() {
     }
 }
 
+fn read_env_value(key: &str) -> Option<String> {
+    let paths = [
+        env::var("ANGST_REPO").ok().map(|p| Path::new(&p).join("user.env")),
+        env::current_dir().ok().map(|d| d.join("user.env")),
+    ];
+    for path in paths.iter().flatten() {
+        if let Some(val) = read_from_env_file(path, key) {
+            return Some(val);
+        }
+    }
+    None
+}
+
+fn read_from_env_file(path: &Path, key: &str) -> Option<String> {
+    let content = fs::read_to_string(path).ok()?;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        if let Some((k, v)) = trimmed.split_once('=') {
+            if k.trim() == key {
+                let val = v.trim();
+                if !val.is_empty() {
+                    return Some(strip_quotes(val).to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn strip_quotes(s: &str) -> &str {
+    s.strip_prefix('\'').and_then(|s| s.strip_suffix('\''))
+        .or_else(|| s.strip_prefix('"').and_then(|s| s.strip_suffix('"')))
+        .unwrap_or(s)
+}
+
 pub fn enter(mode: super::commands::Commands) -> ! {
     let (path_key, nix_shell) = match mode {
         super::commands::Commands::Dev => ("SHELL_DEV_PATH", "dev"),

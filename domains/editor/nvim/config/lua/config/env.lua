@@ -6,6 +6,12 @@ return {
 	priority = 1001,
 	config = function()
 		vim.filetype.add({ extension = { env = "conf" } })
+		vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+			pattern = { "*.env", ".env", ".env.*" },
+			callback = function(ev)
+				vim.bo[ev.buf].filetype = "conf"
+			end,
+		})
 		vim.opt.equalalways = false
 		vim.opt.tabstop = 4
 		vim.opt.softtabstop = 4
