@@ -14,7 +14,14 @@ nix develop .#safe
 
 ### Dev Shell (`nix develop .#dev`)
 
-Full development environment with everything from safe plus Rust, QEMU, angst CLI, and VM CLI.
+Full development environment with everything from safe plus Rust, QEMU, angst CLI, and VM CLI. The dev shell hook (`shellDevHook` in `/lib/flake/shared.nix`) automatically:
+
+- Sets `NIX_DEFAULT_TARGET_HOST=generic` (VM builds default to the generic host)
+- Sets `VM_SSH_PORT=2222` for consistent port forwarding
+- Sets `CARGO_BUILD_TARGET_DIR=$PWD/target`
+- Initialises the SSH agent if not already running
+- Loads `~/.ssh/id_ed25519` or `~/.ssh/id_rsa` into the agent
+- Defines a `res()` shell function wrapping `nix run --impure --refresh` for fast rebuilds with user env variables
 
 ```bash
 nix develop .#dev
@@ -79,24 +86,48 @@ Note: The first CI run builds the full NixOS closure and takes a while; subseque
 ### Building and Running
 
 ```bash
-# Build VM outputs
+# Build VM outputs (uses user.env HOST or NIX_DEFAULT_TARGET_HOST=generic)
 nix run .#vm
 
-# Run with GUI
+# Run with GUI (auto-collects SSH keys and forwards port 2222)
 nix run .#vm-run
 
-# Run headless (no QEMU window)
+# Run headless (auto-detected when no display server is available)
 nix run .#vm-run -- --headless
 ```
+
+### SSH Key Provisioning
+
+The `vm-run` shim (`/lib/flake/shared.nix`) automatically handles SSH access:
+
+1. **Target resolution**: Reads `NIX_TARGET_HOST` env > `user.env HOST` > `NIX_DEFAULT_TARGET_HOST` > `ANGST_HOST` > `generic`
+2. **Key collection**: Gathers public keys from `ssh-add -L` (SSH agent) and `~/.ssh/*.pub` files
+3. **Validation**: Filters keys matching `ssh-rsa`, `ssh-ed25519`, `ecdsa-sha2-*`, `ssh-dss` formats
+4. **Deduplication**: Writes unique keys to `$XDG_STATE_HOME/vm/keys/$TARGET_HOST/authorized_keys`
+5. **Port forwarding**: Forwards host port 2222 → VM port 22
+6. **Error handling**: Exits with a clear message if no SSH keys are found
+
+### VM Runner (Rust)
+
+The VM CLI (`/tools/vm/crates/vm-cli/src/runner/vm.rs`) manages the full VM lifecycle:
+
+- **`target_host()` priority**: `NIX_TARGET_HOST` env > `user.env HOST` > `NIX_DEFAULT_TARGET_HOST` > `ANGST_HOST` > `"generic"`
+- **`target_username()` priority**: `ANGST_USERNAME` env > `user.env USERNAME` > `VmConfig.ssh_user`
+- **Stale QEMU cleanup**: `kill_stale_qemu()` terminates old QEMU processes for the same disk image before starting a new one
+- **Health check system**: `HealthReport` probes QEMU process existence, PID file, port forwarding (hostfwd), port 2222 reachability, and SSH echo response; surfaced via `vm health`
+- **Headless auto-detection**: When `DISPLAY` and `WAYLAND_DISPLAY` are both unset, enables `--headless` mode automatically
+- **Build step**: Runs `nix build --impure --refresh` with `ANGST_USERNAME` env override
+- **SSH wait loop**: Polls up to 300 seconds for SSH readiness after QEMU starts
 
 ### VM Features
 
 - **9p filesystem mounts** — The angst repo is mounted into the VM at `/host/.../proj/angst`, enabling live editing from inside the VM with changes reflected on the host
 - **SPICE vdagent** — Clipboard copy-paste between host and VM
-- **SSH key injection** — Host SSH public keys are automatically provisioned into the VM
-- **Host config mount** — `/home/joao/.config/angst` is symlinked to the host mount, so config changes inside the VM are saved to the host
-- **Display** — `Virtual-1 1920x1080` with VirtIO GPU and modesetting driver
+- **SSH key injection** — Host SSH public keys are automatically provisioned into the VM via the `vm-run` shim
+- **Host config mount** — `/home/$USER/.config/angst` is symlinked to the host mount, so config changes inside the VM are saved to the host
+- **Display** — `Virtual-1 1920x1080` with VirtIO GPU (virtio-vga) and modesetting driver; GTK display with zoom-to-fit
 - **Specs** — 4 vCPUs, 4 GiB RAM, 16 GB disk
+- **Conditional boot** — The `/boot` partition mount is skipped inside QEMU VMs (`angst.isQemuVm`), since the VM image has its own boot partition
 
 ### MCP Server
 
@@ -159,7 +190,9 @@ cargo test --workspace                                      # Test
 2. Create `hosts/<name>/configuration.nix` for NixOS config
 3. Create `hosts/<name>/hardware.nix` for hardware-specific config
 4. Create `hosts/<name>/home.nix` enabling desired domains
-5. The host is auto-discovered by `scanHosts.nix`
+5. Optionally create `hosts/<name>/user.nix` for a dedicated user definition
+6. The host is auto-discovered by `scanHosts.nix`
+7. Set `HOST=<name>` in your `user.env` to make it the active target for VM and dev shell commands
 
 ### Adding a new domain
 1. Create `domains/<category>/<name>/meta.nix` with package metadata

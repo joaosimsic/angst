@@ -157,7 +157,7 @@ Creates home-manager activation scripts that symlink the domain's `config/` dire
 
 ## Toolchains
 
-Toolchains (`/toolchains/`) provide declarative language development environments:
+Toolchains (`/toolchains/`) provide declarative language development environments. Each toolchain defines the runtime, LSP server, linter, formatter, and tree-sitter grammar for a language — all managed by Nix and automatically included in dev shells and home-manager profiles.
 
 ```
 toolchains/
@@ -165,6 +165,7 @@ toolchains/
 ├── bash.nix
 ├── blade.nix
 ├── c.nix
+├── conf.nix      # INI/config syntax highlighting (tree-sitter-ini)
 ├── css.nix
 ├── docker.nix
 ├── go.nix
@@ -178,6 +179,7 @@ toolchains/
 ├── python.nix
 ├── rust.nix
 ├── terraform.nix
+├── toml.nix      # TOML support (taplo formatter + tree-sitter-toml)
 └── xml.nix
 ```
 

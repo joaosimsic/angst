@@ -12,11 +12,12 @@ It manages every layer of the system — from hardware detection and bootloader 
 | `/domains/` | User-space app configs — the unit of configuration |
 | `/themes/` | Color theme definitions (8 themes, strict schema) |
 | `/capabilities/` | Opt-in NixOS system feature modules |
-| `/toolchains/` | Declarative dev language toolchains (17 languages) |
+| `/toolchains/` | Declarative dev language toolchains (19 languages) |
 | `/tools/` | Rust CLI tools: `shell` (dev shell entry), `vm` (QEMU lifecycle) |
-| `/lib/` | Build system, domain framework, theme linting, flake plumbing |
+| `/lib/` | Build system, domain framework, theme linting, flake plumbing, env parsing |
 | `/common/` | Shared config fragments (user, capabilities, home imports) |
-| `/scripts/` | Auxiliary shell scripts (repo seeding) |
+| `/scripts/` | Auxiliary shell scripts (repo seeding, password hashing) |
+| `/user.env.example` | Template for per-host runtime overrides (host, username, theme, password) |
 | `/docs/` | Additional documentation (checks, VM usage) |
 
 ## Key Concepts
@@ -24,8 +25,9 @@ It manages every layer of the system — from hardware detection and bootloader 
 - **Domains** — The unit of user-space configuration. Each `domains/<category>/<name>/` describes one application with `meta.nix` (package info), `render.nix` (theme-aware config generator), and optionally `module.nix`, `config/` directory, and `nixos.nix`.
 - **Themes** — A compact color token system (palette + ansi) with 13 tokens. All 8 themes are validated at build time.
 - **Capabilities** — Opt-in NixOS modules auto-discovered from `/capabilities/`. System-level analogue of domains.
-- **Hosts** — Pure-data machine descriptors in `/hosts/<name>/`. Each defines system arch, theme, user info, monitors. No logic.
-- **Toolchains** — Declarative language environment definitions (runtime, LSP, formatter, linter, tree-sitter grammar).
+- **Hosts** — Pure-data machine descriptors in `/hosts/<name>/`. Each defines system arch, theme, user info, monitors. No logic. The `generic` host serves as the default fallback.
+- **Toolchains** — Declarative language environment definitions (runtime, LSP, formatter, linter, tree-sitter grammar). 19 toolchains for languages from bash to rust.
+- **User Env** — A `user.env` file at the repo root provides runtime overrides for host, username, theme, and password without modifying Nix files. Parsed at build time by `lib/parseEnv.nix` and at runtime by the Rust CLI tools.
 - **Hot-reload** — The `angst render`/`angst watch` CLI regenerates theme-rendered configs without a full Nix rebuild.
 
 ## Getting Started
@@ -88,6 +90,7 @@ nix run .#lint-shell
 | Host | Type | Theme | Config |
 |------|------|-------|--------|
 | `personal` | Physical workstation (AMD, dual monitor, i3) | github | `/hosts/personal/` |
+| `generic` | Default/fallback (used in VMs, CI, or generic hardware) | monochrome | `/hosts/generic/` |
 | `ssh` | Headless server (SSH-only) | miasma | `/hosts/ssh/` |
 
 ## Quick Links
