@@ -104,7 +104,7 @@ let
     export SHARED_DIR="$KEY_DIR"
     export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
 
-    exec nix run "path:$FLAKE_DIR#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" -- "''${NEW_ARGS[@]}"
+    exec nix run "git+file://$FLAKE_DIR#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" -- "''${NEW_ARGS[@]}"
   '';
 
   
@@ -119,7 +119,7 @@ let
       export ANGST_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
       export ANGST_PASSWORD="$(grep "^PASSWORD=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
     fi
-    exec nix run "path:$(pwd)#res" --impure --refresh -- "$@"
+    cd "$FLAKE_DIR" && exec nix run ".#res" --impure --refresh -- "$@"
   '';
 
   devBinPath = pkgs.lib.makeBinPath (
@@ -151,7 +151,7 @@ let
     fi
 
     # res on PATH always evaluates fresh via nix run --impure --refresh
-    res() { nix run "path:''${ANGST_REPO:-$PWD}#res" --impure --refresh -- "$@"; }
+    res() { nix run "git+file://''${ANGST_REPO:-$PWD}#res" --impure --refresh -- "$@"; }
   '';
 
   devEntryScript = pkgs.writeShellScript "shell-dev-entry" ''

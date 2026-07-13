@@ -184,6 +184,7 @@
               fi
 
               echo "Building VM for host '$TARGET_HOST' (user: $SSH_USER)..."
+              git -C "$FLAKE_DIR" update-index -q --refresh 2>/dev/null || true
               nix build ".#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --impure --refresh --no-write-lock-file 2>&1
 
               RUNNER="result/bin/run-$TARGET_HOST-vm"
