@@ -6,10 +6,52 @@ use tokio::{process::Command, time};
 use vm_core::process::io::StateManager;
 use vm_core::{SshEngine, VmConfig, VmProcessController};
 
+fn read_env_value(key: &str) -> Option<String> {
+    let env_path = env::var("ANGST_REPO").ok().map(|p| Path::new(&p).join("user.env"));
+    let cwd_path = env::current_dir().ok().map(|d| d.join("user.env"));
+    for path in [env_path, cwd_path].into_iter().flatten() {
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            for line in content.lines() {
+                let line = line.trim();
+                if let Some(val) = line.strip_prefix(&format!("{}=", key)).map(|v| v.trim()) {
+                    if !val.is_empty() {
+                        return Some(val.to_string());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 fn target_host() -> String {
-    env::var("NIX_TARGET_HOST")
-        .or_else(|_| env::var("NIX_DEFAULT_TARGET_HOST"))
+    if let Ok(host) = env::var("NIX_TARGET_HOST") {
+        if !host.is_empty() {
+            return host;
+        }
+    }
+
+    if let Some(host) = read_env_value("HOST") {
+        return host;
+    }
+
+    env::var("NIX_DEFAULT_TARGET_HOST")
+        .or_else(|_| env::var("ANGST_HOST"))
         .unwrap_or_else(|_| "generic".to_string())
+}
+
+fn target_username() -> String {
+    if let Ok(user) = env::var("ANGST_USERNAME") {
+        if !user.is_empty() {
+            return user;
+        }
+    }
+
+    if let Some(user) = read_env_value("USERNAME") {
+        return user;
+    }
+
+    VmConfig::load().ssh_user
 }
 
 fn kill_stale_qemu(disk: &str) {
@@ -201,6 +243,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
     if !runner_exists {
         println!("VM image not found. Building NixOS VM system image on host...");
 
+        let username = target_username();
         let build_status = Command::new("nix")
             .args([
                 "build",
@@ -212,6 +255,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
                     host
                 ),
             ])
+            .env("ANGST_USERNAME", &username)
             .status()
             .await
             .map_err(|e| format!("Failed to run nix build: {}", e))?;

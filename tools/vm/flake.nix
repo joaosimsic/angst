@@ -87,7 +87,7 @@
             );
 
             vm-run-script = pkgs.writeShellScriptBin "vm-run" ''
-              TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
+              TARGET_HOST="''${NIX_TARGET_HOST:-}"
               FLAKE_DIR="''${ANGST_REPO:-$PWD}"
               if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/user.env" ]; then
                 ENV_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
@@ -95,7 +95,7 @@
                   TARGET_HOST="$ENV_HOST"
                 fi
               fi
-              TARGET_HOST="''${TARGET_HOST:-''${ANGST_HOST:-}}"
+              TARGET_HOST="''${TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-''${ANGST_HOST:-${defaultHost}}}}"
               KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
               KEY_FILE="$KEY_DIR/authorized_keys"
 
@@ -147,7 +147,7 @@
             '';
 
             res-script = pkgs.writeShellScriptBin "res" ''
-              TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
+              TARGET_HOST="''${NIX_TARGET_HOST:-}"
               FLAKE_DIR="''${ANGST_REPO:-$(pwd)}"
               if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/user.env" ]; then
                 ENV_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
@@ -155,7 +155,7 @@
                   TARGET_HOST="$ENV_HOST"
                 fi
               fi
-              TARGET_HOST="''${TARGET_HOST:-''${ANGST_HOST:-}}"
+              TARGET_HOST="''${TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-''${ANGST_HOST:-${defaultHost}}}}"
               SSH_PORT="''${VM_SSH_PORT:-2222}"
 
               get_host_user() {
