@@ -17,6 +17,25 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+local env_augroup = vim.api.nvim_create_augroup("AngstEnvFiletype", { clear = true })
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+	group = env_augroup,
+	pattern = { "*.env", ".env", ".env.*" },
+	callback = function(ev)
+		vim.bo[ev.buf].filetype = "conf"
+	end,
+})
+vim.api.nvim_create_autocmd("FileType", {
+	group = env_augroup,
+	pattern = "sh",
+	callback = function(ev)
+		local name = vim.api.nvim_buf_get_name(ev.buf)
+		if name:match("%.env") then
+			vim.bo[ev.buf].filetype = "conf"
+		end
+	end,
+})
+
 require("lazy").setup({
 	lockfile = vim.fn.stdpath("data") .. "/lazy-lock.json",
 	defaults = {

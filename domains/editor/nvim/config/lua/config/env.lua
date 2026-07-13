@@ -5,6 +5,7 @@ return {
 	lazy = false,
 	priority = 1001,
 	config = function()
+		vim.filetype.add({ extension = { env = "conf" } })
 		vim.opt.equalalways = false
 		vim.opt.tabstop = 4
 		vim.opt.softtabstop = 4

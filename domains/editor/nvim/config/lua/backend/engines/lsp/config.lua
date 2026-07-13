@@ -60,18 +60,30 @@ M.setup = function(logger)
 	capabilities.experimental = capabilities.experimental or {}
 	capabilities.experimental.serverStatusNotification = true
 
+	local function is_env_file(bufnr)
+		local name = vim.api.nvim_buf_get_name(bufnr)
+		return name:match("%.env") ~= nil
+	end
+
 	local all_servers = AdapterScanner:by_tool("lsp")
 	local bufnr = vim.api.nvim_get_current_buf()
 	local ft = vim.bo[bufnr].filetype
 
-	for server_name, _ in pairs(all_servers) do
-		enable_for_filetype(server_name, all_servers, capabilities, ft, logger)
+	if not is_env_file(bufnr) then
+		for server_name, _ in pairs(all_servers) do
+			enable_for_filetype(server_name, all_servers, capabilities, ft, logger)
+		end
 	end
 
 	local group = vim.api.nvim_create_augroup("LspDynamicEnable", { clear = true })
+
 	vim.api.nvim_create_autocmd("FileType", {
 		group = group,
 		callback = function(event)
+			if is_env_file(event.buf) then
+				return
+			end
+
 			local new_ft = vim.bo[event.buf].filetype
 			if not new_ft or new_ft == "" then
 				return
