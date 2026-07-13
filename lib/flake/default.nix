@@ -15,6 +15,15 @@
 let
   testHostname = builtins.head hosts;
 
+  parseEnvFile = import ../parseEnv.nix { inherit lib; };
+  envPath = ../../user.env;
+  userEnv = (if builtins.pathExists envPath then parseEnvFile envPath else { }) // (
+    let h = builtins.getEnv "ANGST_HOST"; u = builtins.getEnv "ANGST_USERNAME"; in
+    (if h != "" then { HOST = h; } else {}) // (if u != "" then { USERNAME = u; } else {})
+  );
+  envHost = userEnv.HOST or testHostname;
+  envUsername = userEnv.USERNAME or (loadHost testHostname).user.username;
+
   domainsLib = import ../domains/default.nix {
     inherit lib;
     domainsPath = ../../domains;
@@ -197,7 +206,7 @@ in
 
   packages = {
     ${system} = {
-      default = self.homeConfigurations."${firstHostUser}@${testHostname}".activationPackage;
+      default = self.homeConfigurations."${envUsername}@${envHost}".activationPackage;
       angst = angstCli;
 
       vm-cli = vmOutputs.packages.${system}.default;
@@ -298,14 +307,14 @@ in
 
       ssh =
         let
-          sshHostUser = (loadHost "ssh").user.username;
+          sshHostUser = envUsername;
         in
         {
           type = "app";
           program = "${pkgs.writeShellScript "angst-ssh-deploy" ''
             set -euo pipefail
-            echo "==> Building & activating ${sshHostUser}@ssh..."
-            nix build ${self}#homeConfigurations.${sshHostUser}@ssh.activationPackage --print-build-logs
+            echo "==> Building & activating ${sshHostUser}@${envHost}..."
+            nix build ${self}#homeConfigurations.${sshHostUser}@${envHost}.activationPackage --print-build-logs
             echo "==> Activating..."
             ./result/activate
             echo "==> Cleaning old Nix store..."
@@ -313,7 +322,7 @@ in
             nix store gc
             echo "==> Done."
           ''}";
-          meta.description = "Deploy ssh host config and prune old Nix store entries.";
+          meta.description = "Deploy ${envHost} host config and prune old Nix store entries.";
         };
 
     };

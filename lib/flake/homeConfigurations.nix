@@ -10,6 +10,18 @@
 let
   inherit (themeContext) overrideTheme testHostname;
 
+  parseEnvFile = import ../parseEnv.nix { inherit lib; };
+  envPath = ../../user.env;
+  userEnv = (if builtins.pathExists envPath then parseEnvFile envPath else { }) // (
+    let u = builtins.getEnv "ANGST_USERNAME"; in if u != "" then { USERNAME = u; } else {}
+  );
+
+  effectiveUsername =
+    h:
+    let envUser = builtins.getEnv "ANGST_USERNAME"; in
+    if envUser != "" then envUser
+    else userEnv.USERNAME or (loadHost h).user.username;
+
   perHost = lib.listToAttrs (
     map (
       h:
@@ -17,16 +29,18 @@ let
         user = (loadHost h).user;
       in
       {
-        name = "${user.username}@${h}";
+        name = "${effectiveUsername h}@${h}";
         value = mkHome h;
       }
     ) hosts
   );
+
+  testUser = effectiveUsername testHostname;
 in
 perHost
 // {
-  "${(loadHost testHostname).user.username}" = mkHome testHostname;
-  "${(loadHost testHostname).user.username}-theme-override-test" =
+  "${testUser}" = mkHome testHostname;
+  "${testUser}-theme-override-test" =
     mkHomeWithExtraModules testHostname
       [
         { theme = overrideTheme; }

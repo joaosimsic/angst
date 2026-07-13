@@ -102,9 +102,23 @@
       };
     in
     {
-      nixosConfigurations = nixpkgs.lib.genAttrs
-        (builtins.filter (h: builtins.pathExists (./hosts + "/${h}/configuration.nix")) hosts)
-        mkHost;
+      nixosConfigurations = let
+        parseEnv = import ./lib/parseEnv.nix { lib = nixpkgs.lib; };
+        envPath = ./user.env;
+        userEnv = (if builtins.pathExists envPath then parseEnv envPath else { }) // (
+          let h = builtins.getEnv "ANGST_HOST"; in if h != "" then { HOST = h; } else {}
+        );
+        configs = nixpkgs.lib.genAttrs
+          (builtins.filter (h: builtins.pathExists (./hosts + "/${h}/configuration.nix")) hosts)
+          mkHost;
+      in
+      configs // {
+        default = let
+          hostname = userEnv.HOST or (builtins.head hosts);
+        in
+        if configs ? ${hostname} then configs.${hostname}
+        else builtins.throw "HOST '${hostname}' not found. Available: ${builtins.toString (builtins.attrNames configs)}";
+      };
 
       inherit (flakeLib)
         homeConfigurations

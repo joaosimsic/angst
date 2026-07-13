@@ -88,7 +88,15 @@
             );
 
             vm-run-script = pkgs.writeShellScriptBin "vm-run" ''
-              TARGET_HOST="''${NIX_TARGET_HOST:-${defaultHost}}"
+              TARGET_HOST="''${NIX_TARGET_HOST:-}"
+              FLAKE_DIR="''${ANGST_REPO:-$PWD}"
+              if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/user.env" ]; then
+                ENV_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+                if [ -n "$ENV_HOST" ]; then
+                  TARGET_HOST="$ENV_HOST"
+                fi
+              fi
+              TARGET_HOST="''${TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
               KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
               KEY_FILE="$KEY_DIR/authorized_keys"
 
@@ -145,7 +153,15 @@
             '';
 
             res-script = pkgs.writeShellScriptBin "res" ''
-              TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
+              TARGET_HOST="''${NIX_TARGET_HOST:-}"
+              FLAKE_DIR="''${ANGST_REPO:-$PWD}"
+              if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/user.env" ]; then
+                ENV_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+                if [ -n "$ENV_HOST" ]; then
+                  TARGET_HOST="$ENV_HOST"
+                fi
+              fi
+              TARGET_HOST="''${TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
               SSH_PORT="''${VM_SSH_PORT:-2222}"
 
               get_host_user() {
@@ -157,10 +173,23 @@
                 esac
               }
 
-              SSH_USER="''${VM_SSH_USER:-$(get_host_user "$TARGET_HOST")}"
+              SSH_USER="''${VM_SSH_USER:-}"
+              if [ -z "$SSH_USER" ] && [ -f "$FLAKE_DIR/user.env" ]; then
+                ENV_USER="$(grep "^USERNAME=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+                if [ -n "$ENV_USER" ]; then
+                  SSH_USER="$ENV_USER"
+                fi
+              fi
+              SSH_USER="''${SSH_USER:-$(get_host_user "$TARGET_HOST")}"
+
+              export ANGST_USERNAME="$SSH_USER"
+              if [ -f "$FLAKE_DIR/user.env" ]; then
+                export ANGST_THEME="$(grep "^THEME=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+                export ANGST_PASSWORD="$(grep "^PASSWORD=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+              fi
 
               echo "Building VM for host '$TARGET_HOST' (user: $SSH_USER)..."
-              nix build ".#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --no-write-lock-file 2>&1
+              nix build ".#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --impure --refresh --no-write-lock-file 2>&1
 
               RUNNER="result/bin/run-$TARGET_HOST-vm"
               if [ ! -f "$RUNNER" ]; then

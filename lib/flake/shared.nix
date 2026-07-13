@@ -48,7 +48,15 @@ let
   # Lightweight vm-run shim that defers host resolution to runtime via nix,
   # avoiding the allHostVms → nixosConfigurations evaluation recursion.
   vmRunShim = pkgs.writeShellScriptBin "vm-run" ''
-    TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
+    TARGET_HOST="''${NIX_TARGET_HOST:-}"
+    FLAKE_DIR="''${ANGST_REPO:-$PWD}"
+    if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/user.env" ]; then
+      ENV_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+      if [ -n "$ENV_HOST" ]; then
+        TARGET_HOST="$ENV_HOST"
+      fi
+    fi
+    TARGET_HOST="''${TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
     KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
     KEY_FILE="$KEY_DIR/authorized_keys"
 
@@ -98,13 +106,28 @@ let
     exec nix run "path:$FLAKE_DIR#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" -- "''${NEW_ARGS[@]}"
   '';
 
+  # Thin wrapper that always runs the freshest res from the flake,
+  # bypassing Nix eval cache issues with path-based flake inputs.
+  # Reads user.env at runtime and exports ANGST_* vars so that mkHost.nix
+  # can use builtins.getEnv (with --impure) to read gitignored user.env.
+  resWrapper = pkgs.writeShellScriptBin "res" ''
+    FLAKE_DIR="''${ANGST_REPO:-$PWD}"
+    if [ -f "$FLAKE_DIR/user.env" ]; then
+      export ANGST_USERNAME="$(grep "^USERNAME=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+      export ANGST_THEME="$(grep "^THEME=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+      export ANGST_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+      export ANGST_PASSWORD="$(grep "^PASSWORD=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+    fi
+    exec nix run "path:$PWD#res" --impure --refresh -- "$@"
+  '';
+
   devBinPath = pkgs.lib.makeBinPath (
     [ pkgs.neovim pkgs.git angstCli ]
     ++ allToolchainPackages
     ++ (with pkgs; [ openssh qemu cargo rustc rust-analyzer ])
     ++ [
       vmOutputs.packages.${system}.default
-      vmOutputs.packages.${system}.res
+      resWrapper
       vmRunShim
     ]
   );
@@ -126,7 +149,8 @@ let
       ssh-add "$HOME/.ssh/id_rsa" 2>/dev/null
     fi
 
-    # res available as a command on PATH via devBinPath
+    # res on PATH always evaluates fresh via nix run --impure --refresh
+    res() { nix run "path:''${ANGST_REPO:-$PWD}#res" --impure --refresh -- "$@"; }
   '';
 
   devEntryScript = pkgs.writeShellScript "shell-dev-entry" ''

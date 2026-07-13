@@ -6,6 +6,15 @@ Usage:
 EOF
 }
 
+env_default() {
+  local repo_root="$1"
+  local key="$2"
+  local env_file="$repo_root/user.env"
+  if [ -f "$env_file" ]; then
+    grep "^${key}=" "$env_file" | tail -1 | cut -d= -f2- || true
+  fi
+}
+
 repo_root_default() {
   if [ -n "${ANGST_REPO:-}" ]; then
     printf '%s\n' "$ANGST_REPO"
@@ -52,7 +61,11 @@ repo_root_default() {
 theme_default() {
   local repo_root="$1"
   local host_name="$2"
-  if [ -n "${ANGST_THEME:-}" ]; then
+  local env_val
+  env_val="$(env_default "$repo_root" "THEME")"
+  if [ -n "$env_val" ]; then
+    printf '%s\n' "$env_val"
+  elif [ -n "${ANGST_THEME:-}" ]; then
     printf '%s\n' "$ANGST_THEME"
   else
     nix eval --impure --raw --expr "let host = import ${repo_root}/hosts/${host_name}; in builtins.toString (host.theme or \"monochrome\")"
@@ -68,7 +81,9 @@ reload_hooks() {
 render_cmd() {
   local repo_root
   repo_root="$(repo_root_default)"
-  local host_name="${ANGST_HOST:-personal}"
+  local host_name
+  host_name="$(env_default "$repo_root" "HOST")"
+  host_name="${host_name:-${ANGST_HOST:-personal}}"
   local theme_name=""
   local should_reload=1
 
@@ -163,7 +178,9 @@ render_cmd() {
 watch_cmd() {
   local repo_root
   repo_root="$(repo_root_default)"
-  local host_name="${ANGST_HOST:-personal}"
+  local host_name
+  host_name="$(env_default "$repo_root" "HOST")"
+  host_name="${host_name:-${ANGST_HOST:-personal}}"
   local theme_name="${ANGST_THEME:-}"
 
   while [ "$#" -gt 0 ]; do

@@ -1,8 +1,6 @@
 {
   system = "x86_64-linux";
 
-  theme = "github";
-
   repoPath = "proj/angst";
 
   user = import ../../common/user.nix;
