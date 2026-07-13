@@ -2,11 +2,12 @@
   lib,
   flakeSelf ? null,
   userConfig ? null,
+  repoPath ? "proj/angst",
   ...
 }:
 
 let
-  isQemuVm = import ./is-qemu-vm.nix { inherit lib flakeSelf userConfig; };
+  isQemuVm = import ./is-qemu-vm.nix { inherit lib flakeSelf userConfig repoPath; };
 in
 {
   options.angst.isQemuVm = lib.mkOption {

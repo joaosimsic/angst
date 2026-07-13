@@ -10,9 +10,23 @@ impl VmConfig {
     pub fn load() -> Self {
         Self {
             ssh_port: var("VM_SSH_PORT").unwrap_or_else(|_| "2222".to_string()),
-            ssh_user: var("VM_SSH_USER").unwrap_or_else(|_| "joao".to_string()),
+            ssh_user: Self::resolve_username(),
             default_host: var("NIX_DEFAULT_TARGET_HOST").unwrap_or_else(|_| "personal".to_string()),
         }
+    }
+
+    fn resolve_username() -> String {
+        if let Ok(user) = var("VM_SSH_USER") {
+            if !user.is_empty() {
+                return user;
+            }
+        }
+        if let Ok(user) = var("ANGST_USERNAME") {
+            if !user.is_empty() {
+                return user;
+            }
+        }
+        "joao".to_string()
     }
 }
 
@@ -29,6 +43,7 @@ mod tests {
         unsafe {
             std::env::remove_var("VM_SSH_PORT");
             std::env::remove_var("VM_SSH_USER");
+            std::env::remove_var("ANGST_USERNAME");
             std::env::remove_var("NIX_DEFAULT_TARGET_HOST");
         }
 

@@ -9,6 +9,26 @@
 hostname:
 let
   hostConfig = loadHost hostname;
+
+  parseEnv = import ../parseEnv.nix { lib = inputs.nixpkgs.lib; };
+  envPath = ../../user.env;
+  userEnv = if builtins.pathExists envPath then parseEnv envPath else { };
+
+  effectiveUsername = let
+    envUser = builtins.getEnv "ANGST_USERNAME";
+  in
+    if envUser != "" then envUser
+    else userEnv.USERNAME or hostConfig.user.username;
+  effectiveUserConfig = hostConfig.user // {
+    username = effectiveUsername;
+    homeDirectory = "/home/${effectiveUsername}";
+  };
+  effectiveTheme = let
+    envTheme = builtins.getEnv "ANGST_THEME";
+  in
+    if envTheme != "" then envTheme
+    else userEnv.THEME or hostConfig.theme or "monochrome";
+
   capabilities = import ../../capabilities { };
   profile = mkHomeProfile hostname;
 
@@ -25,13 +45,16 @@ inputs.nixpkgs.lib.nixosSystem {
       hostname
       capabilities
       flakeSelf
+      userEnv
       ;
 
-    userConfig = hostConfig.user;
+    userConfig = effectiveUserConfig;
 
     monitors = hostConfig.monitors or { };
 
-    theme = hostConfig.theme or "monochrome";
+    theme = effectiveTheme;
+
+    repoPath = hostConfig.repoPath or "proj/angst";
   };
 
   modules = [
@@ -44,15 +67,19 @@ inputs.nixpkgs.lib.nixosSystem {
       home-manager.useUserPackages = true;
       home-manager.backupFileExtension = "hm-backup";
       home-manager.extraSpecialArgs = profile.extraSpecialArgs;
-      home-manager.users.${hostConfig.user.username} = {
+      home-manager.users.${effectiveUsername} = {
         imports = profile.modules;
       };
+    }
 
-      systemd.services."home-manager-${hostConfig.user.username}".before = [
+    
+    
+    ({ config, lib, ... }: {
+      systemd.services."home-manager-${effectiveUsername}".before = lib.mkIf (!config.angst.isQemuVm) [
         "getty@.service"
         "serial-getty@.service"
       ];
-    }
+    })
   ]
   ++ builtins.attrValues capabilities
   ++ domainNixosModules;

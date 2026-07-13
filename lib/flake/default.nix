@@ -13,6 +13,25 @@
 }:
 
 let
+  testHostname = builtins.head hosts;
+
+  parseEnvFile = import ../parseEnv.nix { inherit lib; };
+  envPath = ../../user.env;
+  pwd = builtins.getEnv "PWD";
+  pwdEnvPath = if pwd != "" then pwd + "/user.env" else "";
+  homeEnvPath = builtins.getEnv "HOME" + "/proj/angst/user.env";
+  userEnv = let
+    fromFile = if builtins.pathExists envPath then parseEnvFile envPath
+      else if builtins.pathExists homeEnvPath then parseEnvFile homeEnvPath
+      else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then parseEnvFile pwdEnvPath
+      else { };
+  in fromFile // (
+    let h = builtins.getEnv "ANGST_HOST"; u = builtins.getEnv "ANGST_USERNAME"; in
+    (if h != "" then { HOST = h; } else {}) // (if u != "" then { USERNAME = u; } else {})
+  );
+  envHost = userEnv.HOST or testHostname;
+  envUsername = userEnv.USERNAME or (loadHost testHostname).user.username;
+
   domainsLib = import ../domains/default.nix {
     inherit lib;
     domainsPath = ../../domains;
@@ -65,11 +84,11 @@ let
       (builtins.head matches).text;
 
   themeContext = import ../checks/theme/context.nix {
-    inherit loadHost themesLib lib;
+    inherit loadHost themesLib lib testHostname;
   };
 
   themeLint = import ../checks/theme {
-    inherit lib themesLib renderDomainOutputsFor;
+    inherit lib themesLib renderDomainOutputsFor testHostname;
   };
 
   lintDesktop = import ../checks/desktop.nix {
@@ -78,6 +97,7 @@ let
       pkgs
       themesLib
       renderDomainOutputFor
+      testHostname
       ;
   };
 
@@ -87,6 +107,7 @@ let
       pkgs
       themesLib
       renderDomainOutputFor
+      testHostname
       ;
   };
 
@@ -96,6 +117,7 @@ let
       pkgs
       themesLib
       renderDomainOutputsFor
+      testHostname
       ;
     themeName = themeContext.hostTheme;
   };
@@ -123,6 +145,8 @@ let
       lintShell
       themeRenderedChecks
       renderDomainOutputFor
+      testHostname
+      loadHost
       ;
   };
 
@@ -148,7 +172,8 @@ let
   ++ allToolchainPackages
   ++ (with pkgs; [ openssh qemu cargo rustc rust-analyzer ])
   ++ [
-    vmOutputs.packages.${system}.default
+    vmOutputs.packages.${system}.wrapped
+    vmOutputs.packages.${system}.vm-run
     vmOutputs.packages.${system}.res
   ];
 
@@ -170,6 +195,7 @@ let
       '';
     };
   };
+  firstHostUser = (loadHost testHostname).user.username;
 in
 {
   inherit
@@ -189,11 +215,11 @@ in
 
   packages = {
     ${system} = {
-      default = self.homeConfigurations.joao.activationPackage;
+      default = self.homeConfigurations."${envUsername}@${envHost}".activationPackage;
       angst = angstCli;
 
-      vm-cli = vmOutputs.packages.${system}.default;
-      vm = vmOutputs.packages.${system}.vm;
+      vm-cli = vmOutputs.packages.${system}.wrapped;
+      vm = vmOutputs.packages.${system}.wrapped;
       vm-run = vmOutputs.packages.${system}.vm-run;
       res = vmOutputs.packages.${system}.res;
 
@@ -218,7 +244,7 @@ in
     ${system} = {
       vm = {
         type = "app";
-        program = "${vmOutputs.packages.${system}.default}/bin/vm";
+        program = "${vmOutputs.packages.${system}.wrapped}/bin/vm";
         meta.description = "Run a test virtual machine environment.";
       };
 
@@ -288,21 +314,25 @@ in
         meta.description = "Lint shell script configuration profiles.";
       };
 
-      ssh = {
-        type = "app";
-        program = "${pkgs.writeShellScript "angst-ssh-deploy" ''
-          set -euo pipefail
-          echo "==> Building & activating joao@ssh..."
-          nix build ${self}#homeConfigurations.joao@ssh.activationPackage --print-build-logs
-          echo "==> Activating..."
-          ./result/activate
-          echo "==> Cleaning old Nix store..."
-          nix-collect-garbage -d
-          nix store gc
-          echo "==> Done."
-        ''}";
-        meta.description = "Deploy ssh host config and prune old Nix store entries.";
-      };
+      ssh =
+        let
+          sshHostUser = envUsername;
+        in
+        {
+          type = "app";
+          program = "${pkgs.writeShellScript "angst-ssh-deploy" ''
+            set -euo pipefail
+            echo "==> Building & activating ${sshHostUser}@${envHost}..."
+            nix build ${self}#homeConfigurations.${sshHostUser}@${envHost}.activationPackage --print-build-logs
+            echo "==> Activating..."
+            ./result/activate
+            echo "==> Cleaning old Nix store..."
+            nix-collect-garbage -d
+            nix store gc
+            echo "==> Done."
+          ''}";
+          meta.description = "Deploy ${envHost} host config and prune old Nix store entries.";
+        };
 
     };
   };

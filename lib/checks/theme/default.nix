@@ -2,6 +2,7 @@
   lib,
   themesLib,
   renderDomainOutputsFor,
+  testHostname,
 }:
 
 let
@@ -13,7 +14,7 @@ let
     map (
       themeName:
       map (output: "  ${output.path} render + ${themeName}: ok") (
-        renderDomainOutputsFor "personal" themeName
+        renderDomainOutputsFor testHostname themeName
       )
     ) themeNames
   );

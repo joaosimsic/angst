@@ -3,6 +3,7 @@
   pkgs,
   themesLib,
   renderDomainOutputFor,
+  testHostname,
 }:
 
 let
@@ -10,8 +11,8 @@ let
 
   renderForTheme = themeName: {
     inherit themeName;
-    i3Config = renderDomainOutputFor "personal" themeName "domains/wm/i3/config/config";
-    i3statusConfig = renderDomainOutputFor "personal" themeName "domains/bar/i3status/config/config";
+    i3Config = renderDomainOutputFor testHostname themeName "domains/wm/i3/config/config";
+    i3statusConfig = renderDomainOutputFor testHostname themeName "domains/bar/i3status/config/config";
   };
 
   rendered = map renderForTheme themeNames;

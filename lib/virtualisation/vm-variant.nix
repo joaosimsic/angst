@@ -1,4 +1,4 @@
-{ lib, userConfig, ... }:
+{ lib, userConfig, repoPath, ... }:
 
 {
   virtualisation.vmVariant = {
@@ -17,8 +17,8 @@
     ];
 
     virtualisation.sharedDirectories.angst = {
-      source = "${userConfig.homeDirectory}/proj/angst";
-      target = "/host${userConfig.homeDirectory}/proj/angst";
+      source = "\${ANGST_REPO:-$PWD}";
+      target = "/host${userConfig.homeDirectory}/${repoPath}";
       securityModel = "none";
     };
   };

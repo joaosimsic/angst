@@ -14,6 +14,16 @@ let
     let
       hostConfig = loadHost hostname;
 
+      parseEnv = import ../parseEnv.nix { inherit (inputs.nixpkgs) lib; };
+      envPath = ../../user.env;
+      pwd = builtins.getEnv "PWD";
+      pwdEnvPath = if pwd != "" then pwd + "/user.env" else "";
+      homeEnvPath = builtins.getEnv "HOME" + "/proj/angst/user.env";
+      userEnv = if builtins.pathExists envPath then parseEnv envPath
+        else if builtins.pathExists homeEnvPath then parseEnv homeEnvPath
+        else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then parseEnv pwdEnvPath
+        else { };
+
       pkgs = import inputs.nixpkgs {
         system = hostConfig.system;
         config.allowUnfree = true;
@@ -21,8 +31,22 @@ let
 
       inherit (pkgs) lib;
 
+      effectiveUsername = let
+        envUser = builtins.getEnv "ANGST_USERNAME";
+      in
+        if envUser != "" then envUser
+        else userEnv.USERNAME or hostConfig.user.username;
+      effectiveUserConfig = hostConfig.user // {
+        username = effectiveUsername;
+        homeDirectory = "/home/${effectiveUsername}";
+      };
+
       themesLib = import ../../themes/default.nix { inherit lib; };
-      hostTheme = hostConfig.theme or themesLib.default;
+      hostTheme = let
+        envTheme = builtins.getEnv "ANGST_THEME";
+      in
+        if envTheme != "" then envTheme
+        else userEnv.THEME or hostConfig.theme or themesLib.default;
 
       domainsPath = ../../domains;
       domainsLib = import ../domains/default.nix { inherit lib domainsPath; };
@@ -38,9 +62,11 @@ let
           flakeSelf
           themesLib
           hostTheme
+          userEnv
           ;
-        userConfig = hostConfig.user;
+        userConfig = effectiveUserConfig;
         monitors = hostConfig.monitors or { };
+        repoPath = hostConfig.repoPath or "proj/angst";
       };
 
       modules = [

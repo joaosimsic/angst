@@ -5,6 +5,7 @@
   vmOutputs,
   system,
   hostShellBinPaths ? "",
+  defaultHost ? "generic",
 }:
 
 let
@@ -36,6 +37,7 @@ let
       pkgs.nix
       pkgs.watchexec
       pkgs.jq
+      pkgs.mkpasswd
     ];
     text = builtins.readFile ../../scripts/angst.sh;
   };
@@ -44,10 +46,17 @@ let
 
   safeBinPath = pkgs.lib.makeBinPath ([ pkgs.neovim pkgs.git ] ++ allToolchainPackages);
 
-  # Lightweight vm-run shim that defers host resolution to runtime via nix,
-  # avoiding the allHostVms → nixosConfigurations evaluation recursion.
+  
+  
   vmRunShim = pkgs.writeShellScriptBin "vm-run" ''
-    TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-personal}}"
+    TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
+    FLAKE_DIR="''${ANGST_REPO:-$PWD}"
+    if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/user.env" ]; then
+      ENV_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+      if [ -n "$ENV_HOST" ]; then
+        TARGET_HOST="$ENV_HOST"
+      fi
+    fi
     KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
     KEY_FILE="$KEY_DIR/authorized_keys"
 
@@ -75,6 +84,7 @@ let
       exit 1
     fi
 
+    export ANGST_REPO="''${ANGST_REPO:-$PWD}"
     HEADLESS=0
     NEW_ARGS=()
     for arg in "$@"; do
@@ -94,7 +104,22 @@ let
     export SHARED_DIR="$KEY_DIR"
     export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
 
-    exec nix run "path:$FLAKE_DIR#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" -- "''${NEW_ARGS[@]}"
+    exec nix run "git+file://$FLAKE_DIR#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" -- "''${NEW_ARGS[@]}"
+  '';
+
+  
+  
+  
+  
+  resWrapper = pkgs.writeShellScriptBin "res" ''
+    FLAKE_DIR="''${ANGST_REPO:-$(pwd)}"
+    if [ -f "$FLAKE_DIR/user.env" ]; then
+      export ANGST_USERNAME="$(grep "^USERNAME=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+      export ANGST_THEME="$(grep "^THEME=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+      export ANGST_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+      export ANGST_PASSWORD="$(grep "^PASSWORD=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+    fi
+    cd "$FLAKE_DIR" && exec nix run ".#res" --impure --refresh -- "$@"
   '';
 
   devBinPath = pkgs.lib.makeBinPath (
@@ -103,15 +128,14 @@ let
     ++ (with pkgs; [ openssh qemu cargo rustc rust-analyzer ])
     ++ [
       vmOutputs.packages.${system}.default
-      vmOutputs.packages.${system}.res
-      vmRunShim
+      resWrapper
+      vmOutputs.packages.${system}.vm-run
     ]
   );
 
   shellDevHook = pkgs.writeText "shell-dev-hook" ''
     export VM_SSH_PORT=2222
-    export VM_SSH_USER=joao
-    export NIX_DEFAULT_TARGET_HOST=personal
+    export NIX_DEFAULT_TARGET_HOST=${defaultHost}
     export CARGO_BUILD_TARGET_DIR="$PWD/target"
 
     if [ -z "$SSH_AUTH_SOCK" ]; then
@@ -126,7 +150,8 @@ let
       ssh-add "$HOME/.ssh/id_rsa" 2>/dev/null
     fi
 
-    # res available as a command on PATH via devBinPath
+    # res on PATH always evaluates fresh via nix run --impure --refresh
+    res() { nix run "git+file://''${ANGST_REPO:-$PWD}#res" --impure --refresh -- "$@"; }
   '';
 
   devEntryScript = pkgs.writeShellScript "shell-dev-entry" ''
@@ -157,7 +182,6 @@ in
     angstCli
     safeBinPath
     devBinPath
-    vmRunShim
     shellWrapped
     shellDevHook
     devEntryScript

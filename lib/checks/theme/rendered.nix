@@ -4,6 +4,7 @@
   themesLib,
   renderDomainOutputsFor,
   themeName,
+  testHostname,
 }:
 
 let
@@ -14,7 +15,7 @@ let
     requireInfix
     ;
 
-  allOutputs = renderDomainOutputsFor "personal" themeName;
+  allOutputs = renderDomainOutputsFor testHostname themeName;
 
   themeChecks = [
     (requireDistinct "palette tokens" [

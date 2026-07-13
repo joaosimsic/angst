@@ -2,6 +2,7 @@
   config,
   lib,
   flakeSelf,
+  repoPath,
   ...
 }:
 
@@ -18,7 +19,7 @@ let
       base != ".git" && base != "result" && !(lib.hasSuffix ".qcow2" base);
   };
 
-  hostSrc = "/host${config.home.homeDirectory}/proj/angst";
+  hostSrc = "/host${config.home.homeDirectory}/${repoPath}";
   angstDst = cfg.sourceDir;
 in
 {
@@ -30,7 +31,8 @@ in
     };
   };
 
-  config = {
+  
+  config = lib.mkIf (!lib.hasPrefix "/host" (toString flakeSelf)) {
     home.activation.seedAngstRepo = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       HOST_SRC=${lib.escapeShellArg hostSrc}
       ANGST_SRC=${lib.escapeShellArg angstSrc}

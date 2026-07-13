@@ -3,6 +3,7 @@
   pkgs,
   themesLib,
   renderDomainOutputFor,
+  testHostname,
 }:
 
 let
@@ -10,8 +11,8 @@ let
 
   renderForTheme = themeName: {
     inherit themeName;
-    starship = renderDomainOutputFor "personal" themeName "domains/shell/starship/config/starship.toml";
-    nushellColors = renderDomainOutputFor "personal" themeName "domains/shell/nushell/config/colors.nu";
+    starship = renderDomainOutputFor testHostname themeName "domains/shell/starship/config/starship.toml";
+    nushellColors = renderDomainOutputFor testHostname themeName "domains/shell/nushell/config/colors.nu";
   };
 
   rendered = map renderForTheme themeNames;

@@ -1,9 +1,78 @@
+use std::env;
 use std::fmt;
 use std::process::Stdio;
 use std::{path::Path, time::Duration};
 use tokio::{process::Command, time};
 use vm_core::process::io::StateManager;
 use vm_core::{SshEngine, VmConfig, VmProcessController};
+
+fn read_env_value(key: &str) -> Option<String> {
+    let paths = [
+        env::var("ANGST_REPO").ok().map(|p| Path::new(&p).join("user.env")),
+        env::current_dir().ok().map(|d| d.join("user.env")),
+    ];
+    for path in paths.iter().flatten() {
+        if let Some(val) = read_from_env_file(path, key) {
+            return Some(val);
+        }
+    }
+    None
+}
+
+fn read_from_env_file(path: &Path, key: &str) -> Option<String> {
+    let content = std::fs::read_to_string(path).ok()?;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        if let Some((k, v)) = trimmed.split_once('=') {
+            if k.trim() == key {
+                let val = v.trim();
+                if !val.is_empty() {
+                    return Some(strip_quotes(val).to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn strip_quotes(s: &str) -> &str {
+    s.strip_prefix('\'').and_then(|s| s.strip_suffix('\''))
+        .or_else(|| s.strip_prefix('"').and_then(|s| s.strip_suffix('"')))
+        .unwrap_or(s)
+}
+
+fn target_host() -> String {
+    if let Ok(host) = env::var("NIX_TARGET_HOST") {
+        if !host.is_empty() {
+            return host;
+        }
+    }
+
+    if let Some(host) = read_env_value("HOST") {
+        return host;
+    }
+
+    env::var("NIX_DEFAULT_TARGET_HOST")
+        .or_else(|_| env::var("ANGST_HOST"))
+        .unwrap_or_else(|_| "generic".to_string())
+}
+
+fn target_username() -> String {
+    if let Ok(user) = env::var("ANGST_USERNAME") {
+        if !user.is_empty() {
+            return user;
+        }
+    }
+
+    if let Some(user) = read_env_value("USERNAME") {
+        return user;
+    }
+
+    VmConfig::load().ssh_user
+}
 
 fn kill_stale_qemu(disk: &str) {
     let output = std::process::Command::new("sh")
@@ -176,20 +245,37 @@ pub fn health(ssh: &SshEngine) -> Result<(), String> {
     }
 }
 
+fn detect_display() -> bool {
+    std::env::var_os("DISPLAY").is_some() || std::env::var_os("WAYLAND_DISPLAY").is_some()
+}
+
 pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
-    let disk = "personal.qcow2";
-    kill_stale_qemu(disk);
+    let host = target_host();
+    let disk = format!("{}.qcow2", host);
+    kill_stale_qemu(&disk);
 
-    let disk_exists = Path::new("result/bin/run-personal-vm").exists();
+    // Auto-enable headless when no display server is available
+    let effective_headless = headless || !detect_display();
 
-    if !disk_exists {
+    let runner_path = format!("result/bin/run-{}-vm", host);
+    let runner_exists = Path::new(&runner_path).exists();
+
+    if !runner_exists {
         println!("VM image not found. Building NixOS VM system image on host...");
 
+        let username = target_username();
         let build_status = Command::new("nix")
             .args([
                 "build",
-                ".#nixosConfigurations.personal.config.specialisation.vm.configuration.system.build.vm",
+                "--impure",
+                "--refresh",
+                "--no-write-lock-file",
+                &format!(
+                    ".#nixosConfigurations.{}.config.specialisation.vm.configuration.system.build.vm",
+                    host
+                ),
             ])
+            .env("ANGST_USERNAME", &username)
             .status()
             .await
             .map_err(|e| format!("Failed to run nix build: {}", e))?;
@@ -199,7 +285,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
         }
     }
 
-    match VmProcessController::start("vm", headless) {
+    match VmProcessController::start("vm", effective_headless) {
         Ok(()) => {}
         Err(e) if e.contains("already running") => {
             if ssh.exec("true").is_ok() {
@@ -216,7 +302,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
 
     println!("VM Started! Validating connection status...");
 
-    for _ in 0..120 {
+    for _ in 0..300 {
         if ssh.exec("true").is_ok() {
             println!("VM was initialized and ready via SSH");
             return Ok(());

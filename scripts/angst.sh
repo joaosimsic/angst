@@ -1,9 +1,19 @@
 usage() {
   cat <<'EOF'
 Usage:
+  angst passwd
   angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
   angst watch  [--repo PATH] [--host HOST] [--theme THEME]
 EOF
+}
+
+env_default() {
+  local repo_root="$1"
+  local key="$2"
+  local env_file="$repo_root/user.env"
+  if [ -f "$env_file" ]; then
+    grep "^${key}=" "$env_file" | tail -1 | cut -d= -f2- || true
+  fi
 }
 
 repo_root_default() {
@@ -52,7 +62,11 @@ repo_root_default() {
 theme_default() {
   local repo_root="$1"
   local host_name="$2"
-  if [ -n "${ANGST_THEME:-}" ]; then
+  local env_val
+  env_val="$(env_default "$repo_root" "THEME")"
+  if [ -n "$env_val" ]; then
+    printf '%s\n' "$env_val"
+  elif [ -n "${ANGST_THEME:-}" ]; then
     printf '%s\n' "$ANGST_THEME"
   else
     nix eval --impure --raw --expr "let host = import ${repo_root}/hosts/${host_name}; in builtins.toString (host.theme or \"monochrome\")"
@@ -65,10 +79,57 @@ reload_hooks() {
   fi
 }
 
+passwd_cmd() {
+  local repo_root
+  repo_root="$(repo_root_default)"
+  local env_file="$repo_root/user.env"
+
+  if [ ! -f "$env_file" ]; then
+    echo "Error: $env_file not found" >&2
+    echo "Copy user.env.example to user.env and set USERNAME and HOST first." >&2
+    return 1
+  fi
+
+  printf "Password: "
+  read -rs password
+  printf "\n"
+
+  if [ -z "$password" ]; then
+    echo "Error: password cannot be empty" >&2
+    return 1
+  fi
+
+  printf "Confirm password: "
+  read -rs password_confirm
+  printf "\n"
+
+  if [ "$password" != "$password_confirm" ]; then
+    echo "Error: passwords do not match" >&2
+    return 1
+  fi
+
+  local hash
+  hash="$(mkpasswd -m sha-512 "$password")" || {
+    echo "Error: failed to hash password (is mkpasswd available?)" >&2
+    return 1
+  }
+  unset password password_confirm
+
+  if grep -q "^PASSWORD=" "$env_file"; then
+    sed -i "s|^PASSWORD=.*|PASSWORD=$hash|" "$env_file"
+  else
+    printf "\nPASSWORD=%s\n" "$hash" >> "$env_file"
+  fi
+
+  echo "Password hashed and written to $env_file"
+}
+
 render_cmd() {
   local repo_root
   repo_root="$(repo_root_default)"
-  local host_name="${ANGST_HOST:-personal}"
+  local host_name
+  host_name="$(env_default "$repo_root" "HOST")"
+  host_name="${host_name:-${ANGST_HOST:-personal}}"
   local theme_name=""
   local should_reload=1
 
@@ -163,7 +224,9 @@ render_cmd() {
 watch_cmd() {
   local repo_root
   repo_root="$(repo_root_default)"
-  local host_name="${ANGST_HOST:-personal}"
+  local host_name
+  host_name="$(env_default "$repo_root" "HOST")"
+  host_name="${host_name:-${ANGST_HOST:-personal}}"
   local theme_name="${ANGST_THEME:-}"
 
   while [ "$#" -gt 0 ]; do
@@ -210,6 +273,9 @@ if [ "$#" -gt 0 ]; then
 fi
 
 case "$command" in
+  passwd)
+    passwd_cmd "$@"
+    ;;
   render)
     render_cmd "$@"
     ;;

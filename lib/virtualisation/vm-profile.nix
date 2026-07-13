@@ -3,13 +3,14 @@
   lib,
   pkgs,
   userConfig,
+  repoPath,
   ...
 }:
 
 let
   cfg = config.angst.isQemuVm;
 
-  hostAngstPath = "/host${userConfig.homeDirectory}/proj/angst";
+  hostAngstPath = "/host${userConfig.homeDirectory}/${repoPath}";
 
   angstCli = pkgs.writeShellApplication {
     name = "angst";
@@ -20,6 +21,7 @@ let
   };
 
   p9Options = [
+    "nofail"
     "trans=virtio"
     "version=9p2000.L"
     "msize=16384"
@@ -85,7 +87,7 @@ in
 
     systemd.services.home-manager-upgrade = {
       description = "Activate latest Home Manager generation not baked into the system closure";
-      after = [ "home-manager-joao.service" ];
+      after = [ "home-manager-${userConfig.username}.service" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
         Type = "oneshot";
@@ -156,14 +158,12 @@ in
     fileSystems.${hostAngstPath} = {
       device = "angst";
       fsType = "9p";
-      neededForBoot = true;
       options = p9Options ++ [ "noatime" ];
     };
 
     fileSystems."/nix/.ro-store" = {
       device = "nix-store";
       fsType = "9p";
-      neededForBoot = true;
       options = p9Options ++ [ "cache=loose" ];
     };
 
@@ -185,14 +185,12 @@ in
     fileSystems."/tmp/shared" = {
       device = "shared";
       fsType = "9p";
-      neededForBoot = true;
       options = p9Options;
     };
 
     fileSystems."/tmp/xchg" = {
       device = "xchg";
       fsType = "9p";
-      neededForBoot = true;
       options = p9Options;
     };
   };

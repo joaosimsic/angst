@@ -9,6 +9,7 @@ let
       category,
       name,
       homeDirectory,
+      repoPath,
     }:
     let
       hasXdg = (meta.xdg or null) != null;
@@ -17,8 +18,8 @@ let
 
       mkXdgScript = xdgName: ''
         # Domain ${category}/${name}: directory symlink
-        if [ -d "/host${homeDirectory}/proj/angst" ]; then
-          CFG_SRC="/host${homeDirectory}/proj/angst"
+        if [ -d "/host${homeDirectory}/${repoPath}" ]; then
+          CFG_SRC="/host${homeDirectory}/${repoPath}"
         else
           CFG_SRC="${homeDirectory}/.config/angst"
         fi
@@ -42,8 +43,8 @@ let
 
       mkXdgFileScript = xdgFile: ''
         # Domain ${category}/${name}: single-file symlink
-        if [ -d "/host${homeDirectory}/proj/angst" ]; then
-          CFG_SRC="/host${homeDirectory}/proj/angst"
+        if [ -d "/host${homeDirectory}/${repoPath}" ]; then
+          CFG_SRC="/host${homeDirectory}/${repoPath}"
         else
           CFG_SRC="${homeDirectory}/.config/angst"
         fi

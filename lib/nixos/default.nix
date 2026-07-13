@@ -2,6 +2,7 @@
   lib,
   pkgs,
   userConfig,
+  userEnv ? {},
   ...
 }:
 
@@ -35,7 +36,12 @@
       "video"
       "audio"
     ];
-    initialPassword = lib.mkDefault "changeme";
+    hashedPassword = lib.mkDefault (
+      let envPass = builtins.getEnv "ANGST_PASSWORD"; in
+      if envPass != "" then envPass
+      else if userEnv ? PASSWORD && userEnv.PASSWORD != "" then userEnv.PASSWORD
+      else null
+    );
     shell = pkgs.nushell;
   };
 
@@ -44,7 +50,7 @@
     pkgs.nushell
   ];
 
-  users.users.root.initialPassword = "changeme";
+  users.users.root.initialPassword = lib.mkDefault "changeme";
 
   programs.nix-ld.enable = true;
 }

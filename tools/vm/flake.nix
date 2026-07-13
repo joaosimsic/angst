@@ -38,7 +38,12 @@
               rustc = rustToolchain;
             };
 
-            defaultHost = "personal";
+            defaultHost = let
+              hostNames = builtins.attrNames (rootFlake.nixosConfigurations or { });
+              realHosts = builtins.filter (n: n != "default") hostNames;
+            in
+              if realHosts != [ ] then builtins.head realHosts
+              else builtins.throw "no hosts defined in nixosConfigurations";
 
             vm-package = rustPlatform.buildRustPackage {
               pname = "vm";
@@ -70,14 +75,27 @@
               };
             };
 
-            allHostVms = builtins.mapAttrs (hostname: configExpr: {
-              toplevel = configExpr.config.specialisation.vm.configuration.system.build.toplevel;
-              runner = configExpr.config.specialisation.vm.configuration.system.build.vm;
-              scriptName = "run-${hostname}-vm";
-            }) (rootFlake.nixosConfigurations or { });
+            hostUserCases = pkgs.lib.concatStringsSep "\n" (
+              pkgs.lib.mapAttrsToList (hostname: username: ''
+                "${hostname}")
+                  echo "${username}"
+                  ;;
+              '') {
+                personal = "joao";
+                generic = "user";
+              }
+            );
 
             vm-run-script = pkgs.writeShellScriptBin "vm-run" ''
-              TARGET_HOST="''${NIX_TARGET_HOST:-${defaultHost}}"
+              TARGET_HOST="''${NIX_TARGET_HOST:-}"
+              FLAKE_DIR="''${ANGST_REPO:-$PWD}"
+              if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/user.env" ]; then
+                ENV_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+                if [ -n "$ENV_HOST" ]; then
+                  TARGET_HOST="$ENV_HOST"
+                fi
+              fi
+              TARGET_HOST="''${TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-''${ANGST_HOST:-${defaultHost}}}}"
               KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
               KEY_FILE="$KEY_DIR/authorized_keys"
 
@@ -114,32 +132,60 @@
                 exit 1
               fi
 
-              case "$TARGET_HOST" in
-                ${pkgs.lib.concatStringsSep "\n" (
-                  pkgs.lib.mapAttrsToList (hostname: paths: ''
-                    "${hostname}")
-                      export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
-                      export NIX_DISK_IMAGE="''${NIX_DISK_IMAGE:-$PWD/$TARGET_HOST.qcow2}"
-                      export SHARED_DIR="$KEY_DIR"
-                      
-                      exec ${paths.runner}/bin/${paths.scriptName} "''${NEW_ARGS[@]}"
-                      ;;
-                  '') allHostVms
-                )}
-                *)
-                  echo "Error: Host profile '$TARGET_HOST' not found in your NixOS configurations."
-                  exit 1
-                  ;;
-              esac
+              RUNNER="result/bin/run-''${TARGET_HOST}-vm"
+              if [ ! -f "$RUNNER" ]; then
+                echo "Error: VM runner not found at $RUNNER. Build the VM first (e.g. 'nix build .#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm')."
+                exit 1
+              fi
+
+              export ANGST_REPO="$PWD"
+              export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
+              export NIX_DISK_IMAGE="''${NIX_DISK_IMAGE:-$PWD/$TARGET_HOST.qcow2}"
+              export SHARED_DIR="$KEY_DIR"
+
+              exec "$RUNNER" "''${NEW_ARGS[@]}"
             '';
 
             res-script = pkgs.writeShellScriptBin "res" ''
-              TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
+              TARGET_HOST="''${NIX_TARGET_HOST:-}"
+              FLAKE_DIR="''${ANGST_REPO:-$(pwd)}"
+              if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/user.env" ]; then
+                ENV_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+                if [ -n "$ENV_HOST" ]; then
+                  TARGET_HOST="$ENV_HOST"
+                fi
+              fi
+              TARGET_HOST="''${TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-''${ANGST_HOST:-${defaultHost}}}}"
               SSH_PORT="''${VM_SSH_PORT:-2222}"
-              SSH_USER="''${VM_SSH_USER:-joao}"
 
-              echo "Building VM for host '$TARGET_HOST'..."
-              nix build ".#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --no-write-lock-file 2>&1
+              get_host_user() {
+                case "$1" in
+                  ${hostUserCases}
+                  *)
+                    echo "$USER"
+                    ;;
+                esac
+              }
+
+              SSH_USER="''${VM_SSH_USER:-}"
+              if [ -z "$SSH_USER" ] && [ -f "$FLAKE_DIR/user.env" ]; then
+                ENV_USER="$(grep "^USERNAME=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+                if [ -n "$ENV_USER" ]; then
+                  SSH_USER="$ENV_USER"
+                fi
+              fi
+              SSH_USER="''${SSH_USER:-''${ANGST_USERNAME:-}}"
+              SSH_USER="''${SSH_USER:-$(get_host_user "$TARGET_HOST")}"
+
+              export ANGST_USERNAME="$SSH_USER"
+              if [ -f "$FLAKE_DIR/user.env" ]; then
+                export ANGST_THEME="$(grep "^THEME=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+                export ANGST_PASSWORD="$(grep "^PASSWORD=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
+              fi
+
+              echo "Building VM for host '$TARGET_HOST' (user: $SSH_USER)..."
+              git -C "$FLAKE_DIR" update-index -q --refresh 2>/dev/null || true
+              nix build ".#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --impure --refresh --no-write-lock-file 2>&1
 
               RUNNER="result/bin/run-$TARGET_HOST-vm"
               if [ ! -f "$RUNNER" ]; then
@@ -174,6 +220,7 @@
                 exit 1
               fi
 
+              export ANGST_REPO="$PWD"
               export QEMU_OPTS="-display none -vga none"
               export SHARED_DIR="$KEY_DIR"
               export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
@@ -198,7 +245,8 @@
               nativeBuildInputs = [ pkgs.makeWrapper ];
               postBuild = ''
                 wrapProgram $out/bin/vm \
-                  --prefix PATH : ${pkgs.lib.makeBinPath [ vm-run-script ]}
+                  --prefix PATH : ${pkgs.lib.makeBinPath [ vm-run-script ]} \
+                  --set NIX_DEFAULT_TARGET_HOST "${defaultHost}"
               '';
             };
 
@@ -227,10 +275,8 @@
               shellHook = ''
                 export CARGO_BUILD_TARGET_DIR="$PWD/target"
                 export VM_SSH_PORT="2222"
-                export VM_SSH_USER="joao"
 
                 export NIX_DEFAULT_TARGET_HOST="${defaultHost}"
-                export NIX_VM_HOSTS_MAP='${builtins.toJSON allHostVms}'
 
                 export PATH="${vm-run-script}/bin:$PATH"
 

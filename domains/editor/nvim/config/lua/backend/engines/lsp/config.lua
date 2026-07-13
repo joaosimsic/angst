@@ -69,6 +69,7 @@ M.setup = function(logger)
 	end
 
 	local group = vim.api.nvim_create_augroup("LspDynamicEnable", { clear = true })
+
 	vim.api.nvim_create_autocmd("FileType", {
 		group = group,
 		callback = function(event)

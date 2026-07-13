@@ -9,10 +9,14 @@
   lintShell,
   themeRenderedChecks,
   renderDomainOutputFor,
+  testHostname,
+  loadHost,
 }:
 
 let
   inherit (themeContext) hostTheme overrideTheme;
+
+  testUser = (loadHost testHostname).user.username;
 
   themeSemanticDistinct = import ../checks/theme/semanticDistinct.nix {
     inherit lib pkgs themesLib;
@@ -26,8 +30,9 @@ let
       themesLib
       overrideTheme
       renderDomainOutputFor
+      testHostname
       ;
-    homeConfiguration = self.homeConfigurations.joao-theme-override-test;
+    homeConfiguration = self.homeConfigurations."${testUser}-theme-override-test";
   };
 in
 {
@@ -41,7 +46,7 @@ in
 
   theme-override = themeOverrideCheck;
 
-  home-theme-override-test = self.homeConfigurations.joao-theme-override-test.activationPackage;
+  home-theme-override-test = self.homeConfigurations."${testUser}-theme-override-test".activationPackage;
 
   theme-semantic-distinct = themeSemanticDistinct;
 }
