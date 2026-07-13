@@ -111,7 +111,6 @@ let
 
   shellDevHook = pkgs.writeText "shell-dev-hook" ''
     export VM_SSH_PORT=2222
-    export VM_SSH_USER="''${VM_SSH_USER:-$USER}"
     export NIX_DEFAULT_TARGET_HOST=${defaultHost}
     export CARGO_BUILD_TARGET_DIR="$PWD/target"
 

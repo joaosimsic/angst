@@ -74,7 +74,18 @@
               toplevel = configExpr.config.specialisation.vm.configuration.system.build.toplevel;
               runner = configExpr.config.specialisation.vm.configuration.system.build.vm;
               scriptName = "run-${hostname}-vm";
+              username = builtins.head (builtins.attrNames (
+                pkgs.lib.filterAttrs (n: v: v.isNormalUser or false) configExpr.config.users.users
+              ));
             }) (rootFlake.nixosConfigurations or { });
+
+            hostUserCases = pkgs.lib.concatStringsSep "\n" (
+              pkgs.lib.mapAttrsToList (hostname: info: ''
+                "${hostname}")
+                  echo "${info.username}"
+                  ;;
+              '') allHostVms
+            );
 
             vm-run-script = pkgs.writeShellScriptBin "vm-run" ''
               TARGET_HOST="''${NIX_TARGET_HOST:-${defaultHost}}"
@@ -136,9 +147,19 @@
             res-script = pkgs.writeShellScriptBin "res" ''
               TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
               SSH_PORT="''${VM_SSH_PORT:-2222}"
-              SSH_USER="''${VM_SSH_USER:-$USER}"
 
-              echo "Building VM for host '$TARGET_HOST'..."
+              get_host_user() {
+                case "$1" in
+                  ${hostUserCases}
+                  *)
+                    echo "$USER"
+                    ;;
+                esac
+              }
+
+              SSH_USER="''${VM_SSH_USER:-$(get_host_user "$TARGET_HOST")}"
+
+              echo "Building VM for host '$TARGET_HOST' (user: $SSH_USER)..."
               nix build ".#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --no-write-lock-file 2>&1
 
               RUNNER="result/bin/run-$TARGET_HOST-vm"
@@ -174,6 +195,7 @@
                 exit 1
               fi
 
+              export ANGST_REPO="$PWD"
               export QEMU_OPTS="-display none -vga none"
               export SHARED_DIR="$KEY_DIR"
               export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
@@ -227,7 +249,6 @@
               shellHook = ''
                 export CARGO_BUILD_TARGET_DIR="$PWD/target"
                 export VM_SSH_PORT="2222"
-                export VM_SSH_USER="$USER"
 
                 export NIX_DEFAULT_TARGET_HOST="${defaultHost}"
                 export NIX_VM_HOSTS_MAP='${builtins.toJSON allHostVms}'

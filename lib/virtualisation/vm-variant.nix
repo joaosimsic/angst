@@ -17,7 +17,7 @@
     ];
 
     virtualisation.sharedDirectories.angst = {
-      source = "${userConfig.homeDirectory}/${repoPath}";
+      source = "\${ANGST_REPO:-$PWD}";
       target = "/host${userConfig.homeDirectory}/${repoPath}";
       securityModel = "none";
     };
