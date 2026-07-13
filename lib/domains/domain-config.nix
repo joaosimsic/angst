@@ -31,7 +31,7 @@ in
     };
   };
 
-  # In VMs the repo is already accessible via 9p at /host; no need to copy it.
+  
   config = lib.mkIf (!lib.hasPrefix "/host" (toString flakeSelf)) {
     home.activation.seedAngstRepo = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       HOST_SRC=${lib.escapeShellArg hostSrc}

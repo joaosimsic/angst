@@ -46,8 +46,8 @@ let
 
   safeBinPath = pkgs.lib.makeBinPath ([ pkgs.neovim pkgs.git ] ++ allToolchainPackages);
 
-  # Lightweight vm-run shim that defers host resolution to runtime via nix,
-  # avoiding the allHostVms → nixosConfigurations evaluation recursion.
+  
+  
   vmRunShim = pkgs.writeShellScriptBin "vm-run" ''
     TARGET_HOST="''${NIX_TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
     FLAKE_DIR="''${ANGST_REPO:-$PWD}"
@@ -107,10 +107,10 @@ let
     exec nix run "path:$FLAKE_DIR#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" -- "''${NEW_ARGS[@]}"
   '';
 
-  # Thin wrapper that always runs the freshest res from the flake,
-  # bypassing Nix eval cache issues with path-based flake inputs.
-  # Reads user.env at runtime and exports ANGST_* vars so that mkHost.nix
-  # can use builtins.getEnv (with --impure) to read gitignored user.env.
+  
+  
+  
+  
   resWrapper = pkgs.writeShellScriptBin "res" ''
     FLAKE_DIR="''${ANGST_REPO:-$(pwd)}"
     if [ -f "$FLAKE_DIR/user.env" ]; then
