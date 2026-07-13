@@ -17,7 +17,15 @@ let
 
   parseEnvFile = import ../parseEnv.nix { inherit lib; };
   envPath = ../../user.env;
-  userEnv = (if builtins.pathExists envPath then parseEnvFile envPath else { }) // (
+  pwd = builtins.getEnv "PWD";
+  pwdEnvPath = if pwd != "" then pwd + "/user.env" else "";
+  homeEnvPath = builtins.getEnv "HOME" + "/proj/angst/user.env";
+  userEnv = let
+    fromFile = if builtins.pathExists envPath then parseEnvFile envPath
+      else if builtins.pathExists homeEnvPath then parseEnvFile homeEnvPath
+      else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then parseEnvFile pwdEnvPath
+      else { };
+  in fromFile // (
     let h = builtins.getEnv "ANGST_HOST"; u = builtins.getEnv "ANGST_USERNAME"; in
     (if h != "" then { HOST = h; } else {}) // (if u != "" then { USERNAME = u; } else {})
   );

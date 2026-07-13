@@ -8,11 +8,20 @@
 }:
 
 let
-  inherit (themeContext) overrideTheme testHostname;
+  inherit (themeContext) overrideTheme;
+  testHostname = userEnv.HOST or themeContext.testHostname;
 
   parseEnvFile = import ../parseEnv.nix { inherit lib; };
   envPath = ../../user.env;
-  userEnv = (if builtins.pathExists envPath then parseEnvFile envPath else { }) // (
+  pwd = builtins.getEnv "PWD";
+  pwdEnvPath = if pwd != "" then pwd + "/user.env" else "";
+  homeEnvPath = builtins.getEnv "HOME" + "/proj/angst/user.env";
+  userEnv = let
+    fromFile = if builtins.pathExists envPath then parseEnvFile envPath
+      else if builtins.pathExists homeEnvPath then parseEnvFile homeEnvPath
+      else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then parseEnvFile pwdEnvPath
+      else { };
+  in fromFile // (
     let u = builtins.getEnv "ANGST_USERNAME"; in if u != "" then { USERNAME = u; } else {}
   );
 

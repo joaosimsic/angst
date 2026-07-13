@@ -112,14 +112,14 @@ let
   # Reads user.env at runtime and exports ANGST_* vars so that mkHost.nix
   # can use builtins.getEnv (with --impure) to read gitignored user.env.
   resWrapper = pkgs.writeShellScriptBin "res" ''
-    FLAKE_DIR="''${ANGST_REPO:-$PWD}"
+    FLAKE_DIR="''${ANGST_REPO:-$(pwd)}"
     if [ -f "$FLAKE_DIR/user.env" ]; then
       export ANGST_USERNAME="$(grep "^USERNAME=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
       export ANGST_THEME="$(grep "^THEME=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
       export ANGST_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
       export ANGST_PASSWORD="$(grep "^PASSWORD=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
     fi
-    exec nix run "path:$PWD#res" --impure --refresh -- "$@"
+    exec nix run "path:$(pwd)#res" --impure --refresh -- "$@"
   '';
 
   devBinPath = pkgs.lib.makeBinPath (

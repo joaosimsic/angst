@@ -16,7 +16,13 @@ let
 
       parseEnv = import ../parseEnv.nix { inherit (inputs.nixpkgs) lib; };
       envPath = ../../user.env;
-      userEnv = if builtins.pathExists envPath then parseEnv envPath else { };
+      pwd = builtins.getEnv "PWD";
+      pwdEnvPath = if pwd != "" then pwd + "/user.env" else "";
+      homeEnvPath = builtins.getEnv "HOME" + "/proj/angst/user.env";
+      userEnv = if builtins.pathExists envPath then parseEnv envPath
+        else if builtins.pathExists homeEnvPath then parseEnv homeEnvPath
+        else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then parseEnv pwdEnvPath
+        else { };
 
       pkgs = import inputs.nixpkgs {
         system = hostConfig.system;

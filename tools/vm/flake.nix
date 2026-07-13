@@ -38,7 +38,12 @@
               rustc = rustToolchain;
             };
 
-            defaultHost = builtins.head (builtins.attrNames (rootFlake.nixosConfigurations or { }));
+            defaultHost = let
+              hostNames = builtins.attrNames (rootFlake.nixosConfigurations or { });
+              realHosts = builtins.filter (n: n != "default") hostNames;
+            in
+              if realHosts != [ ] then builtins.head realHosts
+              else builtins.throw "no hosts defined in nixosConfigurations";
 
             vm-package = rustPlatform.buildRustPackage {
               pname = "vm";
@@ -77,7 +82,7 @@
               username = builtins.head (builtins.attrNames (
                 pkgs.lib.filterAttrs (n: v: v.isNormalUser or false) configExpr.config.users.users
               ));
-            }) (rootFlake.nixosConfigurations or { });
+            }) (builtins.removeAttrs (rootFlake.nixosConfigurations or { }) [ "default" ]);
 
             hostUserCases = pkgs.lib.concatStringsSep "\n" (
               pkgs.lib.mapAttrsToList (hostname: info: ''
@@ -154,13 +159,14 @@
 
             res-script = pkgs.writeShellScriptBin "res" ''
               TARGET_HOST="''${NIX_TARGET_HOST:-}"
-              FLAKE_DIR="''${ANGST_REPO:-$PWD}"
+              FLAKE_DIR="''${ANGST_REPO:-$(pwd)}"
               if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/user.env" ]; then
                 ENV_HOST="$(grep "^HOST=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
                 if [ -n "$ENV_HOST" ]; then
                   TARGET_HOST="$ENV_HOST"
                 fi
               fi
+              TARGET_HOST="''${TARGET_HOST:-''${ANGST_HOST:-}}"
               TARGET_HOST="''${TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-${defaultHost}}}"
               SSH_PORT="''${VM_SSH_PORT:-2222}"
 
@@ -180,6 +186,7 @@
                   SSH_USER="$ENV_USER"
                 fi
               fi
+              SSH_USER="''${SSH_USER:-''${ANGST_USERNAME:-}}"
               SSH_USER="''${SSH_USER:-$(get_host_user "$TARGET_HOST")}"
 
               export ANGST_USERNAME="$SSH_USER"
@@ -187,6 +194,15 @@
                 export ANGST_THEME="$(grep "^THEME=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
                 export ANGST_PASSWORD="$(grep "^PASSWORD=" "$FLAKE_DIR/user.env" | tail -1 | cut -d= -f2-)"
               fi
+
+              valid_hosts="${builtins.concatStringsSep ":" (builtins.attrNames (builtins.removeAttrs (rootFlake.nixosConfigurations or { }) [ "default" ]))}"
+              case ":$valid_hosts:" in
+                *:"$TARGET_HOST":*) ;;
+                *)
+                  echo "Error: unknown host '$TARGET_HOST'. Valid hosts: $valid_hosts" >&2
+                  exit 1
+                  ;;
+              esac
 
               echo "Building VM for host '$TARGET_HOST' (user: $SSH_USER)..."
               nix build ".#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --impure --refresh --no-write-lock-file 2>&1
