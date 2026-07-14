@@ -1,7 +1,7 @@
 ---@type Plugin
 return {
 	"ibhagwan/fzf-lua",
-	event = "VeryLazy",
+  lazy = false,
 	config = function()
 		local fzf = require("fzf-lua")
 		local fzf_keys = require("frontend.navigation.fzf.keys")

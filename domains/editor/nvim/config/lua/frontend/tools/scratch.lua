@@ -294,7 +294,7 @@ end
 return {
 	"scratch",
 	virtual = true,
-	event = "VeryLazy",
+	lazy = false,
 	config = function()
 		local binder = Keybinder.new(nil, "SCRATCH")
 		binder:nmap("<leader>n", open_scratch, { desc = "Open scratch buffer" })
