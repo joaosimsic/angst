@@ -47,6 +47,20 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: nix build '.#checks.x86_64-linux.theme-semantic-distinct' --no-link --print-build-logs
+  check-parse-env:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix build '.#checks.x86_64-linux.check-parse-env' --no-link --print-build-logs
+  check-password:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix build '.#checks.x86_64-linux.check-password' --no-link --print-build-logs
   vm-tests:
     runs-on: ubuntu-latest
     steps:

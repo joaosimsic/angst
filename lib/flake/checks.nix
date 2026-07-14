@@ -34,6 +34,10 @@ let
       ;
     homeConfiguration = self.homeConfigurations."${testUser}-theme-override-test";
   };
+
+  checkParseEnv = import ../checks/parseEnv.nix { inherit lib pkgs; };
+
+  checkPassword = import ../checks/password.nix { inherit lib pkgs; };
 in
 {
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;
@@ -49,4 +53,8 @@ in
   home-theme-override-test = self.homeConfigurations."${testUser}-theme-override-test".activationPackage;
 
   theme-semantic-distinct = themeSemanticDistinct;
+
+  check-parse-env = checkParseEnv;
+
+  check-password = checkPassword;
 }
