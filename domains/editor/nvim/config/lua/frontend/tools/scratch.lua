@@ -54,38 +54,50 @@ local function get_filetypes()
 end
 
 local function resolve_placeholders(cmd, filepath)
+	local base = vim.fn.fnamemodify(filepath, ":r")
+	local name = vim.fn.fnamemodify(filepath, ":t")
 	local resolved = {}
 	for _, arg in ipairs(cmd) do
 		if arg == "$FILE" then
 			table.insert(resolved, filepath)
 		elseif arg == "$FILEBASE" then
-			table.insert(resolved, vim.fn.fnamemodify(filepath, ":r"))
+			table.insert(resolved, base)
 		elseif arg == "$FILENAME" then
-			table.insert(resolved, vim.fn.fnamemodify(filepath, ":t"))
+			table.insert(resolved, name)
 		else
-			table.insert(resolved, arg)
+			table.insert(resolved, (arg:gsub("%$FILE", filepath):gsub("%$FILEBASE", base):gsub("%$FILENAME", name)))
 		end
 	end
 	return resolved
 end
 
-local function save_to_temp(buf, ft)
+local tmp_filepath = nil
+
+local function get_temp_filepath(ft)
+	if tmp_filepath then
+		return tmp_filepath
+	end
 	local ext = filetype_extensions[ft] or ft
 	local suffix = ext ~= "" and "." .. ext or ""
-	local tmpfile = vim.fn.tempname() .. suffix
+	tmp_filepath = vim.fn.tempname() .. suffix
+	return tmp_filepath
+end
+
+local function save_to_temp(buf, ft)
+	local filepath = get_temp_filepath(ft)
 
 	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 	local content = table.concat(lines, "\n")
 
-	local fd = io.open(tmpfile, "w")
+	local fd = io.open(filepath, "w")
 	if not fd then
-		vim.notify("Failed to create temp file: " .. tmpfile, vim.log.levels.ERROR)
+		vim.notify("Failed to write temp file: " .. filepath, vim.log.levels.ERROR)
 		return nil
 	end
 	fd:write(content)
 	fd:close()
 
-	return tmpfile
+	return filepath
 end
 
 local out_buf = nil
@@ -154,6 +166,7 @@ local function run_compiler(buf)
 		end
 		vim.api.nvim_win_set_height(out_win or vim.api.nvim_get_current_win(), 12)
 	else
+		local orig_win = vim.api.nvim_get_current_win()
 		vim.cmd("botright split")
 		out_win = vim.api.nvim_get_current_win()
 		out_buf = vim.api.nvim_create_buf(false, true)
@@ -177,12 +190,16 @@ local function run_compiler(buf)
 				out_win = nil
 			end
 		end, { desc = "Close output buffer" })
+
+		vim.api.nvim_set_current_win(orig_win)
 	end
 
 	if not out_win or not vim.api.nvim_win_is_valid(out_win) then
+		local orig_win = vim.api.nvim_get_current_win()
 		vim.cmd("botright split")
 		out_win = vim.api.nvim_get_current_win()
 		vim.api.nvim_win_set_buf(out_win, out_buf)
+		vim.api.nvim_set_current_win(orig_win)
 	end
 
 	process = vim.system(cmd, { text = true }, function(result)
@@ -216,8 +233,6 @@ local function run_compiler(buf)
 			vim.bo[out_buf].modifiable = true
 			vim.api.nvim_buf_set_lines(out_buf, 0, -1, false, lines)
 			vim.bo[out_buf].modifiable = false
-
-			pcall(os.remove, filepath)
 		end)
 	end)
 end
@@ -235,11 +250,12 @@ local function open_scratch()
 			return
 		end
 
-		vim.cmd("botright vsplit")
+		vim.cmd("tabnew")
 		local buf = vim.api.nvim_create_buf(false, false)
 		vim.api.nvim_win_set_buf(0, buf)
 		vim.bo[buf].bufhidden = "wipe"
 		vim.bo[buf].buflisted = false
+		vim.bo[buf].swapfile = false
 		vim.api.nvim_buf_set_name(buf, "[Scratch]")
 		vim.api.nvim_exec_autocmds("BufNewFile", { buffer = buf })
 		vim.bo[buf].filetype = choice
@@ -247,6 +263,10 @@ local function open_scratch()
 		local binder = Keybinder.new(buf, "SCRATCH")
 		binder:nmap("q", function()
 			if vim.api.nvim_buf_is_valid(buf) then
+				if tmp_filepath then
+					pcall(os.remove, tmp_filepath)
+					tmp_filepath = nil
+				end
 				vim.api.nvim_buf_delete(buf, { force = true })
 			end
 		end, { desc = "Close scratch buffer" })

@@ -27,3 +27,7 @@
 # zellij
 
 - [x] screen freeze when exit or close last pane
+
+# print
+
+- [ ] persistent and not persistent prints
