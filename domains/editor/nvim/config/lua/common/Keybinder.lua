@@ -81,17 +81,14 @@ function Keybinder:_bind(mode, lhs, rhs, opts)
 				self.logger:debug(string.format("Pressed: %s -> Executing: %s", lhs, desc))
 			end
 			local ok, result = pcall(rhs, ...)
-			if self.debug then
-				if ok then
-					self.logger:debug(string.format("Completed: %s (%s)", lhs, desc))
-				else
-					self.logger:error(string.format("Failed: %s (%s): %s", lhs, desc, tostring(result)))
-				end
-			end
 			if ok then
+				if self.debug then
+					self.logger:debug(string.format("Completed: %s (%s)", lhs, desc))
+				end
 				return result
 			end
-			error(result)
+			self.logger:error(string.format("Failed: %s (%s): %s", lhs, desc, tostring(result)))
+			vim.notify(string.format("Keybinder [%s]: %s", lhs, tostring(result)), vim.log.levels.ERROR)
 		end
 	else
 		final_rhs = rhs
