@@ -19,6 +19,7 @@ function M.setup()
 		fg_color = "blue_bright",
 		bg_color = "black",
 		enter = "<leader>t",
+		persist = true,
 		logger = logger,
 		heads = {
 			{ "h", function() vim.cmd("tabprev") end,                    "Previous tab" },

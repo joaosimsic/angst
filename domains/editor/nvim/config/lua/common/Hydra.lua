@@ -17,6 +17,7 @@ local resolve = require("config.theme.resolve").resolve
 ---@field debug_level? Level
 ---@field exit_keys? string[]
 ---@field global? boolean
+---@field persist? boolean
 ---@field bufnr? number
 ---@field logger Logger
 
@@ -75,6 +76,7 @@ function Hydra.new(cfg, bufnr)
 	self.heads = cfg.heads
 	self.exit_keys = cfg.exit_keys or { "<Esc>", "<C-c>" }
 	self.global = cfg.global or false
+	self.persist = cfg.persist or false
 	self.bufnr = bufnr
 	self.binder = nil
 	self.active_autocmds = {}
@@ -118,7 +120,7 @@ function Hydra:setup_lifecycle_autocmds(bufnr)
 
 	self:add_lifecycle_autocmd("InsertEnter", self.global and {} or { buffer = bufnr })
 
-	if not self.global then
+	if not self.global and not self.persist then
 		self:add_lifecycle_autocmd({ "BufLeave", "BufWipeout" }, { buffer = bufnr })
 	end
 end
@@ -148,6 +150,20 @@ function Hydra:activate()
 	local target_scope = self.global and nil or vim.api.nvim_get_current_buf()
 	self:setup_lifecycle_autocmds(target_scope)
 
+	self:bind_current_buf()
+
+	active_hydra_instance = self
+	vim.g.active_hydra =
+		{ name = self.name, fg_color = self.fg_color_hex, bg_color = self.bg_color_hex, bufnr = target_scope }
+	notify_hydra_changed()
+end
+
+function Hydra:bind_current_buf()
+	if self.binder then
+		self.binder:purge()
+	end
+
+	local target_scope = self.global and nil or vim.api.nvim_get_current_buf()
 	self.binder = Keybinder.new(target_scope, "HYDRA:" .. self.name:upper())
 
 	if self.debug_level == "debug" and type(self.binder.set_debug) == "function" then
@@ -174,6 +190,9 @@ function Hydra:activate()
 				self:deactivate()
 			else
 				self:refresh_statusline()
+				if self.persist then
+					self:bind_current_buf()
+				end
 			end
 		end, { desc = desc })
 	end
@@ -184,11 +203,6 @@ function Hydra:activate()
 			self:deactivate()
 		end, { desc = "Exit Hydra" })
 	end
-
-	active_hydra_instance = self
-	vim.g.active_hydra =
-		{ name = self.name, fg_color = self.fg_color_hex, bg_color = self.bg_color_hex, bufnr = target_scope }
-	notify_hydra_changed()
 end
 
 function Hydra:purge()
