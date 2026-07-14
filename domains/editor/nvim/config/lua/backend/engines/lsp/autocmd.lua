@@ -36,7 +36,9 @@ M.setup = function(logger)
 				vim.lsp.color.enable(false, { bufnr = bufnr })
 			end
 
-			if inlay_hints.try_enable(client, bufnr) then
+			local inlay_supported = inlay_hints.try_enable(client, bufnr)
+
+			if inlay_supported then
 				if logger then
 					logger:debug(function()
 						return string.format("inlayHint enabled for bufnr=%d client=%s", bufnr, client.name)
@@ -69,7 +71,7 @@ M.setup = function(logger)
 			})
 
 			if logger and client then
-				progress.start_fallback_timer(client, logger)
+				progress.start_fallback_timer(client, logger, inlay_supported)
 			end
 		end,
 	})
