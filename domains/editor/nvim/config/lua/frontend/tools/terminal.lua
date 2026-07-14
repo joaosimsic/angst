@@ -55,6 +55,6 @@ return {
 	event = "VeryLazy",
 	config = function()
 		local binder = Keybinder.new(nil, "TERMINAL")
-		binder:nmap("<leader>t", toggle, { desc = "Toggle terminal" })
+		binder:nmap("<leader>z", toggle, { desc = "Toggle terminal" })
 	end,
 }
