@@ -20,7 +20,6 @@ mkToolchain {
   treesitter = with pkgs.tree-sitter-grammars; [
     tree-sitter-javascript
     tree-sitter-typescript
-    tree-sitter-tsx
     tree-sitter-vue
   ];
 }

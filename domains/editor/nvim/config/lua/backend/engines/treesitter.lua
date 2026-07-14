@@ -40,7 +40,7 @@ return {
 			razor = "c_sharp",
 			sh = "bash",
 			bash = "bash",
-			typescriptreact = "tsx",
+			typescriptreact = "typescript",
 			conf = "ini",
 		}
 

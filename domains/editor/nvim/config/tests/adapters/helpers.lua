@@ -71,6 +71,10 @@ function M.assert_parser_installed(adapter)
 			end
 		end
 
+		if #parsers > 0 then
+			pcall(vim.treesitter.language.add, lang)
+		end
+
 		assert(#parsers > 0, ("Treesitter parser '%s' binary was not found"):format(lang))
 
 		local buf = vim.api.nvim_create_buf(false, true)

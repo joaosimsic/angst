@@ -5,7 +5,7 @@ return {
 	lsp_cmd = { "typescript-language-server", "--stdio" },
 	formatter = "prettierd",
 	linter = "eslint_d",
-	treesitter = { "javascript", "typescript", "tsx" },
+    treesitter = { "javascript", "typescript" },
 
 	lsp_settings = {
 		javascript = {
