@@ -89,7 +89,6 @@ gui:
   switchToFilesAfterStashPop: true
   switchToFilesAfterStashApply: true
   switchTabsWithPanelJumpKeys: false
-
 git:
   pager:
     diff: delta
@@ -130,15 +129,12 @@ git:
   localBranchSortOrder: date
   remoteBranchSortOrder: date
   truncateCopiedCommitHashesTo: 12
-
 update:
   method: prompt
   days: 14
-
 refresher:
   refreshInterval: 10
   fetchInterval: 60
-
 confirmOnQuit: false
 quitOnTopLevelReturn: false
 disableStartupPopups: false
@@ -146,7 +142,6 @@ customCommands: []
 services: {}
 notARepository: prompt
 promptToReturnFromSubprocess: true
-
 keybinding:
   universal:
     quit: q
@@ -230,6 +225,7 @@ keybinding:
     increaseRenameSimilarityThreshold: )
     decreaseRenameSimilarityThreshold: (
     openDiffTool: <ctrl+t>
+    newWorktree: w
   status:
     checkForUpdate: u
     recentRepos: <enter>
@@ -274,8 +270,6 @@ keybinding:
     fetchRemote: f
     addForkRemote: F
     sortOrder: s
-  worktrees:
-    viewWorktreeOptions: w
   commits:
     squashDown: s
     renameCommit: r
@@ -322,4 +316,3 @@ keybinding:
     bulkMenu: b
   commitMessage:
     commitMenu: <ctrl+o>
-

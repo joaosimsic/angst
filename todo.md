@@ -23,6 +23,7 @@
 - [x] deprecating vm scripts to let rust tool handles it
 - [x] add a headless mode for launching the vm without gui
 - [x] ci tests
+- [ ] mcp degradation
 
 # zellij
 

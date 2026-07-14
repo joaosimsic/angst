@@ -23,7 +23,7 @@ M.mode_colors = {
 	["\19"] = { fg = p.background.base, bg = p.surface.base, label = "S-BLOCK" },
 	r = { fg = p.background.base, bg = p.accent.base, label = "REPLACE" },
 	R = { fg = p.background.base, bg = p.accent.base, label = "REPLACE" },
-	c = { fg = p.background.base, bg = p.dim, label = "COMMAND" },
+	c = { fg = p.background.base, bg = p.accent.base, label = "COMMAND" },
 	t = { fg = p.background.base, bg = p.accent.variant, label = "TERMINAL" },
 }
 

@@ -71,6 +71,19 @@ local function resolve_placeholders(cmd, filepath)
 	return resolved
 end
 
+local function ensure_scratch_dir()
+	local dir = vim.fn.stdpath("cache") .. "/scratch"
+	vim.fn.mkdir(dir, "p")
+	return dir
+end
+
+local function get_scratch_filepath(ft)
+	local ext = filetype_extensions[ft] or ft
+	local suffix = ext ~= "" and "." .. ext or ""
+	local dir = ensure_scratch_dir()
+	return dir .. "/scratch_" .. vim.fn.strftime("%Y%m%d_%H%M%S") .. suffix
+end
+
 local tmp_filepath = nil
 
 local function get_temp_filepath(ft)
@@ -256,7 +269,8 @@ local function open_scratch()
 		vim.bo[buf].bufhidden = "wipe"
 		vim.bo[buf].buflisted = false
 		vim.bo[buf].swapfile = false
-		vim.api.nvim_buf_set_name(buf, "[Scratch]")
+		local scratch_path = get_scratch_filepath(choice)
+		vim.api.nvim_buf_set_name(buf, scratch_path)
 		vim.api.nvim_exec_autocmds("BufNewFile", { buffer = buf })
 		vim.bo[buf].filetype = choice
 
@@ -280,7 +294,7 @@ end
 return {
 	"scratch",
 	virtual = true,
-	event = "VeryLazy",
+	lazy = false,
 	config = function()
 		local binder = Keybinder.new(nil, "SCRATCH")
 		binder:nmap("<leader>n", open_scratch, { desc = "Open scratch buffer" })

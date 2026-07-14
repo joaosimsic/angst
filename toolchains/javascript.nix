@@ -8,19 +8,18 @@ mkToolchain {
     nodejs
     bun
   ];
-  lsp = with pkgs; [
-    typescript-language-server
-    vscode-langservers-extracted
-    vue-language-server
-    angular-language-server
-    prisma-language-server
+  lsp = [
+    pkgs.typescript-language-server
+    pkgs.vscode-langservers-extracted
+    pkgs.vue-language-server
+    pkgs.angular-language-server
+    pkgs.prisma-language-server
   ];
   formatter = with pkgs; [ prettierd ];
   linter = with pkgs; [ eslint_d ];
   treesitter = with pkgs.tree-sitter-grammars; [
     tree-sitter-javascript
     tree-sitter-typescript
-    tree-sitter-tsx
     tree-sitter-vue
   ];
 }

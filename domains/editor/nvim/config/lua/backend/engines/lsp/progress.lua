@@ -27,20 +27,24 @@ function M.setup_handler(logger)
 	end
 end
 
-function M.start_fallback_timer(client, logger)
+function M.start_fallback_timer(client, logger, inlay_supported)
 	if client._lsp_fallback_timer then
 		return
 	end
+
+	client_attach_time[client.id] = client_attach_time[client.id] or vim.uv.now()
 
 	client._lsp_fallback_timer = vim.defer_fn(function()
 		client._lsp_fallback_timer = nil
 		if not client._lsp_ready_logged then
 			local elapsed = vim.uv.now() - (client_attach_time[client.id] or vim.uv.now())
-			logger:warn(function()
+			local log_fn = inlay_supported and logger.warn or logger.debug
+			log_fn(logger, function()
 				return string.format(
-					"%s not ready after %dms (no $/progress received). Inlay hints may still apply.",
+					"%s not ready after %dms (no $/progress received)%s",
 					client.name,
-					elapsed
+					elapsed,
+					inlay_supported and ". Inlay hints may still apply." or ""
 				)
 			end)
 		end
