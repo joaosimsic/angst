@@ -33,4 +33,9 @@ return {
 			},
 		},
 	},
+	compiler = { "node", "tsx" },
+	compiler_cmd = {
+		node = { "node", "$FILE" },
+		tsx = { "npx", "tsx", "$FILE" },
+	},
 }

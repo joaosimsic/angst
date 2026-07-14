@@ -6,4 +6,6 @@ return {
 	formatter = "black",
 	linter = "pylint",
 	treesitter = "python",
+	compiler = "python3",
+	compiler_cmd = { "python3", "$FILE" },
 }

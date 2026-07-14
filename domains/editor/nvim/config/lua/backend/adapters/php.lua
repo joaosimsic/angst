@@ -27,4 +27,6 @@ return {
 		["language_server_worse_reflection.inlay_hints.params"] = true,
 		["language_server_worse_reflection.inlay_hints.types"] = true,
 	},
+	compiler = "php",
+	compiler_cmd = { "php", "$FILE" },
 }

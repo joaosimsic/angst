@@ -22,4 +22,6 @@ return {
 			staticcheck = true,
 		},
 	},
+	compiler = "go",
+	compiler_cmd = { "go", "run", "$FILE" },
 }

@@ -29,4 +29,6 @@ return {
 			},
 		},
 	},
+	compiler = "lua",
+	compiler_cmd = { "lua", "$FILE" },
 }
