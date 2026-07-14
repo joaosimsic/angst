@@ -8,7 +8,9 @@ use vm_core::{SshEngine, VmConfig, VmProcessController};
 
 fn read_env_value(key: &str) -> Option<String> {
     let paths = [
-        env::var("ANGST_REPO").ok().map(|p| Path::new(&p).join("user.env")),
+        env::var("ANGST_REPO")
+            .ok()
+            .map(|p| Path::new(&p).join("user.env")),
         env::current_dir().ok().map(|d| d.join("user.env")),
     ];
     for path in paths.iter().flatten() {
@@ -39,7 +41,8 @@ fn read_from_env_file(path: &Path, key: &str) -> Option<String> {
 }
 
 fn strip_quotes(s: &str) -> &str {
-    s.strip_prefix('\'').and_then(|s| s.strip_suffix('\''))
+    s.strip_prefix('\'')
+        .and_then(|s| s.strip_suffix('\''))
         .or_else(|| s.strip_prefix('"').and_then(|s| s.strip_suffix('"')))
         .unwrap_or(s)
 }
@@ -286,7 +289,8 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
             cmd.env("ANGST_PASSWORD", p);
         }
 
-        let build_status = cmd.status()
+        let build_status = cmd
+            .status()
             .await
             .map_err(|e| format!("Failed to run nix build: {}", e))?;
 
