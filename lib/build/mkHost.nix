@@ -18,7 +18,7 @@ let
     envUser = builtins.getEnv "ANGST_USERNAME";
   in
     if envUser != "" then envUser
-    else userEnv.USERNAME or hostConfig.user.username;
+    else hostConfig.user.username;
   effectiveUserConfig = hostConfig.user // {
     username = effectiveUsername;
     homeDirectory = "/home/${effectiveUsername}";

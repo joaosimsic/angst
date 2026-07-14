@@ -29,7 +29,7 @@ let
     h:
     let envUser = builtins.getEnv "ANGST_USERNAME"; in
     if envUser != "" then envUser
-    else userEnv.USERNAME or (loadHost h).user.username;
+    else (loadHost h).user.username;
 
   perHost = lib.listToAttrs (
     map (

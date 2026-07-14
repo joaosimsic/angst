@@ -264,19 +264,29 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
         println!("VM image not found. Building NixOS VM system image on host...");
 
         let username = target_username();
-        let build_status = Command::new("nix")
-            .args([
-                "build",
-                "--impure",
-                "--refresh",
-                "--no-write-lock-file",
-                &format!(
-                    ".#nixosConfigurations.{}.config.specialisation.vm.configuration.system.build.vm",
-                    host
-                ),
-            ])
-            .env("ANGST_USERNAME", &username)
-            .status()
+        let password = env::var("ANGST_PASSWORD")
+            .ok()
+            .filter(|p| !p.is_empty())
+            .or_else(|| read_env_value("PASSWORD"));
+
+        let mut cmd = Command::new("nix");
+        cmd.args([
+            "build",
+            "--impure",
+            "--refresh",
+            "--no-write-lock-file",
+            &format!(
+                ".#nixosConfigurations.{}.config.specialisation.vm.configuration.system.build.vm",
+                host
+            ),
+        ])
+        .env("ANGST_USERNAME", &username);
+
+        if let Some(ref p) = password {
+            cmd.env("ANGST_PASSWORD", p);
+        }
+
+        let build_status = cmd.status()
             .await
             .map_err(|e| format!("Failed to run nix build: {}", e))?;
 

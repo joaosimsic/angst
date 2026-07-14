@@ -2,7 +2,6 @@
   lib,
   pkgs,
   userConfig,
-  userEnv ? {},
   ...
 }:
 
@@ -39,7 +38,6 @@
     hashedPassword = lib.mkDefault (
       let envPass = builtins.getEnv "ANGST_PASSWORD"; in
       if envPass != "" then envPass
-      else if userEnv ? PASSWORD && userEnv.PASSWORD != "" then userEnv.PASSWORD
       else null
     );
     shell = pkgs.nushell;
