@@ -53,4 +53,6 @@ return {
 			end
 		end,
 	},
+	compiler = "rustc",
+	compiler_cmd = { "sh", "-c", "rustc $FILE -o /tmp/scratch_out 2>&1 && /tmp/scratch_out" },
 }

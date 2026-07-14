@@ -9,4 +9,6 @@ return {
 	formatter = "nixfmt",
 	linter = { "statix", "deadnix" },
 	treesitter = "nix",
+	compiler = "nix",
+	compiler_cmd = { "nix", "eval", "--file", "$FILE" },
 }

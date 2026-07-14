@@ -90,6 +90,7 @@ function M.info(adapter, engine_name, tool_name)
 		root_markers = server_field(adapter, engine_name, tool_name, "lsp_root_markers"),
 		root_dir = server_field(adapter, engine_name, tool_name, "lsp_root_dir"),
 		handlers = server_field(adapter, engine_name, tool_name, "lsp_handlers"),
+		compiler = adapter.compiler,
 		filetypes = adapter.filetypes,
 	}
 

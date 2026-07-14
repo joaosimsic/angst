@@ -50,4 +50,6 @@ return {
 			end
 		end,
 	},
+	compiler = "javac",
+	compiler_cmd = { "sh", "-c", "javac $FILE && java -cp /tmp $(basename $FILE .java)" },
 }
