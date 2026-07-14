@@ -8,7 +8,7 @@
 - [x] paste and copy without overriding registers
 - [x] break distance based either on tab space or formatters
 - [x] leave yazi returns heirline in terminal mode
-- [ ] update scratch plugin to allow run compiler on it
+- [x] update scratch plugin to allow run compiler on it
 
 # nu
 - [x] set ":" to replace ">"
