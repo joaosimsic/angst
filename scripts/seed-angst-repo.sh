@@ -1,4 +1,8 @@
-if [ -d "/host" ] || [ ! -d "$HOST_SRC" ]; then
+if [ -d "$HOST_SRC" ]; then
+  [ -e "$ANGST_DST" ] && $DRY_RUN_CMD rm -rf "$ANGST_DST"
+  $DRY_RUN_CMD mkdir -p "$(dirname "$ANGST_DST")"
+  $DRY_RUN_CMD ln -sfn "$HOST_SRC" "$ANGST_DST"
+else
   [ -e "$ANGST_DST" ] && $DRY_RUN_CMD rm -rf "$ANGST_DST"
   $DRY_RUN_CMD mkdir -p "$(dirname "$ANGST_DST")"
   $DRY_RUN_CMD cp -a "$ANGST_SRC" "$ANGST_DST"
