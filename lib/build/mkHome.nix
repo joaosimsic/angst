@@ -15,13 +15,8 @@ let
       hostConfig = loadHost hostname;
 
       parseEnv = import ../parseEnv.nix { inherit (inputs.nixpkgs) lib; };
-      envPath = ../../user.env;
-      pwd = builtins.getEnv "PWD";
-      pwdEnvPath = if pwd != "" then pwd + "/user.env" else "";
       homeEnvPath = builtins.getEnv "HOME" + "/proj/angst/user.env";
-      userEnv = if builtins.pathExists envPath then parseEnv envPath
-        else if builtins.pathExists homeEnvPath then parseEnv homeEnvPath
-        else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then parseEnv pwdEnvPath
+      userEnv = if builtins.pathExists homeEnvPath then parseEnv homeEnvPath
         else { };
 
       pkgs = import inputs.nixpkgs {
@@ -35,7 +30,7 @@ let
         envUser = builtins.getEnv "ANGST_USERNAME";
       in
         if envUser != "" then envUser
-        else hostConfig.user.username;
+        else userEnv.USERNAME;
       effectiveUserConfig = hostConfig.user // {
         username = effectiveUsername;
         homeDirectory = "/home/${effectiveUsername}";

@@ -10,14 +10,14 @@ let
   p = t.palette;
   inherit (checkHelpers) requireInfix require;
 
-  standard = "bg=#${p.surface.variant},fg=#${p.foreground.variant}";
-  inactiveTab = "bg=#${p.surface.variant},fg=#${p.foreground.variant},bold";
-  activeTab = "bg=#${p.foreground.variant},fg=#${p.surface.variant},bold";
+  standard = "bg=#${p.surface.variant},fg=#${t.safe.foregroundOnSurfaceVariant}";
+  inactiveTab = "bg=#${p.surface.variant},fg=#${t.safe.foregroundOnSurfaceVariant},bold";
+  activeTab = "bg=#${t.safe.surfaceVariantOnForegroundVariant},fg=#${p.surface.variant},bold";
 
-  modeNormal = "bg=#${p.surface.variant},fg=#${p.foreground.variant},bold";
+  modeNormal = "bg=#${p.surface.variant},fg=#${t.safe.foregroundOnSurfaceVariant},bold";
   modeLocked = "bg=#${p.dim},fg=#${p.background.base},bold";
-  modePane = "bg=#${p.surface.base},fg=#${p.foreground.variant},bold";
-  modeTab = "bg=#${p.accent.variant},fg=#${p.foreground.variant},bold";
+  modePane = "bg=#${p.surface.base},fg=#${t.safe.foregroundOnSurfaceBase},bold";
+  modeTab = "bg=#${p.accent.variant},fg=#${t.safe.foregroundOnAccentVariant},bold";
   modeScroll = "bg=#${p.accent.base},fg=#${p.background.base},bold";
   modeSearch = "bg=#${p.accent.variant},fg=#${p.background.base},bold";
   modeResize = "bg=#${p.accent.base},fg=#${p.background.base},bold";
