@@ -39,6 +39,7 @@ let
     copy_clipboard "system"
     show_startup_tips false
     show_release_notes false
+    scrollback_editor "nvim"
 
     keybinds clear-defaults=true {
         locked {
@@ -49,6 +50,7 @@ let
             bind "Ctrl g" { SwitchToMode "locked"; }
             bind "Ctrl p" { SwitchToMode "pane"; }
             bind "Ctrl t" { SwitchToMode "tab"; }
+            bind "Ctrl s" { SwitchToMode "scroll"; }
         }
 
         pane {
@@ -79,6 +81,20 @@ let
             bind "9" { GoToTab 9; }
             bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
         }
+
+        scroll {
+            bind "j" "Down" { ScrollDown; }
+            bind "k" "Up" { ScrollUp; }
+            bind "Ctrl d" { HalfPageScrollDown; }
+            bind "Ctrl u" { HalfPageScrollUp; }
+            bind "g" { ScrollToTop; }
+            bind "G" { ScrollToBottom; }
+            bind "v" { EditScrollback; SwitchToMode "normal"; }
+            bind "V" { EditScrollback; SwitchToMode "normal"; }
+            bind "y" "c" { Copy; }
+            bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
+        }
+
 
         shared_except "locked" {
             bind "Ctrl h" {

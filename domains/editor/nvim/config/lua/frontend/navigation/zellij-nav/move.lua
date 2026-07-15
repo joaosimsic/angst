@@ -11,7 +11,7 @@ local function navigate(direction, zellij_dir)
 	vim.cmd("wincmd " .. direction)
 
 	if current_win == vim.api.nvim_get_current_win() then
-		vim.system({ "zellij", "action", "move-focus", zellij_dir })
+		vim.system({ "zellij", "action", "move-focus-or-tab", zellij_dir })
 	end
 end
 
