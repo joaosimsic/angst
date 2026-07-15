@@ -39,7 +39,7 @@ let
     copy_clipboard "system"
     show_startup_tips false
     show_release_notes false
-    scrollback_editor "nvim"
+    scrollback_editor "nvim +ZellijScrollback"
 
     keybinds clear-defaults=true {
         locked {
