@@ -12,6 +12,7 @@ M.get = function()
         TermGitStatus = { fg = a.warn },
         TermCommand = { fg = p.foreground.variant },
         TermNixShell = { fg = p.foreground.variant },
+        TermLangModule = { fg = p.dim },
         TermError = { fg = a.error, bold = true },
         TermSignal = { fg = p.dim },
     }

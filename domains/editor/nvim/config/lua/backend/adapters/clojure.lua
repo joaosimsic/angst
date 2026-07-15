@@ -9,6 +9,13 @@ return {
 	lsp_cmd = { "clojure-lsp" },
 	lsp_root_markers = root_markers,
 	lsp_root_dir = LspTool.make_root_dir_finder(root_markers),
+	lsp_settings = {
+		["clojure-lsp"] = {
+			java = {
+				analyzeJdkSources = false,
+			},
+		},
+	},
 	formatter = "cljfmt",
 	linter = "clj-kondo",
 	linter_cmd = { "clj-kondo" },
