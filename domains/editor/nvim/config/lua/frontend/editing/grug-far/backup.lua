@@ -3,11 +3,12 @@ local backup_root = vim.fn.stdpath("cache") .. "/grug-far-backups"
 local M = {}
 
 function M.backup_file(filepath, run_id)
-	local rel = filepath:gsub("^/+", "")
+	local abs = vim.fn.fnamemodify(filepath, ":p")
+	local rel = abs:gsub("^/+", "")
 	local dest = backup_root .. "/" .. run_id .. "/" .. rel
 	local dir = vim.fn.fnamemodify(dest, ":h")
 	vim.fn.mkdir(dir, "p")
-	vim.fn.system({ "cp", filepath, dest })
+	vim.fn.system({ "cp", abs, dest })
 end
 
 function M.with_backup(opts, run_id)

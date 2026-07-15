@@ -3,6 +3,18 @@ local Keybinder = require("common.Keybinder")
 
 local M = {}
 
+local function resolve_path(path)
+	local abs = "/" .. path:gsub("^/+", "")
+	if vim.fn.filereadable(abs) == 1 then
+		return abs
+	end
+	local parent = vim.fn.fnamemodify(abs, ":h")
+	if vim.fn.isdirectory(parent) == 1 then
+		return abs
+	end
+	return vim.fn.fnamemodify(path, ":p")
+end
+
 local function show_diff(orig_path, backup_path)
 	local orig_content = vim.fn.readfile(orig_path, "c")
 	local backup_content = vim.fn.readfile(backup_path, "c")
@@ -75,7 +87,7 @@ local function files_to_data(files, run_id)
 		stats = { files = 0, matches = #files },
 	}
 	for i, backup_path in ipairs(files) do
-		local orig_path = "/" .. backup_path:sub(prefix_len)
+		local orig_path = resolve_path(backup_path:sub(prefix_len))
 		local status = backup.get_file_status(orig_path, backup_path)
 		local line = string.format("  %s  %s", status, orig_path)
 		table.insert(data.lines, line)
@@ -201,7 +213,7 @@ local function setup_restore_keymaps(inst, state_ref)
 		local prefix_len = #(backup.backup_root .. "/" .. state_ref.run_id) + 1
 		local count = 0
 		for _, backup_path in ipairs(files) do
-			local orig_path = "/" .. backup_path:sub(prefix_len)
+			local orig_path = resolve_path(backup_path:sub(prefix_len))
 			vim.fn.mkdir(vim.fn.fnamemodify(orig_path, ":h"), "p")
 			vim.fn.system({ "cp", backup_path, orig_path })
 			count = count + 1
@@ -284,14 +296,15 @@ function M.add_instance_keymaps(inst, run_id)
 					vim.notify("No file under cursor", vim.log.levels.INFO)
 					return
 				end
-				local backup_path = backup.backup_root .. "/" .. run_id .. "/" .. loc.filename:gsub("^/+", "")
+				local filepath = resolve_path(loc.filename)
+				local backup_path = backup.backup_root .. "/" .. run_id .. "/" .. filepath:gsub("^/+", "")
 				if vim.fn.filereadable(backup_path) == 0 then
-					vim.notify("No backup found for " .. loc.filename, vim.log.levels.WARN)
+					vim.notify("No backup found for " .. filepath, vim.log.levels.WARN)
 					return
 				end
-				vim.fn.mkdir(vim.fn.fnamemodify(loc.filename, ":h"), "p")
-				vim.fn.system({ "cp", backup_path, loc.filename })
-				vim.notify("Restored " .. loc.filename, vim.log.levels.INFO)
+				vim.fn.mkdir(vim.fn.fnamemodify(filepath, ":h"), "p")
+				vim.fn.system({ "cp", backup_path, filepath })
+				vim.notify("Restored " .. filepath, vim.log.levels.INFO)
 			end,
 			desc = "[Grug-Far] Restore file under cursor",
 		})
