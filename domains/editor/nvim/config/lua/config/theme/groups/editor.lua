@@ -9,7 +9,7 @@ M.get = function()
 	return {
 		Normal = { fg = p.foreground.base, bg = p.background.base },
 		NormalNC = { fg = p.foreground.base, bg = p.background.base },
-		NormalFloat = { fg = p.foreground.base, bg = p.background.base },
+		NormalFloat = { fg = p.foreground.base, bg = p.background.variant },
 		FloatBorder = { fg = p.foreground.base, bg = p.background.base },
 		FloatTitle = { fg = p.foreground.variant, bg = p.background.base, bold = true },
 		FloatFooter = { fg = p.accent.base, bg = p.background.base },
