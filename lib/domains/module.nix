@@ -25,13 +25,20 @@ let
       hasRender = builtins.pathExists "${path}/render.nix";
 
       renderedHomeFiles =
-        if hasConfigDir || !hasRender then
+        if !hasRender then
+          { }
+        else if hasConfigDir && !(meta ? xdgFile) then
           { }
         else
           let
             render = import "${path}/render.nix";
+            checkHelpers = import ../checks/theme/assertions.nix {
+              inherit lib;
+              themeName = config.theme;
+              theme = themesLib.get config.theme;
+            };
             outputs = render {
-              inherit themesLib;
+              inherit lib themesLib checkHelpers;
               themeName = config.theme;
               homeDirectory = config.home.homeDirectory;
             };
@@ -65,7 +72,7 @@ let
       customModule = if hasCustomModule then import modulePath else { };
 
       activationModule =
-        if hasConfigDir then
+        if hasConfigDir && !(hasRender && meta ? xdgFile) then
           {
             config = lib.mkIf config.domains.${category}.${name}.enable (mkDomainActivation {
               configDir = configSubdir;
