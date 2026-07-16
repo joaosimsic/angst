@@ -25,5 +25,6 @@
     info    = "#5f9ea0";
     success = "#6e9643";
   };
+
   contrastThreshold = 0;
 }

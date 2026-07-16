@@ -72,6 +72,7 @@ let
         userConfig = effectiveUserConfig;
         monitors = hostConfig.monitors or { };
         repoPath = hostConfig.repoPath or "proj/angst";
+        hostName = hostname;
       };
 
       modules = [

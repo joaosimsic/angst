@@ -95,6 +95,7 @@ function M.with_lsp_inlay_hint_stubs(callback)
 	local original_get_client_by_id = vim.lsp.get_client_by_id
 	local original_enable = vim.lsp.inlay_hint.enable
 	local original_keys = package.loaded["backend.engines.lsp.keys"]
+	local original_hydra = package.loaded["backend.engines.lsp.hydra"]
 
 	local buf = vim.api.nvim_create_buf(false, true)
 	local state = {
@@ -122,6 +123,9 @@ function M.with_lsp_inlay_hint_stubs(callback)
 			state.keymap_buf = attached_buf
 		end,
 	}
+	package.loaded["backend.engines.lsp.hydra"] = {
+		create_diagnostics = function() end,
+	}
 
 	local ok, err = pcall(callback, state)
 
@@ -129,6 +133,7 @@ function M.with_lsp_inlay_hint_stubs(callback)
 	rawset(vim.lsp, "get_client_by_id", original_get_client_by_id)
 	rawset(vim.lsp.inlay_hint, "enable", original_enable)
 	package.loaded["backend.engines.lsp.keys"] = original_keys
+	package.loaded["backend.engines.lsp.hydra"] = original_hydra
 	vim.api.nvim_buf_delete(buf, { force = true })
 
 	assert(ok, err)
