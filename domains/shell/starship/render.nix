@@ -348,7 +348,10 @@ let
       ${extra}
     '';
 
-  formatLine = "$username$hostname $nix_shell$env_var$directory " + "$" + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
+  formatLine =
+    "$username$hostname $nix_shell$env_var$directory "
+    + "$"
+    + lib.concatStringsSep "$" (lib.drop 1 moduleNames);
 
   inherit (checkHelpers) requireInfix require;
 
@@ -369,23 +372,23 @@ let
     truncate_to_repo = false
 
     [git_branch]
-    format = "*[$branch]($style)"
+    format = "[*$branch]($style)"
     style = "#${p.surface.variant}"
     symbol = ""
 
     [git_status]
     format = ' [\[$all_status$ahead_behind\]]($style) '
     style = "#${t.ansi.warn}"
-    conflicted = "!"
-    ahead = "+"
-    behind = "-"
-    diverged = "+-"
-    untracked = "?"
-    stashed = "*"
-    modified = "~"
-    staged = "+"
-    renamed = "r"
-    deleted = "x"
+    conflicted = "[!](#${t.ansi.error})"
+    ahead = "[>](#${p.accent.base})"
+    behind = "[<](#${p.accent.variant})"
+    diverged = "[#](#${t.ansi.error})"
+    untracked = "[?](#${p.foreground.base})"
+    stashed = "[*](#${p.foreground.base})"
+    modified = "[~](#${p.foreground.variant})"
+    staged = "[+](#${t.ansi.success})"
+    renamed = "[R](#${p.foreground.base})"
+    deleted = "[X](#${t.ansi.error})"
 
     [username]
     format = "[$user]($style)"
@@ -412,7 +415,9 @@ in
       (requireInfix starshipText "bold #${t.ansi.error}"
         "starship error_symbol should render ${themeName} ansi.error"
       )
-      (require (t.ansi.success != t.ansi.error) "starship semantic ansi.success and ansi.error must differ in ${themeName}")
+      (require (
+        t.ansi.success != t.ansi.error
+      ) "starship semantic ansi.success and ansi.error must differ in ${themeName}")
     ];
   }
 ]

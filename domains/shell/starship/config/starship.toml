@@ -14,23 +14,23 @@ truncation_length = 3
 truncate_to_repo = false
 
 [git_branch]
-format = "*[$branch]($style)"
+format = "[*$branch]($style)"
 style = "#58a6ff"
 symbol = ""
 
 [git_status]
 format = ' [\[$all_status$ahead_behind\]]($style) '
 style = "#f2b134"
-conflicted = "!"
-ahead = "+"
-behind = "-"
-diverged = "+-"
-untracked = "?"
-stashed = "*"
-modified = "~"
-staged = "+"
-renamed = "r"
-deleted = "x"
+conflicted = "[!](#ff6e6e)"
+ahead = "[>](#ff7b72)"
+behind = "[<](#d29922)"
+diverged = "[#](#ff6e6e)"
+untracked = "[?](#bc8cff)"
+stashed = "[*](#bc8cff)"
+modified = "[~](#b1bac4)"
+staged = "[+](#3fb950)"
+renamed = "[R](#bc8cff)"
+deleted = "[X](#ff6e6e)"
 
 [username]
 format = "[$user]($style)"
