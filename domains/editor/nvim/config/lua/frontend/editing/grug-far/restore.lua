@@ -15,50 +15,133 @@ local function resolve_path(path)
   return vim.fn.fnamemodify(path, ":p")
 end
 
-local function show_diff(orig_path, backup_path)
+local function file_diff_to_data(orig_path, backup_path)
+  local ResultMarkType = require("grug-far.engine").ResultMarkType
+  local ResultHighlightType = require("grug-far.engine").ResultHighlightType
+  local ResultHighlightByType = require("grug-far.engine").ResultHighlightByType
+  local ResultSigns = require("grug-far.engine").ResultSigns
+
+  local data = {
+    lines = {}, marks = {}, highlights = {},
+    stats = { files = 0, matches = 0 },
+  }
+
+  local header = orig_path
+  table.insert(data.lines, header)
+  table.insert(data.marks, {
+    type = ResultMarkType.SourceLocation,
+    start_line = 0, start_col = 0, end_line = 0, end_col = #header,
+    location = { filename = orig_path, text = backup_path, is_counted = false },
+  })
+  table.insert(data.highlights, {
+    hl_group = ResultHighlightByType[ResultHighlightType.FilePath],
+    start_line = 0, start_col = 0, end_line = 0, end_col = #header,
+  })
+  data.stats.files = 1
+
+  if vim.fn.filereadable(orig_path) == 0 then
+    local bk_lines = vim.fn.readfile(backup_path, "")
+    for i, line in ipairs(bk_lines) do
+      local dl = "- " .. line
+      table.insert(data.lines, dl)
+      data.stats.matches = data.stats.matches + 1
+      table.insert(data.marks, {
+        type = ResultMarkType.SourceLocation,
+        start_line = i, start_col = 0, end_line = i, end_col = #dl,
+        sign = ResultSigns.Removed,
+        location = { filename = orig_path, lnum = i, text = dl, is_counted = true },
+      })
+      table.insert(data.highlights, {
+        hl_group = ResultHighlightByType[ResultHighlightType.MatchRemoved],
+        start_line = i, start_col = 0, end_line = i, end_col = #dl,
+      })
+    end
+    return data
+  end
+
   local orig_content = table.concat(vim.fn.readfile(orig_path, ""), "\n")
   local backup_content = table.concat(vim.fn.readfile(backup_path, ""), "\n")
-  local diff = vim.diff(backup_content, orig_content, {
-    result_type = "unified",
-    ctxlen = 3,
-  })
-  if not diff or diff == "" then
-    vim.notify("No differences", vim.log.levels.INFO)
-    return
+
+  if orig_content == backup_content then
+    table.insert(data.lines, "  (unchanged)")
+    return data
   end
-  local lines = vim.split(diff, "\n", { plain = true })
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.bo[buf].modified = false
-  vim.bo[buf].filetype = "diff"
-  local width = math.floor(vim.o.columns * 0.55)
-  local height = math.floor(vim.o.lines * 0.7)
-  local preview_win = vim.api.nvim_open_win(buf, true, {
-    relative = "editor",
-    width = width,
-    height = height,
-    row = math.floor((vim.o.lines - height) / 2),
-    col = math.floor((vim.o.columns - width) / 2),
-    border = "rounded",
-    title = vim.fn.fnamemodify(orig_path, ":t"),
-    title_pos = "center",
+
+  local diff_text = vim.diff(backup_content, orig_content, {
+    result_type = "unified", ctxlen = 3,
   })
-  vim.api.nvim_set_option_value("winhl", "Normal:NormalFloat", { win = preview_win })
-  vim.api.nvim_buf_set_keymap(buf, "n", "q", "", {
-    silent = true,
-    callback = function()
-      pcall(vim.api.nvim_win_close, preview_win, true)
-    end,
-    desc = "Close diff",
-  })
+  if not diff_text or diff_text == "" then
+    table.insert(data.lines, "  (no diff)")
+    return data
+  end
+
+  local diff_lines = vim.split(diff_text, "\n", { plain = true })
+  local line_num = 0
+  local orig_lnum, backup_lnum = 0, 0
+
+  for _, dl in ipairs(diff_lines) do
+    if dl == "" then goto continue end
+    local p = dl:sub(1, 1)
+
+    if p == "-" and dl:sub(2, 2) == "-" then goto continue end
+    if p == "+" and dl:sub(2, 2) == "+" then goto continue end
+    if p == "@" then
+      local _, _, bl = dl:find("@@%-(%d+)")
+      local _, _, ol = dl:find("%+(%d+)")
+      if bl then backup_lnum = tonumber(bl) - 1 end
+      if ol then orig_lnum = tonumber(ol) - 1 end
+      goto continue
+    end
+
+    if p == " " then
+      backup_lnum = backup_lnum + 1
+      orig_lnum = orig_lnum + 1
+      local display = "  " .. dl:sub(2)
+      table.insert(data.lines, display)
+      line_num = line_num + 1
+    elseif p == "-" then
+      backup_lnum = backup_lnum + 1
+      local display = "- " .. dl:sub(2)
+      table.insert(data.lines, display)
+      line_num = line_num + 1
+      data.stats.matches = data.stats.matches + 1
+      table.insert(data.marks, {
+        type = ResultMarkType.SourceLocation,
+        start_line = line_num, start_col = 0, end_line = line_num, end_col = #display,
+        sign = ResultSigns.Removed,
+        location = { filename = orig_path, lnum = backup_lnum, text = display, is_counted = true },
+      })
+      table.insert(data.highlights, {
+        hl_group = ResultHighlightByType[ResultHighlightType.MatchRemoved],
+        start_line = line_num, start_col = 0, end_line = line_num, end_col = #display,
+      })
+    elseif p == "+" then
+      orig_lnum = orig_lnum + 1
+      local display = "+ " .. dl:sub(2)
+      table.insert(data.lines, display)
+      line_num = line_num + 1
+      data.stats.matches = data.stats.matches + 1
+      table.insert(data.marks, {
+        type = ResultMarkType.SourceLocation,
+        start_line = line_num, start_col = 0, end_line = line_num, end_col = #display,
+        sign = ResultSigns.Added,
+        location = { filename = orig_path, lnum = orig_lnum, text = display, is_counted = true },
+      })
+      table.insert(data.highlights, {
+        hl_group = ResultHighlightByType[ResultHighlightType.MatchAdded],
+        start_line = line_num, start_col = 0, end_line = line_num, end_col = #display,
+      })
+    end
+    ::continue::
+  end
+
+  return data
 end
 
 local function runs_to_data(runs)
   local ResultMarkType = require("grug-far.engine").ResultMarkType
   local data = {
-    lines = {},
-    marks = {},
-    highlights = {},
+    lines = {}, marks = {}, highlights = {},
     stats = { files = 0, matches = #runs },
   }
   for i, run in ipairs(runs) do
@@ -67,40 +150,53 @@ local function runs_to_data(runs)
     table.insert(data.lines, line)
     table.insert(data.marks, {
       type = ResultMarkType.SourceLocation,
-      start_line = i - 1,
-      start_col = 0,
-      end_line = i - 1,
-      end_col = #line,
+      start_line = i - 1, start_col = 0, end_line = i - 1, end_col = #line,
       location = { filename = run, is_counted = false },
     })
   end
   return data
 end
 
-local function files_to_data(files, run_id)
-  local ResultMarkType = require("grug-far.engine").ResultMarkType
+local function files_to_diff_data(files, run_id, backup_paths)
   local prefix_len = #(backup.backup_root .. "/" .. run_id) + 1
-  local data = {
-    lines = {},
-    marks = {},
-    highlights = {},
-    stats = { files = 0, matches = #files },
+  local all_data = {
+    lines = {}, marks = {}, highlights = {},
+    stats = { files = 0, matches = 0 },
   }
-  for i, backup_path in ipairs(files) do
-    local orig_path = resolve_path(backup_path:sub(prefix_len))
-    local status = backup.get_file_status(orig_path, backup_path)
-    local line = string.format("  %s  %s", status, orig_path)
-    table.insert(data.lines, line)
-    table.insert(data.marks, {
-      type = ResultMarkType.SourceLocation,
-      start_line = i - 1,
-      start_col = 0,
-      end_line = i - 1,
-      end_col = #line,
-      location = { filename = orig_path, text = backup_path, is_counted = false },
-    })
+  local offset = 0
+
+  for _, bp in ipairs(files) do
+    local orig_path = resolve_path(bp:sub(prefix_len))
+    backup_paths[orig_path] = bp
+
+    local fd = file_diff_to_data(orig_path, bp)
+    if fd and #fd.lines > 0 then
+      for _, m in ipairs(fd.marks) do
+        m.start_line = m.start_line + offset
+        m.end_line = m.end_line + offset
+      end
+      for _, h in ipairs(fd.highlights) do
+        h.start_line = h.start_line + offset
+        h.end_line = h.end_line + offset
+      end
+      for _, l in ipairs(fd.lines) do
+        table.insert(all_data.lines, l)
+      end
+      for _, m in ipairs(fd.marks) do
+        table.insert(all_data.marks, m)
+      end
+      for _, h in ipairs(fd.highlights) do
+        table.insert(all_data.highlights, h)
+      end
+      all_data.stats.files = all_data.stats.files + fd.stats.files
+      all_data.stats.matches = all_data.stats.matches + fd.stats.matches
+
+      table.insert(all_data.lines, "")
+      offset = #all_data.lines
+    end
   end
-  return data
+
+  return all_data
 end
 
 local function render_data(inst, data)
@@ -116,6 +212,23 @@ local function get_location_at_cursor(inst)
   local context = inst._context
   local resultsList = require("grug-far.render.resultsList")
   return resultsList.getResultLocationAtCursor(buf, context)
+end
+
+local function open_file_at_location(loc)
+  local orig_path = loc.filename
+  if not orig_path or vim.fn.filereadable(orig_path) == 0 then
+    return
+  end
+  local bufnr = vim.fn.bufnr(orig_path)
+  if bufnr == -1 then
+    vim.api.nvim_command("edit " .. vim.fn.fnameescape(orig_path))
+  else
+    vim.api.nvim_win_set_buf(0, bufnr)
+  end
+  if loc.lnum then
+    vim.api.nvim_win_set_cursor(0, { loc.lnum, 0 })
+    vim.cmd("normal! zz")
+  end
 end
 
 local function setup_restore_keymaps(inst, state_ref)
@@ -150,86 +263,76 @@ local function setup_restore_keymaps(inst, state_ref)
 
   binder:nmap("<CR>", function()
     local loc = get_location_at_cursor(inst)
-    if not loc then
-      return
-    end
+    if not loc then return end
 
     if state_ref.state == "runs" then
       local run_id = loc.filename
       local files = backup.list_backup_files(run_id)
-      render_data(inst, files_to_data(files, run_id))
+      local backup_paths = {}
+      local data = files_to_diff_data(files, run_id, backup_paths)
+      data.stats.files = #files
+      render_data(inst, data)
       state_ref.state = "files"
       state_ref.run_id = run_id
+      state_ref.backup_paths = backup_paths
     elseif state_ref.state == "files" then
-      local orig_path = loc.filename
-      local backup_path = loc.text
-      if vim.fn.filereadable(orig_path) == 1 then
-        show_diff(orig_path, backup_path)
-      else
-        vim.notify("File no longer exists: " .. orig_path, vim.log.levels.WARN)
-      end
+      open_file_at_location(loc)
     end
-  end, { desc = "Select run or diff file" })
+  end, { desc = "Select run or open file" })
 
   binder:nmap("d", function()
-    if state_ref.state ~= "files" then
-      return
-    end
+    if state_ref.state ~= "files" then return end
     local loc = get_location_at_cursor(inst)
-    if not loc then
-      return
-    end
-    local orig_path = loc.filename
-    local backup_path = loc.text
-    if vim.fn.filereadable(orig_path) == 1 then
-      show_diff(orig_path, backup_path)
-    else
-      vim.notify("File no longer exists: " .. orig_path, vim.log.levels.WARN)
-    end
-  end, { desc = "Diff file" })
+    if not loc then return end
+    open_file_at_location(loc)
+  end, { desc = "Open file at cursor" })
 
   binder:nmap("r", function()
-    if state_ref.state ~= "files" then
-      return
-    end
+    if state_ref.state ~= "files" then return end
     local loc = get_location_at_cursor(inst)
-    if not loc then
+    if not loc then return end
+    local orig_path = loc.filename
+    local backup_path = state_ref.backup_paths and state_ref.backup_paths[orig_path]
+    if not backup_path then
+      vim.notify("No backup path for " .. orig_path, vim.log.levels.WARN)
       return
     end
-    local orig_path = loc.filename
-    local backup_path = loc.text
     vim.fn.mkdir(vim.fn.fnamemodify(orig_path, ":h"), "p")
     vim.fn.system({ "cp", backup_path, orig_path })
-    vim.notify("Restored " .. orig_path, vim.log.levels.INFO)
+    local context = inst._context
+    context.state.actionMessage = "Restored " .. vim.fn.fnamemodify(orig_path, ":t")
+    pcall(require("grug-far.render.resultsHeader"), inst:get_buf(), context)
     local files = backup.list_backup_files(state_ref.run_id)
-    render_data(inst, files_to_data(files, state_ref.run_id))
+    local backup_paths = {}
+    render_data(inst, files_to_diff_data(files, state_ref.run_id, backup_paths))
+    state_ref.backup_paths = backup_paths
   end, { desc = "Restore file" })
 
   binder:nmap("R", function()
-    if state_ref.state ~= "files" then
-      return
-    end
+    if state_ref.state ~= "files" then return end
     local files = backup.list_backup_files(state_ref.run_id)
     local prefix_len = #(backup.backup_root .. "/" .. state_ref.run_id) + 1
     local count = 0
+    local context = inst._context
     for _, backup_path in ipairs(files) do
       local orig_path = resolve_path(backup_path:sub(prefix_len))
       vim.fn.mkdir(vim.fn.fnamemodify(orig_path, ":h"), "p")
       vim.fn.system({ "cp", backup_path, orig_path })
       count = count + 1
     end
-    vim.notify("Restored " .. count .. " files", vim.log.levels.INFO)
-    render_data(inst, files_to_data(files, state_ref.run_id))
+    context.state.actionMessage = "Restored " .. count .. " files"
+    pcall(require("grug-far.render.resultsHeader"), inst:get_buf(), context)
+    local backup_paths = {}
+    render_data(inst, files_to_diff_data(files, state_ref.run_id, backup_paths))
+    state_ref.backup_paths = backup_paths
   end, { desc = "Restore all files" })
 end
 
 local disabled_keymaps
 local function get_disabled_keymaps()
-  if disabled_keymaps then
-    return disabled_keymaps
-  end
+  if disabled_keymaps then return disabled_keymaps end
   disabled_keymaps = {}
-  local default_keymap_names = {
+  local names = {
     "replace", "qflist", "syncLocations", "syncLine", "close",
     "historyOpen", "historyAdd", "refresh", "openLocation",
     "openNextLocation", "openPrevLocation", "gotoLocation",
@@ -238,14 +341,14 @@ local function get_disabled_keymaps()
     "applyNext", "applyPrev", "syncNext", "syncPrev", "syncFile",
     "nextInput", "prevInput",
   }
-  for _, name in ipairs(default_keymap_names) do
+  for _, name in ipairs(names) do
     disabled_keymaps[name] = false
   end
   return disabled_keymaps
 end
 
 local function setup_restore_browser(inst)
-  local state_ref = { state = "runs", run_id = nil }
+  local state_ref = { state = "runs", run_id = nil, backup_paths = {} }
   local runs = backup.list_backup_runs()
   if #runs > 0 then
     render_data(inst, runs_to_data(runs))
@@ -285,9 +388,7 @@ function M.add_instance_keymaps(inst, run_id)
   inst:when_ready(function()
     local buf = inst:get_buf()
     vim.api.nvim_buf_set_keymap(buf, "n", "<localleader>u", "", {
-      noremap = true,
-      nowait = true,
-      silent = true,
+      noremap = true, nowait = true, silent = true,
       callback = function()
         local context = inst._context
         local resultsList = require("grug-far.render.resultsList")
