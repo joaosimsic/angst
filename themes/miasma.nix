@@ -20,9 +20,10 @@
   };
 
   ansi = {
-    error = "#d9534f";
-    warn = "#df9f28";
-    info = "#5f9ea0";
+    error   = "#d9534f";
+    warn    = "#df9f28";
+    info    = "#5f9ea0";
     success = "#6e9643";
   };
+  contrastThreshold = 0;
 }

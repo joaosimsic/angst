@@ -118,7 +118,7 @@ let
         dim = stripHash p.dim;
       };
       ansi = lib.mapAttrs (_: stripHash) theme.ansi;
-    };
+    } // builtins.removeAttrs theme ["palette" "ansi"];
 
   validateTheme =
     name: theme:
@@ -178,28 +178,35 @@ in
     name:
     if themes ? ${name} then
       let
-        theme = withRgb (validateTheme name (normalizeTheme themes.${name}));
+        raw = themes.${name};
+        threshold = raw.contrastThreshold or 4.5;
+        theme = withRgb (validateTheme name (normalizeTheme raw));
         p = theme.palette;
       in
       theme // {
         safe = {
           foregroundOnSurfaceVariant = ensureContrast {
             fg = p.foreground.variant; bg = p.surface.variant; fallback = p.background.base;
+            inherit threshold;
           };
           foregroundOnSurfaceBase = ensureContrast {
             fg = p.foreground.variant; bg = p.surface.base; fallback = p.background.base;
+            inherit threshold;
           };
           foregroundOnAccentVariant = ensureContrast {
             fg = p.foreground.variant; bg = p.accent.variant; fallback = p.background.base;
+            inherit threshold;
           };
           foregroundOnAccentBase = ensureContrast {
             fg = p.foreground.variant; bg = p.accent.base; fallback = p.background.base;
+            inherit threshold;
           };
           foregroundOnBgVariant = ensureContrast {
             fg = p.foreground.variant; bg = p.background.variant; fallback = p.background.base;
+            inherit threshold;
           };
           surfaceVariantOnForegroundVariant =
-            if contrastRatio p.surface.variant p.foreground.variant >= 4.5
+            if contrastRatio p.surface.variant p.foreground.variant >= threshold
             then p.foreground.variant
             else p.background.base;
         };
