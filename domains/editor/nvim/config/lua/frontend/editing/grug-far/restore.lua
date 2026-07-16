@@ -144,13 +144,20 @@ local function runs_to_data(runs)
     lines = {}, marks = {}, highlights = {},
     stats = { files = 0, matches = #runs },
   }
+  local hint = "  [<CR>] Select run  |  [q] Close"
+  table.insert(data.lines, hint)
+  table.insert(data.highlights, {
+    hl_group = "GrugFarHelpHeader",
+    start_line = 0, start_col = 0, end_line = 0, end_col = #hint,
+  })
+  table.insert(data.lines, "")
   for i, run in ipairs(runs) do
     local count = backup.count_files(run)
     local line = string.format("  %s  (%d files)", run, count)
     table.insert(data.lines, line)
     table.insert(data.marks, {
       type = ResultMarkType.SourceLocation,
-      start_line = i - 1, start_col = 0, end_line = i - 1, end_col = #line,
+      start_line = i + 1, start_col = 0, end_line = i + 1, end_col = #line,
       location = { filename = run, is_counted = false },
     })
   end
@@ -163,7 +170,14 @@ local function files_to_diff_data(files, run_id, backup_paths)
     lines = {}, marks = {}, highlights = {},
     stats = { files = 0, matches = 0 },
   }
-  local offset = 0
+  local hint = "  [q] Back  |  [r] Restore  |  [R] All  |  [d/<CR>] Open file"
+  table.insert(all_data.lines, hint)
+  table.insert(all_data.highlights, {
+    hl_group = "GrugFarHelpHeader",
+    start_line = 0, start_col = 0, end_line = 0, end_col = #hint,
+  })
+  table.insert(all_data.lines, "")
+  local offset = 2
 
   for _, bp in ipairs(files) do
     local orig_path = resolve_path(bp:sub(prefix_len))
@@ -290,7 +304,7 @@ local function setup_restore_keymaps(inst, state_ref)
   binder:nmap("r", function()
     if state_ref.state ~= "files" then return end
     local loc = get_location_at_cursor(inst)
-    if not loc then return end
+   if not loc then return end
     local orig_path = loc.filename
     local backup_path = state_ref.backup_paths and state_ref.backup_paths[orig_path]
     if not backup_path then
