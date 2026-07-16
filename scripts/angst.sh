@@ -216,6 +216,35 @@ render_cmd() {
       echo "rendered $path"
   done < <(echo "$json_data" | jq -r '.[] | .path')
 
+  # Sync .gitignore: collect all rendered paths and generate .gitignore entries
+  local unique_dirs
+  unique_dirs=$(echo "$json_data" | jq -r '.[] | .path' | while IFS= read -r p; do
+    echo "$p" | cut -d/ -f1-4
+  done | sort -u)
+
+  if [ -n "$unique_dirs" ]; then
+    for config_dir in $unique_dirs; do
+      local rel_paths
+      rel_paths=$(echo "$json_data" | jq -r '.[] | .path' | while IFS= read -r p; do
+        case "$p" in
+          "$config_dir/"*) echo "${p#"$config_dir"/}" ;;
+        esac
+      done | sort -u)
+
+      local gitignore_path="$repo_root/$config_dir/.gitignore"
+
+      if [ -f "$gitignore_path" ]; then
+        local combined
+        combined=$(printf '%s\n%s' "$rel_paths" "$(cat "$gitignore_path")" | sort -u)
+        printf '%s\n' "$combined" > "$gitignore_path"
+      else
+        printf '%s\n' "$rel_paths" > "$gitignore_path"
+      fi
+
+      echo "synced $config_dir/.gitignore"
+    done
+  fi
+
   if [ "$should_reload" -eq 1 ]; then
     reload_hooks
   fi

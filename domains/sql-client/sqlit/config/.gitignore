@@ -1,3 +1,5 @@
 connections.json
-query_history.json
 credentials.json
+query_history.json
+settings.json
+themes/
