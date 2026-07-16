@@ -1,6 +1,6 @@
 # angst flake analysis
 
-*Generated: 2026-07-16 17:23*
+*Generated: 2026-07-16 17:41*
 
 ## Table of Contents
 
@@ -360,10 +360,10 @@ flake.nix
 - `flake.nix`
 - `lib/build/mkHome.nix`
 - `lib/build/mkHost.nix`
-- `lib/virtualisation/detect.nix`
 - `lib/flake/default.nix`
-- `lib/virtualisation/is-qemu-vm.nix`
+- `lib/virtualisation/detect.nix`
 - `lib/flake/homeConfigurations.nix`
+- `lib/virtualisation/is-qemu-vm.nix`
 
 ### "allowUnfree" hardcoded
 
@@ -375,17 +375,17 @@ flake.nix
 
 - **parseEnv**: 7 files import it
   - `flake.nix`
-  - `lib/flake/checks.nix`
-  - `lib/flake/default.nix`
-  - `lib/flake/homeConfigurations.nix`
   - `lib/build/mkHome.nix`
   - `lib/build/mkHost.nix`
   - `lib/checks/parseEnv.nix`
+  - `lib/flake/checks.nix`
+  - `lib/flake/homeConfigurations.nix`
+  - `lib/flake/default.nix`
 - **domains/default**: 4 files import it
   - `flake.nix`
   - `lib/build/mkHome.nix`
-  - `lib/flake/default.nix`
   - `lib/build/mkHost.nix`
+  - `lib/flake/default.nix`
 - **themes/default**: 3 files import it
   - `lib/build/mkHome.nix`
   - `lib/flake/default.nix`
@@ -520,11 +520,11 @@ flake.nix
 |---|---|
 | capabilities | 9 |
 | domains | 2 |
-| angst | 1 |
 | font | 1 |
-| toolchains | 1 |
 | theme | 1 |
+| toolchains | 1 |
 | domainConfig | 1 |
+| angst | 1 |
 
 ## 18. Nix Idiom Usage
 
@@ -590,7 +590,7 @@ flake.nix
 | Score | File | Contributing factors |
 |---|---|---|
 | 7 | `themes/default.nix` | depth=3, interp=27, LOC=218 |
-| 7 | `lib/flake/default.nix` | depth=2, interp=54, LOC=388 |
+| 7 | `lib/flake/default.nix` | depth=2, interp=53, LOC=388 |
 | 7 | `domains/shell/starship/render.nix` | depth=2, interp=32, LOC=423 |
 | 7 | `domains/shell/nushell/render.nix` | depth=20, interp=72, LOC=130 |
 | 6 | `lib/virtualisation/vm-profile.nix` | interp=12, cond=14, LOC=199 |
@@ -747,16 +747,16 @@ flake.nix
 
 | Command | Result | Time |
 |---|---|---|
-| nix flake show | ✓ | 2.15s |
+| nix flake show | ✓ | 2.19s |
 | packages.x86_64-linux | ✓ | 0.05s |
 | apps.x86_64-linux | ✓ | 0.05s |
-| checks.x86_64-linux | ✓ | 0.05s |
+| checks.x86_64-linux | ✓ | 0.06s |
 
 ### Build (realisation)
 
 | Command | Result | Time |
 |---|---|---|
-| nix flake check | ✓ | 22.82s |
+| nix flake check | ✓ | 23.40s |
 
 ## 26. Technical Debt Score
 
@@ -818,8 +818,7 @@ flake.nix
 
 ## 28. Stability Index
 
-> Cross-references git churn with file recency. **Hot** = high churn + recently modified,
-> **Active** = moderate churn, **Stable** = low churn, **Archived** = no changes in 6+ months.
+> Cross-references git churn with file recency. **Hot** = high churn + recently modified, **Active** = moderate churn, **Stable** = low churn, **Archived** = no changes in 6+ months.
 
 | File | Churn | Last changed | Label |
 |---|---|---|---|
@@ -911,13 +910,13 @@ flake.nix
 | Check | Result | Time | Details |
 |---|---|---|---|
 | `check-parse-env` | ✓ | 0.45s |  |
-| `check-password` | ✓ | 1.67s |  |
-| `home-theme-override-test` | ✓ | 13.00s |  |
-| `lint-desktop` | ✓ | 2.00s |  |
-| `lint-shell` | ✓ | 1.18s |  |
-| `lint-themes` | ✓ | 0.50s |  |
-| `theme-override` | ✓ | 1.15s |  |
-| `theme-rendered` | ✓ | 0.47s |  |
+| `check-password` | ✓ | 1.68s |  |
+| `home-theme-override-test` | ✓ | 13.70s |  |
+| `lint-desktop` | ✓ | 1.79s |  |
+| `lint-shell` | ✓ | 1.23s |  |
+| `lint-themes` | ✓ | 0.48s |  |
+| `theme-override` | ✓ | 1.13s |  |
+| `theme-rendered` | ✓ | 0.45s |  |
 | `theme-semantic-distinct` | ✓ | 0.45s |  |
 
 **9 passed, 0 failed**

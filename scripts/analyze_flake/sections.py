@@ -1,194 +1,29 @@
-#!/usr/bin/env python3
-"""angst flake analysis — Markdown report.
+"""Analysis sections for angst flake report."""
 
-Usage:
-    python scripts/analyze-flake.py [--no-eval-cost] [--no-color]
-
-Outputs a Markdown report to stdout.
-"""
-
-import argparse
-import json
-import os
 import re
-import shutil
-import subprocess
-import sys
 import time
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-REPO = Path.cwd()
-
-# ── helpers ───────────────────────────────────
-
-
-def has_cmd(name: str) -> bool:
-    return shutil.which(name) is not None
-
-
-def run(
-    cmd: list[str],
-    timeout: int | None = 120,
-    check: bool = False,
-    **kwargs,
-) -> tuple[int, str, str]:
-    try:
-        r = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            **kwargs,
-        )
-        if check:
-            r.check_returncode()
-        return r.returncode, r.stdout, r.stderr
-    except FileNotFoundError:
-        return -1, "", f"command not found: {cmd[0]}"
-    except subprocess.TimeoutExpired:
-        return -1, "", f"timed out ({timeout}s)"
-    except subprocess.CalledProcessError as e:
-        return e.returncode, e.stdout, e.stderr
-
-
-def run_quiet(cmd: list[str], **kwargs) -> str:
-    """Run and return stdout.strip(); empty string on failure."""
-    rc, out, _ = run(cmd, **kwargs)
-    return out.strip() if rc == 0 else ""
-
-
-def find_nix_files(root: Path | None = None) -> list[Path]:
-    root = root or REPO
-    result: list[Path] = []
-    for p in root.rglob("*.nix"):
-        parts = p.relative_to(REPO).parts
-        if ".git" in parts or "result" in parts:
-            continue
-        # exclude tools subflakes (vm, shell) — they are separate flakes
-        if len(parts) >= 2 and parts[0] == "tools" and parts[1] in ("vm", "shell"):
-            continue
-        result.append(p)
-    return sorted(result)
-
-
-def nix_eval(
-    attr: str,
-    apply: str | None = None,
-    json_out: bool = False,
-    **kwargs,
-) -> tuple[int, str, str]:
-    """nix eval wrapper."""
-    cmd = ["nix", "eval", f".#{attr}", "--no-warn-dirty"]
-    if json_out:
-        cmd.append("--json")
-    if apply:
-        cmd.extend(["--apply", apply])
-    return run(cmd, **kwargs)
-
-
-def nix_eval_attr_names(attr: str, **kwargs) -> list[str]:
-    """Return list of attribute names under #.attr."""
-    rc, out, err = nix_eval(attr, apply="builtins.attrNames", json_out=True, **kwargs)
-    if rc != 0:
-        return []
-    try:
-        return json.loads(out)
-    except json.JSONDecodeError:
-        return []
-
-
-def git_log(patterns: list[str], since: str = "1 year ago") -> list[str]:
-    cmd = [
-        "git",
-        "log",
-        "--oneline",
-        f"--since={since}",
-        "--name-only",
-        "--",
-    ] + patterns
-    rc, out, _ = run(cmd, timeout=30)
-    if rc != 0:
-        return []
-    return [l for l in out.splitlines() if l and not l.startswith(("commit ", "Date:"))]
-
-
-# ── markdown helpers ──────────────────────────
-
-
-def md_escape(s: str | int | float) -> str:
-    return str(s).replace("|", "\\|")
-
-
-def md_table(headers: list[str], rows: list[list[Any]]) -> str:
-    lines = ["| " + " | ".join(str(h) for h in headers) + " |"]
-    lines.append("|" + "|".join("---" for _ in headers) + "|")
-    for row in rows:
-        lines.append("| " + " | ".join(md_escape(c) for c in row) + " |")
-    return "\n".join(lines)
-
-
-def md_section(n: int, title: str) -> str:
-    return f"\n## {n}. {title}\n"
-
-
-def md_subsection(title: str) -> str:
-    return f"\n### {title}\n"
-
-
-def md_code(text: str, lang: str = "") -> str:
-    return f"```{lang}\n{text}\n```"
-
-
-# ── file parsing ──────────────────────────────
-
-
-def read_nix(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8")
-    except Exception:
-        return ""
-
-
-def parse_imports(text: str, base_dir: Path) -> list[Path]:
-    """Extract imported .nix file paths relative to base_dir."""
-    imports: list[Path] = []
-    for m in re.finditer(
-        r"""import\s+(?:\(?\s*)(\.\.?/[^'"\s;)]+)\.nix|import\s+(?:\(?\s*)["'](\.\.?/[^"'\s;)]+)["']""",
-        text,
-    ):
-        raw = (m.group(1) or m.group(2)).rstrip("/")
-        if raw.startswith("."):
-            full = (base_dir / raw).resolve()
-            # Nix adds .nix implicitly
-            for candidate in [full, full.with_suffix(".nix")]:
-                if candidate.exists() and candidate.suffix == ".nix":
-                    imports.append(candidate)
-                    break
-    return imports
-
-
-def parse_imports_from_tree(
-    files: list[Path],
-) -> tuple[dict[Path, list[Path]], dict[Path, int]]:
-    """Return (fan_out: file -> imports, fan_in: file -> import_count)."""
-    fan_out: dict[Path, list[Path]] = {}
-    fan_in: Counter = Counter()
-    for f in files:
-        text = read_nix(f)
-        deps = parse_imports(text, f.parent)
-        fan_out[f] = deps
-        for d in deps:
-            fan_in[d] += 1
-    return fan_out, dict(fan_in)
-
-
-# ── analysis sections ─────────────────────────
+from .util import (
+    REPO,
+    has_cmd,
+    run,
+    find_nix_files,
+    nix_eval_attr_names,
+    md_table,
+    md_section,
+    md_subsection,
+    md_code,
+    read_nix,
+    parse_imports_from_tree,
+)
 
 
 def section_overview(no_eval_cost: bool = False) -> str:
+    """Section 1: Overview."""
     lines = [md_section(1, "Overview")]
     nix_files = find_nix_files()
     total_nix_loc = sum(len(read_nix(f).splitlines()) for f in nix_files)
@@ -230,6 +65,7 @@ def section_overview(no_eval_cost: bool = False) -> str:
 
 
 def section_file_size_heatmap() -> str:
+    """Section 2: File Size Heatmap."""
     lines = [md_section(2, "File Size Heatmap (top 30)")]
     entries: list[tuple[int, str, str]] = []
     for f in find_nix_files():
@@ -246,6 +82,7 @@ def section_file_size_heatmap() -> str:
 
 
 def section_directory_breakdown() -> str:
+    """Section 3: Directory Size Breakdown."""
     lines = [md_section(3, "Directory Size Breakdown")]
     rows: list[list[Any]] = []
     for d in (
@@ -284,6 +121,7 @@ def section_directory_breakdown() -> str:
 
 
 def section_attribute_surface() -> str:
+    """Section 4: Attribute Surface."""
     lines = [md_section(4, "Attribute Surface")]
     pairs = [
         ("packages", "packages.x86_64-linux"),
@@ -308,6 +146,7 @@ def section_attribute_surface() -> str:
 
 
 def section_config_matrix() -> str:
+    """Section 5: Configuration Matrix."""
     lines = [md_section(5, "Configuration Matrix")]
 
     hosts = sorted(d.name for d in REPO.joinpath("hosts").iterdir() if d.is_dir())
@@ -343,12 +182,14 @@ def section_config_matrix() -> str:
 
     combo_host_theme = len(hosts) * len(themes)
     lines.append(
-        f"\n> **Possible host/theme configurations:** {len(hosts)} × {len(themes)} = {combo_host_theme}"
+        f"\n> **Possible host/theme configurations:** {len(hosts)} × {len(themes)}"
+        f" = {combo_host_theme}"
     )
     return "\n".join(lines)
 
 
 def section_render_coverage() -> str:
+    """Section 6: Render Coverage."""
     lines = [md_section(6, "Render Coverage")]
     total = 0
     counts: Counter[str] = Counter()
@@ -396,7 +237,6 @@ def transitive_dependents(
     fan_out: dict[Path, list[Path]],
 ) -> dict[Path, int]:
     """For each file, count how many other files depend on it transitively."""
-    # Build reverse graph: node -> set of direct dependents
     reverse: dict[Path, set[Path]] = defaultdict(set)
     all_nodes = set(fan_out)
     for src, deps in fan_out.items():
@@ -404,10 +244,10 @@ def transitive_dependents(
             reverse[d].add(src)
             all_nodes.add(d)
 
-    # For each node, compute transitive closure in reverse graph
     memo: dict[Path, set[Path]] = {}
 
     def closure(node: Path, visiting: set) -> set[Path]:
+        """DFS to compute transitive dependents for a node."""
         if node in memo:
             return memo[node]
         if node in visiting:
@@ -428,14 +268,13 @@ def transitive_dependents(
 
 
 def section_dependency_fan() -> str:
+    """Section 7: Dependency Fan-in / Fan-out."""
     lines = [md_section(7, "Dependency Fan-in / Fan-out")]
     files = find_nix_files()
     fan_out, fan_in = parse_imports_from_tree(files)
 
-    # transitive dependents
     trans = transitive_dependents(fan_out)
 
-    # fan-in: most imported
     fi_sorted = sorted(fan_in.items(), key=lambda x: -x[1])
     fi_rows: list[list[Any]] = []
     for path, count in fi_sorted[:15]:
@@ -445,7 +284,6 @@ def section_dependency_fan() -> str:
     lines.append(md_subsection("Most imported modules (fan-in)"))
     lines.append(md_table(["Direct", "Transitive", "File"], fi_rows))
 
-    # fan-out: files importing the most
     fo_sorted = sorted(fan_out.items(), key=lambda x: -len(x[1]))
     fo_rows: list[list[Any]] = []
     for path, deps in fo_sorted[:15]:
@@ -490,6 +328,7 @@ def build_import_tree(
     root: Path,
     fan_out: dict[Path, list[Path]],
 ) -> str:
+    """Render an ASCII import tree for a given root file."""
     lines: list[str] = []
     rel = root.relative_to(REPO)
     lines.append(str(rel))
@@ -502,12 +341,14 @@ def build_import_tree(
 
 
 def build_mermaid_graph(fan_out: dict[Path, list[Path]]) -> str:
+    """Build a Mermaid flowchart of the module dependency graph."""
     edges: list[str] = []
     seen_edges: set[tuple[Path, Path]] = set()
     node_ids: dict[Path, str] = {}
     next_id = 0
 
     def nid(path: Path) -> str:
+        """Return a short unique node ID for a path."""
         nonlocal next_id
         if path not in node_ids:
             node_ids[path] = f"n{next_id}"
@@ -515,6 +356,7 @@ def build_mermaid_graph(fan_out: dict[Path, list[Path]]) -> str:
         return node_ids[path]
 
     def walk(node: Path, v: set):
+        """Recursively walk the import graph to collect edges."""
         if node in v:
             return
         v.add(node)
@@ -556,7 +398,7 @@ def _file_layer(path: Path) -> int:
         return 0
     if rel.parts and rel.parts[0] in LAYER_ORDER:
         return LAYER_ORDER.index(rel.parts[0])
-    return 5  # unknown -> middle
+    return 5
 
 
 def _check_layer_violations(
@@ -581,6 +423,7 @@ def _check_layer_violations(
 
 
 def section_coupling_graph(no_graph: bool = False) -> str:
+    """Section 8: Module Coupling Graph."""
     lines = [md_section(8, "Module Coupling Graph")]
     files = find_nix_files()
     fan_out, _ = parse_imports_from_tree(files)
@@ -592,7 +435,7 @@ def section_coupling_graph(no_graph: bool = False) -> str:
     lines.append(md_code(build_import_tree(root, fan_out)))
 
     lines.append(md_subsection("Architectural layer validation"))
-    lines.append(f"\nAllowed direction (foundational → specific):\n")
+    lines.append("\nAllowed direction (foundational → specific):\n")
     lines.append("```\n" + "\n ↓\n".join(LAYER_ORDER) + "\n```\n")
     violations = _check_layer_violations(fan_out)
     if violations:
@@ -624,7 +467,7 @@ def deepest_import_path(
     if node in memo:
         return memo[node]
     if node in visiting:
-        return 0, []  # cycle guard
+        return 0, []
     visiting.add(node)
     best_depth = 0
     best_path: list[Path] = []
@@ -639,6 +482,7 @@ def deepest_import_path(
 
 
 def section_build_depth() -> str:
+    """Section 9: Build Graph Depth."""
     lines = [md_section(9, "Build Graph Depth")]
     files = find_nix_files()
     fan_out, _ = parse_imports_from_tree(files)
@@ -648,7 +492,7 @@ def section_build_depth() -> str:
     depth, path = deepest_import_path(root, fan_out)
     lines.append(f"\nMaximum dependency depth from **flake.nix**: **{depth}**\n")
     lines.append("Longest import chain:\n")
-    lines.append(f"```\nflake.nix")
+    lines.append("```\nflake.nix")
     for i, p in enumerate(path):
         rel = p.relative_to(REPO)
         indent = "    " * i + " └─ "
@@ -658,10 +502,13 @@ def section_build_depth() -> str:
 
 
 def section_duplication() -> str:
+    """Section 10: Duplication Hotspots."""
     lines = [md_section(10, "Duplication Hotspots")]
 
     patterns = {
-        "userEnv parsing (parseEnv.nix)": r"parseEnv\.nix|userEnv\s*=|builtins\.pathExists.*user\.env",
+        "userEnv parsing (parseEnv.nix)": (
+            r"parseEnv\.nix|userEnv\s*=|builtins\.pathExists.*user\.env"
+        ),
         '"x86_64-linux" hardcoded': r"x86_64-linux",
         '"proj/angst" hardcoded': r"proj/angst",
         '"allowUnfree" hardcoded': r"allowUnfree",
@@ -722,6 +569,7 @@ def section_duplication() -> str:
 
 
 def section_hardcoded_strings() -> str:
+    """Section 11: Hardcoded Strings Inventory."""
     lines = [md_section(11, "Hardcoded Strings Inventory")]
     pairs = [
         ("angst", "project name"),
@@ -786,6 +634,7 @@ def section_hardcoded_strings() -> str:
 
 
 def section_domain_inventory_condensed() -> str:
+    """Section 12: Domain Inventory."""
     lines = [md_section(12, "Domain Inventory")]
     rows: list[list[Any]] = []
     domains_path = REPO / "domains"
@@ -819,6 +668,7 @@ def section_domain_inventory_condensed() -> str:
 
 
 def section_theme_inventory_condensed() -> str:
+    """Section 13: Theme Inventory."""
     lines = [md_section(13, "Theme Inventory")]
     lines.append("> **See `nix flake show` for the full list.**\n")
     themes_dir = REPO / "themes"
@@ -841,6 +691,7 @@ def section_theme_inventory_condensed() -> str:
 
 
 def section_capabilities_inventory_condensed() -> str:
+    """Section 14: Capabilities Inventory."""
     lines = [md_section(14, "Capabilities Inventory")]
     lines.append("> **See `nix flake show` for the full list.**\n")
     cap_dir = REPO / "capabilities"
@@ -860,6 +711,7 @@ def section_capabilities_inventory_condensed() -> str:
 
 
 def section_toolchain_inventory_condensed() -> str:
+    """Section 15: Toolchain Inventory."""
     lines = [md_section(15, "Toolchain Inventory")]
     lines.append("> **See `nix flake show` for the full list.**\n")
     tc_dir = REPO / "toolchains"
@@ -879,6 +731,7 @@ def section_toolchain_inventory_condensed() -> str:
 
 
 def section_host_inventory() -> str:
+    """Section 16: Host Inventory."""
     lines = [md_section(16, "Host Inventory")]
     host_dir = REPO / "hosts"
     if not host_dir.is_dir():
@@ -894,6 +747,7 @@ def section_host_inventory() -> str:
 
 
 def section_option_inventory() -> str:
+    """Section 17: Option Inventory."""
     lines = [md_section(17, "Option Inventory")]
 
     rc, out, _ = run(
@@ -979,7 +833,6 @@ def section_option_inventory() -> str:
         )
     )
 
-    # Option namespace detection: look for options.<name> patterns in module files
     lines.append(md_subsection("Option namespace references"))
     rc, out, _ = run(
         [
@@ -1009,6 +862,7 @@ def section_option_inventory() -> str:
 
 
 def section_nix_idiom() -> str:
+    """Section 18: Nix Idiom Usage."""
     lines = [md_section(18, "Nix Idiom Usage")]
     idioms = [
         "lib.genAttrs",
@@ -1049,7 +903,6 @@ def section_nix_idiom() -> str:
     rows: list[list[Any]] = []
     for idiom in idioms:
         rows.append([idiom, counts.get(idiom, 0)])
-    # also show top 5 others
     all_others = {k: v for k, v in counts.items() if k not in idioms}
     top_others = sorted(all_others.items(), key=lambda x: -x[1])[:5]
     for k, v in top_others:
@@ -1059,6 +912,7 @@ def section_nix_idiom() -> str:
 
 
 def section_conditional_builtins() -> str:
+    """Section 19: Conditional & Builtins Usage."""
     lines = [md_section(19, "Conditional & Builtins Usage")]
 
     lines.append(md_subsection("Conditional logic"))
@@ -1116,7 +970,7 @@ def section_conditional_builtins() -> str:
     if rc == 0 and out.strip():
         counts: Counter = Counter(out.strip().splitlines())
         top = counts.most_common(15)
-        lines.append(md_table(["Builtin", "Count"], top))
+        lines.append(md_table(["Builtin", "Count"], [list(x) for x in top]))
     return "\n".join(lines)
 
 
@@ -1162,6 +1016,7 @@ def _complexity_score_raw(filepath: Path) -> tuple[int, int, int, int, int]:
 
 
 def section_complexity_metrics() -> str:
+    """Section 20: Complexity Metrics."""
     lines = [md_section(20, "Complexity Metrics")]
 
     rows: list[list[Any]] = []
@@ -1249,27 +1104,12 @@ def _deepest_pipeline(text: str) -> int:
     best = 0
     for line in text.splitlines():
         count = line.count("|>")
-        if count > best:
-            best = count
+        best = max(best, count)
     return best
 
 
-def _largest_attrset(text: str, rel: str) -> tuple[int, str] | None:
-    """Find the file-level attribute count (estimate)."""
-    count = _estimate_attrset_size(text)
-    if count > 0:
-        return count, rel
-    return None
-
-
-def _largest_list(text: str, rel: str) -> tuple[int, str] | None:
-    count = _estimate_list_entries(text)
-    if count > 0:
-        return count, rel
-    return None
-
-
 def section_interesting_complexity() -> str:
+    """Section 21: "Interesting" Complexity Metrics."""
     lines = [md_section(21, '"Interesting" Complexity Metrics')]
 
     top_by_metric: dict[str, list[tuple[int, str]]] = {
@@ -1287,7 +1127,6 @@ def section_interesting_complexity() -> str:
         text = read_nix(f)
         rel = str(f.relative_to(REPO))
 
-        # Count brace depth (attrset proxy)
         max_brace = 0
         brace_depth = 0
         for ch in text:
@@ -1298,15 +1137,12 @@ def section_interesting_complexity() -> str:
                 brace_depth = max(0, brace_depth - 1)
         top_by_metric["Deepest attrset nesting"].append((max_brace, rel))
 
-        # rec block count
         rec_count = len(re.findall(r"\brec\b", text))
         top_by_metric["Most rec blocks"].append((rec_count, rel))
 
-        # with block count
         with_count = len(re.findall(r"\bwith\b", text))
         top_by_metric["Most with blocks"].append((with_count, rel))
 
-        # nested mkIf depth (max paren depth after mkIf)
         max_mkif = 0
         for m in re.finditer(r"mkIf\s*\(", text):
             pos = m.end()
@@ -1321,7 +1157,6 @@ def section_interesting_complexity() -> str:
                 max_mkif = max(max_mkif, paren_depth)
         top_by_metric["Deepest mkIf nesting"].append((max_mkif, rel))
 
-        # New metrics
         attr_count = _estimate_attrset_size(text)
         top_by_metric["Largest attrset"].append((attr_count, rel))
 
@@ -1345,6 +1180,7 @@ def section_interesting_complexity() -> str:
 
 
 def section_error_handling() -> str:
+    """Section 22: Error Handling."""
     lines = [md_section(22, "Error Handling")]
     counts: dict[str, int] = {}
     for pat, name in [
@@ -1403,6 +1239,7 @@ def section_error_handling() -> str:
 
 
 def section_dead_code() -> str:
+    """Section 23: Dead Code."""
     lines = [md_section(23, "Dead Code")]
     if not has_cmd("deadnix"):
         lines.append(
@@ -1422,6 +1259,7 @@ def section_dead_code() -> str:
 
 
 def section_anti_patterns() -> str:
+    """Section 24: Anti-Patterns."""
     lines = [md_section(24, "Anti-Patterns (statix)")]
     if not has_cmd("statix"):
         lines.append("> `statix` not found. Install with `nix shell nixpkgs#statix`.\n")
@@ -1437,14 +1275,16 @@ def section_anti_patterns() -> str:
 
 
 def section_eval_cost(no_eval_cost: bool) -> str:
+    """Section 25: Evaluation Cost."""
     lines = [md_section(25, "Evaluation Cost")]
     if no_eval_cost:
         lines.append("> Skipped (`--no-eval-cost`)\n")
         return "\n".join(lines)
 
     def timed(label: str, cmd: list[str], timeout: int) -> list[str]:
+        """Run a command and return [label, status, elapsed]."""
         start = time.perf_counter()
-        rc, out, err = run(cmd, timeout=timeout)
+        rc, _out, err = run(cmd, timeout=timeout)
         elapsed = time.perf_counter() - start
         status = "✓" if rc == 0 else "✗"
         if "timed out" in err:
@@ -1477,19 +1317,19 @@ def section_eval_cost(no_eval_cost: bool) -> str:
 
 
 def section_tech_debt() -> str:
+    """Section 26: Technical Debt Score."""
     lines = [md_section(26, "Technical Debt Score")]
 
     checks: list[tuple[str, str, bool]] = []
 
-    # Architecture
     files = find_nix_files()
-    fan_out, fan_in = parse_imports_from_tree(files)
-    # check for cycles
+    fan_out, _fan_in = parse_imports_from_tree(files)
     has_cycle = False
     visited: set = set()
     stack: set = set()
 
     def has_cycle_dfs(node: Path) -> bool:
+        """DFS cycle detection in the import graph."""
         if node in stack:
             return True
         if node in visited:
@@ -1509,7 +1349,6 @@ def section_tech_debt() -> str:
 
     checks.append(("Architecture", "No cyclic imports", not has_cycle))
 
-    # parseEnv duplication
     rc, out, _ = run(
         [
             "rg",
@@ -1537,7 +1376,6 @@ def section_tech_debt() -> str:
         )
     )
 
-    # x86_64 hardcoded
     rc, out, _ = run(
         [
             "rg",
@@ -1565,7 +1403,6 @@ def section_tech_debt() -> str:
         )
     )
 
-    # repoPath hardcoded
     rc, out, _ = run(
         [
             "rg",
@@ -1593,7 +1430,6 @@ def section_tech_debt() -> str:
         )
     )
 
-    # absolute store paths
     rc, out, _ = run(
         [
             "rg",
@@ -1617,7 +1453,6 @@ def section_tech_debt() -> str:
         ("Portability", f"{store_files} files reference /nix/store", store_files <= 1)
     )
 
-    # domain registration
     domains_dir = REPO / "domains"
     all_domains_have_meta = True
     if domains_dir.is_dir():
@@ -1630,14 +1465,12 @@ def section_tech_debt() -> str:
                     break
     checks.append(("Configuration", "All domains have meta.nix", all_domains_have_meta))
 
-    # statix
     statix_ok = True
     if has_cmd("statix"):
         rc, _, _ = run(["statix", "check", "."], timeout=30)
         statix_ok = rc == 0
     checks.append(("Evaluation", "Statix clean", statix_ok))
 
-    # deadnix
     deadnix_ok = True
     if has_cmd("deadnix"):
         rc, _, _ = run(
@@ -1646,8 +1479,7 @@ def section_tech_debt() -> str:
         deadnix_ok = rc == 0
     checks.append(("Evaluation", "No dead code (deadnix clean)", deadnix_ok))
 
-    # Group by category
-    categories: dict[str, list[tuple[str, str, bool]]] = {}
+    categories: dict[str, list[tuple[str, bool]]] = {}
     for cat, desc, ok in checks:
         categories.setdefault(cat, []).append((desc, ok))
 
@@ -1664,9 +1496,11 @@ def section_tech_debt() -> str:
 
 
 def section_hotspot_table() -> str:
+    """Section 27: Hotspot Table."""
     lines = [md_section(27, "Hotspot Table")]
     lines.append(
-        "> Cross-references file size, git churn, dependency counts, and complexity into a single view.\n"
+        "> Cross-references file size, git churn, dependency counts,"
+        " and complexity into a single view.\n"
     )
     lines.append(
         "> **Columns**: LOC (size), Churn (commits/year), Imports (fan-out), Dependents (fan-in),"
@@ -1678,7 +1512,6 @@ def section_hotspot_table() -> str:
     files = find_nix_files()
     fan_out, fan_in = parse_imports_from_tree(files)
 
-    # churn
     rc, out, _ = run(
         [
             "git",
@@ -1701,12 +1534,11 @@ def section_hotspot_table() -> str:
                 continue
             churn[line] += 1
 
-    # complexity score
     def complexity_score(filepath: Path) -> tuple[str, int, str]:
+        """Compute a complexity label, score, and reason string for a file."""
         text = read_nix(filepath)
         score = 0
         reasons: list[str] = []
-        # deep let nesting
         depth = 0
         maxdepth = 0
         for line in text.splitlines():
@@ -1722,7 +1554,6 @@ def section_hotspot_table() -> str:
         elif maxdepth >= 2:
             score += 1
             reasons.append(f"depth={maxdepth}")
-        # string interpolation
         interp = len(re.findall(r"\$\{", text))
         if interp > 30:
             score += 3
@@ -1733,7 +1564,6 @@ def section_hotspot_table() -> str:
         elif interp > 5:
             score += 1
             reasons.append(f"interp={interp}")
-        # conditionals
         cond = len(re.findall(r"mkIf|mkDefault|mkForce", text))
         if cond > 10:
             score += 3
@@ -1744,7 +1574,6 @@ def section_hotspot_table() -> str:
         elif cond > 2:
             score += 1
             reasons.append(f"cond={cond}")
-        # LOC factor
         loc = len(text.splitlines())
         if loc > 300:
             score += 3
@@ -1775,10 +1604,9 @@ def section_hotspot_table() -> str:
         ch = churn.get(rel, 0)
         im = len(fan_out.get(f, []))
         de = fan_in.get(f, 0)
-        cx_label, cx_score, cx_reason = complexity_score(f)
+        cx_label, cx_score, _cx_reason = complexity_score(f)
         rows.append([f"`{rel}`", loc, ch, im, de, f"{cx_label}", cx_score])
 
-    # sort by LOC then churn
     rows.sort(key=lambda r: (-r[1], -r[2]))
     header = ["File", "LOC", "Churn", "Imports", "Dependents", "Complexity", "Score"]
     lines.append(md_table(header, rows[:25]))
@@ -1786,15 +1614,14 @@ def section_hotspot_table() -> str:
 
 
 def section_stability_index() -> str:
+    """Section 28: Stability Index."""
     lines = [md_section(28, "Stability Index")]
     lines.append(
         "> Cross-references git churn with file recency. **Hot** = high churn + recently modified,"
-    )
-    lines.append(
-        "> **Active** = moderate churn, **Stable** = low churn, **Archived** = no changes in 6+ months.\n"
+        " **Active** = moderate churn, **Stable** = low churn,"
+        " **Archived** = no changes in 6+ months.\n"
     )
 
-    # Build date -> commit hash mapping
     rc2, out2, _ = run(
         [
             "git",
@@ -1814,7 +1641,6 @@ def section_stability_index() -> str:
             if len(parts) == 2:
                 date_by_commit[parts[0]] = parts[1]
 
-    # Get churn and last commit per file
     churn: Counter = Counter()
     file_last_date: dict[str, str] = {}
     rc3, out3, _ = run(
@@ -1850,7 +1676,6 @@ def section_stability_index() -> str:
             ):
                 file_last_date[line] = date_by_commit[current_hash]
 
-    # Process files
     now = datetime.now()
     rows: list[list[Any]] = []
     for f in find_nix_files():
@@ -1892,6 +1717,7 @@ def section_stability_index() -> str:
 
 
 def section_module_summary() -> str:
+    """Section 29: Module Summary."""
     lines = [md_section(29, "Module Summary")]
     lines.append(
         "> Per-domain availability of module types. ✓ = present, — = absent.\n"
@@ -1919,9 +1745,6 @@ def section_module_summary() -> str:
     return "\n".join(lines)
 
 
-# ── new sections (30–35) ──────────────────────
-
-
 def _discover_domains() -> list[Path]:
     """Return sorted list of domain directories that exist under domains/."""
     result: list[Path] = []
@@ -1938,6 +1761,7 @@ def _discover_domains() -> list[Path]:
 
 
 def _domain_name(d: Path) -> str:
+    """Return the domain name as category/name from its path."""
     rel = d.relative_to(REPO)
     parts = rel.parts
     if len(parts) >= 3 and parts[0] == "domains":
@@ -1946,6 +1770,7 @@ def _domain_name(d: Path) -> str:
 
 
 def _discover_themes() -> list[str]:
+    """Return sorted list of theme names, excluding default/schema."""
     themes_dir = REPO / "themes"
     if not themes_dir.is_dir():
         return []
@@ -1955,16 +1780,19 @@ def _discover_themes() -> list[str]:
 
 
 def _domain_from_render_path(output_path: str) -> str | None:
+    """Extract domain name from a render output path."""
     m = re.match(r"domains/([^/]+/[^/]+)/", output_path)
     return m.group(1) if m else None
 
 
 def _domain_from_error(err: str) -> str | None:
+    """Extract domain name from an error message."""
     m = re.search(r"domains/([^/]+/[^/]+)/", err)
     return m.group(1) if m else None
 
 
 def section_theme_domain_coverage(no_eval_cost: bool = False) -> str:
+    """Section 30: Theme × Domain Coverage."""
     lines = [md_section(30, "Theme × Domain Coverage")]
     lines.append("> ✓ = render produces output, ✗ = render throws, — = no render.nix\n")
 
@@ -2039,6 +1867,7 @@ def section_theme_domain_coverage(no_eval_cost: bool = False) -> str:
 
 
 def section_domain_maturity() -> str:
+    """Section 31: Domain Maturity Score."""
     lines = [md_section(31, "Domain Maturity Score")]
     lines.append("> Composite score per domain. 5 = Complete, 0 = Skeleton.\n")
 
@@ -2101,6 +1930,7 @@ def section_domain_maturity() -> str:
 
 
 def section_check_results(no_eval_cost: bool = False) -> str:
+    """Section 32: Check Results Breakdown."""
     lines = [md_section(32, "Check Results Breakdown")]
 
     if no_eval_cost:
@@ -2142,10 +1972,8 @@ def section_check_results(no_eval_cost: bool = False) -> str:
         rows.append([f"`{name}`", status, f"{elapsed:.2f}s", detail])
 
     lines.append(md_table(["Check", "Result", "Time", "Details"], rows))
-
     lines.append(f"\n**{pass_count} passed, {fail_count} failed**\n")
 
-    # Phase B — theme lint textual summary
     rc, out, _ = run(
         ["nix", "eval", ".#lib.themeLint", "--raw", "--no-warn-dirty"],
         timeout=30,
@@ -2161,13 +1989,11 @@ def section_check_results(no_eval_cost: bool = False) -> str:
 
 
 def _count_render_output_lines(render_path: Path) -> tuple[int, int]:
+    """Estimate number of output files and lines from a render.nix."""
     text = read_nix(render_path)
     file_count = 0
     total_lines = 0
 
-    # Find all multi-line string assignments.
-    # Patterns:   text = ''  or  someVar = '' (used via text = someVar later)
-    # Each block starts with "= ''" at line start and ends with "'';", "''" or "'' +" next line.
     in_block = False
     block_lines = 0
     openers_seen = 0
@@ -2176,7 +2002,6 @@ def _count_render_output_lines(render_path: Path) -> tuple[int, int]:
         stripped = line.strip()
 
         if not in_block:
-            # line that opens a multi-line string:  <thing> = ''
             if re.search(r"=\s*''\s*$", stripped):
                 in_block = True
                 block_lines = 0
@@ -2184,19 +2009,18 @@ def _count_render_output_lines(render_path: Path) -> tuple[int, int]:
                 continue
 
         if in_block:
-            # Close on line that is JUST '' or '' followed by  ;  ]  }  @  or end of expression
             if re.match(r"''\s*[;\]})@]?\s*$", stripped):
                 in_block = False
                 total_lines += block_lines
                 continue
             block_lines += 1
 
-    # file_count: count output entries (path = "..." assignments) to estimate output file count
     file_count = len(re.findall(r'path\s*=\s*"[^"]+"', text))
     return file_count, total_lines
 
 
 def section_render_output_sizes() -> str:
+    """Section 33: Rendered Output Sizes."""
     lines = [md_section(33, "Rendered Output Sizes")]
     lines.append(
         "> Estimated output lines from multi-line string literals in render.nix.\n"
@@ -2222,6 +2046,7 @@ def section_render_output_sizes() -> str:
 
 
 def section_growth_velocity() -> str:
+    """Section 34: Growth Velocity."""
     lines = [md_section(34, "Growth Velocity")]
     lines.append(
         "> Monthly lines added/removed across .nix, .sh, and .rs files (excludes merges).\n"
@@ -2301,12 +2126,11 @@ def section_growth_velocity() -> str:
     lines.append(md_table(["Month", "Added", "Removed", "Net", "Commits"], rows))
     total_net = total_added - total_removed
     lines.append(
-        f"\n> **12-month totals:** +{total_added} added, −{total_removed} removed, net {total_net:+d}"
+        f"\n> **12-month totals:** +{total_added} added, −{total_removed} removed,"
+        f" net {total_net:+d}"
     )
     return "\n".join(lines)
 
-
-# ── token definitions for section 35 ──────────
 
 _TOKEN_DEFS: list[tuple[str, str]] = [
     ("palette.bg.base", r"p\.background\.base\b|t\.safe\.foregroundOnBackground\b"),
@@ -2335,6 +2159,7 @@ _TOKEN_DEFS: list[tuple[str, str]] = [
 
 
 def _token_counts(render_path: Path) -> dict[str, int]:
+    """Count theme token references in a render.nix file."""
     text = read_nix(render_path)
     result: dict[str, int] = {}
     for token_name, pattern in _TOKEN_DEFS:
@@ -2343,12 +2168,14 @@ def _token_counts(render_path: Path) -> dict[str, int]:
 
 
 def section_token_usage() -> str:
+    """Section 35: Theme Token Usage Audit."""
     lines = [md_section(35, "Theme Token Usage Audit")]
     lines.append(
         "> How many times each schema token is referenced in each render.nix.\n"
     )
     lines.append(
-        "> Token lookup uses regex patterns covering `${p.xxx}`, `${t.safe.xxx}`, `${a.xxx}`, and `${t.ansi.xxx}` references.\n"
+        "> Token lookup uses regex patterns covering `${p.xxx}`, `${t.safe.xxx}`,"
+        " `${a.xxx}`, and `${t.ansi.xxx}` references.\n"
     )
 
     all_domains = _discover_domains()
@@ -2384,7 +2211,6 @@ def section_token_usage() -> str:
     lines.append(md_subsection("Per-domain usage"))
     lines.append(md_table(headers, rows))
 
-    # summary: most/least popular tokens
     lines.append(md_subsection("Token popularity summary"))
     summary_rows: list[list[Any]] = []
     for tn in token_names:
@@ -2399,89 +2225,3 @@ def section_token_usage() -> str:
     lines.append(md_table(["Token", "Total uses", "Used by (domains)"], summary_rows))
 
     return "\n".join(lines)
-
-
-# ── main ──────────────────────────────────────
-
-
-def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="angst flake analysis — Markdown report")
-    p.add_argument(
-        "--no-eval-cost", action="store_true", help="Skip evaluation timing (opt-out)"
-    )
-    p.add_argument("--no-graph", action="store_true", help="Skip Mermaid dependency graph")
-    return p.parse_args(argv)
-
-
-def main() -> None:
-    args = parse_args()
-    no_eval_cost = args.no_eval_cost
-    no_graph = args.no_graph
-
-    def slug(s: str) -> str:
-        s = s.lower()
-        s = re.sub(r"[^a-z0-9]+", "-", s)
-        return s.strip("-")
-
-    section_fns: list[tuple[str, str]] = [
-        ("1. Overview", section_overview(no_eval_cost)),
-        ("2. File Size Heatmap (top 30)", section_file_size_heatmap()),
-        ("3. Directory Size Breakdown", section_directory_breakdown()),
-        ("4. Attribute Surface", section_attribute_surface()),
-        ("5. Configuration Matrix", section_config_matrix()),
-        ("6. Render Coverage", section_render_coverage()),
-        ("7. Dependency Fan-in / Fan-out", section_dependency_fan()),
-        ("8. Module Coupling Graph", section_coupling_graph(no_graph=no_graph)),
-        ("9. Build Graph Depth", section_build_depth()),
-        ("10. Duplication Hotspots", section_duplication()),
-        ("11. Hardcoded Strings Inventory", section_hardcoded_strings()),
-        ("12. Domain Inventory", section_domain_inventory_condensed()),
-        ("13. Theme Inventory", section_theme_inventory_condensed()),
-        ("14. Capabilities Inventory", section_capabilities_inventory_condensed()),
-        ("15. Toolchain Inventory", section_toolchain_inventory_condensed()),
-        ("16. Host Inventory", section_host_inventory()),
-        ("17. Option Inventory", section_option_inventory()),
-        ("18. Nix Idiom Usage", section_nix_idiom()),
-        ("19. Conditional & Builtins Usage", section_conditional_builtins()),
-        ("20. Complexity Metrics", section_complexity_metrics()),
-        ('21. "Interesting" Complexity Metrics', section_interesting_complexity()),
-        ("22. Error Handling", section_error_handling()),
-        ("23. Dead Code", section_dead_code()),
-        ("24. Anti-Patterns (statix)", section_anti_patterns()),
-        ("25. Evaluation Cost", section_eval_cost(no_eval_cost)),
-        ("26. Technical Debt Score", section_tech_debt()),
-        ("27. Hotspot Table", section_hotspot_table()),
-        ("28. Stability Index", section_stability_index()),
-        ("29. Module Summary", section_module_summary()),
-        ("30. Theme × Domain Coverage", section_theme_domain_coverage(no_eval_cost)),
-        ("31. Domain Maturity Score", section_domain_maturity()),
-        ("32. Check Results Breakdown", section_check_results(no_eval_cost)),
-        ("33. Rendered Output Sizes", section_render_output_sizes()),
-        ("34. Growth Velocity", section_growth_velocity()),
-        ("35. Theme Token Usage Audit", section_token_usage()),
-    ]
-
-    # Document header
-    print(f"# angst flake analysis\n")
-    print(f"*Generated: {datetime.now():%Y-%m-%d %H:%M}*\n")
-
-    # Table of contents
-    print("## Table of Contents\n")
-    for heading, _ in section_fns:
-        num_dot = heading.index(".")
-        num = heading[:num_dot]
-        rest = heading[num_dot + 1 :].strip()
-        print(f"- [{heading}](#{slug(rest)})")
-    print()
-
-    for heading, result in section_fns:
-        if result:
-            print(result)
-
-    print()
-    print("---")
-    print(f"\n*Analysis complete.*")
-
-
-if __name__ == "__main__":
-    main()
