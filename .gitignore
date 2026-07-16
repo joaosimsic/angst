@@ -14,3 +14,4 @@ user.env
 .claude
 *.log
 __pycache__
+node_modules
