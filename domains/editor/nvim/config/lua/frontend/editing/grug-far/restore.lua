@@ -105,6 +105,7 @@ local function file_diff_to_data(orig_path, backup_path)
 		return data
 	end
 
+	---@type string[]
 	local diff_lines = vim.split(diff_text, "\n", { plain = true })
 	local line_num = 0
 	local orig_lnum, backup_lnum = 0, 0

@@ -24,7 +24,7 @@ function M.with_backup(opts, run_id)
 end
 
 function M.list_backup_runs()
-	local handle = vim.loop.fs_scandir(backup_root)
+	local handle = vim.uv.fs_scandir(backup_root)
 
 	if not handle then
 		return {}
@@ -33,7 +33,7 @@ function M.list_backup_runs()
 	local runs = {}
 
 	while true do
-		local name, typ = vim.loop.fs_scandir_next(handle)
+		local name, typ = vim.uv.fs_scandir_next(handle)
 
 		if not name then
 			break
@@ -56,14 +56,14 @@ function M.count_files(run_id)
 	local count = 0
 
 	local function scan(dir)
-		local h = vim.loop.fs_scandir(dir)
+		local h = vim.uv.fs_scandir(dir)
 
 		if not h then
 			return
 		end
 
 		while true do
-			local name, typ = vim.loop.fs_scandir_next(h)
+			local name, typ = vim.uv.fs_scandir_next(h)
 
 			if not name then
 				break
@@ -89,14 +89,14 @@ function M.list_backup_files(run_id)
 	local files = {}
 
 	local function scan(dir)
-		local h = vim.loop.fs_scandir(dir)
+		local h = vim.uv.fs_scandir(dir)
 
 		if not h then
 			return
 		end
 
 		while true do
-			local name, typ = vim.loop.fs_scandir_next(h)
+			local name, typ = vim.uv.fs_scandir_next(h)
 
 			if not name then
 				break
