@@ -13,3 +13,4 @@ nvim-profile.log
 user.env
 .claude
 *.log
+__pycache__
