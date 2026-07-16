@@ -358,11 +358,7 @@ in
       analyze = {
         type = "app";
         program = "${pkgs.writeShellScript "analyze" ''
-          if command -v python3 &>/dev/null; then
-            exec python3 ${../../scripts/analyze-flake.py} "$@"
-          else
-            exec bash ${../../scripts/analyze-flake.sh} "$@"
-          fi
+          exec python3 ${../../scripts/analyze-flake.py} "$@"
         ''}";
         meta.description = "Analyze flake structure for refactoring insight.";
       };
