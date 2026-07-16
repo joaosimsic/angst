@@ -9,7 +9,9 @@
 
 let
   inherit (themeContext) overrideTheme;
-  testHostname = userEnv.HOST or themeContext.testHostname;
+  testHostname = userEnv.HOST or builtins.warn
+    "HOST not found; falling back to '${themeContext.testHostname}'"
+    themeContext.testHostname;
 
   parseEnvFile = import ../parseEnv.nix { inherit lib; };
   homeEnvPath = builtins.getEnv "HOME" + "/proj/angst/user.env";
@@ -24,7 +26,9 @@ let
     envUser = builtins.getEnv "ANGST_USERNAME";
   in
     if envUser != "" then envUser
-    else userEnv.USERNAME;
+    else userEnv.USERNAME or builtins.warn
+      "ANGST_USERNAME not found; falling back to '${(loadHost testHostname).user.username}'"
+      (loadHost testHostname).user.username;
 
   perHost = lib.listToAttrs (
     map (
