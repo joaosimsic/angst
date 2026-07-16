@@ -235,9 +235,9 @@ local function open_file_at_location(loc)
   end
   local bufnr = vim.fn.bufnr(orig_path)
   if bufnr == -1 then
-    vim.api.nvim_command("edit " .. vim.fn.fnameescape(orig_path))
+    vim.api.nvim_command("tabedit " .. vim.fn.fnameescape(orig_path))
   else
-    vim.api.nvim_win_set_buf(0, bufnr)
+    vim.api.nvim_command("tabedit " .. vim.fn.fnameescape(orig_path))
   end
   if loc.lnum then
     vim.api.nvim_win_set_cursor(0, { loc.lnum, 0 })
