@@ -1,6 +1,6 @@
 # angst flake analysis
 
-*Generated: 2026-07-16 16:34*
+*Generated: 2026-07-16 16:50*
 
 ## Table of Contents
 
@@ -31,15 +31,17 @@
 - [25. Evaluation Cost](#evaluation-cost)
 - [26. Technical Debt Score](#technical-debt-score)
 - [27. Hotspot Table](#hotspot-table)
+- [28. Stability Index](#stability-index)
+- [29. Module Summary](#module-summary)
 
 
 ## 1. Overview
 
 | Metric | Value |
 |---|---|
-| Files | 139 .nix files, 6049 LOC |
+| Files | 139 .nix files, 6045 LOC |
 | Rust | 2268 LOC (tools/vm + tools/shell) |
-| Scripts | 738 LOC (bash) |
+| Scripts | 333 LOC (bash) |
 | Docs | 1294 LOC (openwiki) |
 | Flake check | ✓ passed |
 
@@ -49,7 +51,7 @@
 |---|---|---|
 | 423 | domains/terminal/zellij/render.nix | domains |
 | 423 | domains/shell/starship/render.nix | domains |
-| 392 | lib/flake/default.nix | lib |
+| 388 | lib/flake/default.nix | lib |
 | 341 | domains/git/lazygit/render.nix | domains |
 | 218 | themes/default.nix | themes |
 | 199 | lib/virtualisation/vm-profile.nix | lib |
@@ -82,14 +84,14 @@
 
 | Directory | .nix files | LOC | Extra |
 |---|---|---|---|
-| lib/ | 41 | 2223 |  |
+| lib/ | 41 | 2219 |  |
 | domains/ | 41 | 2345 |  |
 | toolchains/ | 21 | 277 |  |
 | themes/ | 11 | 449 |  |
 | capabilities/ | 10 | 294 |  |
 | hosts/ | 11 | 255 |  |
 | common/ | 3 | 35 |  |
-| scripts/ | 0 | 0 |  (+3 .sh files, 738 LOC) |
+| scripts/ | 0 | 0 |  (+2 .sh files, 333 LOC) |
 
 ## 4. Attribute Surface
 
@@ -129,23 +131,23 @@
 
 ### Most imported modules (fan-in)
 
-| Imports | File |
-|---|---|
-| 20 | lib/toolchain.nix |
-| 6 | lib/parseEnv.nix |
-| 4 | lib/domains/default.nix |
-| 4 | lib/checks/theme/assertions.nix |
-| 3 | themes/default.nix |
-| 2 | lib/flake/shared.nix |
-| 2 | common/user.nix |
-| 2 | lib/home/fonts.nix |
-| 2 | lib/treesitter.nix |
-| 1 | lib/build/scanHosts.nix |
-| 1 | common/home.nix |
-| 1 | lib/build/mkHome.nix |
-| 1 | lib/build/mkHost.nix |
-| 1 | lib/flake/default.nix |
-| 1 | hosts/generic/user.nix |
+| Direct | Transitive | File |
+|---|---|---|
+| 20 | 20 | lib/toolchain.nix |
+| 6 | 7 | lib/parseEnv.nix |
+| 4 | 4 | lib/domains/default.nix |
+| 4 | 9 | lib/checks/theme/assertions.nix |
+| 3 | 4 | themes/default.nix |
+| 2 | 2 | lib/flake/shared.nix |
+| 2 | 2 | common/user.nix |
+| 2 | 3 | lib/home/fonts.nix |
+| 2 | 4 | lib/treesitter.nix |
+| 1 | 1 | lib/build/scanHosts.nix |
+| 1 | 1 | common/home.nix |
+| 1 | 1 | lib/build/mkHome.nix |
+| 1 | 1 | lib/build/mkHost.nix |
+| 1 | 1 | lib/flake/default.nix |
+| 1 | 1 | hosts/generic/user.nix |
 
 ### Largest dependency fan-out
 
@@ -230,6 +232,38 @@ flake.nix
 └── lib/parseEnv.nix
 ```
 
+### Architectural layer validation
+
+
+Allowed direction (foundational → specific):
+
+```
+flake.nix
+ ↓
+lib
+ ↓
+common
+ ↓
+capabilities
+ ↓
+domains
+ ↓
+themes
+ ↓
+toolchains
+ ↓
+hosts
+ ↓
+scripts
+```
+
+
+**3 violations detected:**
+
+- `capabilities/graphical.nix` → `themes/default.nix`
+- `lib/build/mkHome.nix` → `themes/default.nix`
+- `lib/flake/default.nix` → `themes/default.nix`
+
 ### Graphviz (DOT)
 
 ```dot
@@ -284,10 +318,14 @@ digraph {
 
 Maximum dependency depth from **flake.nix**: **4**
 
+Longest import chain:
+
 ```
 flake.nix
- ↓ ↓ ↓ ↓
-(leaf)
+ └─ lib/build/mkHome.nix
+     └─ lib/domains/default.nix
+         └─ lib/domains/module.nix
+             └─ lib/checks/theme/assertions.nix
 ```
 
 ## 10. Duplication Hotspots
@@ -319,10 +357,10 @@ flake.nix
 - `flake.nix`
 - `lib/build/mkHome.nix`
 - `lib/build/mkHost.nix`
+- `lib/flake/default.nix`
+- `lib/flake/homeConfigurations.nix`
 - `lib/virtualisation/detect.nix`
 - `lib/virtualisation/is-qemu-vm.nix`
-- `lib/flake/homeConfigurations.nix`
-- `lib/flake/default.nix`
 
 ### "allowUnfree" hardcoded
 
@@ -480,10 +518,10 @@ flake.nix
 | capabilities | 9 |
 | domains | 2 |
 | angst | 1 |
+| domainConfig | 1 |
 | font | 1 |
 | toolchains | 1 |
 | theme | 1 |
-| domainConfig | 1 |
 
 ## 18. Nix Idiom Usage
 
@@ -544,32 +582,46 @@ flake.nix
 ## 20. Complexity Metrics
 
 
-### Deep let-in nesting (depth >= 3)
+### All files with non-trivial complexity
 
-- depth 20: `domains/shell/nushell/render.nix`
-- depth 3: `lib/checks/password.nix`
-- depth 4: `lib/domains/module.nix`
-- depth 3: `themes/default.nix`
-
-### String interpolation hotspots
-
--  151  `domains/terminal/zellij/render.nix`
--   71  `domains/shell/nushell/render.nix`
--   50  `domains/llm/opencode/render.nix`
--   46  `domains/sql-client/sqlit/render.nix`
--   45  `lib/flake/default.nix`
--   32  `domains/shell/starship/render.nix`
--   28  `domains/terminal/ghostty/render.nix`
--   22  `lib/flake/shared.nix`
--   17  `lib/domains/activation.nix`
--   16  `domains/wm/i3/render.nix`
-
-### Large let blocks (> 50 lines) in render.nix
-
-- 331 lines  `domains/git/lazygit/render.nix`:3
-- 62 lines  `domains/llm/opencode/render.nix`:3
-- 107 lines  `domains/shell/nushell/render.nix`:8
-- 356 lines  `domains/terminal/zellij/render.nix`:8
+| Score | File | Contributing factors |
+|---|---|---|
+| 7 | `themes/default.nix` | depth=3, interp=27, LOC=218 |
+| 7 | `lib/flake/default.nix` | depth=2, interp=54, LOC=388 |
+| 7 | `domains/shell/starship/render.nix` | depth=2, interp=32, LOC=423 |
+| 7 | `domains/shell/nushell/render.nix` | depth=20, interp=72, LOC=130 |
+| 6 | `lib/virtualisation/vm-profile.nix` | interp=12, cond=14, LOC=199 |
+| 6 | `lib/domains/module.nix` | depth=4, interp=18, LOC=104 |
+| 6 | `domains/terminal/zellij/render.nix` | interp=167, LOC=423 |
+| 5 | `lib/domains/activation.nix` | depth=2, interp=31, LOC=91 |
+| 5 | `domains/wm/i3/render.nix` | depth=2, interp=43, LOC=147 |
+| 4 | `lib/flake/shared.nix` | interp=25, LOC=190 |
+| 4 | `lib/checks/password.nix` | depth=3, LOC=102 |
+| 4 | `flake.nix` | depth=2, interp=10, LOC=171 |
+| 4 | `domains/sql-client/sqlit/render.nix` | interp=48, LOC=105 |
+| 4 | `domains/git/lazygit/render.nix` | interp=11, LOC=341 |
+| 3 | `domains/terminal/ghostty/render.nix` | interp=28, LOC=89 |
+| 3 | `domains/llm/opencode/render.nix` | interp=50 |
+| 2 | `lib/treesitter.nix` | depth=2, interp=15 |
+| 2 | `lib/nixos/default.nix` | cond=7 |
+| 2 | `lib/domains/scan.nix` | depth=2, interp=9 |
+| 2 | `lib/domains/domain-config.nix` | depth=2, interp=14 |
+| 2 | `lib/build/mkHome.nix` | depth=2, LOC=109 |
+| 1 | `lib/virtualisation/runtime.nix` | cond=4 |
+| 1 | `lib/virtualisation/host-mount.nix` | interp=9 |
+| 1 | `lib/parseEnv.nix` | depth=2 |
+| 1 | `lib/checks/theme/assertions.nix` | depth=2 |
+| 1 | `lib/checks/shell.nix` | interp=7 |
+| 1 | `lib/checks/desktop.nix` | interp=9 |
+| 1 | `lib/build/mkHost.nix` | LOC=88 |
+| 1 | `hosts/generic/hardware.nix` | cond=3 |
+| 1 | `hosts/generic/configuration.nix` | cond=4 |
+| 1 | `domains/wm/i3/module.nix` | interp=6 |
+| 1 | `domains/launcher/rofi/render.nix` | LOC=128 |
+| 1 | `domains/http-client/posting/render.nix` | interp=10 |
+| 1 | `domains/files/yazi/render.nix` | interp=9 |
+| 1 | `domains/editor/nvim/render.nix` | interp=13 |
+| 1 | `capabilities/default.nix` | depth=2 |
 
 ## 21. "Interesting" Complexity Metrics
 
@@ -612,6 +664,50 @@ flake.nix
 |---|---|
 | 1 | `lib/domains/domain-config.nix` |
 
+### Largest Attrset
+
+| Value | File |
+|---|---|
+| 159 | `domains/shell/starship/render.nix` |
+| 61 | `lib/virtualisation/vm-profile.nix` |
+| 56 | `domains/llm/opencode/render.nix` |
+| 44 | `lib/flake/default.nix` |
+| 41 | `themes/default.nix` |
+| 29 | `flake.nix` |
+| 14 | `themes/miasma.nix` |
+| 13 | `themes/rose-pine.nix` |
+
+### Largest List
+
+| Value | File |
+|---|---|
+| 379 | `domains/shell/starship/render.nix` |
+| 287 | `lib/flake/default.nix` |
+| 203 | `domains/git/lazygit/render.nix` |
+| 200 | `themes/default.nix` |
+| 148 | `lib/flake/shared.nix` |
+| 144 | `lib/virtualisation/vm-profile.nix` |
+| 113 | `domains/launcher/rofi/render.nix` |
+| 112 | `flake.nix` |
+
+### Longest String (Lines)
+
+| Value | File |
+|---|---|
+| 326 | `domains/git/lazygit/render.nix` |
+| 145 | `domains/terminal/zellij/render.nix` |
+| 103 | `domains/shell/nushell/render.nix` |
+| 102 | `domains/wm/i3/render.nix` |
+| 97 | `domains/launcher/rofi/render.nix` |
+| 49 | `lib/checks/password.nix` |
+| 48 | `domains/shell/starship/render.nix` |
+| 39 | `domains/terminal/zellij/module.nix` |
+
+### Deepest Function Pipeline (|>)
+
+| Value | File |
+|---|---|
+
 ## 22. Error Handling
 
 | Construct | Count |
@@ -629,9 +725,9 @@ flake.nix
 - `lib/checks/theme/context.nix:21:      builtins.throw "No alternate theme available for override test (host uses ${hostTheme})"`
 - `lib/checks/theme/override.nix:20:  throw "expected config.theme = ${overrideTheme}, got ${theme}"`
 - `lib/checks/theme/override.nix:22:  throw "theme override did not reach rendered ghostty colors (expected ${overrideTheme} background.variant)"`
-- `lib/flake/default.nix:93:      builtins.throw "Unknown domain render output: ${outputPath}"`
 - `lib/domains/scan.nix:18:      builtins.throw "domains/${category}/${name}/meta.nix: 'xdg' and 'xdgFile' are mutually exclusive"`
 - `lib/domains/scan.nix:20:      builtins.throw "domains/${category}/${name}/meta.nix: must set 'xdg', 'xdgFile', or 'customXdg = true'"`
+- `lib/flake/default.nix:93:      builtins.throw "Unknown domain render output: ${outputPath}"`
 
 ## 23. Dead Code
 
@@ -643,13 +739,21 @@ flake.nix
 
 ## 25. Evaluation Cost
 
+
+### Evaluation (attribute resolution)
+
 | Command | Result | Time |
 |---|---|---|
-| nix flake check | ✓ | 22.48s |
-| nix flake show | ✓ | 0.44s |
-| eval: packages.x86_64-linux | ✓ | 0.05s |
-| eval: apps.x86_64-linux | ✓ | 0.05s |
-| eval: checks.x86_64-linux | ✓ | 0.05s |
+| nix flake show | ✓ | 2.08s |
+| packages.x86_64-linux | ✓ | 0.05s |
+| apps.x86_64-linux | ✓ | 0.05s |
+| checks.x86_64-linux | ✓ | 0.05s |
+
+### Build (realisation)
+
+| Command | Result | Time |
+|---|---|---|
+| nix flake check | ✓ | 22.59s |
 
 ## 26. Technical Debt Score
 
@@ -657,13 +761,13 @@ flake.nix
 ### Architecture
 
 - ✓ No cyclic imports
-- ⚠ No parseEnv duplication (7 files)
+- ⚠ parseEnv imported from 7 files
 
 ### Portability
 
-- ✓ Minimal x86_64 hardcoding (5 files)
-- ⚠ Minimal proj/angst hardcoding (10 files)
-- ✓ No absolute /nix/store paths (1 files)
+- ✓ 5 architecture-specific literals (x86_64-linux)
+- ⚠ 10 repository path literals (proj/angst)
+- ✓ 1 files reference /nix/store
 
 ### Configuration
 
@@ -681,33 +785,84 @@ flake.nix
 > **Columns**: LOC (size), Churn (commits/year), Imports (fan-out), Dependents (fan-in),
 > Complexity (derived from nesting depth, string interpolation, conditional count).
 
-| File | LOC | Churn | Imports | Dependents | Complexity |
-|---|---|---|---|---|---|
-| `domains/terminal/zellij/render.nix` | 423 | 20 | 0 | 0 | High |
-| `domains/shell/starship/render.nix` | 423 | 14 | 0 | 0 | Very High |
-| `lib/flake/default.nix` | 392 | 30 | 12 | 1 | Very High |
-| `domains/git/lazygit/render.nix` | 341 | 2 | 0 | 0 | Medium |
-| `themes/default.nix` | 218 | 12 | 1 | 3 | Very High |
-| `lib/virtualisation/vm-profile.nix` | 199 | 7 | 0 | 0 | High |
-| `lib/flake/shared.nix` | 190 | 14 | 1 | 2 | Medium |
-| `flake.nix` | 171 | 29 | 8 | 0 | Medium |
-| `domains/wm/i3/render.nix` | 147 | 3 | 0 | 0 | High |
-| `domains/shell/nushell/render.nix` | 130 | 6 | 0 | 0 | Very High |
-| `domains/launcher/rofi/render.nix` | 128 | 3 | 0 | 0 | Low |
-| `lib/build/mkHome.nix` | 109 | 20 | 4 | 1 | Low |
-| `domains/sql-client/sqlit/render.nix` | 105 | 7 | 0 | 0 | Medium |
-| `lib/domains/module.nix` | 104 | 11 | 1 | 1 | High |
-| `lib/checks/password.nix` | 102 | 1 | 0 | 1 | Medium |
-| `lib/domains/activation.nix` | 91 | 10 | 0 | 1 | High |
-| `domains/terminal/ghostty/render.nix` | 89 | 6 | 0 | 0 | Medium |
-| `lib/build/mkHost.nix` | 88 | 12 | 2 | 1 | Low |
-| `domains/llm/opencode/render.nix` | 76 | 4 | 0 | 0 | Medium |
-| `lib/domains/scan.nix` | 73 | 3 | 0 | 1 | Low |
-| `lib/domains/domain-config.nix` | 64 | 7 | 0 | 0 | Low |
-| `domains/terminal/zellij/module.nix` | 62 | 3 | 0 | 0 | Minimal |
-| `lib/flake/checks.nix` | 61 | 9 | 4 | 1 | Minimal |
-| `lib/checks/desktop.nix` | 57 | 7 | 0 | 1 | Low |
-| `hosts/ssh/home.nix` | 56 | 8 | 0 | 0 | Minimal |
+| File | LOC | Churn | Imports | Dependents | Complexity | Score |
+|---|---|---|---|---|---|---|
+| `domains/terminal/zellij/render.nix` | 423 | 20 | 0 | 0 | High | 6 |
+| `domains/shell/starship/render.nix` | 423 | 14 | 0 | 0 | Very High | 7 |
+| `lib/flake/default.nix` | 388 | 32 | 12 | 1 | Very High | 7 |
+| `domains/git/lazygit/render.nix` | 341 | 2 | 0 | 0 | Medium | 4 |
+| `themes/default.nix` | 218 | 12 | 1 | 3 | Very High | 7 |
+| `lib/virtualisation/vm-profile.nix` | 199 | 7 | 0 | 0 | High | 6 |
+| `lib/flake/shared.nix` | 190 | 14 | 1 | 2 | Medium | 4 |
+| `flake.nix` | 171 | 29 | 8 | 0 | Medium | 4 |
+| `domains/wm/i3/render.nix` | 147 | 3 | 0 | 0 | High | 5 |
+| `domains/shell/nushell/render.nix` | 130 | 6 | 0 | 0 | Very High | 7 |
+| `domains/launcher/rofi/render.nix` | 128 | 3 | 0 | 0 | Low | 1 |
+| `lib/build/mkHome.nix` | 109 | 20 | 4 | 1 | Low | 2 |
+| `domains/sql-client/sqlit/render.nix` | 105 | 7 | 0 | 0 | Medium | 4 |
+| `lib/domains/module.nix` | 104 | 11 | 1 | 1 | High | 6 |
+| `lib/checks/password.nix` | 102 | 1 | 0 | 1 | Medium | 4 |
+| `lib/domains/activation.nix` | 91 | 10 | 0 | 1 | High | 5 |
+| `domains/terminal/ghostty/render.nix` | 89 | 6 | 0 | 0 | Medium | 3 |
+| `lib/build/mkHost.nix` | 88 | 12 | 2 | 1 | Low | 1 |
+| `domains/llm/opencode/render.nix` | 76 | 4 | 0 | 0 | Medium | 3 |
+| `lib/domains/scan.nix` | 73 | 3 | 0 | 1 | Low | 2 |
+| `lib/domains/domain-config.nix` | 64 | 7 | 0 | 0 | Low | 2 |
+| `domains/terminal/zellij/module.nix` | 62 | 3 | 0 | 0 | Minimal | 0 |
+| `lib/flake/checks.nix` | 61 | 9 | 4 | 1 | Minimal | 0 |
+| `lib/checks/desktop.nix` | 57 | 7 | 0 | 1 | Low | 1 |
+| `hosts/ssh/home.nix` | 56 | 8 | 0 | 0 | Minimal | 0 |
+
+## 28. Stability Index
+
+> Cross-references git churn with file recency. **Hot** = high churn + recently modified,
+> **Active** = moderate churn, **Stable** = low churn, **Archived** = no changes in 6+ months.
+
+| File | Churn | Last changed | Label |
+|---|---|---|---|
+| `lib/flake/default.nix` | 32 | 2026-07-16 | Hot |
+| `flake.nix` | 29 | 2026-07-13 | Hot |
+| `domains/terminal/zellij/render.nix` | 20 | 2026-07-15 | Hot |
+| `lib/build/mkHome.nix` | 20 | 2026-07-16 | Hot |
+| `hosts/personal/default.nix` | 19 | 2026-07-13 | Hot |
+| `hosts/personal/configuration.nix` | 16 | 2026-07-16 | Hot |
+| `lib/flake/shared.nix` | 14 | 2026-07-13 | Hot |
+| `domains/shell/starship/render.nix` | 14 | 2026-07-16 | Hot |
+| `themes/miasma.nix` | 13 | 2026-07-16 | Hot |
+| `lib/build/mkHost.nix` | 12 | 2026-07-16 | Hot |
+| `themes/default.nix` | 12 | 2026-07-16 | Hot |
+| `lib/domains/module.nix` | 11 | 2026-07-16 | Hot |
+| `themes/catppuccin-mocha.nix` | 10 | 2026-07-10 | Hot |
+| `themes/kanagawa.nix` | 10 | 2026-07-10 | Hot |
+| `lib/domains/activation.nix` | 10 | 2026-07-16 | Hot |
+| `toolchains/php.nix` | 9 | 2026-07-02 | Active |
+| `domains/editor/nvim/module.nix` | 9 | 2026-07-06 | Active |
+| `themes/monochrome.nix` | 9 | 2026-07-10 | Active |
+| `themes/noctis.nix` | 9 | 2026-07-10 | Active |
+| `domains/wm/i3/module.nix` | 9 | 2026-07-12 | Active |
+
+## 29. Module Summary
+
+> Per-domain availability of module types. ✓ = present, — = absent.
+
+| Domain | HM | NixOS | Render | Activation |
+|---|---|---|---|---|
+| bar/i3status | ✓ | — | ✓ | — |
+| editor/nvim | ✓ | — | ✓ | — |
+| files/yazi | ✓ | — | ✓ | — |
+| git/lazygit | — | — | ✓ | — |
+| http-client/posting | — | — | ✓ | — |
+| launcher/rofi | ✓ | — | ✓ | — |
+| llm/cursor-cli | — | — | — | — |
+| llm/opencode | — | — | ✓ | — |
+| session/x11 | ✓ | — | — | — |
+| shell/nushell | ✓ | — | ✓ | — |
+| shell/starship | ✓ | — | ✓ | — |
+| sql-client/sqlit | — | — | ✓ | — |
+| terminal/ghostty | ✓ | — | ✓ | — |
+| terminal/tmux | ✓ | — | — | — |
+| terminal/zellij | ✓ | — | ✓ | — |
+| wm/i3 | ✓ | ✓ | ✓ | — |
 
 ---
 

@@ -350,19 +350,58 @@ def section_render_coverage() -> str:
     return "\n".join(lines)
 
 
+def transitive_dependents(
+    fan_out: dict[Path, list[Path]],
+) -> dict[Path, int]:
+    """For each file, count how many other files depend on it transitively."""
+    # Build reverse graph: node -> set of direct dependents
+    reverse: dict[Path, set[Path]] = defaultdict(set)
+    all_nodes = set(fan_out)
+    for src, deps in fan_out.items():
+        for d in deps:
+            reverse[d].add(src)
+            all_nodes.add(d)
+
+    # For each node, compute transitive closure in reverse graph
+    memo: dict[Path, set[Path]] = {}
+
+    def closure(node: Path, visiting: set) -> set[Path]:
+        if node in memo:
+            return memo[node]
+        if node in visiting:
+            return set()
+        visiting.add(node)
+        result: set[Path] = set()
+        for dep in reverse.get(node, set()):
+            result.add(dep)
+            result |= closure(dep, visiting)
+        memo[node] = result
+        visiting.discard(node)
+        return result
+
+    result: dict[Path, int] = {}
+    for node in all_nodes:
+        result[node] = len(closure(node, set()))
+    return result
+
+
 def section_dependency_fan() -> str:
     lines = [md_section(7, "Dependency Fan-in / Fan-out")]
     files = find_nix_files()
     fan_out, fan_in = parse_imports_from_tree(files)
+
+    # transitive dependents
+    trans = transitive_dependents(fan_out)
 
     # fan-in: most imported
     fi_sorted = sorted(fan_in.items(), key=lambda x: -x[1])
     fi_rows: list[list[Any]] = []
     for path, count in fi_sorted[:15]:
         rel = path.relative_to(REPO)
-        fi_rows.append([str(count), str(rel)])
+        tc = trans.get(path, 0)
+        fi_rows.append([str(count), str(tc), str(rel)])
     lines.append(md_subsection("Most imported modules (fan-in)"))
-    lines.append(md_table(["Imports", "File"], fi_rows))
+    lines.append(md_table(["Direct", "Transitive", "File"], fi_rows))
 
     # fan-out: files importing the most
     fo_sorted = sorted(fan_out.items(), key=lambda x: -len(x[1]))
@@ -450,6 +489,43 @@ def build_dot_graph(
     return "\n".join(lines)
 
 
+LAYER_ORDER = [
+    "flake.nix", "lib", "common", "capabilities", "domains", "themes",
+    "toolchains", "hosts", "scripts",
+]
+
+
+def _file_layer(path: Path) -> int:
+    """Return numeric layer for a file. Lower = more foundational."""
+    rel = path.relative_to(REPO)
+    if str(rel) == "flake.nix":
+        return 0
+    if rel.parts and rel.parts[0] in LAYER_ORDER:
+        return LAYER_ORDER.index(rel.parts[0])
+    return 5  # unknown -> middle
+
+
+def _check_layer_violations(
+    fan_out: dict[Path, list[Path]],
+) -> list[tuple[Path, Path]]:
+    """Return list of (importer, imported) violations where a foundational
+    layer imports from a more specific layer. Entry point (flake.nix) is exempt."""
+    violations: list[tuple[Path, Path]] = []
+    for src, deps in fan_out.items():
+        src_rel = str(src.relative_to(REPO))
+        if src_rel == "flake.nix":
+            continue
+        src_layer = _file_layer(src)
+        for dep in deps:
+            dep_rel = str(dep.relative_to(REPO))
+            if dep_rel == "flake.nix":
+                continue
+            dep_layer = _file_layer(dep)
+            if src_layer < dep_layer:
+                violations.append((src, dep))
+    return violations
+
+
 def section_coupling_graph(no_graph: bool = False) -> str:
     lines = [md_section(8, "Module Coupling Graph")]
     files = find_nix_files()
@@ -457,20 +533,36 @@ def section_coupling_graph(no_graph: bool = False) -> str:
     root = REPO / "flake.nix"
     if not root.exists():
         return lines[0] + "\n(flake.nix not found)"
+
     lines.append(md_subsection("Import tree (from flake.nix)"))
     lines.append(md_code(build_import_tree(root, fan_out)))
+
+    lines.append(md_subsection("Architectural layer validation"))
+    lines.append(f"\nAllowed direction (foundational → specific):\n")
+    lines.append("```\n" + "\n ↓\n".join(LAYER_ORDER) + "\n```\n")
+    violations = _check_layer_violations(fan_out)
+    if violations:
+        lines.append(f"\n**{len(violations)} violations detected:**\n")
+        for src, dep in violations:
+            s_rel = src.relative_to(REPO)
+            d_rel = dep.relative_to(REPO)
+            lines.append(f"- `{s_rel}` → `{d_rel}`")
+    else:
+        lines.append("\n**No layer violations.**\n")
+
     if not no_graph:
         lines.append(md_subsection("Graphviz (DOT)"))
         lines.append(build_dot_graph(fan_out))
     return "\n".join(lines)
 
 
-def max_import_depth(
+def deepest_import_path(
     node: Path,
     fan_out: dict[Path, list[Path]],
-    memo: dict[Path, int] | None = None,
+    memo: dict[Path, tuple[int, list[Path]]] | None = None,
     visiting: set | None = None,
-) -> int:
+) -> tuple[int, list[Path]]:
+    """Return (depth, [path]) for the longest import chain from node."""
     if memo is None:
         memo = {}
     if visiting is None:
@@ -478,14 +570,18 @@ def max_import_depth(
     if node in memo:
         return memo[node]
     if node in visiting:
-        return 0  # cycle guard
+        return 0, []  # cycle guard
     visiting.add(node)
-    max_d = 0
+    best_depth = 0
+    best_path: list[Path] = []
     for dep in fan_out.get(node, []):
-        max_d = max(max_d, 1 + max_import_depth(dep, fan_out, memo, visiting))
-    memo[node] = max_d
+        d, p = deepest_import_path(dep, fan_out, memo, visiting)
+        if d + 1 > best_depth:
+            best_depth = d + 1
+            best_path = [dep] + p
+    memo[node] = (best_depth, best_path)
     visiting.discard(node)
-    return max_d
+    return best_depth, best_path
 
 
 def section_build_depth() -> str:
@@ -495,10 +591,15 @@ def section_build_depth() -> str:
     root = REPO / "flake.nix"
     if not root.exists():
         return lines[0] + "\n(flake.nix not found)"
-    depth = max_import_depth(root, fan_out)
-    lines.append(f"\nMaximum dependency depth from **flake.nix**: **{depth}**")
-    # also show deepest chain
-    lines.append(f"\n```\nflake.nix\n{' ↓' * depth}\n(leaf)\n```")
+    depth, path = deepest_import_path(root, fan_out)
+    lines.append(f"\nMaximum dependency depth from **flake.nix**: **{depth}**\n")
+    lines.append("Longest import chain:\n")
+    lines.append(f"```\nflake.nix")
+    for i, p in enumerate(path):
+        rel = p.relative_to(REPO)
+        indent = "    " * i + " └─ "
+        lines.append(f"{indent}{rel}")
+    lines.append("```")
     return "\n".join(lines)
 
 
@@ -758,65 +859,153 @@ def section_conditional_builtins() -> str:
     return "\n".join(lines)
 
 
+def _complexity_score_raw(filepath: Path) -> tuple[int, int, int, int, int]:
+    """Return (score, maxdepth, interp_count, cond_count, loc)."""
+    text = read_nix(filepath)
+    score = 0
+    depth = 0
+    maxdepth = 0
+    for line in text.splitlines():
+        s = line.strip()
+        if s.startswith("let ") or s == "let":
+            depth += 1
+            maxdepth = max(maxdepth, depth)
+        elif s.startswith("in ") or s == "in":
+            depth = max(0, depth - 1)
+    if maxdepth >= 3:
+        score += 3
+    elif maxdepth >= 2:
+        score += 1
+    interp = len(re.findall(r"\$\{", text))
+    if interp > 30:
+        score += 3
+    elif interp > 15:
+        score += 2
+    elif interp > 5:
+        score += 1
+    cond = len(re.findall(r"mkIf|mkDefault|mkForce", text))
+    if cond > 10:
+        score += 3
+    elif cond > 5:
+        score += 2
+    elif cond > 2:
+        score += 1
+    loc = len(text.splitlines())
+    if loc > 300:
+        score += 3
+    elif loc > 150:
+        score += 2
+    elif loc > 80:
+        score += 1
+    return score, maxdepth, interp, cond, loc
+
+
 def section_complexity_metrics() -> str:
     lines = [md_section(20, "Complexity Metrics")]
 
-    lines.append(md_subsection("Deep let-in nesting (depth >= 3)"))
-    found_any = False
+    rows: list[list[Any]] = []
     for f in find_nix_files():
-        depth = 0
-        maxdepth = 0
-        for line in read_nix(f).splitlines():
-            stripped = line.strip()
-            if stripped.startswith("let ") or stripped == "let":
-                depth += 1
-                maxdepth = max(maxdepth, depth)
-            elif stripped.startswith("in ") or stripped == "in":
-                depth = max(0, depth - 1)
-        if maxdepth >= 3:
-            lines.append(f"- depth {maxdepth}: `{f.relative_to(REPO)}`")
-            found_any = True
-    if not found_any:
-        lines.append("_(none with depth >= 3)_")
-
-    lines.append(md_subsection("String interpolation hotspots"))
-    rc, out, _ = run(
-        ["rg", "-c", r"\$\{", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"],
-        timeout=15,
-    )
-    if rc == 0 and out.strip():
-        entries: list[tuple[int, str]] = []
-        for l in out.strip().splitlines():
-            if ":" in l:
-                fname, count = l.rsplit(":", 1)
-                try:
-                    entries.append((int(count), fname))
-                except ValueError:
-                    pass
-        entries.sort(reverse=True)
-        for count, fname in entries[:10]:
-            lines.append(f"- {count:4d}  `{fname}`")
-
-    lines.append(md_subsection("Large let blocks (> 50 lines) in render.nix"))
-    for f in find_nix_files():
-        if f.name != "render.nix":
+        score, maxdepth, interp, cond, loc = _complexity_score_raw(f)
+        if score == 0:
             continue
-        lines_in = 0
-        in_let = False
-        let_start = 0
-        for i, line in enumerate(read_nix(f).splitlines(), 1):
-            stripped = line.strip()
-            if stripped == "let":
-                in_let = True
-                let_start = i
-                lines_in = 0
-            elif stripped == "in" and in_let:
-                if lines_in > 50:
-                    lines.append(f"- {lines_in} lines  `{f.relative_to(REPO)}`:{let_start}")
-                in_let = False
-            elif in_let:
-                lines_in += 1
+        reasons = []
+        if maxdepth >= 2:
+            reasons.append(f"depth={maxdepth}")
+        if interp > 5:
+            reasons.append(f"interp={interp}")
+        if cond > 2:
+            reasons.append(f"cond={cond}")
+        if loc > 80:
+            reasons.append(f"LOC={loc}")
+        rel = f.relative_to(REPO)
+        rows.append([score, f"`{rel}`", ", ".join(reasons)])
+    rows.sort(reverse=True)
+    lines.append(md_subsection("All files with non-trivial complexity"))
+    lines.append(md_table(["Score", "File", "Contributing factors"], rows))
     return "\n".join(lines)
+
+
+def _estimate_attrset_size(text: str) -> int:
+    """Heuristic: count 'name = expr;' lines in top-level brace block."""
+    count = 0
+    in_brace = 0
+    for line in text.splitlines():
+        stripped = line.strip()
+        if "{" in stripped:
+            in_brace += stripped.count("{")
+        if "}" in stripped:
+            in_brace -= stripped.count("}")
+        if in_brace > 0 and "=" in stripped and stripped.rstrip().endswith(";"):
+            count += 1
+    return count
+
+
+def _estimate_list_entries(text: str) -> int:
+    """Heuristic: count lines with standalone entries between [ and ]."""
+    entries = 0
+    in_bracket = 0
+    for line in text.splitlines():
+        stripped = line.strip()
+        if "[" in stripped:
+            in_bracket += 1
+            continue
+        if in_bracket > 0:
+            if "]" in stripped:
+                if stripped.rstrip().endswith("]") and not stripped.startswith("]"):
+                    entries += 1
+                in_bracket -= 1
+            else:
+                entries += 1
+    return entries
+
+
+def _longest_string(text: str) -> int:
+    """Approximate longest string literal by line count (multi-line '' strings)."""
+    max_lines = 0
+    in_string = False
+    current_lines = 0
+    i = 0
+    while i < len(text):
+        if not in_string and text[i:i+2] == "''":
+            in_string = True
+            current_lines = 1
+            i += 2
+        elif in_string and text[i:i+2] == "''":
+            in_string = False
+            max_lines = max(max_lines, current_lines)
+            i += 2
+        elif in_string:
+            if text[i] == "\n":
+                current_lines += 1
+            i += 1
+        else:
+            i += 1
+    return max_lines
+
+
+def _deepest_pipeline(text: str) -> int:
+    """Max consecutive |> operators."""
+    best = 0
+    for line in text.splitlines():
+        count = line.count("|>")
+        if count > best:
+            best = count
+    return best
+
+
+def _largest_attrset(text: str, rel: str) -> tuple[int, str] | None:
+    """Find the file-level attribute count (estimate)."""
+    count = _estimate_attrset_size(text)
+    if count > 0:
+        return count, rel
+    return None
+
+
+def _largest_list(text: str, rel: str) -> tuple[int, str] | None:
+    count = _estimate_list_entries(text)
+    if count > 0:
+        return count, rel
+    return None
 
 
 def section_interesting_complexity() -> str:
@@ -827,6 +1016,10 @@ def section_interesting_complexity() -> str:
         "Most rec blocks": [],
         "Most with blocks": [],
         "Deepest mkIf nesting": [],
+        "Largest attrset": [],
+        "Largest list": [],
+        "Longest string (lines)": [],
+        "Deepest function pipeline (|>)": [],
     }
 
     for f in find_nix_files():
@@ -866,6 +1059,19 @@ def section_interesting_complexity() -> str:
                     paren_depth -= 1
                 max_mkif = max(max_mkif, paren_depth)
         top_by_metric["Deepest mkIf nesting"].append((max_mkif, rel))
+
+        # New metrics
+        attr_count = _estimate_attrset_size(text)
+        top_by_metric["Largest attrset"].append((attr_count, rel))
+
+        list_entries = _estimate_list_entries(text)
+        top_by_metric["Largest list"].append((list_entries, rel))
+
+        str_lines = _longest_string(text)
+        top_by_metric["Longest string (lines)"].append((str_lines, rel))
+
+        pipe_depth = _deepest_pipeline(text)
+        top_by_metric["Deepest function pipeline (|>)"].append((pipe_depth, rel))
 
     for metric, entries in top_by_metric.items():
         lines.append(md_subsection(metric.replace("_", " ").title()))
@@ -931,20 +1137,7 @@ def section_eval_cost(no_eval_cost: bool) -> str:
         lines.append("> Skipped (`--no-eval-cost`)\n")
         return "\n".join(lines)
 
-    trials: list[tuple[str, list[str], int]] = [
-        ("nix flake check", ["nix", "flake", "check", "--no-build"], 120),
-        ("nix flake show", ["nix", "flake", "show"], 120),
-    ]
-    # nix eval for each output type
-    for label, attr in [
-        ("eval: packages.x86_64-linux", "packages.x86_64-linux"),
-        ("eval: apps.x86_64-linux", "apps.x86_64-linux"),
-        ("eval: checks.x86_64-linux", "checks.x86_64-linux"),
-    ]:
-        trials.append((label, ["nix", "eval", f".#{attr}", "--apply", "builtins.attrNames"], 60))
-
-    rows: list[list[Any]] = []
-    for label, cmd, timeout in trials:
+    def timed(label: str, cmd: list[str], timeout: int) -> list[str]:
         start = time.perf_counter()
         rc, out, err = run(cmd, timeout=timeout)
         elapsed = time.perf_counter() - start
@@ -952,8 +1145,23 @@ def section_eval_cost(no_eval_cost: bool) -> str:
         if "timed out" in err:
             status = "⚠"
             elapsed = float(timeout)
-        rows.append([label, status, f"{elapsed:.2f}s"])
-    lines.append(md_table(["Command", "Result", "Time"], rows))
+        return [label, status, f"{elapsed:.2f}s"]
+
+    lines.append(md_subsection("Evaluation (attribute resolution)"))
+    eval_trials: list[tuple[str, list[str], int]] = [
+        ("nix flake show", ["nix", "flake", "show"], 120),
+    ]
+    for label, attr in [
+        ("packages.x86_64-linux", "packages.x86_64-linux"),
+        ("apps.x86_64-linux", "apps.x86_64-linux"),
+        ("checks.x86_64-linux", "checks.x86_64-linux"),
+    ]:
+        eval_trials.append((label, ["nix", "eval", f".#{attr}", "--apply", "builtins.attrNames"], 60))
+    lines.append(md_table(["Command", "Result", "Time"], [timed(*t) for t in eval_trials]))
+
+    lines.append(md_subsection("Build (realisation)"))
+    build_trials = [("nix flake check", ["nix", "flake", "check", "--no-build"], 120)]
+    lines.append(md_table(["Command", "Result", "Time"], [timed(*t) for t in build_trials]))
     return "\n".join(lines)
 
 
@@ -993,22 +1201,22 @@ def section_tech_debt() -> str:
     # parseEnv duplication
     rc, out, _ = run(["rg", "-l", "parseEnv", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=10)
     parseenv_files = len(out.strip().splitlines()) if rc == 0 and out.strip() else 0
-    checks.append(("Architecture", f"No parseEnv duplication ({parseenv_files} files)", parseenv_files <= 4))
+    checks.append(("Architecture", f"parseEnv imported from {parseenv_files} files", parseenv_files <= 4))
 
     # x86_64 hardcoded
     rc, out, _ = run(["rg", "-l", "x86_64-linux", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=10)
     x86_files = len(out.strip().splitlines()) if rc == 0 and out.strip() else 0
-    checks.append(("Portability", f"Minimal x86_64 hardcoding ({x86_files} files)", x86_files <= 5))
+    checks.append(("Portability", f"{x86_files} architecture-specific literals (x86_64-linux)", x86_files <= 5))
 
     # repoPath hardcoded
     rc, out, _ = run(["rg", "-l", "proj/angst", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=10)
     repo_files = len(out.strip().splitlines()) if rc == 0 and out.strip() else 0
-    checks.append(("Portability", f"Minimal proj/angst hardcoding ({repo_files} files)", repo_files <= 3))
+    checks.append(("Portability", f"{repo_files} repository path literals (proj/angst)", repo_files <= 3))
 
     # absolute store paths
     rc, out, _ = run(["rg", "-l", "/nix/store", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=10)
     store_files = len(out.strip().splitlines()) if rc == 0 and out.strip() else 0
-    checks.append(("Portability", f"No absolute /nix/store paths ({store_files} files)", store_files <= 1))
+    checks.append(("Portability", f"{store_files} files reference /nix/store", store_files <= 1))
 
     # domain registration
     domains_dir = REPO / "domains"
@@ -1077,9 +1285,10 @@ def section_hotspot_table() -> str:
             churn[line] += 1
 
     # complexity score
-    def complexity_score(filepath: Path) -> str:
+    def complexity_score(filepath: Path) -> tuple[str, int, str]:
         text = read_nix(filepath)
         score = 0
+        reasons: list[str] = []
         # deep let nesting
         depth = 0
         maxdepth = 0
@@ -1092,42 +1301,55 @@ def section_hotspot_table() -> str:
                 depth = max(0, depth - 1)
         if maxdepth >= 3:
             score += 3
+            reasons.append(f"depth={maxdepth}")
         elif maxdepth >= 2:
             score += 1
+            reasons.append(f"depth={maxdepth}")
         # string interpolation
         interp = len(re.findall(r"\$\{", text))
         if interp > 30:
             score += 3
+            reasons.append(f"interp={interp}")
         elif interp > 15:
             score += 2
+            reasons.append(f"interp={interp}")
         elif interp > 5:
             score += 1
+            reasons.append(f"interp={interp}")
         # conditionals
         cond = len(re.findall(r"mkIf|mkDefault|mkForce", text))
         if cond > 10:
             score += 3
+            reasons.append(f"cond={cond}")
         elif cond > 5:
             score += 2
+            reasons.append(f"cond={cond}")
         elif cond > 2:
             score += 1
+            reasons.append(f"cond={cond}")
         # LOC factor
         loc = len(text.splitlines())
         if loc > 300:
             score += 3
+            reasons.append(f"LOC={loc}")
         elif loc > 150:
             score += 2
+            reasons.append(f"LOC={loc}")
         elif loc > 80:
             score += 1
+            reasons.append(f"LOC={loc}")
 
         if score >= 7:
-            return "Very High"
+            label = "Very High"
         elif score >= 5:
-            return "High"
+            label = "High"
         elif score >= 3:
-            return "Medium"
+            label = "Medium"
         elif score >= 1:
-            return "Low"
-        return "Minimal"
+            label = "Low"
+        else:
+            label = "Minimal"
+        return label, score, ", ".join(reasons)
 
     rows: list[list[Any]] = []
     for f in files:
@@ -1136,13 +1358,118 @@ def section_hotspot_table() -> str:
         ch = churn.get(rel, 0)
         im = len(fan_out.get(f, []))
         de = fan_in.get(f, 0)
-        cx = complexity_score(f)
-        rows.append([f"`{rel}`", loc, ch, im, de, cx])
+        cx_label, cx_score, cx_reason = complexity_score(f)
+        rows.append([f"`{rel}`", loc, ch, im, de, f"{cx_label}", cx_score])
 
     # sort by LOC then churn
     rows.sort(key=lambda r: (-r[1], -r[2]))
-    header = ["File", "LOC", "Churn", "Imports", "Dependents", "Complexity"]
+    header = ["File", "LOC", "Churn", "Imports", "Dependents", "Complexity", "Score"]
     lines.append(md_table(header, rows[:25]))
+    return "\n".join(lines)
+
+
+def section_stability_index() -> str:
+    lines = [md_section(28, "Stability Index")]
+    lines.append("> Cross-references git churn with file recency. **Hot** = high churn + recently modified,")
+    lines.append("> **Active** = moderate churn, **Stable** = low churn, **Archived** = no changes in 6+ months.\n")
+
+    # Build date -> commit hash mapping
+    rc2, out2, _ = run(
+        ["git", "log", "--oneline", "--since=2 years ago", "--format=%H %ai", "--", "*.nix"],
+        timeout=30,
+    )
+    date_by_commit: dict[str, str] = {}
+    if rc2 == 0:
+        for line in out2.strip().splitlines():
+            parts = line.split(None, 1)
+            if len(parts) == 2:
+                date_by_commit[parts[0]] = parts[1]
+
+    # Get churn and last commit per file
+    churn: Counter = Counter()
+    file_last_date: dict[str, str] = {}
+    rc3, out3, _ = run(
+        ["git", "log", "--oneline", "--since=2 years ago", "--format=%H", "--name-only", "--", "*.nix"],
+        timeout=30,
+    )
+    current_hash = ""
+    if rc3 == 0:
+        for line in out3.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if re.match(r"^[0-9a-f]{7,40}$", line):
+                current_hash = line
+                continue
+            if line in churn:
+                churn[line] += 1
+            else:
+                churn[line] = 1
+            if current_hash and line not in file_last_date and current_hash in date_by_commit:
+                file_last_date[line] = date_by_commit[current_hash]
+
+    # Process files
+    now = datetime.now()
+    rows: list[list[Any]] = []
+    for f in find_nix_files():
+        rel = str(f.relative_to(REPO))
+        ch = churn.get(rel, 0)
+        last_date_str = file_last_date.get(rel, "")
+        last_date = None
+        if last_date_str:
+            try:
+                last_date = datetime.strptime(last_date_str[:10], "%Y-%m-%d")
+            except ValueError:
+                pass
+
+        if last_date:
+            days_ago = (now - last_date).days
+        else:
+            days_ago = 999
+
+        if ch >= 10 and days_ago < 60:
+            label = "Hot"
+        elif ch >= 5 and days_ago < 180:
+            label = "Active"
+        elif ch >= 1:
+            label = "Stable"
+        else:
+            label = "Archived"
+
+        if last_date_str:
+            date_short = last_date_str[:10] if len(last_date_str) >= 10 else last_date_str
+            rows.append([f"`{rel}`", ch, date_short, label])
+        elif ch > 0:
+            rows.append([f"`{rel}`", ch, "(no date)", label])
+
+    rows.sort(key=lambda r: (-r[1], r[2] if len(r) > 2 else ""))
+    lines.append(md_table(["File", "Churn", "Last changed", "Label"], rows[:20]))
+    return "\n".join(lines)
+
+
+def section_module_summary() -> str:
+    lines = [md_section(29, "Module Summary")]
+    lines.append("> Per-domain availability of module types. ✓ = present, — = absent.\n")
+
+    domains_path = REPO / "domains"
+    if not domains_path.is_dir():
+        return lines[0] + "\n(no domains/)"
+
+    rows: list[list[Any]] = []
+    for cat in sorted(domains_path.iterdir()):
+        if not cat.is_dir():
+            continue
+        for d in sorted(cat.iterdir()):
+            if not d.is_dir():
+                continue
+            domain_name = f"{cat.name}/{d.name}"
+            hm = "✓" if (d / "module.nix").exists() else "—"
+            nixos = "✓" if (d / "nixos.nix").exists() else "—"
+            render = "✓" if (d / "render.nix").exists() else "—"
+            activation = "✓" if (d / "activation.nix").exists() else "—"
+            rows.append([domain_name, hm, nixos, render, activation])
+
+    lines.append(md_table(["Domain", "HM", "NixOS", "Render", "Activation"], rows))
     return "\n".join(lines)
 
 
@@ -1193,6 +1520,8 @@ def main() -> None:
         ("25. Evaluation Cost", section_eval_cost(no_eval_cost)),
         ("26. Technical Debt Score", section_tech_debt()),
         ("27. Hotspot Table", section_hotspot_table()),
+        ("28. Stability Index", section_stability_index()),
+        ("29. Module Summary", section_module_summary()),
     ]
 
     # Document header
