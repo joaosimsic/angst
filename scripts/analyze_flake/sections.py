@@ -974,24 +974,140 @@ def section_conditional_builtins() -> str:
     return "\n".join(lines)
 
 
+def _nix_depth_and_interp(text: str) -> tuple[int, int]:
+    """Return (max_let_in_depth, interp_count) with string-awareness.
+
+    Tracks `` '' `` and `` "`` string contexts and comments (`` // `` and `` /* */``)
+    so that keywords and interpolation syntax inside string literals are not counted.
+    """
+    depth = 0
+    maxdepth = 0
+    interp = 0
+
+    in_double = False
+    in_indented = False
+    in_block_comment = False
+
+    lines = text.splitlines(keepends=True)
+    line_starts_in_str = []
+
+    for line in lines:
+        line_starts_in_str.append(in_double or in_indented or in_block_comment)
+
+        j = 0
+        while j < len(line):
+            ch = line[j]
+
+            if in_block_comment:
+                if line[j : j + 2] == "*/":
+                    in_block_comment = False
+                    j += 2
+                else:
+                    j += 1
+                continue
+
+            if in_indented:
+                if line[j : j + 2] == "''":
+                    if j + 2 < len(line) and line[j + 2] == "$":
+                        if j + 3 < len(line) and line[j + 3] == "{":
+                            j += 4  # ''${  — escaped literal, not interpolation
+                            continue
+                        j += 3  # ''$   — escaped literal $
+                        continue
+                    if j + 2 < len(line) and line[j + 2] == "'":
+                        j += 3  # '''' — literal '
+                        continue
+                    if j + 2 < len(line) and line[j + 2] in "\n\r":
+                        j += 2  # '' + newline — line continuation
+                        continue
+                    in_indented = False
+                    j += 2
+                    continue
+                if line[j : j + 2] == "${":
+                    interp += 1
+                    paren_depth = 1
+                    j += 2
+                    while j < len(line) and paren_depth > 0:
+                        if line[j] == "{":
+                            paren_depth += 1
+                        elif line[j] == "}":
+                            paren_depth -= 1
+                        j += 1
+                    continue
+                j += 1
+                continue
+
+            if in_double:
+                if ch == "\\":
+                    j += 2
+                    continue
+                if ch == '"':
+                    in_double = False
+                    j += 1
+                    continue
+                if line[j : j + 2] == "${":
+                    interp += 1
+                    paren_depth = 1
+                    j += 2
+                    while j < len(line) and paren_depth > 0:
+                        if line[j] == "{":
+                            paren_depth += 1
+                        elif line[j] == "}":
+                            paren_depth -= 1
+                        j += 1
+                    continue
+                j += 1
+                continue
+
+            # Outside any string / comment
+            if line[j : j + 2] == "//":
+                break  # rest of line is comment
+            if line[j : j + 2] == "/*":
+                in_block_comment = True
+                j += 2
+                continue
+            if line[j : j + 2] == "${":
+                interp += 1
+                paren_depth = 1
+                j += 2
+                while j < len(line) and paren_depth > 0:
+                    if line[j] == "{":
+                        paren_depth += 1
+                    elif line[j] == "}":
+                        paren_depth -= 1
+                    j += 1
+                continue
+            if line[j : j + 2] == "''":
+                in_indented = True
+                j += 2
+                continue
+            if ch == '"':
+                in_double = True
+                j += 1
+                continue
+            j += 1
+
+    for li, line in enumerate(lines):
+        if not line_starts_in_str[li]:
+            s = line.strip()
+            if s.startswith("let ") or s == "let":
+                depth += 1
+                maxdepth = max(maxdepth, depth)
+            elif s.startswith("in ") or s == "in":
+                depth = max(0, depth - 1)
+
+    return maxdepth, interp
+
+
 def _complexity_score_raw(filepath: Path) -> tuple[int, int, int, int, int]:
     """Return (score, maxdepth, interp_count, cond_count, loc)."""
     text = read_nix(filepath)
     score = 0
-    depth = 0
-    maxdepth = 0
-    for line in text.splitlines():
-        s = line.strip()
-        if s.startswith("let ") or s == "let":
-            depth += 1
-            maxdepth = max(maxdepth, depth)
-        elif s.startswith("in ") or s == "in":
-            depth = max(0, depth - 1)
+    maxdepth, interp = _nix_depth_and_interp(text)
     if maxdepth >= 3:
         score += 3
     elif maxdepth >= 2:
         score += 1
-    interp = len(re.findall(r"\$\{", text))
     if interp > 30:
         score += 3
     elif interp > 15:
