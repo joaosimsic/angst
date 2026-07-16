@@ -24,6 +24,7 @@
 - [x] add a headless mode for launching the vm without gui
 - [x] ci tests
 - [ ] mcp degradation
+- [x] static angst repo mounting
 
 # zellij
 

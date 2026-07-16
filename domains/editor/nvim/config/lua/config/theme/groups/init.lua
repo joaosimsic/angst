@@ -4,6 +4,7 @@ local modules = {
 	require("config.theme.groups.syntax"),
 	require("config.theme.groups.treesitter"),
 	require("config.theme.groups.lsp"),
+	require("config.theme.groups.terminal_output"),
 }
 
 local M = {}

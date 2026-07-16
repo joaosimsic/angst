@@ -21,5 +21,14 @@ return {
 			end,
 			pattern = { "*" },
 		})
+
+		vim.api.nvim_create_autocmd({ "FocusLost", "BufLeave" }, {
+			group = group,
+			callback = function()
+				if vim.bo.modified and vim.bo.buftype == "" and vim.api.nvim_buf_get_name(0) ~= "" then
+					vim.cmd("silent! write")
+				end
+			end,
+		})
 	end,
 }

@@ -19,10 +19,15 @@ let
       pwd = builtins.getEnv "PWD";
       pwdEnvPath = if pwd != "" then pwd + "/user.env" else "";
       homeEnvPath = builtins.getEnv "HOME" + "/proj/angst/user.env";
-      userEnv = if builtins.pathExists envPath then parseEnv envPath
-        else if builtins.pathExists homeEnvPath then parseEnv homeEnvPath
-        else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then parseEnv pwdEnvPath
-        else { };
+      userEnv = let
+        fromFile = if builtins.pathExists envPath then parseEnv envPath
+          else if builtins.pathExists homeEnvPath then parseEnv homeEnvPath
+          else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then parseEnv pwdEnvPath
+          else { };
+      in fromFile // (
+        let u = builtins.getEnv "ANGST_USERNAME"; h = builtins.getEnv "ANGST_HOST"; in
+        (if h != "" then { HOST = h; } else {}) // (if u != "" then { USERNAME = u; } else {})
+      );
 
       pkgs = import inputs.nixpkgs {
         system = hostConfig.system;
@@ -35,7 +40,7 @@ let
         envUser = builtins.getEnv "ANGST_USERNAME";
       in
         if envUser != "" then envUser
-        else hostConfig.user.username;
+        else userEnv.USERNAME or hostConfig.user.username;
       effectiveUserConfig = hostConfig.user // {
         username = effectiveUsername;
         homeDirectory = "/home/${effectiveUsername}";

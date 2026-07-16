@@ -22,29 +22,27 @@ let
       else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then parseEnvFile pwdEnvPath
       else { };
   in fromFile // (
-    let u = builtins.getEnv "ANGST_USERNAME"; in if u != "" then { USERNAME = u; } else {}
+    let u = builtins.getEnv "ANGST_USERNAME"; h = builtins.getEnv "ANGST_HOST"; in
+    (if h != "" then { HOST = h; } else {}) // (if u != "" then { USERNAME = u; } else {})
   );
 
-  effectiveUsername =
-    h:
-    let envUser = builtins.getEnv "ANGST_USERNAME"; in
+  effectiveUsername = let
+    envUser = builtins.getEnv "ANGST_USERNAME";
+  in
     if envUser != "" then envUser
-    else (loadHost h).user.username;
+    else userEnv.USERNAME or (loadHost testHostname).user.username;
 
   perHost = lib.listToAttrs (
     map (
       h:
-      let
-        user = (loadHost h).user;
-      in
       {
-        name = "${effectiveUsername h}@${h}";
+        name = "${effectiveUsername}@${h}";
         value = mkHome h;
       }
     ) hosts
   );
 
-  testUser = effectiveUsername testHostname;
+  testUser = effectiveUsername;
 in
 perHost
 // {

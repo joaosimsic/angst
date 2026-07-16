@@ -271,8 +271,8 @@ local function open_scratch()
 		vim.bo[buf].swapfile = false
 		local scratch_path = get_scratch_filepath(choice)
 		vim.api.nvim_buf_set_name(buf, scratch_path)
-		vim.api.nvim_exec_autocmds("BufNewFile", { buffer = buf })
 		vim.bo[buf].filetype = choice
+		vim.api.nvim_exec_autocmds("BufNewFile", { buffer = buf })
 
 		local binder = Keybinder.new(buf, "SCRATCH")
 		binder:nmap("q", function()

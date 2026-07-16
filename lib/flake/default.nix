@@ -62,7 +62,7 @@ let
           ;
         fontFamily = fontsLib.defaultFamily;
         monitors = hostConfig.monitors or { };
-        homeDirectory = hostConfig.user.homeDirectory;
+        homeDirectory = "/home/${envUsername}";
       };
     in
     lib.concatLists (map (path: import path args) domainRendererPaths);
@@ -147,6 +147,7 @@ let
       renderDomainOutputFor
       testHostname
       loadHost
+      envUsername
       ;
   };
 
