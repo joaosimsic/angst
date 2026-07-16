@@ -218,7 +218,6 @@ render_cmd() {
         echo "rendered $path"
     done < <(echo "$json_data" | jq -r '.[] | .path')
 
-    # Sync .gitignore: collect all rendered paths and generate .gitignore entries
     local unique_dirs
     unique_dirs=$(echo "$json_data" | jq -r '.[] | .path' | while IFS= read -r p; do
         echo "$p" | cut -d/ -f1-4
