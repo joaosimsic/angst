@@ -36,7 +36,7 @@ header() {
 }
 
 subheader() {
-    printf "\n${BOLD}${YELLOW}  %s${RESET}\n" "$1"
+    printf "${BOLD}${YELLOW}  %s${RESET}\n" "$1"
 }
 
 label() {
@@ -146,7 +146,6 @@ printf "\n"
 
 # ─── 4. FLAKE OUTPUT SURFACE ────────────────
 header "4. FLAKE OUTPUT SURFACE"
-printf "\n"
 for pair in "packages:  packages.x86_64-linux" "devShells: devShells.x86_64-linux" "apps:      apps.x86_64-linux" "checks:    checks.x86_64-linux" "nixosConfig: nixosConfigurations" "homeConfig:  homeConfigurations"; do
     label=$(echo "$pair" | awk '{print $1}')
     attr=$(echo "$pair" | awk '{print $2}')
@@ -194,7 +193,6 @@ count_string() {
     files=$(rg -lF "$s" --type nix 2>/dev/null | wc -l)
     printf "  ${BOLD}%-20s${RESET} %4d×  in %2d files  ${DIM}%s${RESET}\n" "\"$s\"" "$count" "$files" "$desc"
 }
-printf "\n"
 count_string "angst" "project name"
 count_string "ANGST" "env var prefix"
 count_string "nixpkgs" "flake input"
