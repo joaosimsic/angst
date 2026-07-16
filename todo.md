@@ -11,6 +11,7 @@
 - [x] update scratch plugin to allow run compiler on it
 - [ ] better git handling(neogit/diffview)
 - [ ] md handling(md-preview/render-md)
+- [ ] add file line length in heirline
 
 # nu
 - [x] set ":" to replace ">"
