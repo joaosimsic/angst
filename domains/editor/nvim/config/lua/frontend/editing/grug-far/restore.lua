@@ -236,11 +236,7 @@ local function open_file_at_location(loc, backup_path)
   vim.api.nvim_command("tabedit " .. vim.fn.fnameescape(orig_path))
   if backup_path and vim.fn.filereadable(backup_path) == 1 then
     vim.api.nvim_command("vertical diffsplit " .. vim.fn.fnameescape(backup_path))
-  end
-  vim.api.nvim_set_current_tabpage(vim.api.nvim_tabpage_get_number(0))
-  local orig_win = vim.fn.bufwinid(vim.fn.bufnr(orig_path))
-  if orig_win ~= -1 then
-    vim.api.nvim_set_current_win(orig_win)
+    vim.api.nvim_command("wincmd h")
   end
   if loc.lnum then
     vim.api.nvim_win_set_cursor(0, { loc.lnum, 0 })
