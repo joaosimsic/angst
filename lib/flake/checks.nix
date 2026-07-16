@@ -9,14 +9,15 @@
   lintShell,
   themeRenderedChecks,
   renderDomainOutputFor,
-  testHostname,
-  loadHost,
+   testHostname,
+   loadHost,
+   envUsername,
 }:
 
 let
   inherit (themeContext) hostTheme overrideTheme;
 
-  testUser = (loadHost testHostname).user.username;
+  testUser = envUsername;
 
   themeSemanticDistinct = import ../checks/theme/semanticDistinct.nix {
     inherit lib pkgs themesLib;

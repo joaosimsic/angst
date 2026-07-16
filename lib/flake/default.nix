@@ -147,6 +147,7 @@ let
       renderDomainOutputFor
       testHostname
       loadHost
+      envUsername
       ;
   };
 
