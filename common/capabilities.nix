@@ -2,9 +2,11 @@ _: {
   services.fstrim.enable = true;
   zramSwap.enable = true;
 
-  capabilities.network.enable = true;
-  capabilities.git.enable = true;
-  capabilities.search.enable = true;
-  capabilities.monitoring.enable = true;
-  capabilities.container.enable = true;
+  capabilities = {
+    network.enable = true;
+    git.enable = true;
+    search.enable = true;
+    monitoring.enable = true;
+    container.enable = true;
+  };
 }

@@ -16,8 +16,10 @@
   services.xserver.xkb.variant = lib.mkForce "";
   time.timeZone = lib.mkForce "UTC";
 
-  capabilities.audio.enable = true;
-  capabilities.graphical.enable = true;
-  capabilities.ssh.enable = true;
-  capabilities.clipboard.enable = true;
+  capabilities = {
+    audio.enable = true;
+    graphical.enable = true;
+    ssh.enable = true;
+    clipboard.enable = true;
+  };
 }

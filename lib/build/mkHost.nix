@@ -63,12 +63,14 @@ inputs.nixpkgs.lib.nixosSystem {
     ../../hosts/${hostname}/configuration.nix
     inputs.home-manager.nixosModules.home-manager
     {
-      home-manager.useGlobalPkgs = true;
-      home-manager.useUserPackages = true;
-      home-manager.backupFileExtension = "hm-backup";
-      home-manager.extraSpecialArgs = profile.extraSpecialArgs;
-      home-manager.users.${effectiveUsername} = {
-        imports = profile.modules;
+      home-manager = {
+        useGlobalPkgs = true;
+        useUserPackages = true;
+        backupFileExtension = "hm-backup";
+        inherit (profile) extraSpecialArgs;
+        users.${effectiveUsername} = {
+          imports = profile.modules;
+        };
       };
     }
 

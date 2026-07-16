@@ -32,7 +32,7 @@ let
   check6 = assert builtins.attrNames result1 == [ "PASSWORD" "THEME" ]; "  key set: ok";
 in
 pkgs.writeText "check-parse-env" (
-  builtins.concatStringsSep "\n" ([
+  builtins.concatStringsSep "\n" [
     "parseEnv checks:"
     check1
     check2
@@ -40,5 +40,5 @@ pkgs.writeText "check-parse-env" (
     check4
     check5
     check6
-  ])
+  ]
 )

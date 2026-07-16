@@ -30,7 +30,7 @@ let
       );
 
       pkgs = import inputs.nixpkgs {
-        system = hostConfig.system;
+        inherit (hostConfig) system;
         config.allowUnfree = true;
       };
 
@@ -81,7 +81,7 @@ let
         ../home/i3Fragments.nix
         ../../hosts/${hostname}/home.nix
 
-        ({ ... }: {
+        (_: {
           home.packages =
             lib.optionals (hostConfig.enableVmTool or true) [ vmTool ]
             ++ lib.optionals (hostConfig.enableShellTool or true) [ shellTool ]

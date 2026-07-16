@@ -1,13 +1,15 @@
 { ... }: {
   imports = [ ../toolchains ];
-  domains.shell.nushell.enable = true;
-  domains.shell.starship.enable = true;
-  domains.terminal.zellij.enable = true;
-  domains.llm.opencode.enable = true;
-  domains.llm.cursor-cli.enable = true;
-  domains.editor.nvim.enable = true;
-  domains.files.yazi.enable = true;
-  domains.sql-client.sqlit.enable = true;
-  domains.http-client.posting.enable = true;
-  domains.git.lazygit.enable = true;
+  domains = {
+    shell.nushell.enable = true;
+    shell.starship.enable = true;
+    terminal.zellij.enable = true;
+    llm.opencode.enable = true;
+    llm.cursor-cli.enable = true;
+    editor.nvim.enable = true;
+    files.yazi.enable = true;
+    sql-client.sqlit.enable = true;
+    http-client.posting.enable = true;
+    git.lazygit.enable = true;
+  };
 }

@@ -20,21 +20,23 @@ in
       themeColors = themesLib.get theme;
     in
     {
-      services.xserver.enable = true;
-      services.libinput.enable = true;
-
-      services.xserver.displayManager.lightdm = {
-        enable = true;
-        background = "#${themeColors.palette.background.base}";
-        greeters.gtk = {
+      services = {
+        xserver = {
           enable = true;
-          extraConfig = ''
-            user-background = false
-          '';
+          displayManager.lightdm = {
+            enable = true;
+            background = "#${themeColors.palette.background.base}";
+            greeters.gtk = {
+              enable = true;
+              extraConfig = ''
+                user-background = false
+              '';
+            };
+          };
         };
+        libinput.enable = true;
+        dbus.enable = true;
       };
-
-      services.dbus.enable = true;
 
       xdg.portal = {
         enable = true;

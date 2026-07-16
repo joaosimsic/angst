@@ -32,113 +32,119 @@ in
   config = lib.mkIf cfg {
     documentation.nixos.enable = lib.mkForce false;
 
-    boot.initrd.kernelModules = lib.mkForce [ ];
-    boot.kernelModules = lib.mkForce [ "virtio_gpu" ];
-    boot.kernelParams = lib.mkForce [ ];
-
-    services.xserver = {
-      enable = lib.mkForce true;
-      videoDrivers = lib.mkForce [ "modesetting" ];
+    boot = {
+      initrd.kernelModules = lib.mkForce [ ];
+      kernelModules = lib.mkForce [ "virtio_gpu" ];
+      kernelParams = lib.mkForce [ ];
     };
 
-    services.fstrim.enable = lib.mkForce false;
+    services = {
+      xserver = {
+        enable = lib.mkForce true;
+        videoDrivers = lib.mkForce [ "modesetting" ];
+      };
+      fstrim.enable = lib.mkForce false;
+      spice-vdagentd.enable = true;
+    };
 
-    hardware.cpu.amd.updateMicrocode = lib.mkForce false;
-
-    hardware.graphics = {
-      enable = lib.mkForce true;
-      enable32Bit = lib.mkForce false;
-      extraPackages = lib.mkForce [ ];
+    hardware = {
+      cpu.amd.updateMicrocode = lib.mkForce false;
+      graphics = {
+        enable = lib.mkForce true;
+        enable32Bit = lib.mkForce false;
+        extraPackages = lib.mkForce [ ];
+      };
     };
 
     capabilities.ssh.server.enable = lib.mkForce true;
 
-    services.spice-vdagentd.enable = true;
-
-    environment.systemPackages = with pkgs; [
-      spice-vdagent
-      pkg-config
-      openssl.dev
-      angstCli
-    ];
-
-    environment.sessionVariables = {
-      ANGST_REPO = hostAngstPath;
-      PKG_CONFIG_PATH = "/run/current-system/sw/lib/pkgconfig";
+    environment = {
+      systemPackages = with pkgs; [
+        spice-vdagent
+        pkg-config
+        openssl.dev
+        angstCli
+      ];
+      sessionVariables = {
+        ANGST_REPO = hostAngstPath;
+        PKG_CONFIG_PATH = "/run/current-system/sw/lib/pkgconfig";
+      };
     };
 
     users.users.${userConfig.username}.openssh.authorizedKeys.keys =
       userConfig.ssh.authorizedKeys or [ ];
 
-    systemd.user.services.spice-vdagent = {
-      description = "SPICE vdagent session agent";
-      wantedBy = [ "graphical-session.target" ];
-      after = [ "graphical-session.target" ];
+    systemd = {
+      user.services.spice-vdagent = {
+        description = "SPICE vdagent session agent";
+        wantedBy = [ "graphical-session.target" ];
+        after = [ "graphical-session.target" ];
 
-      unitConfig = {
-        ConditionPathExists = "/run/spice-vdagentd/spice-vdagent-sock";
+        unitConfig = {
+          ConditionPathExists = "/run/spice-vdagentd/spice-vdagent-sock";
+        };
+
+        serviceConfig = {
+          ExecStart = "${pkgs.spice-vdagent}/bin/spice-vdagent -x";
+          Restart = "on-failure";
+        };
       };
 
-      serviceConfig = {
-        ExecStart = "${pkgs.spice-vdagent}/bin/spice-vdagent -x";
-        Restart = "on-failure";
-      };
-    };
+      services.home-manager-upgrade = {
+        description = "Activate latest Home Manager generation not baked into the system closure";
+        after = [ "home-manager-${userConfig.username}.service" ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          User = userConfig.username;
+        };
+        script = ''
+          active=""
+          if [ -L "/etc/profiles/per-user/${userConfig.username}" ]; then
+            active="$(readlink -f "/etc/profiles/per-user/${userConfig.username}")"
+          fi
 
-    systemd.services.home-manager-upgrade = {
-      description = "Activate latest Home Manager generation not baked into the system closure";
-      after = [ "home-manager-${userConfig.username}.service" ];
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        User = userConfig.username;
-      };
-      script = ''
-        active=""
-        if [ -L "/etc/profiles/per-user/${userConfig.username}" ]; then
-          active="$(readlink -f "/etc/profiles/per-user/${userConfig.username}")"
-        fi
+          latest=""
+          for gen in /nix/store/*-home-manager-generation/activate; do
+            [ -f "$gen" ] || continue
+            dir="$(dirname "$gen")"
+            hp="$(readlink "$dir/home-path" 2>/dev/null || true)"
+            [ -n "$hp" ] || continue
+            [ "$hp" = "$active" ] && continue
+            latest="$dir"
+          done
 
-        latest=""
-        for gen in /nix/store/*-home-manager-generation/activate; do
-          [ -f "$gen" ] || continue
-          dir="$(dirname "$gen")"
-          hp="$(readlink "$dir/home-path" 2>/dev/null || true)"
-          [ -n "$hp" ] || continue
-          [ "$hp" = "$active" ] && continue
-          latest="$dir"
-        done
-
-        if [ -n "$latest" ]; then
-          exec "$latest/activate" --driver-version 1
-        fi
-      '';
-    };
-
-    systemd.services.vm-authorized-keys = {
-      description = "Install runtime SSH authorized_keys for VM access";
-      wantedBy = [ "multi-user.target" ];
-      before = [ "sshd.service" ];
-      requires = [ "tmp-shared.mount" ];
-      after = [ "tmp-shared.mount" ];
-
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
+          if [ -n "$latest" ]; then
+            exec "$latest/activate" --driver-version 1
+          fi
+        '';
       };
 
-      script = ''
-        key_file=/tmp/shared/authorized_keys
+      services.vm-authorized-keys = {
+        description = "Install runtime SSH authorized_keys for VM access";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "sshd.service" ];
+        requires = [ "tmp-shared.mount" ];
+        after = [ "tmp-shared.mount" ];
 
-        if [ ! -s "$key_file" ]; then
-          echo "No runtime VM SSH keys found at $key_file; keeping declarative authorized_keys fallback."
-          exit 0
-        fi
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
 
-        install -d -m 700 -o ${userConfig.username} -g users ${userConfig.homeDirectory}/.ssh
-        install -m 600 -o ${userConfig.username} -g users "$key_file" ${userConfig.homeDirectory}/.ssh/authorized_keys
-      '';
+        script = ''
+          key_file=/tmp/shared/authorized_keys
+
+          if [ ! -s "$key_file" ]; then
+            echo "No runtime VM SSH keys found at $key_file; keeping declarative authorized_keys fallback."
+            exit 0
+          fi
+
+          install -d -m 700 -o ${userConfig.username} -g users ${userConfig.homeDirectory}/.ssh
+          install -m 600 -o ${userConfig.username} -g users "$key_file" ${userConfig.homeDirectory}/.ssh/authorized_keys
+        '';
+      };
     };
 
     home-manager.extraSpecialArgs.monitors = {
@@ -150,48 +156,44 @@ in
       };
     };
 
-    fileSystems."/" = lib.mkForce {
-      device = "/dev/disk/by-label/nixos";
-      fsType = "ext4";
-    };
-
-    fileSystems.${hostAngstPath} = {
-      device = "angst";
-      fsType = "9p";
-      options = p9Options ++ [ "noatime" ];
-    };
-
-    fileSystems."/nix/.ro-store" = {
-      device = "nix-store";
-      fsType = "9p";
-      options = p9Options ++ [ "cache=loose" ];
-    };
-
-    fileSystems."/nix/.rw-store" = {
-      device = "tmpfs";
-      fsType = "tmpfs";
-      neededForBoot = true;
-      options = [ "mode=0755" ];
-    };
-
-    fileSystems."/nix/store" = {
-      overlay = {
-        lowerdir = [ "/nix/.ro-store" ];
-        upperdir = "/nix/.rw-store/upper";
-        workdir = "/nix/.rw-store/work";
+    fileSystems = {
+      "/" = lib.mkForce {
+        device = "/dev/disk/by-label/nixos";
+        fsType = "ext4";
       };
-    };
-
-    fileSystems."/tmp/shared" = {
-      device = "shared";
-      fsType = "9p";
-      options = p9Options;
-    };
-
-    fileSystems."/tmp/xchg" = {
-      device = "xchg";
-      fsType = "9p";
-      options = p9Options;
+      ${hostAngstPath} = {
+        device = "angst";
+        fsType = "9p";
+        options = p9Options ++ [ "noatime" ];
+      };
+      "/nix/.ro-store" = {
+        device = "nix-store";
+        fsType = "9p";
+        options = p9Options ++ [ "cache=loose" ];
+      };
+      "/nix/.rw-store" = {
+        device = "tmpfs";
+        fsType = "tmpfs";
+        neededForBoot = true;
+        options = [ "mode=0755" ];
+      };
+      "/nix/store" = {
+        overlay = {
+          lowerdir = [ "/nix/.ro-store" ];
+          upperdir = "/nix/.rw-store/upper";
+          workdir = "/nix/.rw-store/work";
+        };
+      };
+      "/tmp/shared" = {
+        device = "shared";
+        fsType = "9p";
+        options = p9Options;
+      };
+      "/tmp/xchg" = {
+        device = "xchg";
+        fsType = "9p";
+        options = p9Options;
+      };
     };
   };
 }
