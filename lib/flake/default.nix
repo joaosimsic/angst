@@ -315,6 +315,14 @@ in
         meta.description = "Lint shell script configuration profiles.";
       };
 
+      analyze = {
+        type = "app";
+        program = "${pkgs.writeShellScript "analyze" ''
+          exec bash ${../../scripts/analyze-flake.sh}
+        ''}";
+        meta.description = "Analyze flake structure for refactoring insight.";
+      };
+
       ssh =
         let
           sshHostUser = envUsername;

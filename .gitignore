@@ -12,3 +12,4 @@ nvim-profile.log
 .direnv
 user.env
 .claude
+*.log
