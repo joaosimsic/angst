@@ -1,6 +1,6 @@
 # angst flake analysis
 
-*Generated: 2026-07-16 17:13*
+*Generated: 2026-07-16 17:23*
 
 ## Table of Contents
 
@@ -270,53 +270,50 @@ scripts
 - `lib/build/mkHome.nix` → `themes/default.nix`
 - `lib/flake/default.nix` → `themes/default.nix`
 
-### Graphviz (DOT)
+### Module Dependency Graph (Mermaid)
 
-```dot
-digraph {
-  node [shape=box, style=rounded, fontname=monospace];
-  rankdir=LR;
-  "flake.nix" -> "lib/build/scanHosts.nix";
-  "flake.nix" -> "lib/domains/default.nix";
-  "lib/domains/default.nix" -> "lib/domains/scan.nix";
-  "lib/domains/default.nix" -> "lib/domains/activation.nix";
-  "lib/domains/default.nix" -> "lib/domains/module.nix";
-  "lib/domains/module.nix" -> "lib/checks/theme/assertions.nix";
-  "flake.nix" -> "common/home.nix";
-  "flake.nix" -> "lib/flake/shared.nix";
-  "lib/flake/shared.nix" -> "lib/treesitter.nix";
-  "flake.nix" -> "lib/build/mkHome.nix";
-  "lib/build/mkHome.nix" -> "lib/parseEnv.nix";
-  "lib/build/mkHome.nix" -> "themes/default.nix";
-  "themes/default.nix" -> "themes/schema.nix";
-  "lib/build/mkHome.nix" -> "lib/domains/default.nix";
-  "lib/build/mkHome.nix" -> "lib/home/themeModule.nix";
-  "flake.nix" -> "lib/build/mkHost.nix";
-  "lib/build/mkHost.nix" -> "lib/parseEnv.nix";
-  "lib/build/mkHost.nix" -> "lib/domains/default.nix";
-  "flake.nix" -> "lib/flake/default.nix";
-  "lib/flake/default.nix" -> "lib/parseEnv.nix";
-  "lib/flake/default.nix" -> "lib/domains/default.nix";
-  "lib/flake/default.nix" -> "themes/default.nix";
-  "lib/flake/default.nix" -> "lib/home/fonts.nix";
-  "lib/flake/default.nix" -> "lib/checks/theme/assertions.nix";
-  "lib/flake/default.nix" -> "lib/checks/theme/context.nix";
-  "lib/flake/default.nix" -> "lib/checks/desktop.nix";
-  "lib/flake/default.nix" -> "lib/checks/shell.nix";
-  "lib/flake/default.nix" -> "lib/checks/theme/rendered.nix";
-  "lib/checks/theme/rendered.nix" -> "lib/checks/theme/assertions.nix";
-  "lib/flake/default.nix" -> "lib/flake/homeConfigurations.nix";
-  "lib/flake/homeConfigurations.nix" -> "lib/parseEnv.nix";
-  "lib/flake/default.nix" -> "lib/flake/checks.nix";
-  "lib/flake/checks.nix" -> "lib/checks/theme/semanticDistinct.nix";
-  "lib/checks/theme/semanticDistinct.nix" -> "lib/checks/theme/assertions.nix";
-  "lib/flake/checks.nix" -> "lib/checks/theme/override.nix";
-  "lib/flake/checks.nix" -> "lib/checks/parseEnv.nix";
-  "lib/checks/parseEnv.nix" -> "lib/parseEnv.nix";
-  "lib/flake/checks.nix" -> "lib/checks/password.nix";
-  "lib/flake/default.nix" -> "lib/flake/shared.nix";
-  "flake.nix" -> "lib/parseEnv.nix";
-}
+```mermaid
+flowchart LR
+    n0["flake.nix"] --> n1["lib/build/scanHosts.nix"]
+    n0["flake.nix"] --> n2["lib/domains/default.nix"]
+    n2["lib/domains/default.nix"] --> n3["lib/domains/scan.nix"]
+    n2["lib/domains/default.nix"] --> n4["lib/domains/activation.nix"]
+    n2["lib/domains/default.nix"] --> n5["lib/domains/module.nix"]
+    n5["lib/domains/module.nix"] --> n6["lib/checks/theme/assertions.nix"]
+    n0["flake.nix"] --> n7["common/home.nix"]
+    n0["flake.nix"] --> n8["lib/flake/shared.nix"]
+    n8["lib/flake/shared.nix"] --> n9["lib/treesitter.nix"]
+    n0["flake.nix"] --> n10["lib/build/mkHome.nix"]
+    n10["lib/build/mkHome.nix"] --> n11["lib/parseEnv.nix"]
+    n10["lib/build/mkHome.nix"] --> n12["themes/default.nix"]
+    n12["themes/default.nix"] --> n13["themes/schema.nix"]
+    n10["lib/build/mkHome.nix"] --> n2["lib/domains/default.nix"]
+    n10["lib/build/mkHome.nix"] --> n14["lib/home/themeModule.nix"]
+    n0["flake.nix"] --> n15["lib/build/mkHost.nix"]
+    n15["lib/build/mkHost.nix"] --> n11["lib/parseEnv.nix"]
+    n15["lib/build/mkHost.nix"] --> n2["lib/domains/default.nix"]
+    n0["flake.nix"] --> n16["lib/flake/default.nix"]
+    n16["lib/flake/default.nix"] --> n11["lib/parseEnv.nix"]
+    n16["lib/flake/default.nix"] --> n2["lib/domains/default.nix"]
+    n16["lib/flake/default.nix"] --> n12["themes/default.nix"]
+    n16["lib/flake/default.nix"] --> n17["lib/home/fonts.nix"]
+    n16["lib/flake/default.nix"] --> n6["lib/checks/theme/assertions.nix"]
+    n16["lib/flake/default.nix"] --> n18["lib/checks/theme/context.nix"]
+    n16["lib/flake/default.nix"] --> n19["lib/checks/desktop.nix"]
+    n16["lib/flake/default.nix"] --> n20["lib/checks/shell.nix"]
+    n16["lib/flake/default.nix"] --> n21["lib/checks/theme/rendered.nix"]
+    n21["lib/checks/theme/rendered.nix"] --> n6["lib/checks/theme/assertions.nix"]
+    n16["lib/flake/default.nix"] --> n22["lib/flake/homeConfigurations.nix"]
+    n22["lib/flake/homeConfigurations.nix"] --> n11["lib/parseEnv.nix"]
+    n16["lib/flake/default.nix"] --> n23["lib/flake/checks.nix"]
+    n23["lib/flake/checks.nix"] --> n24["lib/checks/theme/semanticDistinct.nix"]
+    n24["lib/checks/theme/semanticDistinct.nix"] --> n6["lib/checks/theme/assertions.nix"]
+    n23["lib/flake/checks.nix"] --> n25["lib/checks/theme/override.nix"]
+    n23["lib/flake/checks.nix"] --> n26["lib/checks/parseEnv.nix"]
+    n26["lib/checks/parseEnv.nix"] --> n11["lib/parseEnv.nix"]
+    n23["lib/flake/checks.nix"] --> n27["lib/checks/password.nix"]
+    n16["lib/flake/default.nix"] --> n8["lib/flake/shared.nix"]
+    n0["flake.nix"] --> n11["lib/parseEnv.nix"]
 ```
 
 ## 9. Build Graph Depth
@@ -378,21 +375,21 @@ flake.nix
 
 - **parseEnv**: 7 files import it
   - `flake.nix`
-  - `lib/build/mkHome.nix`
-  - `lib/build/mkHost.nix`
-  - `lib/checks/parseEnv.nix`
   - `lib/flake/checks.nix`
   - `lib/flake/default.nix`
   - `lib/flake/homeConfigurations.nix`
+  - `lib/build/mkHome.nix`
+  - `lib/build/mkHost.nix`
+  - `lib/checks/parseEnv.nix`
 - **domains/default**: 4 files import it
   - `flake.nix`
   - `lib/build/mkHome.nix`
-  - `lib/build/mkHost.nix`
   - `lib/flake/default.nix`
+  - `lib/build/mkHost.nix`
 - **themes/default**: 3 files import it
-  - `capabilities/graphical.nix`
   - `lib/build/mkHome.nix`
   - `lib/flake/default.nix`
+  - `capabilities/graphical.nix`
 - **shared.nix**: 2 files import it
   - `flake.nix`
   - `lib/flake/default.nix`
@@ -750,7 +747,7 @@ flake.nix
 
 | Command | Result | Time |
 |---|---|---|
-| nix flake show | ✓ | 0.46s |
+| nix flake show | ✓ | 2.15s |
 | packages.x86_64-linux | ✓ | 0.05s |
 | apps.x86_64-linux | ✓ | 0.05s |
 | checks.x86_64-linux | ✓ | 0.05s |
@@ -759,7 +756,7 @@ flake.nix
 
 | Command | Result | Time |
 |---|---|---|
-| nix flake check | ✓ | 23.18s |
+| nix flake check | ✓ | 22.82s |
 
 ## 26. Technical Debt Score
 
@@ -913,15 +910,15 @@ flake.nix
 
 | Check | Result | Time | Details |
 |---|---|---|---|
-| `check-parse-env` | ✓ | 0.08s |  |
-| `check-password` | ✓ | 0.19s |  |
-| `home-theme-override-test` | ✓ | 0.67s |  |
-| `lint-desktop` | ✓ | 0.23s |  |
-| `lint-shell` | ✓ | 0.13s |  |
-| `lint-themes` | ✓ | 0.08s |  |
-| `theme-override` | ✓ | 0.07s |  |
-| `theme-rendered` | ✓ | 0.08s |  |
-| `theme-semantic-distinct` | ✓ | 0.07s |  |
+| `check-parse-env` | ✓ | 0.45s |  |
+| `check-password` | ✓ | 1.67s |  |
+| `home-theme-override-test` | ✓ | 13.00s |  |
+| `lint-desktop` | ✓ | 2.00s |  |
+| `lint-shell` | ✓ | 1.18s |  |
+| `lint-themes` | ✓ | 0.50s |  |
+| `theme-override` | ✓ | 1.15s |  |
+| `theme-rendered` | ✓ | 0.47s |  |
+| `theme-semantic-distinct` | ✓ | 0.45s |  |
 
 **9 passed, 0 failed**
 

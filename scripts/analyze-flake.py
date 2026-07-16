@@ -24,6 +24,7 @@ REPO = Path.cwd()
 
 # ── helpers ───────────────────────────────────
 
+
 def has_cmd(name: str) -> bool:
     return shutil.which(name) is not None
 
@@ -101,8 +102,12 @@ def nix_eval_attr_names(attr: str, **kwargs) -> list[str]:
 
 def git_log(patterns: list[str], since: str = "1 year ago") -> list[str]:
     cmd = [
-        "git", "log", "--oneline", f"--since={since}",
-        "--name-only", "--",
+        "git",
+        "log",
+        "--oneline",
+        f"--since={since}",
+        "--name-only",
+        "--",
     ] + patterns
     rc, out, _ = run(cmd, timeout=30)
     if rc != 0:
@@ -111,6 +116,7 @@ def git_log(patterns: list[str], since: str = "1 year ago") -> list[str]:
 
 
 # ── markdown helpers ──────────────────────────
+
 
 def md_escape(s: str | int | float) -> str:
     return str(s).replace("|", "\\|")
@@ -137,6 +143,7 @@ def md_code(text: str, lang: str = "") -> str:
 
 
 # ── file parsing ──────────────────────────────
+
 
 def read_nix(path: Path) -> str:
     try:
@@ -180,16 +187,26 @@ def parse_imports_from_tree(
 
 # ── analysis sections ─────────────────────────
 
+
 def section_overview(no_eval_cost: bool = False) -> str:
     lines = [md_section(1, "Overview")]
     nix_files = find_nix_files()
     total_nix_loc = sum(len(read_nix(f).splitlines()) for f in nix_files)
-    total_rust_loc = sum(len(read_nix(f).splitlines()) for f in Path("tools").rglob("*.rs")
-                         if ".git" not in f.parts)
-    total_sh_loc = sum(len(read_nix(f).splitlines()) for f in Path("scripts").rglob("*.sh")
-                       if ".git" not in f.parts)
-    total_md_loc = sum(len(read_nix(f).splitlines()) for f in Path("openwiki").rglob("*.md")
-                       if ".git" not in f.parts)
+    total_rust_loc = sum(
+        len(read_nix(f).splitlines())
+        for f in Path("tools").rglob("*.rs")
+        if ".git" not in f.parts
+    )
+    total_sh_loc = sum(
+        len(read_nix(f).splitlines())
+        for f in Path("scripts").rglob("*.sh")
+        if ".git" not in f.parts
+    )
+    total_md_loc = sum(
+        len(read_nix(f).splitlines())
+        for f in Path("openwiki").rglob("*.md")
+        if ".git" not in f.parts
+    )
 
     rows = [
         ["Files", f"{len(nix_files)} .nix files, {total_nix_loc} LOC"],
@@ -231,13 +248,25 @@ def section_file_size_heatmap() -> str:
 def section_directory_breakdown() -> str:
     lines = [md_section(3, "Directory Size Breakdown")]
     rows: list[list[Any]] = []
-    for d in ("lib", "domains", "toolchains", "themes", "capabilities", "hosts", "common", "scripts"):
+    for d in (
+        "lib",
+        "domains",
+        "toolchains",
+        "themes",
+        "capabilities",
+        "hosts",
+        "common",
+        "scripts",
+    ):
         path = REPO / d
         if not path.is_dir():
             continue
         nix_count = sum(1 for _ in path.rglob("*.nix") if ".git" not in _.parts)
-        nix_loc = sum(len(read_nix(f).splitlines()) for f in path.rglob("*.nix")
-                      if ".git" not in f.parts)
+        nix_loc = sum(
+            len(read_nix(f).splitlines())
+            for f in path.rglob("*.nix")
+            if ".git" not in f.parts
+        )
         extra = ""
         if d == "tools":
             rc = sum(1 for _ in Path("tools").rglob("*.rs"))
@@ -267,7 +296,13 @@ def section_attribute_surface() -> str:
     rows: list[list[Any]] = []
     for label, attr in pairs:
         names = nix_eval_attr_names(attr)
-        rows.append([label, str(len(names)), ", ".join(names[:8]) + ("..." if len(names) > 8 else "")])
+        rows.append(
+            [
+                label,
+                str(len(names)),
+                ", ".join(names[:8]) + ("..." if len(names) > 8 else ""),
+            ]
+        )
     lines.append(md_table(["Output", "Count", "Entries"], rows))
     return "\n".join(lines)
 
@@ -278,7 +313,8 @@ def section_config_matrix() -> str:
     hosts = sorted(d.name for d in REPO.joinpath("hosts").iterdir() if d.is_dir())
 
     themes = sorted(
-        f.stem for f in REPO.joinpath("themes").glob("*.nix")
+        f.stem
+        for f in REPO.joinpath("themes").glob("*.nix")
         if f.stem not in ("default", "schema")
     )
 
@@ -297,12 +333,18 @@ def section_config_matrix() -> str:
         ["Hosts", str(len(hosts)), ", ".join(hosts)],
         ["Themes", str(len(themes)), ", ".join(themes)],
         ["Architectures", str(len(architectures)), ", ".join(architectures)],
-        ["Domains", str(len(domains)), f"{len(domains)} domains in {len(set(d.split('/')[0] for d in domains))} categories"],
+        [
+            "Domains",
+            str(len(domains)),
+            f"{len(domains)} domains in {len(set(d.split('/')[0] for d in domains))} categories",
+        ],
     ]
     lines.append(md_table(["Dimension", "Count", "Values"], rows))
 
     combo_host_theme = len(hosts) * len(themes)
-    lines.append(f"\n> **Possible host/theme configurations:** {len(hosts)} × {len(themes)} = {combo_host_theme}")
+    lines.append(
+        f"\n> **Possible host/theme configurations:** {len(hosts)} × {len(themes)} = {combo_host_theme}"
+    )
     return "\n".join(lines)
 
 
@@ -436,7 +478,9 @@ def _render_tree_lines(
     child_prefix = prefix + ("    " if is_last else "│   ")
     for i, dep in enumerate(deps):
         child_is_last = i == len(deps) - 1
-        child_lines = _render_tree_lines(dep, fan_out, child_prefix, child_is_last, visited)
+        child_lines = _render_tree_lines(
+            dep, fan_out, child_prefix, child_is_last, visited
+        )
         lines.extend(child_lines)
     visited.discard(node)
     return lines
@@ -457,12 +501,18 @@ def build_import_tree(
     return "\n".join(lines)
 
 
-def build_dot_graph(
-    fan_out: dict[Path, list[Path]],
-    visited: set | None = None,
-) -> str:
+def build_mermaid_graph(fan_out: dict[Path, list[Path]]) -> str:
     edges: list[str] = []
     seen_edges: set[tuple[Path, Path]] = set()
+    node_ids: dict[Path, str] = {}
+    next_id = 0
+
+    def nid(path: Path) -> str:
+        nonlocal next_id
+        if path not in node_ids:
+            node_ids[path] = f"n{next_id}"
+            next_id += 1
+        return node_ids[path]
 
     def walk(node: Path, v: set):
         if node in v:
@@ -471,27 +521,31 @@ def build_dot_graph(
         for dep in fan_out.get(node, []):
             if (node, dep) not in seen_edges:
                 seen_edges.add((node, dep))
-                src = str(node.relative_to(REPO))
-                dst = str(dep.relative_to(REPO))
-                edges.append(f'  "{src}" -> "{dst}";')
+                src_label = str(node.relative_to(REPO))
+                dst_label = str(dep.relative_to(REPO))
+                edges.append(
+                    f'    {nid(node)}["{src_label}"] --> {nid(dep)}["{dst_label}"]'
+                )
             walk(dep, v)
 
     walk(REPO / "flake.nix", set())
-    lines = [
-        "```dot",
-        "digraph {",
-        "  node [shape=box, style=rounded, fontname=monospace];",
-        "  rankdir=LR;",
-    ]
+
+    lines = ["```mermaid", "flowchart LR"]
     lines.extend(edges)
-    lines.append("}")
     lines.append("```")
     return "\n".join(lines)
 
 
 LAYER_ORDER = [
-    "flake.nix", "lib", "common", "capabilities", "domains", "themes",
-    "toolchains", "hosts", "scripts",
+    "flake.nix",
+    "lib",
+    "common",
+    "capabilities",
+    "domains",
+    "themes",
+    "toolchains",
+    "hosts",
+    "scripts",
 ]
 
 
@@ -551,8 +605,8 @@ def section_coupling_graph(no_graph: bool = False) -> str:
         lines.append("\n**No layer violations.**\n")
 
     if not no_graph:
-        lines.append(md_subsection("Graphviz (DOT)"))
-        lines.append(build_dot_graph(fan_out))
+        lines.append(md_subsection("Module Dependency Graph (Mermaid)"))
+        lines.append(build_mermaid_graph(fan_out))
     return "\n".join(lines)
 
 
@@ -615,7 +669,24 @@ def section_duplication() -> str:
 
     for label, pat in patterns.items():
         lines.append(md_subsection(label))
-        rc, out, _ = run(["rg", "-l", pat, "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=30)
+        rc, out, _ = run(
+            [
+                "rg",
+                "-l",
+                pat,
+                "--type",
+                "nix",
+                "-g",
+                "!.git",
+                "-g",
+                "!result",
+                "-g",
+                "!tools/vm/**",
+                "-g",
+                "!tools/shell/**",
+            ],
+            timeout=30,
+        )
         if rc == 0 and out.strip():
             for f in out.strip().splitlines():
                 lines.append(f"- `{f}`")
@@ -624,7 +695,24 @@ def section_duplication() -> str:
 
     lines.append(md_subsection("Key re-imports (dedup candidates)"))
     for pat in ("parseEnv", "domains/default", "themes/default", "shared.nix"):
-        rc, out, _ = run(["rg", "-l", pat, "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=15)
+        rc, out, _ = run(
+            [
+                "rg",
+                "-l",
+                pat,
+                "--type",
+                "nix",
+                "-g",
+                "!.git",
+                "-g",
+                "!result",
+                "-g",
+                "!tools/vm/**",
+                "-g",
+                "!tools/shell/**",
+            ],
+            timeout=15,
+        )
         count = len(out.strip().splitlines()) if rc == 0 and out.strip() else 0
         if count > 1:
             lines.append(f"- **{pat}**: {count} files import it")
@@ -650,13 +738,47 @@ def section_hardcoded_strings() -> str:
     ]
     rows: list[list[Any]] = []
     for s, desc in pairs:
-        rc, out, _ = run(["rg", "-cF", s, "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=15)
+        rc, out, _ = run(
+            [
+                "rg",
+                "-cF",
+                s,
+                "--type",
+                "nix",
+                "-g",
+                "!.git",
+                "-g",
+                "!result",
+                "-g",
+                "!tools/vm/**",
+                "-g",
+                "!tools/shell/**",
+            ],
+            timeout=15,
+        )
         total = 0
         if rc == 0 and out.strip():
             for line in out.strip().splitlines():
                 if ":" in line:
                     total += int(line.split(":", 1)[1])
-        rc2, out2, _ = run(["rg", "-lF", s, "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=15)
+        rc2, out2, _ = run(
+            [
+                "rg",
+                "-lF",
+                s,
+                "--type",
+                "nix",
+                "-g",
+                "!.git",
+                "-g",
+                "!result",
+                "-g",
+                "!tools/vm/**",
+                "-g",
+                "!tools/shell/**",
+            ],
+            timeout=15,
+        )
         files = len(out2.strip().splitlines()) if rc2 == 0 and out2.strip() else 0
         rows.append([f'"{s}"', total, files, desc])
     lines.append(md_table(["String", "Occurrences", "Files", "Description"], rows))
@@ -675,14 +797,24 @@ def section_domain_inventory_condensed() -> str:
         doms = sorted(d.name for d in cat.iterdir() if d.is_dir())
         cat_loc = sum(
             len(read_nix(f).splitlines())
-            for d in cat.iterdir() if d.is_dir()
-            for f in d.rglob("*.nix") if ".git" not in f.parts
+            for d in cat.iterdir()
+            if d.is_dir()
+            for f in d.rglob("*.nix")
+            if ".git" not in f.parts
         )
-        has_render = sum(1 for d in cat.iterdir() if d.is_dir() and (d / "render.nix").exists())
-        has_module = sum(1 for d in cat.iterdir() if d.is_dir() and (d / "module.nix").exists())
-        rows.append([cat.name, len(doms), ",".join(doms), has_render, has_module, cat_loc])
+        has_render = sum(
+            1 for d in cat.iterdir() if d.is_dir() and (d / "render.nix").exists()
+        )
+        has_module = sum(
+            1 for d in cat.iterdir() if d.is_dir() and (d / "module.nix").exists()
+        )
+        rows.append(
+            [cat.name, len(doms), ",".join(doms), has_render, has_module, cat_loc]
+        )
     if rows:
-        lines.append(md_table(["Category", "Domains", "Names", "Render", "Module", "LOC"], rows))
+        lines.append(
+            md_table(["Category", "Domains", "Names", "Render", "Module", "LOC"], rows)
+        )
     return "\n".join(lines)
 
 
@@ -693,11 +825,13 @@ def section_theme_inventory_condensed() -> str:
     if not themes_dir.is_dir():
         return lines[0] + "\n(no themes/)"
     themes = sorted(
-        f.stem for f in themes_dir.glob("*.nix")
+        f.stem for f in themes_dir.glob("*.nix") if f.stem not in ("default", "schema")
+    )
+    total_loc = sum(
+        len(read_nix(f).splitlines())
+        for f in themes_dir.glob("*.nix")
         if f.stem not in ("default", "schema")
     )
-    total_loc = sum(len(read_nix(f).splitlines()) for f in themes_dir.glob("*.nix")
-                    if f.stem not in ("default", "schema"))
     lines.append(f"- **{len(themes)} themes**, {total_loc} total LOC\n")
     for t in themes:
         loc = len(read_nix(themes_dir / f"{t}.nix").splitlines())
@@ -713,8 +847,11 @@ def section_capabilities_inventory_condensed() -> str:
     if not cap_dir.is_dir():
         return lines[0] + "\n(no capabilities/)"
     caps = sorted(f.stem for f in cap_dir.glob("*.nix") if f.stem != "default")
-    total_loc = sum(len(read_nix(f).splitlines()) for f in cap_dir.glob("*.nix")
-                    if f.stem != "default")
+    total_loc = sum(
+        len(read_nix(f).splitlines())
+        for f in cap_dir.glob("*.nix")
+        if f.stem != "default"
+    )
     lines.append(f"- **{len(caps)} capabilities**, {total_loc} total LOC\n")
     for c in caps:
         loc = len(read_nix(cap_dir / f"{c}.nix").splitlines())
@@ -729,8 +866,11 @@ def section_toolchain_inventory_condensed() -> str:
     if not tc_dir.is_dir():
         return lines[0] + "\n(no toolchains/)"
     tcs = sorted(f.stem for f in tc_dir.glob("*.nix") if f.stem != "default")
-    total_loc = sum(len(read_nix(f).splitlines()) for f in tc_dir.glob("*.nix")
-                    if f.stem != "default")
+    total_loc = sum(
+        len(read_nix(f).splitlines())
+        for f in tc_dir.glob("*.nix")
+        if f.stem != "default"
+    )
     lines.append(f"- **{len(tcs)} toolchains**, {total_loc} total LOC\n")
     for t in tcs:
         loc = len(read_nix(tc_dir / f"{t}.nix").splitlines())
@@ -756,40 +896,107 @@ def section_host_inventory() -> str:
 def section_option_inventory() -> str:
     lines = [md_section(17, "Option Inventory")]
 
-    rc, out, _ = run(["rg", "-cF", "mkOption", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=15)
+    rc, out, _ = run(
+        [
+            "rg",
+            "-cF",
+            "mkOption",
+            "--type",
+            "nix",
+            "-g",
+            "!.git",
+            "-g",
+            "!result",
+            "-g",
+            "!tools/vm/**",
+            "-g",
+            "!tools/shell/**",
+        ],
+        timeout=15,
+    )
     mkopt_total = 0
     if rc == 0 and out.strip():
         for l in out.strip().splitlines():
             if ":" in l:
                 mkopt_total += int(l.split(":", 1)[1])
 
-    rc, out, _ = run(["rg", "-cF", "mkEnableOption", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=15)
+    rc, out, _ = run(
+        [
+            "rg",
+            "-cF",
+            "mkEnableOption",
+            "--type",
+            "nix",
+            "-g",
+            "!.git",
+            "-g",
+            "!result",
+            "-g",
+            "!tools/vm/**",
+            "-g",
+            "!tools/shell/**",
+        ],
+        timeout=15,
+    )
     mkenable_total = 0
     if rc == 0 and out.strip():
         for l in out.strip().splitlines():
             if ":" in l:
                 mkenable_total += int(l.split(":", 1)[1])
 
-    rc, out, _ = run(["rg", "-cF", "mkIf", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=15)
+    rc, out, _ = run(
+        [
+            "rg",
+            "-cF",
+            "mkIf",
+            "--type",
+            "nix",
+            "-g",
+            "!.git",
+            "-g",
+            "!result",
+            "-g",
+            "!tools/vm/**",
+            "-g",
+            "!tools/shell/**",
+        ],
+        timeout=15,
+    )
     mkif_total = 0
     if rc == 0 and out.strip():
         for l in out.strip().splitlines():
             if ":" in l:
                 mkif_total += int(l.split(":", 1)[1])
 
-    lines.append(md_table(
-        ["Construct", "Count"],
-        [
-            ["mkOption", mkopt_total],
-            ["mkEnableOption", mkenable_total],
-            ["mkIf", mkif_total],
-        ],
-    ))
+    lines.append(
+        md_table(
+            ["Construct", "Count"],
+            [
+                ["mkOption", mkopt_total],
+                ["mkEnableOption", mkenable_total],
+                ["mkIf", mkif_total],
+            ],
+        )
+    )
 
     # Option namespace detection: look for options.<name> patterns in module files
     lines.append(md_subsection("Option namespace references"))
     rc, out, _ = run(
-        ["rg", "-o", r"options\.\w+", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"],
+        [
+            "rg",
+            "-o",
+            r"options\.\w+",
+            "--type",
+            "nix",
+            "-g",
+            "!.git",
+            "-g",
+            "!result",
+            "-g",
+            "!tools/vm/**",
+            "-g",
+            "!tools/shell/**",
+        ],
         timeout=15,
     )
     if rc == 0 and out.strip():
@@ -804,13 +1011,36 @@ def section_option_inventory() -> str:
 def section_nix_idiom() -> str:
     lines = [md_section(18, "Nix Idiom Usage")]
     idioms = [
-        "lib.genAttrs", "lib.optional", "lib.optionalAttrs",
-        "lib.mapAttrs", "lib.mkMerge", "lib.pipe", "lib.foldl'",
-        "lib.filterAttrs", "lib.nameValuePair", "lib.listToAttrs",
-        "lib.concatMap", "lib.flatten", "lib.zipAttrsWith",
+        "lib.genAttrs",
+        "lib.optional",
+        "lib.optionalAttrs",
+        "lib.mapAttrs",
+        "lib.mkMerge",
+        "lib.pipe",
+        "lib.foldl'",
+        "lib.filterAttrs",
+        "lib.nameValuePair",
+        "lib.listToAttrs",
+        "lib.concatMap",
+        "lib.flatten",
+        "lib.zipAttrsWith",
     ]
     rc, out, _ = run(
-        ["rg", "-o", r"lib\.\w+", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"],
+        [
+            "rg",
+            "-o",
+            r"lib\.\w+",
+            "--type",
+            "nix",
+            "-g",
+            "!.git",
+            "-g",
+            "!result",
+            "-g",
+            "!tools/vm/**",
+            "-g",
+            "!tools/shell/**",
+        ],
         timeout=15,
     )
     counts: Counter = Counter()
@@ -835,7 +1065,24 @@ def section_conditional_builtins() -> str:
     cond_pats = ["mkIf", "mkDefault", "mkForce", "mkOption", "mkEnableOption"]
     rows: list[list[Any]] = []
     for pat in cond_pats:
-        rc, out, _ = run(["rg", "-cF", pat, "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=15)
+        rc, out, _ = run(
+            [
+                "rg",
+                "-cF",
+                pat,
+                "--type",
+                "nix",
+                "-g",
+                "!.git",
+                "-g",
+                "!result",
+                "-g",
+                "!tools/vm/**",
+                "-g",
+                "!tools/shell/**",
+            ],
+            timeout=15,
+        )
         total = 0
         files = 0
         if rc == 0 and out.strip():
@@ -848,8 +1095,22 @@ def section_conditional_builtins() -> str:
 
     lines.append(md_subsection("Builtins frequency (top 15)"))
     rc, out, _ = run(
-        ["rg", "-o", "--no-filename", r"builtins\.\w+", "--type", "nix",
-         "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"],
+        [
+            "rg",
+            "-o",
+            "--no-filename",
+            r"builtins\.\w+",
+            "--type",
+            "nix",
+            "-g",
+            "!.git",
+            "-g",
+            "!result",
+            "-g",
+            "!tools/vm/**",
+            "-g",
+            "!tools/shell/**",
+        ],
         timeout=15,
     )
     if rc == 0 and out.strip():
@@ -966,11 +1227,11 @@ def _longest_string(text: str) -> int:
     current_lines = 0
     i = 0
     while i < len(text):
-        if not in_string and text[i:i+2] == "''":
+        if not in_string and text[i : i + 2] == "''":
             in_string = True
             current_lines = 1
             i += 2
-        elif in_string and text[i:i+2] == "''":
+        elif in_string and text[i : i + 2] == "''":
             in_string = False
             max_lines = max(max_lines, current_lines)
             i += 2
@@ -1050,7 +1311,7 @@ def section_interesting_complexity() -> str:
         for m in re.finditer(r"mkIf\s*\(", text):
             pos = m.end()
             paren_depth = 0
-            for ch in text[pos:pos + 200]:
+            for ch in text[pos : pos + 200]:
                 if ch == "(":
                     paren_depth += 1
                 elif ch == ")":
@@ -1077,15 +1338,38 @@ def section_interesting_complexity() -> str:
         lines.append(md_subsection(metric.replace("_", " ").title()))
         entries.sort(reverse=True)
         top = entries[:8]
-        lines.append(md_table(["Value", "File"], [[str(v), f"`{f}`"] for v, f in top if v > 0]))
+        lines.append(
+            md_table(["Value", "File"], [[str(v), f"`{f}`"] for v, f in top if v > 0])
+        )
     return "\n".join(lines)
 
 
 def section_error_handling() -> str:
     lines = [md_section(22, "Error Handling")]
     counts: dict[str, int] = {}
-    for pat, name in [(r"builtins\.throw|throw ", "throw"), (r"builtins\.abort|abort ", "abort"), (r"\bassert ", "assert")]:
-        rc, out, _ = run(["rg", "-c", pat, "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=15)
+    for pat, name in [
+        (r"builtins\.throw|throw ", "throw"),
+        (r"builtins\.abort|abort ", "abort"),
+        (r"\bassert ", "assert"),
+    ]:
+        rc, out, _ = run(
+            [
+                "rg",
+                "-c",
+                pat,
+                "--type",
+                "nix",
+                "-g",
+                "!.git",
+                "-g",
+                "!result",
+                "-g",
+                "!tools/vm/**",
+                "-g",
+                "!tools/shell/**",
+            ],
+            timeout=15,
+        )
         total = 0
         if rc == 0 and out.strip():
             for l in out.strip().splitlines():
@@ -1094,7 +1378,24 @@ def section_error_handling() -> str:
         counts[name] = total
     lines.append(md_table(["Construct", "Count"], [[k, v] for k, v in counts.items()]))
     lines.append(md_subsection("Throw locations"))
-    rc, out, _ = run(["rg", "-n", r'throw "', "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=15)
+    rc, out, _ = run(
+        [
+            "rg",
+            "-n",
+            r'throw "',
+            "--type",
+            "nix",
+            "-g",
+            "!.git",
+            "-g",
+            "!result",
+            "-g",
+            "!tools/vm/**",
+            "-g",
+            "!tools/shell/**",
+        ],
+        timeout=15,
+    )
     if rc == 0 and out.strip():
         for l in out.strip().splitlines()[:12]:
             lines.append(f"- `{l}`")
@@ -1104,9 +1405,13 @@ def section_error_handling() -> str:
 def section_dead_code() -> str:
     lines = [md_section(23, "Dead Code")]
     if not has_cmd("deadnix"):
-        lines.append("> `deadnix` not found. Install with `nix shell nixpkgs#deadnix`.\n")
+        lines.append(
+            "> `deadnix` not found. Install with `nix shell nixpkgs#deadnix`.\n"
+        )
         return "\n".join(lines)
-    rc, out, _ = run(["deadnix", ".", "--quiet", "--no-lambda-pattern-names"], timeout=30)
+    rc, out, _ = run(
+        ["deadnix", ".", "--quiet", "--no-lambda-pattern-names"], timeout=30
+    )
     if rc > 1:
         lines.append("_(deadnix encountered an error)_")
     elif out.strip():
@@ -1156,12 +1461,18 @@ def section_eval_cost(no_eval_cost: bool) -> str:
         ("apps.x86_64-linux", "apps.x86_64-linux"),
         ("checks.x86_64-linux", "checks.x86_64-linux"),
     ]:
-        eval_trials.append((label, ["nix", "eval", f".#{attr}", "--apply", "builtins.attrNames"], 60))
-    lines.append(md_table(["Command", "Result", "Time"], [timed(*t) for t in eval_trials]))
+        eval_trials.append(
+            (label, ["nix", "eval", f".#{attr}", "--apply", "builtins.attrNames"], 60)
+        )
+    lines.append(
+        md_table(["Command", "Result", "Time"], [timed(*t) for t in eval_trials])
+    )
 
     lines.append(md_subsection("Build (realisation)"))
     build_trials = [("nix flake check", ["nix", "flake", "check", "--no-build"], 120)]
-    lines.append(md_table(["Command", "Result", "Time"], [timed(*t) for t in build_trials]))
+    lines.append(
+        md_table(["Command", "Result", "Time"], [timed(*t) for t in build_trials])
+    )
     return "\n".join(lines)
 
 
@@ -1199,24 +1510,112 @@ def section_tech_debt() -> str:
     checks.append(("Architecture", "No cyclic imports", not has_cycle))
 
     # parseEnv duplication
-    rc, out, _ = run(["rg", "-l", "parseEnv", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=10)
+    rc, out, _ = run(
+        [
+            "rg",
+            "-l",
+            "parseEnv",
+            "--type",
+            "nix",
+            "-g",
+            "!.git",
+            "-g",
+            "!result",
+            "-g",
+            "!tools/vm/**",
+            "-g",
+            "!tools/shell/**",
+        ],
+        timeout=10,
+    )
     parseenv_files = len(out.strip().splitlines()) if rc == 0 and out.strip() else 0
-    checks.append(("Architecture", f"parseEnv imported from {parseenv_files} files", parseenv_files <= 4))
+    checks.append(
+        (
+            "Architecture",
+            f"parseEnv imported from {parseenv_files} files",
+            parseenv_files <= 4,
+        )
+    )
 
     # x86_64 hardcoded
-    rc, out, _ = run(["rg", "-l", "x86_64-linux", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=10)
+    rc, out, _ = run(
+        [
+            "rg",
+            "-l",
+            "x86_64-linux",
+            "--type",
+            "nix",
+            "-g",
+            "!.git",
+            "-g",
+            "!result",
+            "-g",
+            "!tools/vm/**",
+            "-g",
+            "!tools/shell/**",
+        ],
+        timeout=10,
+    )
     x86_files = len(out.strip().splitlines()) if rc == 0 and out.strip() else 0
-    checks.append(("Portability", f"{x86_files} architecture-specific literals (x86_64-linux)", x86_files <= 5))
+    checks.append(
+        (
+            "Portability",
+            f"{x86_files} architecture-specific literals (x86_64-linux)",
+            x86_files <= 5,
+        )
+    )
 
     # repoPath hardcoded
-    rc, out, _ = run(["rg", "-l", "proj/angst", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=10)
+    rc, out, _ = run(
+        [
+            "rg",
+            "-l",
+            "proj/angst",
+            "--type",
+            "nix",
+            "-g",
+            "!.git",
+            "-g",
+            "!result",
+            "-g",
+            "!tools/vm/**",
+            "-g",
+            "!tools/shell/**",
+        ],
+        timeout=10,
+    )
     repo_files = len(out.strip().splitlines()) if rc == 0 and out.strip() else 0
-    checks.append(("Portability", f"{repo_files} repository path literals (proj/angst)", repo_files <= 3))
+    checks.append(
+        (
+            "Portability",
+            f"{repo_files} repository path literals (proj/angst)",
+            repo_files <= 3,
+        )
+    )
 
     # absolute store paths
-    rc, out, _ = run(["rg", "-l", "/nix/store", "--type", "nix", "-g", "!.git", "-g", "!result", "-g", "!tools/vm/**", "-g", "!tools/shell/**"], timeout=10)
+    rc, out, _ = run(
+        [
+            "rg",
+            "-l",
+            "/nix/store",
+            "--type",
+            "nix",
+            "-g",
+            "!.git",
+            "-g",
+            "!result",
+            "-g",
+            "!tools/vm/**",
+            "-g",
+            "!tools/shell/**",
+        ],
+        timeout=10,
+    )
     store_files = len(out.strip().splitlines()) if rc == 0 and out.strip() else 0
-    checks.append(("Portability", f"{store_files} files reference /nix/store", store_files <= 1))
+    checks.append(
+        ("Portability", f"{store_files} files reference /nix/store", store_files <= 1)
+    )
 
     # domain registration
     domains_dir = REPO / "domains"
@@ -1241,7 +1640,9 @@ def section_tech_debt() -> str:
     # deadnix
     deadnix_ok = True
     if has_cmd("deadnix"):
-        rc, _, _ = run(["deadnix", ".", "--quiet", "--no-lambda-pattern-names"], timeout=30)
+        rc, _, _ = run(
+            ["deadnix", ".", "--quiet", "--no-lambda-pattern-names"], timeout=30
+        )
         deadnix_ok = rc == 0
     checks.append(("Evaluation", "No dead code (deadnix clean)", deadnix_ok))
 
@@ -1264,16 +1665,32 @@ def section_tech_debt() -> str:
 
 def section_hotspot_table() -> str:
     lines = [md_section(27, "Hotspot Table")]
-    lines.append("> Cross-references file size, git churn, dependency counts, and complexity into a single view.\n")
-    lines.append("> **Columns**: LOC (size), Churn (commits/year), Imports (fan-out), Dependents (fan-in),")
-    lines.append("> Complexity (derived from nesting depth, string interpolation, conditional count).\n")
+    lines.append(
+        "> Cross-references file size, git churn, dependency counts, and complexity into a single view.\n"
+    )
+    lines.append(
+        "> **Columns**: LOC (size), Churn (commits/year), Imports (fan-out), Dependents (fan-in),"
+    )
+    lines.append(
+        "> Complexity (derived from nesting depth, string interpolation, conditional count).\n"
+    )
 
     files = find_nix_files()
     fan_out, fan_in = parse_imports_from_tree(files)
 
     # churn
     rc, out, _ = run(
-        ["git", "log", "--oneline", "--since=1 year ago", "--name-only", "--", "*.nix", "*.sh", "*.rs"],
+        [
+            "git",
+            "log",
+            "--oneline",
+            "--since=1 year ago",
+            "--name-only",
+            "--",
+            "*.nix",
+            "*.sh",
+            "*.rs",
+        ],
         timeout=30,
     )
     churn: Counter = Counter()
@@ -1370,12 +1787,24 @@ def section_hotspot_table() -> str:
 
 def section_stability_index() -> str:
     lines = [md_section(28, "Stability Index")]
-    lines.append("> Cross-references git churn with file recency. **Hot** = high churn + recently modified,")
-    lines.append("> **Active** = moderate churn, **Stable** = low churn, **Archived** = no changes in 6+ months.\n")
+    lines.append(
+        "> Cross-references git churn with file recency. **Hot** = high churn + recently modified,"
+    )
+    lines.append(
+        "> **Active** = moderate churn, **Stable** = low churn, **Archived** = no changes in 6+ months.\n"
+    )
 
     # Build date -> commit hash mapping
     rc2, out2, _ = run(
-        ["git", "log", "--oneline", "--since=2 years ago", "--format=%H %ai", "--", "*.nix"],
+        [
+            "git",
+            "log",
+            "--oneline",
+            "--since=2 years ago",
+            "--format=%H %ai",
+            "--",
+            "*.nix",
+        ],
         timeout=30,
     )
     date_by_commit: dict[str, str] = {}
@@ -1389,7 +1818,16 @@ def section_stability_index() -> str:
     churn: Counter = Counter()
     file_last_date: dict[str, str] = {}
     rc3, out3, _ = run(
-        ["git", "log", "--oneline", "--since=2 years ago", "--format=%H", "--name-only", "--", "*.nix"],
+        [
+            "git",
+            "log",
+            "--oneline",
+            "--since=2 years ago",
+            "--format=%H",
+            "--name-only",
+            "--",
+            "*.nix",
+        ],
         timeout=30,
     )
     current_hash = ""
@@ -1405,7 +1843,11 @@ def section_stability_index() -> str:
                 churn[line] += 1
             else:
                 churn[line] = 1
-            if current_hash and line not in file_last_date and current_hash in date_by_commit:
+            if (
+                current_hash
+                and line not in file_last_date
+                and current_hash in date_by_commit
+            ):
                 file_last_date[line] = date_by_commit[current_hash]
 
     # Process files
@@ -1437,7 +1879,9 @@ def section_stability_index() -> str:
             label = "Archived"
 
         if last_date_str:
-            date_short = last_date_str[:10] if len(last_date_str) >= 10 else last_date_str
+            date_short = (
+                last_date_str[:10] if len(last_date_str) >= 10 else last_date_str
+            )
             rows.append([f"`{rel}`", ch, date_short, label])
         elif ch > 0:
             rows.append([f"`{rel}`", ch, "(no date)", label])
@@ -1449,7 +1893,9 @@ def section_stability_index() -> str:
 
 def section_module_summary() -> str:
     lines = [md_section(29, "Module Summary")]
-    lines.append("> Per-domain availability of module types. ✓ = present, — = absent.\n")
+    lines.append(
+        "> Per-domain availability of module types. ✓ = present, — = absent.\n"
+    )
 
     domains_path = REPO / "domains"
     if not domains_path.is_dir():
@@ -1504,8 +1950,7 @@ def _discover_themes() -> list[str]:
     if not themes_dir.is_dir():
         return []
     return sorted(
-        f.stem for f in themes_dir.glob("*.nix")
-        if f.stem not in ("default", "schema")
+        f.stem for f in themes_dir.glob("*.nix") if f.stem not in ("default", "schema")
     )
 
 
@@ -1552,11 +1997,15 @@ def section_theme_domain_coverage(no_eval_cost: bool = False) -> str:
                 matrix[theme][dn] = "—"
 
         rc, out, err = run(
-            ["nix", "eval",
-             "--apply", f'f: f "generic" "{theme}"',
-             "--raw",
-             ".#lib.renderDomainOutputPathsFor",
-             "--no-warn-dirty"],
+            [
+                "nix",
+                "eval",
+                "--apply",
+                f'f: f "generic" "{theme}"',
+                "--raw",
+                ".#lib.renderDomainOutputPathsFor",
+                "--no-warn-dirty",
+            ],
             timeout=30,
         )
 
@@ -1598,7 +2047,14 @@ def section_domain_maturity() -> str:
         lines.append("(no domains)")
         return "\n".join(lines)
 
-    labels_map = {5: "Complete", 4: "Operational", 3: "Rendering", 2: "Partial", 1: "Minimal", 0: "Skeleton"}
+    labels_map = {
+        5: "Complete",
+        4: "Operational",
+        3: "Rendering",
+        2: "Partial",
+        1: "Minimal",
+        0: "Skeleton",
+    }
 
     rows: list[list[Any]] = []
     for d in all_domains:
@@ -1612,22 +2068,35 @@ def section_domain_maturity() -> str:
         }
         score = sum(1 for v in features.values() if v)
         label = labels_map.get(score, str(score))
-        rows.append([
-            dn,
-            score,
-            label,
-            "✓" if features["render"] else "—",
-            "✓" if features["module"] else "—",
-            "✓" if features["nixos"] else "—",
-            "✓" if features["activation"] else "—",
-            "✓" if features["checks"] else "—",
-        ])
+        rows.append(
+            [
+                dn,
+                score,
+                label,
+                "✓" if features["render"] else "—",
+                "✓" if features["module"] else "—",
+                "✓" if features["nixos"] else "—",
+                "✓" if features["activation"] else "—",
+                "✓" if features["checks"] else "—",
+            ]
+        )
 
     rows.sort(key=lambda r: (-r[1], str(r[0])))
-    lines.append(md_table(
-        ["Domain", "Score", "Label", "render", "module", "nixos", "activation", "checks"],
-        rows,
-    ))
+    lines.append(
+        md_table(
+            [
+                "Domain",
+                "Score",
+                "Label",
+                "render",
+                "module",
+                "nixos",
+                "activation",
+                "checks",
+            ],
+            rows,
+        )
+    )
     return "\n".join(lines)
 
 
@@ -1650,7 +2119,13 @@ def section_check_results(no_eval_cost: bool = False) -> str:
     for name in sorted(check_names):
         start = time.perf_counter()
         rc, out, err = run(
-            ["nix", "build", "--no-link", f".#checks.x86_64-linux.{name}", "--no-warn-dirty"],
+            [
+                "nix",
+                "build",
+                "--no-link",
+                f".#checks.x86_64-linux.{name}",
+                "--no-warn-dirty",
+            ],
             timeout=90,
         )
         elapsed = time.perf_counter() - start
@@ -1723,10 +2198,14 @@ def _count_render_output_lines(render_path: Path) -> tuple[int, int]:
 
 def section_render_output_sizes() -> str:
     lines = [md_section(33, "Rendered Output Sizes")]
-    lines.append("> Estimated output lines from multi-line string literals in render.nix.\n")
+    lines.append(
+        "> Estimated output lines from multi-line string literals in render.nix.\n"
+    )
 
     all_domains = _discover_domains()
-    render_domains = [(d, _domain_name(d)) for d in all_domains if (d / "render.nix").exists()]
+    render_domains = [
+        (d, _domain_name(d)) for d in all_domains if (d / "render.nix").exists()
+    ]
 
     if not render_domains:
         lines.append("(no domains with render.nix)")
@@ -1744,15 +2223,27 @@ def section_render_output_sizes() -> str:
 
 def section_growth_velocity() -> str:
     lines = [md_section(34, "Growth Velocity")]
-    lines.append("> Monthly lines added/removed across .nix, .sh, and .rs files (excludes merges).\n")
+    lines.append(
+        "> Monthly lines added/removed across .nix, .sh, and .rs files (excludes merges).\n"
+    )
 
     if not has_cmd("git"):
         lines.append("> `git` not found.\n")
         return "\n".join(lines)
 
     rc, out, _ = run(
-        ["git", "log", "--since=12 months ago", "--format=COMMIT %ai", "--numstat",
-         "--no-merges", "--", "*.nix", "*.sh", "*.rs"],
+        [
+            "git",
+            "log",
+            "--since=12 months ago",
+            "--format=COMMIT %ai",
+            "--numstat",
+            "--no-merges",
+            "--",
+            "*.nix",
+            "*.sh",
+            "*.rs",
+        ],
         timeout=60,
     )
 
@@ -1797,31 +2288,49 @@ def section_growth_velocity() -> str:
         net = m["added"] - m["removed"]
         total_added += m["added"]
         total_removed += m["removed"]
-        rows.append([month, m["added"], m["removed"], f"+{net}" if net >= 0 else str(net), m["commits"]])
+        rows.append(
+            [
+                month,
+                m["added"],
+                m["removed"],
+                f"+{net}" if net >= 0 else str(net),
+                m["commits"],
+            ]
+        )
 
     lines.append(md_table(["Month", "Added", "Removed", "Net", "Commits"], rows))
     total_net = total_added - total_removed
-    lines.append(f"\n> **12-month totals:** +{total_added} added, −{total_removed} removed, net {total_net:+d}")
+    lines.append(
+        f"\n> **12-month totals:** +{total_added} added, −{total_removed} removed, net {total_net:+d}"
+    )
     return "\n".join(lines)
 
 
 # ── token definitions for section 35 ──────────
 
 _TOKEN_DEFS: list[tuple[str, str]] = [
-    ("palette.bg.base",     r"p\.background\.base\b|t\.safe\.foregroundOnBackground\b"),
-    ("palette.bg.variant",  r"p\.background\.variant\b"),
-    ("palette.sf.base",     r"p\.surface\.base\b|t\.safe\.foregroundOnSurfaceBase\b"),
-    ("palette.sf.variant",  r"p\.surface\.variant\b|t\.safe\.foregroundOnSurfaceVariant\b"),
-    ("palette.fg.base",     r"p\.foreground\.base\b"),
-    ("palette.fg.variant",  r"p\.foreground\.variant\b|t\.safe\.\w*OnForegroundVariant\b"),
-    ("palette.ac.base",     r"p\.accent\.base\b"),
-    ("palette.ac.variant",  r"p\.accent\.variant\b|t\.safe\.foregroundOnAccentVariant\b"),
-    ("palette.dim",         r"p\.dim\b"),
-
-    ("ansi.error",          r"\bt\.ansi\.error\b|\ba\.error\b"),
-    ("ansi.warn",           r"\bt\.ansi\.warn\b|\ba\.warn\b"),
-    ("ansi.info",           r"\bt\.ansi\.info\b|\ba\.info\b"),
-    ("ansi.success",        r"\bt\.ansi\.success\b|\ba\.success\b"),
+    ("palette.bg.base", r"p\.background\.base\b|t\.safe\.foregroundOnBackground\b"),
+    ("palette.bg.variant", r"p\.background\.variant\b"),
+    ("palette.sf.base", r"p\.surface\.base\b|t\.safe\.foregroundOnSurfaceBase\b"),
+    (
+        "palette.sf.variant",
+        r"p\.surface\.variant\b|t\.safe\.foregroundOnSurfaceVariant\b",
+    ),
+    ("palette.fg.base", r"p\.foreground\.base\b"),
+    (
+        "palette.fg.variant",
+        r"p\.foreground\.variant\b|t\.safe\.\w*OnForegroundVariant\b",
+    ),
+    ("palette.ac.base", r"p\.accent\.base\b"),
+    (
+        "palette.ac.variant",
+        r"p\.accent\.variant\b|t\.safe\.foregroundOnAccentVariant\b",
+    ),
+    ("palette.dim", r"p\.dim\b"),
+    ("ansi.error", r"\bt\.ansi\.error\b|\ba\.error\b"),
+    ("ansi.warn", r"\bt\.ansi\.warn\b|\ba\.warn\b"),
+    ("ansi.info", r"\bt\.ansi\.info\b|\ba\.info\b"),
+    ("ansi.success", r"\bt\.ansi\.success\b|\ba\.success\b"),
 ]
 
 
@@ -1835,11 +2344,17 @@ def _token_counts(render_path: Path) -> dict[str, int]:
 
 def section_token_usage() -> str:
     lines = [md_section(35, "Theme Token Usage Audit")]
-    lines.append("> How many times each schema token is referenced in each render.nix.\n")
-    lines.append("> Token lookup uses regex patterns covering `${p.xxx}`, `${t.safe.xxx}`, `${a.xxx}`, and `${t.ansi.xxx}` references.\n")
+    lines.append(
+        "> How many times each schema token is referenced in each render.nix.\n"
+    )
+    lines.append(
+        "> Token lookup uses regex patterns covering `${p.xxx}`, `${t.safe.xxx}`, `${a.xxx}`, and `${t.ansi.xxx}` references.\n"
+    )
 
     all_domains = _discover_domains()
-    render_domains = [(d, _domain_name(d)) for d in all_domains if (d / "render.nix").exists()]
+    render_domains = [
+        (d, _domain_name(d)) for d in all_domains if (d / "render.nix").exists()
+    ]
 
     if not render_domains:
         lines.append("(no domains with render.nix)")
@@ -1873,11 +2388,13 @@ def section_token_usage() -> str:
     lines.append(md_subsection("Token popularity summary"))
     summary_rows: list[list[Any]] = []
     for tn in token_names:
-        summary_rows.append([
-            f"`{tn}`",
-            token_totals[tn],
-            token_domain_counts[tn],
-        ])
+        summary_rows.append(
+            [
+                f"`{tn}`",
+                token_totals[tn],
+                token_domain_counts[tn],
+            ]
+        )
     summary_rows.sort(key=lambda r: (-r[1], r[0]))
     lines.append(md_table(["Token", "Total uses", "Used by (domains)"], summary_rows))
 
@@ -1886,10 +2403,13 @@ def section_token_usage() -> str:
 
 # ── main ──────────────────────────────────────
 
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="angst flake analysis — Markdown report")
-    p.add_argument("--no-eval-cost", action="store_true", help="Skip evaluation timing (opt-out)")
-    p.add_argument("--no-graph", action="store_true", help="Skip DOT graph generation")
+    p.add_argument(
+        "--no-eval-cost", action="store_true", help="Skip evaluation timing (opt-out)"
+    )
+    p.add_argument("--no-graph", action="store_true", help="Skip Mermaid dependency graph")
     return p.parse_args(argv)
 
 
@@ -1900,8 +2420,8 @@ def main() -> None:
 
     def slug(s: str) -> str:
         s = s.lower()
-        s = re.sub(r'[^a-z0-9]+', '-', s)
-        return s.strip('-')
+        s = re.sub(r"[^a-z0-9]+", "-", s)
+        return s.strip("-")
 
     section_fns: list[tuple[str, str]] = [
         ("1. Overview", section_overview(no_eval_cost)),
@@ -1950,7 +2470,7 @@ def main() -> None:
     for heading, _ in section_fns:
         num_dot = heading.index(".")
         num = heading[:num_dot]
-        rest = heading[num_dot + 1:].strip()
+        rest = heading[num_dot + 1 :].strip()
         print(f"- [{heading}](#{slug(rest)})")
     print()
 
