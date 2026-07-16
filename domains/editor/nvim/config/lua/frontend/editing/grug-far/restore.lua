@@ -228,16 +228,19 @@ local function get_location_at_cursor(inst)
   return resultsList.getResultLocationAtCursor(buf, context)
 end
 
-local function open_file_at_location(loc)
+local function open_file_at_location(loc, backup_path)
   local orig_path = loc.filename
   if not orig_path or vim.fn.filereadable(orig_path) == 0 then
     return
   end
-  local bufnr = vim.fn.bufnr(orig_path)
-  if bufnr == -1 then
-    vim.api.nvim_command("tabedit " .. vim.fn.fnameescape(orig_path))
-  else
-    vim.api.nvim_command("tabedit " .. vim.fn.fnameescape(orig_path))
+  vim.api.nvim_command("tabedit " .. vim.fn.fnameescape(orig_path))
+  if backup_path and vim.fn.filereadable(backup_path) == 1 then
+    vim.api.nvim_command("vertical diffsplit " .. vim.fn.fnameescape(backup_path))
+  end
+  vim.api.nvim_set_current_tabpage(vim.api.nvim_tabpage_get_number(0))
+  local orig_win = vim.fn.bufwinid(vim.fn.bufnr(orig_path))
+  if orig_win ~= -1 then
+    vim.api.nvim_set_current_win(orig_win)
   end
   if loc.lnum then
     vim.api.nvim_win_set_cursor(0, { loc.lnum, 0 })
@@ -290,7 +293,7 @@ local function setup_restore_keymaps(inst, state_ref)
       state_ref.run_id = run_id
       state_ref.backup_paths = backup_paths
     elseif state_ref.state == "files" then
-      open_file_at_location(loc)
+      open_file_at_location(loc, state_ref.backup_paths and state_ref.backup_paths[loc.filename])
     end
   end, { desc = "Select run or open file" })
 
@@ -298,7 +301,7 @@ local function setup_restore_keymaps(inst, state_ref)
     if state_ref.state ~= "files" then return end
     local loc = get_location_at_cursor(inst)
     if not loc then return end
-    open_file_at_location(loc)
+    open_file_at_location(loc, state_ref.backup_paths and state_ref.backup_paths[loc.filename])
   end, { desc = "Open file at cursor" })
 
   binder:nmap("r", function()
