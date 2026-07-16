@@ -9,6 +9,8 @@
 - [x] break distance based either on tab space or formatters
 - [x] leave yazi returns heirline in terminal mode
 - [x] update scratch plugin to allow run compiler on it
+- [ ] better git handling(neogit/diffview)
+- [ ] md handling(md-preview/render-md)
 
 # nu
 - [x] set ":" to replace ">"
@@ -16,6 +18,7 @@
 
 # nix
 - [x] add package managers to toolchains
+- [ ] use nixos-generate-config to set hardware
 
 # vm
 
