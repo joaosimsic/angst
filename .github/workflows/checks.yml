@@ -4,6 +4,9 @@ on:
     branches: 
       - '**'
   pull_request:
+env:
+  HOST: generic
+  ANGST_USERNAME: user
 jobs:
   lint-themes:
     runs-on: ubuntu-latest
