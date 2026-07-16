@@ -1,6 +1,6 @@
 # angst flake analysis
 
-*Generated: 2026-07-16 16:50*
+*Generated: 2026-07-16 17:13*
 
 ## Table of Contents
 
@@ -33,6 +33,12 @@
 - [27. Hotspot Table](#hotspot-table)
 - [28. Stability Index](#stability-index)
 - [29. Module Summary](#module-summary)
+- [30. Theme × Domain Coverage](#theme-domain-coverage)
+- [31. Domain Maturity Score](#domain-maturity-score)
+- [32. Check Results Breakdown](#check-results-breakdown)
+- [33. Rendered Output Sizes](#rendered-output-sizes)
+- [34. Growth Velocity](#growth-velocity)
+- [35. Theme Token Usage Audit](#theme-token-usage-audit)
 
 
 ## 1. Overview
@@ -357,10 +363,10 @@ flake.nix
 - `flake.nix`
 - `lib/build/mkHome.nix`
 - `lib/build/mkHost.nix`
-- `lib/flake/default.nix`
-- `lib/flake/homeConfigurations.nix`
 - `lib/virtualisation/detect.nix`
+- `lib/flake/default.nix`
 - `lib/virtualisation/is-qemu-vm.nix`
+- `lib/flake/homeConfigurations.nix`
 
 ### "allowUnfree" hardcoded
 
@@ -384,9 +390,9 @@ flake.nix
   - `lib/build/mkHost.nix`
   - `lib/flake/default.nix`
 - **themes/default**: 3 files import it
+  - `capabilities/graphical.nix`
   - `lib/build/mkHome.nix`
   - `lib/flake/default.nix`
-  - `capabilities/graphical.nix`
 - **shared.nix**: 2 files import it
   - `flake.nix`
   - `lib/flake/default.nix`
@@ -518,10 +524,10 @@ flake.nix
 | capabilities | 9 |
 | domains | 2 |
 | angst | 1 |
-| domainConfig | 1 |
 | font | 1 |
 | toolchains | 1 |
 | theme | 1 |
+| domainConfig | 1 |
 
 ## 18. Nix Idiom Usage
 
@@ -744,7 +750,7 @@ flake.nix
 
 | Command | Result | Time |
 |---|---|---|
-| nix flake show | ✓ | 2.08s |
+| nix flake show | ✓ | 0.46s |
 | packages.x86_64-linux | ✓ | 0.05s |
 | apps.x86_64-linux | ✓ | 0.05s |
 | checks.x86_64-linux | ✓ | 0.05s |
@@ -753,7 +759,7 @@ flake.nix
 
 | Command | Result | Time |
 |---|---|---|
-| nix flake check | ✓ | 22.59s |
+| nix flake check | ✓ | 23.18s |
 
 ## 26. Technical Debt Score
 
@@ -863,6 +869,344 @@ flake.nix
 | terminal/tmux | ✓ | — | — | — |
 | terminal/zellij | ✓ | — | ✓ | — |
 | wm/i3 | ✓ | ✓ | ✓ | — |
+
+## 30. Theme × Domain Coverage
+
+> ✓ = render produces output, ✗ = render throws, — = no render.nix
+
+| Theme | bar/i3status | editor/nvim | files/yazi | git/lazygit | http-client/posting | launcher/rofi | llm/cursor-cli | llm/opencode | session/x11 | shell/nushell | shell/starship | sql-client/sqlit | terminal/ghostty | terminal/tmux | terminal/zellij | wm/i3 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `catppuccin-mocha` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ |
+| `github` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ |
+| `gotham` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ |
+| `kanagawa` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ |
+| `lotus` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ |
+| `miasma` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ |
+| `monochrome` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ |
+| `noctis` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ |
+| `rose-pine` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ |
+
+## 31. Domain Maturity Score
+
+> Composite score per domain. 5 = Complete, 0 = Skeleton.
+
+| Domain | Score | Label | render | module | nixos | activation | checks |
+|---|---|---|---|---|---|---|---|
+| wm/i3 | 3 | Rendering | ✓ | ✓ | ✓ | — | — |
+| bar/i3status | 2 | Partial | ✓ | ✓ | — | — | — |
+| editor/nvim | 2 | Partial | ✓ | ✓ | — | — | — |
+| files/yazi | 2 | Partial | ✓ | ✓ | — | — | — |
+| launcher/rofi | 2 | Partial | ✓ | ✓ | — | — | — |
+| shell/nushell | 2 | Partial | ✓ | ✓ | — | — | — |
+| shell/starship | 2 | Partial | ✓ | ✓ | — | — | — |
+| terminal/ghostty | 2 | Partial | ✓ | ✓ | — | — | — |
+| terminal/zellij | 2 | Partial | ✓ | ✓ | — | — | — |
+| git/lazygit | 1 | Minimal | ✓ | — | — | — | — |
+| http-client/posting | 1 | Minimal | ✓ | — | — | — | — |
+| llm/opencode | 1 | Minimal | ✓ | — | — | — | — |
+| session/x11 | 1 | Minimal | — | ✓ | — | — | — |
+| sql-client/sqlit | 1 | Minimal | ✓ | — | — | — | — |
+| terminal/tmux | 1 | Minimal | — | ✓ | — | — | — |
+| llm/cursor-cli | 0 | Skeleton | — | — | — | — | — |
+
+## 32. Check Results Breakdown
+
+| Check | Result | Time | Details |
+|---|---|---|---|
+| `check-parse-env` | ✓ | 0.08s |  |
+| `check-password` | ✓ | 0.19s |  |
+| `home-theme-override-test` | ✓ | 0.67s |  |
+| `lint-desktop` | ✓ | 0.23s |  |
+| `lint-shell` | ✓ | 0.13s |  |
+| `lint-themes` | ✓ | 0.08s |  |
+| `theme-override` | ✓ | 0.07s |  |
+| `theme-rendered` | ✓ | 0.08s |  |
+| `theme-semantic-distinct` | ✓ | 0.07s |  |
+
+**9 passed, 0 failed**
+
+
+### Theme lint detail
+
+```
+Themes (9):
+  catppuccin-mocha: ok
+  github: ok
+  gotham: ok
+  kanagawa: ok
+  lotus: ok
+  miasma: ok
+  monochrome: ok
+  noctis: ok
+  rose-pine: ok
+
+Domain renders:
+  domains/bar/i3status/config/config render + catppuccin-mocha: ok
+  domains/editor/nvim/config/lua/config/theme/palette.lua render + catppuccin-mocha: ok
+  domains/files/yazi/config/theme.toml render + catppuccin-mocha: ok
+  domains/git/lazygit/config/config.yml render + catppuccin-mocha: ok
+  domains/http-client/posting/config/config.yaml render + catppuccin-mocha: ok
+  domains/http-client/posting/config/themes/angst.yaml render + catppuccin-mocha: ok
+  domains/launcher/rofi/config/config.rasi render + catppuccin-mocha: ok
+  domains/launcher/rofi/config/theme.rasi render + catppuccin-mocha: ok
+  domains/llm/opencode/config/tui.json render + catppuccin-mocha: ok
+  domains/llm/opencode/config/themes/angst.json render + catppuccin-mocha: ok
+  domains/shell/nushell/config/colors.nu render + catppuccin-mocha: ok
+  domains/shell/starship/config/starship.toml render + catppuccin-mocha: ok
+  domains/sql-client/sqlit/config/settings.json render + catppuccin-mocha: ok
+  domains/sql-client/sqlit/config/themes/catppuccin-mocha.json render + catppuccin-mocha: ok
+  domains/terminal/ghostty/config/config render + catppuccin-mocha: ok
+  domains/terminal/ghostty/config/colors.conf render + catppuccin-mocha: ok
+  domains/terminal/zellij/config/config.kdl render + catppuccin-mocha: ok
+  domains/terminal/zellij/config/themes/angst.kdl render + catppuccin-mocha: ok
+  domains/terminal/zellij/config/layouts/default.kdl render + catppuccin-mocha: ok
+  domains/wm/i3/config/monitors.conf render + catppuccin-mocha: ok
+  domains/wm/i3/config/config render + catppuccin-mocha: ok
+  domains/bar/i3status/config/config render + github: ok
+  domains/editor/nvim/config/lua/config/theme/palette.lua render + github: ok
+  domains/files/yazi/config/theme.toml render + github: ok
+  domains/git/lazygit/config/config.yml render + github: ok
+  domains/http-client/posting/config/config.yaml render + github: ok
+  domains/http-client/posting/config/themes/angst.yaml render + github: ok
+  domains/launcher/rofi/config/config.rasi render + github: ok
+  domains/launcher/rofi/config/theme.rasi render + github: ok
+  domains/llm/opencode/config/tui.json render + github: ok
+  domains/llm/opencode/config/themes/angst.json render + github: ok
+  domains/shell/nushell/config/colors.nu render + github: ok
+  domains/shell/starship/config/starship.toml render + github: ok
+  domains/sql-client/sqlit/config/settings.json render + github: ok
+  domains/sql-client/sqlit/config/themes/github.json render + github: ok
+  domains/terminal/ghostty/config/config render + github: ok
+  domains/terminal/ghostty/config/colors.conf render + github: ok
+  domains/terminal/zellij/config/config.kdl render + github: ok
+  domains/terminal/zellij/config/themes/angst.kdl render + github: ok
+  domains/terminal/zellij/config/layouts/default.kdl render + github: ok
+  domains/wm/i3/config/monitors.conf render + github: ok
+  domains/wm/i3/config/config render + github: ok
+  domains/bar/i3status/config/config render + gotham: ok
+  domains/editor/nvim/config/lua/config/theme/palette.lua render + gotham: ok
+  domains/files/yazi/config/theme.toml render + gotham: ok
+  domains/git/lazygit/config/config.yml render + gotham: ok
+  domains/http-client/posting/config/config.yaml render + gotham: ok
+  domains/http-client/posting/config/themes/angst.yaml render + gotham: ok
+  domains/launcher/rofi/config/config.rasi render + gotham: ok
+  domains/launcher/rofi/config/theme.rasi render + gotham: ok
+  domains/llm/opencode/config/tui.json render + gotham: ok
+  domains/llm/opencode/config/themes/angst.json render + gotham: ok
+  domains/shell/nushell/config/colors.nu render + gotham: ok
+  domains/shell/starship/config/starship.toml render + gotham: ok
+  domains/sql-client/sqlit/config/settings.json render + gotham: ok
+  domains/sql-client/sqlit/config/themes/gotham.json render + gotham: ok
+  domains/terminal/ghostty/config/config render + gotham: ok
+  domains/terminal/ghostty/config/colors.conf render + gotham: ok
+  domains/terminal/zellij/config/config.kdl render + gotham: ok
+  domains/terminal/zellij/config/themes/angst.kdl render + gotham: ok
+  domains/terminal/zellij/config/layouts/default.kdl render + gotham: ok
+  domains/wm/i3/config/monitors.conf render + gotham: ok
+  domains/wm/i3/config/config render + gotham: ok
+  domains/bar/i3status/config/config render + kanagawa: ok
+  domains/editor/nvim/config/lua/config/theme/palette.lua render + kanagawa: ok
+  domains/files/yazi/config/theme.toml render + kanagawa: ok
+  domains/git/lazygit/config/config.yml render + kanagawa: ok
+  domains/http-client/posting/config/config.yaml render + kanagawa: ok
+  domains/http-client/posting/config/themes/angst.yaml render + kanagawa: ok
+  domains/launcher/rofi/config/config.rasi render + kanagawa: ok
+  domains/launcher/rofi/config/theme.rasi render + kanagawa: ok
+  domains/llm/opencode/config/tui.json render + kanagawa: ok
+  domains/llm/opencode/config/themes/angst.json render + kanagawa: ok
+  domains/shell/nushell/config/colors.nu render + kanagawa: ok
+  domains/shell/starship/config/starship.toml render + kanagawa: ok
+  domains/sql-client/sqlit/config/settings.json render + kanagawa: ok
+  domains/sql-client/sqlit/config/themes/kanagawa.json render + kanagawa: ok
+  domains/terminal/ghostty/config/config render + kanagawa: ok
+  domains/terminal/ghostty/config/colors.conf render + kanagawa: ok
+  domains/terminal/zellij/config/config.kdl render + kanagawa: ok
+  domains/terminal/zellij/config/themes/angst.kdl render + kanagawa: ok
+  domains/terminal/zellij/config/layouts/default.kdl render + kanagawa: ok
+  domains/wm/i3/config/monitors.conf render + kanagawa: ok
+  domains/wm/i3/config/config render + kanagawa: ok
+  domains/bar/i3status/config/config render + lotus: ok
+  domains/editor/nvim/config/lua/config/theme/palette.lua render + lotus: ok
+  domains/files/yazi/config/theme.toml render + lotus: ok
+  domains/git/lazygit/config/config.yml render + lotus: ok
+  domains/http-client/posting/config/config.yaml render + lotus: ok
+  domains/http-client/posting/config/themes/angst.yaml render + lotus: ok
+  domains/launcher/rofi/config/config.rasi render + lotus: ok
+  domains/launcher/rofi/config/theme.rasi render + lotus: ok
+  domains/llm/opencode/config/tui.json render + lotus: ok
+  domains/llm/opencode/config/themes/angst.json render + lotus: ok
+  domains/shell/nushell/config/colors.nu render + lotus: ok
+  domains/shell/starship/config/starship.toml render + lotus: ok
+  domains/sql-client/sqlit/config/settings.json render + lotus: ok
+  domains/sql-client/sqlit/config/themes/lotus.json render + lotus: ok
+  domains/terminal/ghostty/config/config render + lotus: ok
+  domains/terminal/ghostty/config/colors.conf render + lotus: ok
+  domains/terminal/zellij/config/config.kdl render + lotus: ok
+  domains/terminal/zellij/config/themes/angst.kdl render + lotus: ok
+  domains/terminal/zellij/config/layouts/default.kdl render + lotus: ok
+  domains/wm/i3/config/monitors.conf render + lotus: ok
+  domains/wm/i3/config/config render + lotus: ok
+  domains/bar/i3status/config/config render + miasma: ok
+  domains/editor/nvim/config/lua/config/theme/palette.lua render + miasma: ok
+  domains/files/yazi/config/theme.toml render + miasma: ok
+  domains/git/lazygit/config/config.yml render + miasma: ok
+  domains/http-client/posting/config/config.yaml render + miasma: ok
+  domains/http-client/posting/config/themes/angst.yaml render + miasma: ok
+  domains/launcher/rofi/config/config.rasi render + miasma: ok
+  domains/launcher/rofi/config/theme.rasi render + miasma: ok
+  domains/llm/opencode/config/tui.json render + miasma: ok
+  domains/llm/opencode/config/themes/angst.json render + miasma: ok
+  domains/shell/nushell/config/colors.nu render + miasma: ok
+  domains/shell/starship/config/starship.toml render + miasma: ok
+  domains/sql-client/sqlit/config/settings.json render + miasma: ok
+  domains/sql-client/sqlit/config/themes/miasma.json render + miasma: ok
+  domains/terminal/ghostty/config/config render + miasma: ok
+  domains/terminal/ghostty/config/colors.conf render + miasma: ok
+  domains/terminal/zellij/config/config.kdl render + miasma: ok
+  domains/terminal/zellij/config/themes/angst.kdl render + miasma: ok
+  domains/terminal/zellij/config/layouts/default.kdl render + miasma: ok
+  domains/wm/i3/config/monitors.conf render + miasma: ok
+  domains/wm/i3/config/config render + miasma: ok
+  domains/bar/i3status/config/config render + monochrome: ok
+  domains/editor/nvim/config/lua/config/theme/palette.lua render + monochrome: ok
+  domains/files/yazi/config/theme.toml render + monochrome: ok
+  domains/git/lazygit/config/config.yml render + monochrome: ok
+  domains/http-client/posting/config/config.yaml render + monochrome: ok
+  domains/http-client/posting/config/themes/angst.yaml render + monochrome: ok
+  domains/launcher/rofi/config/config.rasi render + monochrome: ok
+  domains/launcher/rofi/config/theme.rasi render + monochrome: ok
+  domains/llm/opencode/config/tui.json render + monochrome: ok
+  domains/llm/opencode/config/themes/angst.json render + monochrome: ok
+  domains/shell/nushell/config/colors.nu render + monochrome: ok
+  domains/shell/starship/config/starship.toml render + monochrome: ok
+  domains/sql-client/sqlit/config/settings.json render + monochrome: ok
+  domains/sql-client/sqlit/config/themes/monochrome.json render + monochrome: ok
+  domains/terminal/ghostty/config/config render + monochrome: ok
+  domains/terminal/ghostty/config/colors.conf render + monochrome: ok
+  domains/terminal/zellij/config/config.kdl render + monochrome: ok
+  domains/terminal/zellij/config/themes/angst.kdl render + monochrome: ok
+  domains/terminal/zellij/config/layouts/default.kdl render + monochrome: ok
+  domains/wm/i3/config/monitors.conf render + monochrome: ok
+  domains/wm/i3/config/config render + monochrome: ok
+  domains/bar/i3status/config/config render + noctis: ok
+  domains/editor/nvim/config/lua/config/theme/palette.lua render + noctis: ok
+  domains/files/yazi/config/theme.toml render + noctis: ok
+  domains/git/lazygit/config/config.yml render + noctis: ok
+  domains/http-client/posting/config/config.yaml render + noctis: ok
+  domains/http-client/posting/config/themes/angst.yaml render + noctis: ok
+  domains/launcher/rofi/config/config.rasi render + noctis: ok
+  domains/launcher/rofi/config/theme.rasi render + noctis: ok
+  domains/llm/opencode/config/tui.json render + noctis: ok
+  domains/llm/opencode/config/themes/angst.json render + noctis: ok
+  domains/shell/nushell/config/colors.nu render + noctis: ok
+  domains/shell/starship/config/starship.toml render + noctis: ok
+  domains/sql-client/sqlit/config/settings.json render + noctis: ok
+  domains/sql-client/sqlit/config/themes/noctis.json render + noctis: ok
+  domains/terminal/ghostty/config/config render + noctis: ok
+  domains/terminal/ghostty/config/colors.conf render + noctis: ok
+  domains/terminal/zellij/config/config.kdl render + noctis: ok
+  domains/terminal/zellij/config/themes/angst.kdl render + noctis: ok
+  domains/terminal/zellij/config/layouts/default.kdl render + noctis: ok
+  domains/wm/i3/config/monitors.conf render + noctis: ok
+  domains/wm/i3/config/config render + noctis: ok
+  domains/bar/i3status/config/config render + rose-pine: ok
+  domains/editor/nvim/config/lua/config/theme/palette.lua render + rose-pine: ok
+  domains/files/yazi/config/theme.toml render + rose-pine: ok
+  domains/git/lazygit/config/config.yml render + rose-pine: ok
+  domains/http-client/posting/config/config.yaml render + rose-pine: ok
+  domains/http-client/posting/config/themes/angst.yaml render + rose-pine: ok
+  domains/launcher/rofi/config/config.rasi render + rose-pine: ok
+  domains/launcher/rofi/config/theme.rasi render + rose-pine: ok
+  domains/llm/opencode/config/tui.json render + rose-pine: ok
+  domains/llm/opencode/config/themes/angst.json render + rose-pine: ok
+  domains/shell/nushell/config/colors.nu render + rose-pine: ok
+  domains/shell/starship/config/starship.toml render + rose-pine: ok
+  domains/sql-client/sqlit/config/settings.json render + rose-pine: ok
+  domains/sql-client/sqlit/config/themes/rose-pine.json render + rose-pine: ok
+  domains/terminal/ghostty/config/config render + rose-pine: ok
+  domains/terminal/ghostty/config/colors.conf render + rose-pine: ok
+  domains/terminal/zellij/config/config.kdl render + rose-pine: ok
+  domains/terminal/zellij/config/themes/angst.kdl render + rose-pine: ok
+  domains/terminal/zellij/config/layouts/default.kdl render + rose-pine: ok
+  domains/wm/i3/config/monitors.conf render + rose-pine: ok
+  domains/wm/i3/config/config render + rose-pine: ok
+
+All theme checks passed.
+```
+
+## 33. Rendered Output Sizes
+
+> Estimated output lines from multi-line string literals in render.nix.
+
+| Domain | Output files | Est. output lines |
+|---|---|---|
+| git/lazygit | 1 | 324 |
+| terminal/zellij | 3 | 322 |
+| launcher/rofi | 2 | 105 |
+| shell/nushell | 1 | 101 |
+| wm/i3 | 2 | 100 |
+| terminal/ghostty | 2 | 50 |
+| shell/starship | 1 | 46 |
+| editor/nvim | 1 | 37 |
+| sql-client/sqlit | 2 | 29 |
+| http-client/posting | 2 | 24 |
+| bar/i3status | 1 | 14 |
+| files/yazi | 1 | 14 |
+| llm/opencode | 2 | 0 |
+
+## 34. Growth Velocity
+
+> Monthly lines added/removed across .nix, .sh, and .rs files (excludes merges).
+
+| Month | Added | Removed | Net | Commits |
+|---|---|---|---|---|
+| 2026-06 | 10483 | 4442 | +6041 | 108 |
+| 2026-07 | 8386 | 5438 | +2948 | 111 |
+
+> **12-month totals:** +18869 added, −9880 removed, net +8989
+
+## 35. Theme Token Usage Audit
+
+> How many times each schema token is referenced in each render.nix.
+
+> Token lookup uses regex patterns covering `${p.xxx}`, `${t.safe.xxx}`, `${a.xxx}`, and `${t.ansi.xxx}` references.
+
+
+### Per-domain usage
+
+| Domain | bg·base | bg·variant | sf·base | sf·variant | fg·base | fg·variant | ac·base | ac·variant | dim | ansi·error | ansi·warn | ansi·info | ansi·success |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| bar/i3status | — | — | — | — | — | 1 | — | — | — | 1 | 1 | — | 1 |
+| editor/nvim | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
+| files/yazi | 1 | 2 | 1 | 1 | — | 2 | — | 1 | 1 | — | — | — | — |
+| git/lazygit | — | — | — | 2 | 3 | 1 | 2 | 2 | — | 1 | — | — | — |
+| http-client/posting | 1 | 1 | 1 | — | 1 | 1 | — | 1 | — | 1 | 1 | — | 1 |
+| launcher/rofi | — | 1 | — | — | — | 2 | 1 | — | — | — | — | — | — |
+| llm/opencode | 3 | 6 | — | 1 | 5 | 11 | 13 | — | 3 | 3 | 1 | 1 | 3 |
+| shell/nushell | 1 | — | 3 | 2 | 24 | 11 | 12 | 1 | 16 | — | — | — | — |
+| shell/starship | — | — | — | 3 | 3 | 2 | 3 | 1 | 1 | 7 | 1 | — | 2 |
+| sql-client/sqlit | 8 | 1 | 3 | — | 4 | 2 | 1 | 3 | — | 3 | 2 | — | 3 |
+| terminal/ghostty | 1 | 1 | 2 | 2 | 2 | 5 | 3 | 4 | 4 | — | — | — | — |
+| terminal/zellij | 26 | 3 | 4 | 9 | 12 | 7 | 24 | 6 | 2 | 14 | 16 | 14 | 3 |
+| wm/i3 | 16 | — | — | — | 4 | 1 | 4 | — | 3 | 3 | 2 | 3 | — |
+
+### Token popularity summary
+
+| Token | Total uses | Used by (domains) |
+|---|---|---|
+| `palette.ac.base` | 64 | 10 |
+| `palette.fg.base` | 59 | 10 |
+| `palette.bg.base` | 58 | 9 |
+| `palette.fg.variant` | 47 | 13 |
+| `ansi.error` | 34 | 9 |
+| `palette.dim` | 31 | 8 |
+| `ansi.warn` | 25 | 8 |
+| `palette.sf.variant` | 21 | 8 |
+| `palette.ac.variant` | 20 | 9 |
+| `ansi.info` | 19 | 4 |
+| `palette.bg.variant` | 16 | 8 |
+| `palette.sf.base` | 15 | 7 |
+| `ansi.success` | 14 | 7 |
 
 ---
 
