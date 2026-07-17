@@ -4,5 +4,5 @@ return {
 	lsp = "marksman",
 	lsp_cmd = { "marksman" },
 	formatter = "mdformat",
-	treesitter = { "markdown", "markdown-inline" },
+	treesitter = { "markdown", "markdown_inline" },
 }
