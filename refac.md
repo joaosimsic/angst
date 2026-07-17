@@ -15,4 +15,92 @@ There are various use cases that i want to cover that were made diffucult by the
 
 ! dont edit the text above
 
----
+______________________________________________________________________
+
+## Plan
+
+### Core idea
+
+`local/config.nix` (gitignored) is the **source of truth** for machine identity. **Profiles** (under `profiles/`) are reusable bundles of co-dependent configs — e.g., `desktop` enables i3 + bar + launcher + graphical capabilities as a unit. The builder functions become pure: they accept resolved configs + profile modules instead of re-parsing env and re-scanning internally.
+
+Existing domain/theme/capability/toolchain structure is **untouched** — only the wiring around them changes.
+
+______________________________________________________________________
+
+### Phase 1 — `lib/resolve.nix`
+
+Central config resolver. Single entry point that:
+
+- Loads `local/config.nix`
+- Returns a unified machine config: `{ system, username, theme, hostname, monitors, profiles, domains, password, ... }`
+- Env vars (`ANGST_*`) override anything in the file
+- Eliminates the 5-way duplicated `parseEnv` + path resolution across the codebase
+
+**Files to create:** `lib/resolve.nix`
+**Files to modify:** `flake.nix`, `lib/flake/default.nix`, `lib/build/mkHome.nix`, `lib/build/mkHost.nix`, `lib/flake/homeConfigurations.nix` — all switch to `lib/resolve.nix`
+
+### Phase 2 — Unified profiles (`profiles/`)
+
+Each profile is a standard NixOS/HM module that enables a bundle of related domains, capabilities, and packages:
+
+- `profiles/base.nix` — shell, terminal, editor, toolchains (replaces `common/home.nix`)
+- `profiles/desktop.nix` — i3, bar, rofi, ghostty, graphical capabilities
+- `profiles/development.nix` — git, LLMs, dev toolchains
+- `profiles/server.nix` — SSH, monitoring, minimal
+- `profiles/default.nix` — helper to resolve a list of profile names → module list
+
+Domain routing is already handled by `meta.building` — profiles just enable things and the existing system dispatches them correctly.
+
+**Files to create:** `profiles/` directory with modules
+**Files to remove:** `common/home.nix`, `common/capabilities.nix`, `common/user.nix`
+
+### Phase 3 — Pure builders
+
+- `lib/build/mkHome.nix` refactored to accept `resolvedConfig` + `profileModules` — no internal env/theme/domain resolution
+- `lib/build/mkHost.nix` refactored to accept `resolvedConfig` + `profileModules` — compose NixOS + HM cleanly
+- Both become thin, predictable functions with explicit inputs
+
+### Phase 4 — `local/config.nix`
+
+- Create `local/` directory, add to `.gitignore`
+- `local/config.nix` becomes the source of truth:
+  ```nix
+  {
+    system = "x86_64-linux";
+    username = "joao";
+    profiles = [ "base" "desktop" "development" ];
+    theme = "miasma";
+    hostname = "personal";
+    password = "...";
+    monitors.primary = { name = "DP-1"; resolution = "1920x1080"; ... };
+    domains.terminal.ghostty.enable = false;  # per-machine override
+  }
+  ```
+- Delete `user.env` + `user.env.example`
+- Update `lib/resolve.nix` to default to `local/config.nix`
+
+### Phase 5 — Output splitting
+
+Split `lib/flake/default.nix` (397 LOC, fan-out 12) into focused submodules:
+
+- `lib/outputs/packages.nix`
+- `lib/outputs/apps.nix`
+- `lib/outputs/checks.nix`
+- `lib/outputs/devShells.nix`
+- `lib/outputs/homeConfigurations.nix`
+- `lib/outputs/nixosConfigurations.nix`
+- `lib/outputs/default.nix` — orchestrates all of the above
+
+### Phase 6 — Consolidation
+
+- Move domain/theme/toolchain/capability scanning into `lib/scan/` (evaluate once, pass around)
+- Eliminate hardcoded `"proj/angst"`, `"x86_64-linux"`, `"allowUnfree"` into centralized constants in `lib/resolve.nix`
+- Remove `common/` directory
+- Optionally remove `hosts/` — config now lives in `local/config.nix` or profiles
+
+### Invariants
+
+- `local/config.nix` is **never tracked by git**
+- Profiles are pure NixOS/HM modules — no special framework required
+- Existing domain, theme, capability, toolchain structure is untouched
+- `flake.nix` stays thin — just inputs + output wiring
