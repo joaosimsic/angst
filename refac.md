@@ -4,16 +4,16 @@ The idea is to refac my whole nix repo, there are several flaws descripted on `a
 
 # Use cases
 
-There are various use cases that i want to cover that were made diffucult by the current architecture. I've been running this system on various hosts ranging from virtual machine, NixOS system and regular linux distro which have only access to nix package manager, and each host have its particularities like only using the system via ssh, only needing some specific toolchains for a debian server or running only home-manager in a regular linux distro.
+There are various use cases that i want to cover that were made difficult by the current architecture. I've been running this system on various hosts ranging from virtual machine, NixOS system and regular linux distro which have only access to nix package manager, and each host have its peculiarities like only using the system via ssh, only needing some specific toolchains for a debian server or running only home-manager in a regular linux distro.
 
 # Problems
 
 - There's no differentiation between home-manager related packages and NixOS configurations, they are all bundled together meaning i have little control how to run the system under different conditions.
-- I'm forced to create a new host for every machine that ill run the system, even though i cant possibly predict if i will need the system to work in a completely different host. this obligates me to know before hand or to spend some time into creating a unique host if i ever want to use the system
-- Since flake is based on git, it inherent all of the systems state such as user, themes and any other host specific configurations. Since i might use each host differently, i must be able to keep the system requirements outside git, allowing me to manage the way and reason im going to use it without have conflicts with new system versions or changes.
-- There are several bottlenecks listed in ´analysis.md´ that makes the build time largely bigger than i must be.
+- I'm forced to create a new host for every machine that ill run the system, even though i cant possibly predict if i will need the system to work in a completely different host. this obligates me to know beforehand or to spend some time into creating a unique host if i ever want to use the system
+- Since flake is based on git, it inherits all of the system's state such as user, themes and any other host specific configurations. Since i might use each host differently, i must be able to keep the system requirements outside git, allowing me to manage the way and reason im going to use it without have conflicts with new system versions or changes.
+- There are several bottlenecks listed in `analysis.md` that makes the build time largely bigger than i must be.
 
-! dont edit the text above
+<!-- dont edit the text above -->
 
 ______________________________________________________________________
 
@@ -33,9 +33,9 @@ All new files created; existing code still works alongside them.
 
 #### `lib/read-config.nix` — pure config reader
 
-Reads `local/config.nix` only — no `builtins.getEnv`, no impurity. Resolves toolchains (unset/`"*"` → all, list → specific), calls existing scan functions once.
+Reads `local/config.nix` only — no `builtins.getEnv`. Resolves toolchains (unset/`"*"` → all, list → specific), calls existing scan functions once.
 
-> Pure evaluation: `nix flake show`, `nix flake check`, `nix build .#...` all work without `--impure`.
+> **Impure evaluation:** `local/config.nix` is gitignored, so it's not available in the Nix store. Evaluation requires `--impure` (same as the current `user.env` approach). `nix flake show`, `nix flake check`, `nix build .#...` all work with `--impure`.
 >
 > **Self-flake only:** `local/` is gitignored so `builtins.pathExists ../local/config.nix` will never find the file when evaluated from the Nix store (e.g., when pinned as a remote input). This flake is designed to be evaluated from a working `git clone` only.
 
@@ -98,7 +98,6 @@ in
         inherit lib pkgs;
         grammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or []) _allTCs);
       };
-      capabilities = import ../capabilities { };
     };
 
     # toolchain modules — shares _tcIndex with scan (no re-import)
@@ -249,6 +248,8 @@ inputs.home-manager.lib.homeManagerConfiguration {
     ++ (if cfg.extraHome != {} then [ cfg.extraHome ] else []);
 }
 ```
+
+> `vmTool`, `shellTool`, and `angstTool` are always included — they're lightweight shell-script wrappers (not heavy closures like QEMU or Rust) and are harmless on all profiles. For server-only deployments, exclude them via `cfg.extraHome`.
 
 **Files to modify:** `lib/build/mkHome.nix`
 
@@ -419,7 +420,7 @@ in rec {
     ''}"; };
   };
 
-  checks = mkChecks homeConfigurations;
+  checks = mkChecks;
 
   formatter.${cfg.system} = pkgs.nixfmt;
 
@@ -544,7 +545,8 @@ No `common/`, `hosts/`, `user.env`, or env re-parsing involved.
 let
   inherit (lib) attrNames filter head;
 
-  alternate = head (filter (n: n != cfg.theme) (attrNames cfg.scan.themes.themes));
+  themesLib = cfg.scan.themes;
+  alternate = head (filter (n: n != cfg.theme) (attrNames themesLib.themes));
 
   themeLint = import ../../checks/theme {
     inherit lib;
@@ -676,7 +678,7 @@ Disko: `local/disk.nix`, applied with `sudo nix run github:nix-community/disko -
 }
 ```
 
-`current` aliases exposed by `lib/outputs.nix` — `nixosConfigurations.current` and `homeConfigurations.current` always resolve from `local/config.nix`. No env vars needed at build time. All commands (`nix flake show`, `nix flake check`, `nix build`) work **without** `--impure`.
+`current` aliases exposed by `lib/outputs.nix` — `nixosConfigurations.current` and `homeConfigurations.current` always resolve from `local/config.nix`. No env vars needed at build time. All commands (`nix flake show`, `nix flake check`, `nix build`) work with `--impure` (required because `local/` is gitignored).
 
 #### Scripts — update from `user.env`/`hosts/` to `local/config.nix`
 
@@ -717,7 +719,6 @@ Delete all dead code:
 | Hardcoded `"x86_64-linux"` (5 files) | Centralized in `read-config.nix` |
 | Hardcoded `"allowUnfree"` (3 files) | Centralized in `read-config.nix` |
 | `hostUserCases` case statement (`tools/vm/flake.nix:78-87`) | Replaced by `local/config.nix` read at runtime |
-| `lib/checks/password.nix` | Rewrite for `local/config.nix` (deferred) |
 
 Files under `lib/virtualisation/` that are **kept** (referenced by `profiles/vm.nix` or needed at runtime):
 
@@ -733,8 +734,7 @@ Files under `lib/virtualisation/` that are **kept** (referenced by `profiles/vm.
 
 #### Deferred — follow-up pass after core refactor
 
-- [ ] `lib/checks/password.nix` — rewrite tests for `local/config.nix`
-- [ ] `lib/checks/parseEnv.nix` — delete (no longer needed after env file format removed)
+- [ ] `lib/checks/password.nix` — rewrite tests for `local/config.nix` (env var test replaced, CLI test removed)
 
 ______________________________________________________________________
 
@@ -795,7 +795,7 @@ ______________________________________________________________________
 - No `hosts/` directory — machine identity comes solely from `local/config.nix`
 - `angst passwd` CLI removed — use `just setup` instead
 - No env re-parsing in builders — `read-config.nix` evaluates everything once
-- All operations (`nix flake show`, `nix flake check`, `nix build`) work **without** `--impure` — no env var overrides, `local/config.nix` is the sole source of truth
+- All operations (`nix flake show`, `nix flake check`, `nix build`) work with `--impure` — `local/config.nix` is the sole source of truth (impure is required because `local/` is gitignored and unavailable from the Nix store)
 - Self-flake only: must be evaluated from a working `git clone` — `local/` is gitignored so it won't be found if the flake is used as a remote input
 - `repoPath` is an explicit field in `local/config.nix` (not auto-derived) — each machine declares its own checkout path
 - `vmRunShim`/`resWrapper` live in `tools/vm` and `tools/shell` flakes, not inlined in the main flake output
