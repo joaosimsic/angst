@@ -21,7 +21,7 @@ ______________________________________________________________________
 
 ### Core idea
 
-`local/config.nix` (gitignored) is the **source of truth** for machine identity. **Profiles** (under `profiles/`) are reusable bundles of co-dependent configs — e.g., `desktop` enables i3 + bar + launcher + graphical capabilities as a unit. `lib/resolve.nix` reads config, applies env var overrides, and calls existing scan functions once — no duplicate scanning, no I/O in builders.
+`local/config.nix` (gitignored) is the **source of truth** for machine identity — includes `repoPath`, hostname, username, theme, monitors, profiles, toolchains, and machine-local settings. **Profiles** (under `profiles/`) are reusable bundles of co-dependent configs — e.g., `desktop` enables i3 + bar + launcher + graphical capabilities as a unit. `lib/read-config.nix` reads `local/config.nix` purely; `lib/apply-overrides.nix` layers `ANGST_*` env vars on top (requires `--impure`). All scan functions are called once, centrally — no duplicate scanning, no I/O in builders.
 
 Existing domain/theme/capability/toolchain structure is **untouched** — only the wiring around them changes.
 
@@ -31,118 +31,146 @@ ______________________________________________________________________
 
 All new files created; existing code still works alongside them.
 
-#### `lib/resolve.nix` — single entry point
+#### `lib/read-config.nix` — pure config reader
 
-Reads `local/config.nix` (or `$ANGST_CONFIG` env var override), applies `ANGST_HOST`/`ANGST_USERNAME`/`ANGST_THEME`/`ANGST_PASSWORD` overrides, resolves toolchains (unset/`"*"` → all, list → specific), calls existing scan functions once, and derives `repoPath` from `self.sourceInfo.outPath`:
+Reads `local/config.nix` only — no `builtins.getEnv`, no impurity. Resolves toolchains (unset/`"*"` → all, list → specific), calls existing scan functions once.
 
-> Env var overrides require `--impure` at eval time (e.g., `nix build --impure .#...`). Pure evaluation reads only `local/config.nix`.
-
-The implementation guards against a missing config file and auto-derives `repoPath` from `self.sourceInfo.outPath` (with fallback):
+> Pure evaluation: `nix flake show`, `nix flake check`, `nix build .#...` all work without `--impure`.
 
 ```nix
-# lib/resolve.nix
+# lib/read-config.nix — pure config reader
+#
+# Toolchains are evaluated once into an indexed map, then shared by
+# both `scan.allToolchainPackages`/`treesitter` and `toolchainModules`.
+# No duplicate scanning, no I/O in builders.
 { inputs, self }:
 
 let
   pkgs = import inputs.nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; };
   lib = pkgs.lib;
 
-  # ---- config loading (with helpful error) ----
   configPath = if builtins.pathExists ../local/config.nix
                then ../local/config.nix
                else builtins.throw "Create local/config.nix (see local/config.nix.example)";
   config = import configPath;
 
-  # ---- repoPath: derive from flake root path (self.sourceInfo.outPath) ----
-  repoPath = let
-    flakePath = builtins.toString self.sourceInfo.outPath;
-    home = builtins.getEnv "HOME";
-  in
-  if flakePath != "" && home != ""
-  then builtins.substring (builtins.stringLength home + 1) (-1) flakePath
-  else "proj/angst";
+  # Toolchain evaluation — once, indexed by bare name
+  _toolchainDir = ../toolchains;
+  _rawFiles = builtins.attrNames (
+    lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "default.nix")
+      (builtins.readDir _toolchainDir)
+  );
+  _tcIndex = lib.listToAttrs (map (f:
+    let name = lib.removeSuffix ".nix" f;
+    in { inherit name; value = import (_toolchainDir + "/${f}") { inherit lib pkgs; }; }
+  ) _rawFiles);
+  _allTCs = builtins.attrValues _tcIndex;
 
-  # ---- env overrides (require --impure) ----
-  envHost     = builtins.getEnv "ANGST_HOST";
-  envUsername = builtins.getEnv "ANGST_USERNAME";
-  envTheme    = builtins.getEnv "ANGST_THEME";
-  envPassword = builtins.getEnv "ANGST_PASSWORD";
+  domainsLib = import ../lib/domains/default.nix { inherit lib; domainsPath = ../domains; };
+  themesLib  = import ../themes/default.nix { inherit lib; };
 in
+
+# Helpers exported alongside cfg (used by lib/profiles.nix)
 {
+  inherit _tcIndex _allTCs;
+
   cfg = {
     system     = config.system or "x86_64-linux";
-    hostname   = if envHost     != "" then envHost     else config.hostname;
-    username   = if envUsername != "" then envUsername else config.username;
-    theme      = if envTheme    != "" then envTheme    else config.theme;
-    password   = if envPassword != "" then envPassword else config.password;
+    hostname   = config.hostname;
+    username   = config.username;
+    theme      = config.theme or "monochrome";
+    password   = config.password;
     monitors   = config.monitors or {};
     profiles   = config.profiles or [ "base" ];
     toolchains = config.toolchains or "*";
+    repoPath   = config.repoPath;
     extraNixos = config.nixos or {};
     extraHome  = config.home or {};
-    inherit repoPath;
 
     # resolved from scan (evaluated once here, not by builders)
-    scan = let
-      domainsLib = import ../lib/domains/default.nix { inherit lib; domainsPath = ../domains; };
-      themesLib  = import ../themes/default.nix { inherit lib; };
-      toolchainDir = ../toolchains;
-      toolchainFiles = builtins.attrNames (
-        lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".nix" name && name != "default.nix")
-          (builtins.readDir toolchainDir)
-      );
-      evaluatedToolchains = map (f: import (toolchainDir + "/${f}") { inherit lib pkgs; }) toolchainFiles;
-      allGrammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or []) evaluatedToolchains);
-    in {
+    scan = {
       domains = domainsLib;
       themes = themesLib;
-      allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or []) evaluatedToolchains);
-      treesitter = import ../lib/treesitter.nix { inherit lib pkgs; grammars = allGrammars; };
+      allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or []) _allTCs);
+      treesitter = import ../lib/treesitter.nix {
+        inherit lib pkgs;
+        grammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or []) _allTCs);
+      };
       capabilities = import ../capabilities { };
     };
 
-    # toolchain modules — resolved once based on config.toolchains
+    # toolchain modules — shares _tcIndex with scan (no re-import)
     toolchainModules =
-      let
-        resolveOne = name: import (../toolchains + "/${name}.nix") { inherit lib pkgs; };
-        allNames = builtins.attrNames (
-          lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "default.nix")
-            (builtins.readDir ../toolchains)
-        );
-        bareNames = map (lib.removeSuffix ".nix") allNames;
-      in
-      if config.toolchains == "*" then map resolveOne bareNames
-      else if builtins.isList config.toolchains
-      then let
-        unknown = builtins.filter (n: !builtins.elem n bareNames) config.toolchains;
-      in if unknown != []
-        then builtins.throw "Unknown toolchains: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " bareNames}"
-        else map resolveOne config.toolchains
-      else builtins.throw "toolchains must be \"*\" or a list";
+      let bareNames = builtins.attrNames _tcIndex;
+      in if config.toolchains == "*" then _allTCs
+         else if builtins.isList config.toolchains then
+           let unknown = builtins.filter (n: !builtins.elem n bareNames) config.toolchains;
+           in if unknown != []
+             then builtins.throw "Unknown toolchains: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " bareNames}"
+             else map (n: _tcIndex.${n}) config.toolchains
+         else builtins.throw "toolchains must be \"*\" or a list";
   };
 }
 ```
 
+#### `lib/apply-overrides.nix` — impure env override layer
+
+Wraps pure `cfg` with `ANGST_HOST`/`ANGST_USERNAME`/`ANGST_THEME`/`ANGST_PASSWORD` overrides. Only evaluates when `--impure` is passed:
+
+```nix
+# lib/apply-overrides.nix
+{ cfg }:
+cfg // {
+  hostname = let e = builtins.getEnv "ANGST_HOST";     in if e != "" then e else cfg.hostname;
+  username = let e = builtins.getEnv "ANGST_USERNAME"; in if e != "" then e else cfg.username;
+  theme    = let e = builtins.getEnv "ANGST_THEME";    in if e != "" then e else cfg.theme;
+  password = let e = builtins.getEnv "ANGST_PASSWORD"; in if e != "" then e else cfg.password;
+}
+```
+
+> Env var overrides require `--impure` at eval time (e.g., `nix build --impure .#...`). Pure evaluation reads only `local/config.nix`.
+
+> **`ANGST_PASSWORD` must be a pre-hashed password** (`mkpasswd -m sha-512` output), not plaintext. This matches the format of the `password` field in `local/config.nix`. The override exists for CI/automation scenarios where writing the hash to a file is impractical. For interactive use, set `password` in `local/config.nix` instead.
+
 All builders receive the same `cfg` — no duplicate scanning, no env re-parsing.
 
-**No `lib/scan/` directory** — the scan is just calling existing modules. The duplication was that they were called in 7 places; now they're called once in `resolve.nix`.
+**No `lib/scan/` directory** — the scan is just calling existing modules. The duplication was that they were called in 7 places; now they're called once in `read-config.nix`.
 
-**Files to create:** `lib/resolve.nix`
+**Files to create:** `lib/read-config.nix`, `lib/apply-overrides.nix`
 
 #### Profiles (`profiles/`)
 
 Each profile returns `{ hm, nixos }` — two lists of NixOS/HM modules (paths or inline attrsets).
 
-Domain custom modules (e.g., `domains/wm/i3/module.nix`) depend on `config.domains.wm.i3.enable` which is **defined by `mkDomainModule` from the scan system**, not by the module file itself. So profiles can't list domain `module.nix` paths directly. Instead, profile `hm` lists **inline enable modules** — simple attrsets that set `enable = true`. The builders still import all domain modules via `mkDomainModule` from `cfg.scan.domains`; profiles just decide which ones are active.
+Domain custom modules (e.g., `domains/wm/i3/module.nix`) depend on `config.domains.wm.i3.enable` which is **defined by `mkDomainModule` from the scan system**, not by the module file itself. So profiles can't list domain `module.nix` paths directly. Instead, profile `hm` lists **enable modules** via `mkDomainEnable` — a helper that validates domain names against the scan at eval time, throwing with an available-list error if the domain doesn't exist. The builders still import all domain modules via `mkDomainModule` from `cfg.scan.domains`; profiles just decide which ones are active.
+
+**`lib/mkDomainEnable.nix`** — validates domain names at eval time so renames fail early:
+
+```nix
+# lib/mkDomainEnable.nix
+{ lib, scan }:
+
+name:
+let
+  entries = scan.domains.homeEntries ++ scan.domains.nixosEntries;
+  domain = lib.findFirst (e: "${e.category}.${e.name}" == name) null entries;
+in
+if domain == null then
+  builtins.throw "Unknown domain '${name}'. Available: ${builtins.concatStringsSep ", " (map (e: "${e.category}.${e.name}") entries)}"
+else {
+  domains.${domain.category}.${domain.name}.enable = true;
+}
+```
 
 ```nix
 # profiles/desktop.nix
+{ mkDomainEnable }:
 {
   hm = [
-    ({ ... }: { domains.wm.i3.enable = true; })
-    ({ ... }: { domains.bar.i3status.enable = true; })
-    ({ ... }: { domains.launcher.rofi.enable = true; })
-    ({ ... }: { domains.terminal.ghostty.enable = true; })
+    (mkDomainEnable "wm.i3")
+    (mkDomainEnable "bar.i3status")
+    (mkDomainEnable "launcher.rofi")
+    (mkDomainEnable "terminal.ghostty")
   ];
   nixos = [
     ../../capabilities/graphical.nix
@@ -151,8 +179,6 @@ Domain custom modules (e.g., `domains/wm/i3/module.nix`) depend on `config.domai
   ];
 }
 ```
-
-> **Safety note:** The inline enable attrsets silently no-op if the domain option path changes (e.g., a rename of `i3` to `i3wm`). Consider adding a `lib/mkDomainEnable.nix` helper that validates domain names against `cfg.scan.domains.homeEntries` at eval time — e.g., `lib.mkDomainEnable "wm.i3"` which looks up the domain entry and returns the enable attrset, or throws with an available-list error if not found. This is optional but recommended for early failure.
 
 - Later profiles in the list override earlier ones (NixOS/HM module import order)
 - On **NixOS**: `mkHost.nix` applies both `hm` + `nixos` parts
@@ -167,25 +193,43 @@ Domain custom modules (e.g., `domains/wm/i3/module.nix`) depend on `config.domai
 | `server` | (none) | ssh capability |
 | `vm` | (none) | `lib/virtualisation/vm-profile.nix` (virtio/9p/SPICE, qemu mounts, VM detected keys) |
 
+> **Migration note:** The current `common/home.nix` enables terminal via `zellij` (not `ghostty`) and does not enable `rofi`. If migrating from the existing setup, your `common/home.nix` enablements won't automatically carry over — adjust your profile selection or add `config.nix.home` overrides to retain previous behavior.
+
 **Profile resolution** (`lib/profiles.nix`):
 
 ```nix
-resolve = names:
-  let
-    validNames = builtins.attrNames profileMap;
-    unknown = builtins.filter (n: !builtins.elem n validNames) names;
-  in
-  if unknown != []
-  then builtins.throw "Unknown profiles: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " validNames}"
-  else {
-    hm  = lib.concatMap (n: profileMap.${n}.hm)  names;
-    nixos = lib.concatMap (n: profileMap.${n}.nixos) names;
+# lib/profiles.nix
+{ profiles, lib, scan }:
+
+let
+  mkDomainEnable = import ./mkDomainEnable.nix { inherit lib scan; };
+
+  profileMap = {
+    base        = import ../profiles/base.nix        { inherit mkDomainEnable; };
+    desktop     = import ../profiles/desktop.nix      { inherit mkDomainEnable; };
+    development = import ../profiles/development.nix  { inherit mkDomainEnable; };
+    server      = import ../profiles/server.nix       { inherit mkDomainEnable; };
+    vm          = import ../profiles/vm.nix           { inherit mkDomainEnable; };
   };
+
+  resolve = names:
+    let
+      validNames = builtins.attrNames profileMap;
+      unknown = builtins.filter (n: !builtins.elem n validNames) names;
+    in
+    if unknown != []
+    then builtins.throw "Unknown profiles: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " validNames}"
+    else {
+      hm    = lib.concatMap (n: profileMap.${n}.hm)  names;
+      nixos = lib.concatMap (n: profileMap.${n}.nixos) names;
+    };
+in
+resolve profiles
 ```
 
 No toolchain imports in profiles — toolchain selection is driven by `config.nix.toolchains`. Same validation pattern applies to toolchain names in `resolve.nix`.
 
-**Files to create:** `profiles/base.nix`, `profiles/desktop.nix`, `profiles/development.nix`, `profiles/server.nix`, `profiles/vm.nix`, `lib/profiles.nix`
+**Files to create:** `profiles/base.nix`, `profiles/desktop.nix`, `profiles/development.nix`, `profiles/server.nix`, `profiles/vm.nix`, `lib/profiles.nix`, `lib/mkDomainEnable.nix`
 
 #### `lib/build/mkHome.nix` — pure builder
 
@@ -267,7 +311,7 @@ inputs.nixpkgs.lib.nixosSystem {
     ++ nixosModules
     ++ appNixosModules
     ++ [ ../../lib/nixos ]
-    ++ (if builtins.pathExists (builtins.toString self.sourceInfo.outPath + "/local/hardware.nix") then [ (import (builtins.toString self.sourceInfo.outPath + "/local/hardware.nix")) ] else [])
+    ++ (if builtins.pathExists (builtins.toString self.outPath + "/local/hardware.nix") then [ (import (builtins.toString self.sourceInfo.outPath + "/local/hardware.nix")) ] else [])
     ++ (if cfg.extraNixos != {} then [ cfg.extraNixos ] else [])
     ++ [
       ({ lib, ... }: {
@@ -312,11 +356,12 @@ inputs.nixpkgs.lib.nixosSystem {
 
 **Files to modify:** `lib/build/mkHost.nix`, `lib/nixos/default.nix` (remove `ANGST_PASSWORD` env read)
 
-#### `lib/outputs.nix` — single output file
+#### `lib/outputs.nix` — pure wiring
 
-Replaces `lib/flake/default.nix` (397 LOC, fan-out 12). Checks are split into `lib/checks/default.nix` for readability; shared inline tools (`vmRunShim`, `resWrapper`, `angstCli`, dev shell packages, `fullDevPackages`, `shellDevHook`) can live in `lib/shared/default.nix` to keep `outputs.nix` under 250 LOC. `outputs.nix` imports both and merges the result:
+Replaces `lib/flake/default.nix` (397 LOC, fan-out 12). Dev shells and inline tools (`vmRunShim`, `resWrapper`) are kept in their respective tool flakes. Tool definitions (`angstCli`) live in `lib/tools.nix`. Render logic lives in `lib/render.nix`. Dev shells live in `lib/devshell.nix`. Checks live in `lib/checks/default.nix`. `outputs.nix` imports each part and wires them together — under 150 LOC.
 
 ```nix
+# lib/outputs.nix
 { self, inputs, cfg, profiles }:
 
 let
@@ -326,48 +371,139 @@ let
   mkHome = import ./build/mkHome.nix;
   mkHost = import ./build/mkHost.nix;
 
-  hmModules     = profiles.hm;
-  nixosModules  = profiles.nixos;
+  hmModules    = profiles.hm;
+  nixosModules = profiles.nixos;
 
-  # local tool outputs (vm-cli, shell-cli)
+  # tool flake outputs (vmRunShim/resWrapper kept in their own flakes)
   vmOutputs    = inputs.vm.mkOutputs self;
   shellOutputs = inputs.shell.mkOutputs self;
+  vmTool       = vmOutputs.packages.${cfg.system}.default;
+  shellTool    = shellOutputs.packages.${cfg.system}.default;
+  angstTool    = (import ./tools.nix { inherit pkgs; }).angstCli;
 
-  vmTool    = vmOutputs.packages.${cfg.system}.default;
-  shellTool = shellOutputs.packages.${cfg.system}.default;
+  # render logic
+  render = import ./render.nix { inherit cfg lib; };
 
-  # tools built here (previously in shared.nix)
+  # dev shells
+  devshell = import ./devshell.nix { inherit pkgs cfg inputs vmOutputs shellOutputs; angstCli = angstTool; };
+
+  # checks
+  mkChecks = import ./checks/default.nix {
+    inherit self inputs cfg profiles pkgs lib render;
+  };
+in rec {
+  homeConfigurations = {
+    current = mkHome { inherit inputs cfg hmModules vmTool shellTool angstTool; };
+    "${cfg.username}@${cfg.hostname}" = mkHome { inherit inputs cfg hmModules vmTool shellTool angstTool; };
+  } // {
+    "${cfg.username}-theme-override-test" =
+      let
+        overrideTheme = lib.head (lib.filter (n: n != cfg.theme) (lib.attrNames cfg.scan.themes.themes));
+      in
+      mkHome {
+        inherit inputs cfg hmModules vmTool shellTool angstTool;
+        themeOverride = overrideTheme;
+      };
+  };
+
+  nixosConfigurations = {
+    current = mkHost { inherit inputs self cfg hmModules nixosModules; };
+    "${cfg.hostname}" = mkHost { inherit inputs self cfg hmModules nixosModules; };
+  };
+
+  packages.${cfg.system} = {
+    default = homeConfigurations.current.activationPackage;
+    angst   = angstTool;
+    vm-cli  = vmOutputs.packages.${cfg.system}.wrapped;
+    vm      = vmOutputs.packages.${cfg.system}.wrapped;
+    vm-run  = vmOutputs.packages.${cfg.system}.vm-run;
+    res     = vmOutputs.packages.${cfg.system}.res;
+    shell   = shellTool;
+  };
+
+  devShells.${cfg.system} = devshell.shells;
+
+  apps.${cfg.system} = {
+    vm = { type = "app"; program = "${vmOutputs.packages.${cfg.system}.wrapped}/bin/vm"; };
+    shell = { type = "app"; program = "${shellTool}/bin/shell"; };
+    angst = { type = "app"; program = "${angstTool}/bin/angst"; };
+    render = { type = "app"; program = "${pkgs.writeShellScript "angst-render" ''exec ${angstTool}/bin/angst render "$@"''}"; };
+    watch = { type = "app"; program = "${pkgs.writeShellScript "angst-watch" ''exec ${angstTool}/bin/angst watch "$@"''}"; };
+    check = { type = "app"; program = "${pkgs.writeShellScript "check" ''set -euo pipefail; ${pkgs.nix}/bin/nix flake check --print-build-logs''}"; };
+    lint-themes = { type = "app"; program = "${pkgs.writeShellScript "lint-themes" ''set -euo pipefail; ${pkgs.nix}/bin/nix eval ${self}#lib.themeLint --raw''}"; };
+    lint-desktop = { type = "app"; program = "${pkgs.writeShellScript "lint-desktop" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${cfg.system}.lint-desktop --no-link --print-build-logs; echo "All desktop config checks passed."''}"; };
+    lint-shell = { type = "app"; program = "${pkgs.writeShellScript "lint-shell" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${cfg.system}.lint-shell --no-link --print-build-logs; echo "All shell config checks passed."''}"; };
+    analyze = { type = "app"; program = "${pkgs.writeShellScript "analyze" ''exec python3 -m scripts.analyze_flake "$@"''}"; };
+    analyze-to-file = { type = "app"; program = "${pkgs.writeShellScript "analyze-to-file" ''cd "$(git rev-parse --show-toplevel)" && exec python3 -m scripts.analyze_flake --output analysis.md "$@"''}"; };
+    ssh = { type = "app"; program = "${pkgs.writeShellScript "angst-ssh-deploy" ''
+      set -euo pipefail
+      echo "==> Building & activating ${cfg.username}@${cfg.hostname}..."
+      nix build ${self}#homeConfigurations.${cfg.username}@${cfg.hostname}.activationPackage --print-build-logs
+      echo "==> Activating..."; ./result/activate
+      echo "==> Cleaning old Nix store..."; nix-collect-garbage -d; nix store gc; echo "==> Done."
+    ''}"; };
+  };
+
+  checks = mkChecks homeConfigurations;
+
+  formatter.${cfg.system} = pkgs.nixfmt;
+
+  lib = {
+    inherit (render) renderDomainOutputsFor renderDomainOutputFor;
+    themeLint = mkChecks.themeLint or (import ../checks/theme {
+      inherit lib;
+      themesLib = cfg.scan.themes;
+      renderDomainOutputsFor = render.renderDomainOutputsFor cfg.hostname;
+    });
+  };
+}
+```
+
+**`lib/tools.nix`** — angst CLI wrapper only (previously in `shared.nix`):
+```nix
+{ pkgs }: {
   angstCli = pkgs.writeShellApplication {
     name = "angst";
     runtimeInputs = with pkgs; [ coreutils findutils git nix watchexec jq mkpasswd ];
     text = builtins.readFile ./scripts/angst.sh;
   };
+}
+```
 
-  vmRunShim = pkgs.writeShellScriptBin "vm-run" ''
-    TARGET_HOST="${cfg.hostname}"
-    KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
-    KEY_FILE="$KEY_DIR/authorized_keys"
-    mkdir -p "$KEY_DIR"
-    TMP_KEYS="$(mktemp)"; trap 'rm -f "$TMP_KEYS"' EXIT
-    ssh-add -L 2>/dev/null >> "$TMP_KEYS" || true
-    for pubkey in "$HOME"/.ssh/*.pub; do
-      [ -r "$pubkey" ] && cat "$pubkey" >> "$TMP_KEYS"
-    done
-    awk '/^(ssh-rsa|ssh-ed25519|ecdsa-sha2-|sk-ssh-|sk-ecdsa-)/ { print }' "$TMP_KEYS" | sort -u > "$KEY_FILE"
-    chmod 600 "$KEY_FILE"
-    [ -s "$KEY_FILE" ] || { echo "Error: no SSH public keys found" >&2; exit 1; }
-    export NIX_DISK_IMAGE="''${NIX_DISK_IMAGE:-$PWD/$TARGET_HOST.qcow2}"
-    export SHARED_DIR="$KEY_DIR"
-    export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
-    exec nix run "git+file://$PWD#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" -- "$@"
-  '';
+**`lib/render.nix`** — domain render logic extracted from `outputs.nix`:
+```nix
+{ cfg, lib }:
 
-  resWrapper = pkgs.writeShellScriptBin "res" ''
-    cd "$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")" || exit 1
-    exec nix run ".#res" --impure --refresh -- "$@"
-  '';
+let
+  fontsLib = import ../home/fonts.nix;
+in rec {
+  renderDomainOutputsFor = hostName: themeName:
+    let
+      themesLib = cfg.scan.themes;
+      checkHelpers = import ../checks/theme/assertions.nix { inherit lib; theme = themesLib.get themeName; inherit themeName; };
+      domainRendererPaths = map (e: "${e.path}/render.nix") (
+        lib.filter (e: e.hasRender or false) cfg.scan.domains.homeEntries
+      );
+    in lib.concatLists (map (path: import path {
+      inherit lib themesLib themeName checkHelpers fontsLib;
+      fontFamily = fontsLib.defaultFamily;
+      monitors = cfg.monitors or {};
+      homeDirectory = "/home/${cfg.username}";
+    }) domainRendererPaths);
 
-  # dev shell — all toolchains always available
+  renderDomainOutputFor = hostName: themeName: outputPath:
+    let
+      matches = lib.filter (output: output.path == outputPath) (renderDomainOutputsFor hostName themeName);
+    in if matches == [] then builtins.throw "Unknown domain render output: ${outputPath}"
+      else (builtins.head matches).text;
+}
+```
+
+**`lib/devshell.nix`** — dev shells extracted from `outputs.nix`:
+```nix
+{ pkgs, cfg, inputs, angstCli, vmOutputs, shellOutputs }:
+
+let
   allToolchainPkgs = cfg.scan.allToolchainPackages;
   treesitter = cfg.scan.treesitter;
 
@@ -399,164 +535,94 @@ let
     vmOutputs.packages.${cfg.system}.vm-run
     vmOutputs.packages.${cfg.system}.res
   ];
-
-  # rendered domain outputs (used by checks + lib export)
-  renderDomainOutputsFor = hostName: themeName:
-    let
-      themesLib = cfg.scan.themes;
-      fontsLib = import ../home/fonts.nix;
-      checkHelpers = import ../checks/theme/assertions.nix { inherit lib; theme = themesLib.get themeName; inherit themeName; };
-      domainRendererPaths = map (e: "${e.path}/render.nix") (
-        lib.filter (e: e.hasRender or false) cfg.scan.domains.homeEntries
-      );
-    in lib.concatLists (map (path: import path {
-      inherit lib themesLib themeName checkHelpers fontsLib;
-      fontFamily = fontsLib.defaultFamily;
-      monitors = cfg.monitors or {};
-      homeDirectory = "/home/${cfg.username}";
-    }) domainRendererPaths);
-
-  renderDomainOutputFor = hostName: themeName: outputPath:
-    let
-      matches = lib.filter (output: output.path == outputPath) (renderDomainOutputsFor hostName themeName);
-    in if matches == [] then builtins.throw "Unknown domain render output: ${outputPath}"
-      else (builtins.head matches).text;
-
-  # checks (extracted to lib/checks/default.nix for readability)
-  mkChecks = import ./checks/default.nix {
-    inherit self inputs cfg profiles pkgs lib renderDomainOutputsFor renderDomainOutputFor;
-  };
-
-  # used by lib export (the rest of the check logic lives in lib/checks/default.nix)
-  themeLint = import ../checks/theme {
-    inherit lib;
-    themesLib = cfg.scan.themes;
-    renderDomainOutputsFor = renderDomainOutputsFor cfg.hostname;
-  };
-in rec {
-  homeConfigurations = {
-    current = mkHome { inherit inputs cfg hmModules vmTool shellTool angstTool; };
-    "${cfg.username}@${cfg.hostname}" = mkHome { inherit inputs cfg hmModules vmTool shellTool angstTool; };
-  } // {
-    "${cfg.username}-theme-override-test" =
-      let
-        overrideTheme = lib.head (lib.filter (n: n != cfg.theme) (lib.attrNames cfg.scan.themes.themes));
-      in
-      mkHome {
-        inherit inputs cfg hmModules vmTool shellTool angstTool;
-        themeOverride = overrideTheme;
-      };
-  };
-
-  nixosConfigurations = {
-    current = mkHost { inherit inputs self cfg hmModules nixosModules; };
-    "${cfg.hostname}" = mkHost { inherit inputs self cfg hmModules nixosModules; };
-  };
-
-  packages = {
-    ${cfg.system} = {
-      default = homeConfigurations.current.activationPackage;
-      angst   = angstCli;
-      vm-cli  = vmOutputs.packages.${cfg.system}.wrapped;
-      vm      = vmOutputs.packages.${cfg.system}.wrapped;
-      vm-run  = vmOutputs.packages.${cfg.system}.vm-run;
-      res     = vmOutputs.packages.${cfg.system}.res;
-      shell   = shellTool;
+in {
+  shells = {
+    safe = pkgs.mkShell {
+      packages = with pkgs; [ neovim git ] ++ allToolchainPkgs;
+      shellHook = treesitterShellHook;
     };
-  };
 
-  devShells = {
-    ${cfg.system} = {
-      safe = pkgs.mkShell {
-        packages = with pkgs; [ neovim git ] ++ allToolchainPkgs;
-        shellHook = treesitterShellHook;
-      };
-
-      dev = pkgs.mkShell {
-        packages = fullDevPackages;
-        shellHook = "${treesitterShellHook}\n. ${shellDevHook}";
-      };
-
-      vm = pkgs.mkShell {
-        inputsFrom = [ inputs.vm.devShells.${cfg.system}.default ];
-        packages = fullDevPackages;
-        shellHook = "${treesitterShellHook}\n. ${shellDevHook}";
-      };
+    dev = pkgs.mkShell {
+      packages = fullDevPackages;
+      shellHook = "${treesitterShellHook}\n. ${shellDevHook}";
     };
-  };
 
-  apps = {
-    ${cfg.system} = {
-      vm = {
-        type = "app";
-        program = "${vmOutputs.packages.${cfg.system}.wrapped}/bin/vm";
-      };
-      shell = {
-        type = "app";
-        program = "${shellTool}/bin/shell";
-      };
-      angst = {
-        type = "app";
-        program = "${angstCli}/bin/angst";
-      };
-      render = {
-        type = "app";
-        program = "${pkgs.writeShellScript "angst-render" ''exec ${angstCli}/bin/angst render "$@"''}";
-      };
-      watch = {
-        type = "app";
-        program = "${pkgs.writeShellScript "angst-watch" ''exec ${angstCli}/bin/angst watch "$@"''}";
-      };
-      check = {
-        type = "app";
-        program = "${pkgs.writeShellScript "check" ''set -euo pipefail; ${pkgs.nix}/bin/nix flake check --print-build-logs''}";
-      };
-      lint-themes = {
-        type = "app";
-        program = "${pkgs.writeShellScript "lint-themes" ''set -euo pipefail; ${pkgs.nix}/bin/nix eval ${self}#lib.themeLint --raw''}";
-      };
-      lint-desktop = {
-        type = "app";
-        program = "${pkgs.writeShellScript "lint-desktop" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${cfg.system}.lint-desktop --no-link --print-build-logs; echo "All desktop config checks passed."''}";
-      };
-      lint-shell = {
-        type = "app";
-        program = "${pkgs.writeShellScript "lint-shell" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${cfg.system}.lint-shell --no-link --print-build-logs; echo "All shell config checks passed."''}";
-      };
-      analyze = {
-        type = "app";
-        program = "${pkgs.writeShellScript "analyze" ''exec python3 -m scripts.analyze_flake "$@"''}";
-      };
-      analyze-to-file = {
-        type = "app";
-        program = "${pkgs.writeShellScript "analyze-to-file" ''cd "$(git rev-parse --show-toplevel)" && exec python3 -m scripts.analyze_flake --output analysis.md "$@"''}";
-      };
-      ssh = {
-        type = "app";
-        program = "${pkgs.writeShellScript "angst-ssh-deploy" ''
-          set -euo pipefail
-          echo "==> Building & activating ${cfg.username}@${cfg.hostname}..."
-          nix build ${self}#homeConfigurations.${cfg.username}@${cfg.hostname}.activationPackage --print-build-logs
-          echo "==> Activating..."; ./result/activate
-          echo "==> Cleaning old Nix store..."; nix-collect-garbage -d; nix store gc; echo "==> Done."
-        ''}";
-      };
+    vm = pkgs.mkShell {
+      inputsFrom = [ inputs.vm.devShells.${cfg.system}.default ];
+      packages = fullDevPackages;
+      shellHook = "${treesitterShellHook}\n. ${shellDevHook}";
     };
-  };
-
-  checks = mkChecks homeConfigurations;
-
-  formatter.${cfg.system} = pkgs.nixfmt;
-
-  lib = {
-    inherit renderDomainOutputsFor renderDomainOutputFor themeLint;
   };
 }
 ```
 
+> `vmRunShim` and `resWrapper` are **not** inlined here — they live in `tools/vm/flake.nix` and `tools/shell/flake.nix` respectively, exposed as `vm-run` and `res` packages. Update those flakes in Phase 3 to read from `local/config.nix` instead of `user.env`.
+
 No `common/`, `hosts/`, `user.env`, or env re-parsing involved.
 
-**Files to create:** `lib/outputs.nix`, `lib/checks/default.nix`
+**`lib/checks/default.nix`** — adapted from `lib/flake/checks.nix`, uses `cfg` instead of `user.env`/`loadHost`:
+
+```nix
+# lib/checks/default.nix
+{ self, inputs, cfg, profiles, pkgs, lib, render }:
+
+let
+  inherit (lib) attrNames filter head;
+
+  alternate = head (filter (n: n != cfg.theme) (attrNames cfg.scan.themes.themes));
+
+  themeLint = import ../../checks/theme {
+    inherit lib;
+    themesLib = cfg.scan.themes;
+    renderDomainOutputsFor = render.renderDomainOutputsFor cfg.hostname;
+  };
+
+  lintDesktop = import ../../checks/desktop.nix {
+    inherit lib pkgs;
+    themesLib = cfg.scan.themes;
+    renderDomainOutputFor = render.renderDomainOutputFor cfg.hostname;
+  };
+
+  lintShell = import ../../checks/shell.nix {
+    inherit lib pkgs;
+    themesLib = cfg.scan.themes;
+    renderDomainOutputFor = render.renderDomainOutputFor cfg.hostname;
+  };
+
+  themeRendered = import ../../checks/theme/rendered.nix {
+    inherit lib pkgs;
+    themesLib = cfg.scan.themes;
+    renderDomainOutputsFor = render.renderDomainOutputsFor cfg.hostname;
+    themeName = cfg.theme;
+  };
+
+  themeSemanticDistinct = import ../../checks/theme/semanticDistinct.nix {
+    inherit lib pkgs;
+    themesLib = cfg.scan.themes;
+    themeName = cfg.theme;
+  };
+
+  themeOverrideCheck = import ../../checks/theme/override.nix {
+    inherit lib pkgs themesLib;
+    overrideTheme = alternate;
+    renderDomainOutputFor = render.renderDomainOutputFor cfg.hostname;
+    homeConfiguration = self.homeConfigurations."${cfg.username}-theme-override-test";
+  };
+
+  # check-password: deferred to Phase 3 (needs rewrite for local/config.nix)
+in
+{
+  lint-themes           = pkgs.writeText "lint-themes-check" themeLint;
+  lint-desktop          = lintDesktop;
+  lint-shell            = lintShell;
+  theme-rendered        = themeRendered;
+  theme-override        = themeOverrideCheck;
+  theme-semantic-distinct = themeSemanticDistinct;
+  home-theme-override-test = self.homeConfigurations."${cfg.username}-theme-override-test".activationPackage;
+}
+```
+
+**Files to create:** `lib/outputs.nix`, `lib/tools.nix`, `lib/render.nix`, `lib/devshell.nix`, `lib/checks/default.nix`
 
 ______________________________________________________________________
 
@@ -568,13 +634,27 @@ ______________________________________________________________________
 - `local/config.nix` is the **sole source of machine identity** — no fallback files:
 
 ```nix
+# local/config.nix — machine identity (gitignored)
+#
+# Generate password hash:
+#   mkpasswd -m sha-512
+# Then paste the hash as the password value below.
+#
+# repoPath: relative path from $HOME to this git checkout.
+#   The activation scripts resolve config dirs from $HOME/$repoPath.
+#   On NixOS this is typically "proj/angst".
+#   Verify with: git rev-parse --show-prefix
+#
+# toolchains: "*" for all, or a list like ["bash" "nix" "php"]
+#             for a minimal server setup.
 {
   system = "x86_64-linux";
+  repoPath = "proj/angst";
   hostname = "personal";
   username = "joao";
   theme = "miasma";
   profiles = ["base" "desktop" "development"];
-  toolchains = "*";  # or ["bash" "nix" "php"] for server
+  toolchains = "*";
 
   # Hashed password — NOT plaintext. Generate with: mkpasswd -m sha-512
   password = "$6$CHANGE_ME_REPLACE_WITH_REAL_HASH";
@@ -582,7 +662,8 @@ ______________________________________________________________________
   monitors.primary = {
     name = "DP-1";
     resolution = "1920x1080";
-    refresh = 144;
+    refreshRate = 144;
+    position = "0x0";
   };
 
   nixos = {};  # one-off NixOS config (replaces host-specific configuration.nix)
@@ -596,7 +677,7 @@ Hardware: `nixos-generate-config --show-hardware-config > local/hardware.nix` (a
 
 Disko: `local/disk.nix`, applied with `sudo nix run github:nix-community/disko -- --mode disko local/disk.nix`.
 
-**Files to create:** `local/config.nix.example` (tracked in git, mirrors the schema), `local/config.nix` (gitignored, copy of `.example` with real values), `.gitignore` entry for `local/`
+**Files to create:** `local/config.nix.example` (tracked in git, mirrors the schema), `local/config.nix` (gitignored, copy of `.example` with real values), `.gitignore` entry for `local/` (add `local/` to `.gitignore` alongside existing `user.env`)
 **Files to delete:** `user.env`, `user.env.example`
 
 #### `flake.nix` — thin wiring (~25 lines)
@@ -607,15 +688,21 @@ Disko: `local/disk.nix`, applied with `sudo nix run github:nix-community/disko -
 
   outputs = { self, nixpkgs, home-manager, vm, shell, ... }@inputs:
     let
-      inherit (import ./lib/resolve.nix { inherit inputs self; }) cfg;
-      profiles = import ./lib/profiles.nix { inherit (cfg) profiles; };
-      outputs = import ./lib/outputs.nix { inherit self inputs cfg profiles; };
+      pure  = import ./lib/read-config.nix { inherit inputs self; };
+      # --impure additionally applies ANGST_HOST/USERNAME/THEME/PASSWORD overrides
+      cfg   = import ./lib/apply-overrides.nix { cfg = pure.cfg; };
+      pkgs  = import nixpkgs { system = cfg.system; config.allowUnfree = true; };
+      profiles = import ./lib/profiles.nix {
+        inherit (cfg) profiles;
+        lib = pkgs.lib;
+        scan = cfg.scan;
+      };
     in
-    outputs;
+    import ./lib/outputs.nix { inherit self inputs cfg profiles; };
 }
 ```
 
-`current` aliases exposed by `lib/outputs.nix` — `nixosConfigurations.current` and `homeConfigurations.current` always resolve from `local/config.nix`. No env vars needed at build time.
+`current` aliases exposed by `lib/outputs.nix` — `nixosConfigurations.current` and `homeConfigurations.current` always resolve from `local/config.nix`. No env vars needed at build time. Pure commands (`nix flake show`, `nix flake check`) work **without** `--impure`; only env-override scenarios need it.
 
 ______________________________________________________________________
 
@@ -630,16 +717,16 @@ Delete all dead code:
 | `lib/flake/default.nix` | Replaced by `lib/outputs.nix` |
 | `lib/flake/homeConfigurations.nix` | Replaced by `lib/outputs.nix` |
 | `lib/flake/checks.nix` | Replaced by `lib/outputs.nix` |
-| `lib/flake/shared.nix` | Toolchain logic moved into `resolve.nix`; dev shell logic into `outputs.nix` |
+| `lib/flake/shared.nix` | Toolchain logic moved into `read-config.nix`; dev shell logic into `devshell.nix`; `angstCli` into `tools.nix` |
 | `common/` (entire dir) | Replaced by profiles |
 | `hosts/` (entire dir) | Replaced by `local/config.nix` |
 | `lib/virtualisation/default.nix` | Aggregator no longer needed — profiles import individual files directly |
 | `user.env` | Replaced by `local/config.nix` |
 | `user.env.example` | Replaced by `local/config.nix` template |
 | `lib/checks/parseEnv.nix` | Env file format deleted |
-| Hardcoded `"proj/angst"` (16 files) | Auto-derived from `self.sourceInfo.outPath` in `resolve.nix` (fallback `"proj/angst"`) |
-| Hardcoded `"x86_64-linux"` (5 files) | Centralized in `resolve.nix` |
-| Hardcoded `"allowUnfree"` (3 files) | Centralized in `resolve.nix` |
+| Hardcoded `"proj/angst"` (16 files) | Explicit field in `local/config.nix` — each machine sets its own `repoPath` |
+| Hardcoded `"x86_64-linux"` (5 files) | Centralized in `read-config.nix` |
+| Hardcoded `"allowUnfree"` (3 files) | Centralized in `read-config.nix` |
 
 Files under `lib/virtualisation/` that are **kept** (referenced by `profiles/vm.nix` or needed at runtime):
 
@@ -659,6 +746,8 @@ Files under `lib/virtualisation/` that are **kept** (referenced by `profiles/vm.
 - [ ] `tools/vm/crates/vm-cli/src/runner/vm.rs` — Rust runner reads `ANGST_PASSWORD` from env → read from config
 - [ ] `lib/checks/password.nix` — rewrite tests for `local/config.nix`
 - [ ] `lib/checks/parseEnv.nix` — delete (no longer needed after env file format removed)
+- [ ] `tools/vm/flake.nix` — expose `vm-run` package so `outputs.nix` can reference it instead of inlining
+- [ ] `tools/shell/flake.nix` — expose `res` package so `outputs.nix` can reference it instead of inlining
 
 ______________________________________________________________________
 
@@ -682,21 +771,36 @@ bootstrap: disko hardware
     @echo "Now write local/config.nix, run 'just setup', then 'just build'"
 
 build:
+    nix build .#nixosConfigurations.current
+
+build-impure:
     nix build --impure .#nixosConfigurations.current
 
 switch:
+    sudo nixos-rebuild switch --flake .#current
+
+switch-impure:
     sudo nixos-rebuild switch --impure --flake .#current
 
 hm:
-    nix build --impure .#homeConfigurations.current.activationPackage
+    nix build .#homeConfigurations.current.activationPackage
 
 hm-switch:
+    nix build .#homeConfigurations.current.activationPackage && ./result/activate
+
+hm-switch-impure:
     nix build --impure .#homeConfigurations.current.activationPackage && ./result/activate
 
 check:
+    nix flake check
+
+check-impure:
     nix flake check --impure
 
 dev:
+    nix develop
+
+dev-impure:
     nix develop --impure
 ```
 
@@ -709,7 +813,7 @@ ______________________________________________________________________
 - `local/` is **never tracked by git** (entire directory in `.gitignore`)
 - Profiles are pure lists of NixOS/HM modules (paths or inline attrsets) — no special framework required
 - Existing domain, theme, capability, toolchain structure is untouched
-- Domain enablement comes from profiles (inline enable attrsets), domain option definitions come from scan via `mkDomainModule` in builders
+- Domain enablement comes from profiles via `mkDomainEnable` helper (validates domain names against scan at eval time), domain option definitions come from scan via `mkDomainModule` in builders
 - Dev shell always has all toolchains available regardless of profile selection
 - Toolchain selection is driven by `config.nix.toolchains`, not by profiles
 - No fallback files — `config.nix.nixos` and `config.nix.home` are the only escape hatches
@@ -717,5 +821,9 @@ ______________________________________________________________________
 - Profiles compose via module ordering: later modules override earlier ones
 - No `hosts/` directory — machine identity comes solely from `local/config.nix`
 - No `angst passwd` CLI needed for bootstrap — `mkpasswd` is a standard system tool
-- No env re-parsing in builders — `resolve.nix` evaluates everything once
-- Env var overrides (`$ANGST_HOST`, `$ANGST_USERNAME`, etc.) require `--impure` at eval time; pure evaluation reads only `local/config.nix`
+- No env re-parsing in builders — `read-config.nix` evaluates everything once
+- Pure operations (`nix flake show`, `nix flake check`) work **without** `--impure`
+- Env var overrides (`$ANGST_HOST`, `$ANGST_USERNAME`, etc.) are applied by `apply-overrides.nix` and require `--impure` at eval time
+- `repoPath` is an explicit field in `local/config.nix` (not auto-derived) — each machine declares its own checkout path
+- `vmRunShim`/`resWrapper` live in `tools/vm` and `tools/shell` flakes, not inlined in the main flake output
+- `outputs.nix` stays under 150 LOC by splitting dev shells (`devshell.nix`), renders (`render.nix`), tools (`tools.nix`), and checks (`checks/default.nix`) into separate files
