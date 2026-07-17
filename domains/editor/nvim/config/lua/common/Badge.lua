@@ -59,41 +59,65 @@ function Badge:_refresh()
 	vim.bo[self.buf].bufhidden = "wipe"
 	vim.bo[self.buf].buflisted = false
 
-	if self.win and vim.api.nvim_win_is_valid(self.win) then
-		self.logger:debug(function()
-			return "Updating badge: " .. content
-		end)
-		vim.api.nvim_win_set_buf(self.win, self.buf)
-		return
-	end
-
-	self.logger:debug(function()
-		return "Creating badge window: " .. content
-	end)
-
 	local ui = vim.api.nvim_list_uis()[1]
-	local width = vim.fn.strdisplaywidth(content) + 2
+	local my_width = vim.fn.strdisplaywidth(content) + 2
 
 	local max_bottom = 0
+	local badges = {}
 	for _, win in ipairs(vim.api.nvim_list_wins()) do
 		local config = vim.api.nvim_win_get_config(win)
 		if config.relative == "" then
 			local pos = vim.api.nvim_win_get_position(win)
 			local height = vim.api.nvim_win_get_height(win)
 			max_bottom = math.max(max_bottom, pos[1] + height)
+		elseif config.relative == "editor" and config.focusable == false and win ~= self.win then
+			table.insert(badges, { win = win, width = config.width })
 		end
 	end
 
-	self.win = vim.api.nvim_open_win(self.buf, false, {
-		relative = "editor",
-		width = width,
-		height = 1,
-		row = max_bottom - 1,
-		col = ui.width - width,
-		style = "minimal",
-		border = "none",
-		focusable = false,
-	})
+	if self.win and vim.api.nvim_win_is_valid(self.win) then
+		self.logger:debug(function()
+			return "Updating badge: " .. content
+		end)
+		vim.api.nvim_win_set_buf(self.win, self.buf)
+	else
+		self.logger:debug(function()
+			return "Creating badge window: " .. content
+		end)
+		self.win = vim.api.nvim_open_win(self.buf, false, {
+			relative = "editor",
+			width = my_width,
+			height = 1,
+			row = max_bottom - 1,
+			col = 0,
+			style = "minimal",
+			border = "none",
+			focusable = false,
+		})
+	end
+
+	table.insert(badges, { win = self.win, width = my_width, is_self = true })
+	table.sort(badges, function(a, b)
+		return vim.api.nvim_win_get_config(a.win).col < vim.api.nvim_win_get_config(b.win).col
+	end)
+
+	local gap = 1
+	local right_edge = ui.width
+	for i = #badges, 1, -1 do
+		local bw = badges[i]
+		local cfg = vim.api.nvim_win_get_config(bw.win)
+		vim.api.nvim_win_set_config(bw.win, {
+			relative = cfg.relative,
+			width = cfg.width,
+			height = cfg.height,
+			col = right_edge - bw.width,
+			row = max_bottom - 1,
+			style = cfg.style,
+			border = cfg.border,
+			focusable = cfg.focusable,
+		})
+		right_edge = right_edge - bw.width - gap
+	end
 
 	if self.fg or self.bg then
 		local hl_name = "Badge" .. (self.name or "Default")
