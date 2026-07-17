@@ -1,4 +1,5 @@
-local p, a = require("config.theme.palette")
+local palette = require("config.theme.palette")
+local p, a = palette.p, palette.a
 local icons = require("common.icons")
 local utils = require("frontend.status.heirline.utils")
 

@@ -3,7 +3,8 @@ local Hydra = require("common.Hydra")
 ---@type Logger
 local Logger = require("common.Logger")
 
-local p, a = require("config.theme.palette")
+local palette = require("config.theme.palette")
+local p, a = palette.p, palette.a
 
 local M = {}
 

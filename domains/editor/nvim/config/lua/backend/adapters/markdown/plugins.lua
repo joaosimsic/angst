@@ -18,7 +18,8 @@ return {
 		end,
 		config = function()
 			local Badge = require("common.Badge")
-            local p, a = require("config.theme.palette")
+			local palette = require("config.theme.palette")
+			local p = palette.p
 			local md_badge = Badge.new({
 				name = "md-preview",
 				fg = p.foreground.variant,

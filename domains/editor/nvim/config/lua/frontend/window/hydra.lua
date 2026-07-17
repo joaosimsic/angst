@@ -5,7 +5,8 @@ local Logger = require("common.Logger")
 ---@type table
 local Resize = require("frontend.window.resize")
 
-local p, a = require("config.theme.palette")
+local palette = require("config.theme.palette")
+local p, a = palette.p, palette.a
 
 local M = {}
 

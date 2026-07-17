@@ -11,7 +11,8 @@ return {
 		local utils = require("frontend.status.heirline.utils")
 		local conditions = require("heirline.conditions")
 
-		local p = require("config.theme.palette")
+		local palette = require("config.theme.palette")
+		local p = palette.p
 
 		hls.setup_highlights()
 

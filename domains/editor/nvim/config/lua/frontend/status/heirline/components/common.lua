@@ -1,4 +1,5 @@
-local p = require("config.theme.palette")
+local palette = require("config.theme.palette")
+local p = palette.p
 local utils = require("frontend.status.heirline.utils")
 
 local M = {}

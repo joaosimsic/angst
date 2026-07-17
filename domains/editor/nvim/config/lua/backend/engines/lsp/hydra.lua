@@ -1,5 +1,6 @@
 local Hydra = require("common.Hydra")
-local p, a = require("config.theme.palette")
+local palette = require("config.theme.palette")
+local p, a = palette.p, palette.a
 
 -- BEFORE U WANT TO REFAC, THIS IS TO PREVENT
 -- INVALID DIAGNOSTIC TO JUMP MESSAGE SPAM
