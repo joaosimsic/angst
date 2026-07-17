@@ -33,28 +33,70 @@ All new files created; existing code still works alongside them.
 
 #### `lib/resolve.nix` — single entry point
 
-Reads `local/config.nix` (or `$ANGST_CONFIG` env var override), applies `ANGST_HOST`/`ANGST_USERNAME`/`ANGST_THEME`/`ANGST_PASSWORD` overrides, resolves toolchains (unset/`"*"` → all, list → specific), and calls existing scan functions once:
+Reads `local/config.nix` (or `$ANGST_CONFIG` env var override), applies `ANGST_HOST`/`ANGST_USERNAME`/`ANGST_THEME`/`ANGST_PASSWORD` overrides, resolves toolchains (unset/`"*"` → all, list → specific), calls existing scan functions once, and derives `repoPath` from the flake's filesystem path:
+
+> Env var overrides require `--impure` at eval time (e.g., `nix build --impure .#...`). Pure evaluation reads only `local/config.nix`.
+
+The implementation guards against a missing config file and auto-derives `repoPath` from the working directory:
 
 ```nix
+# lib/resolve.nix
+{ inputs, self }:
+
+let
+  pkgs = import inputs.nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; };
+  lib = pkgs.lib;
+
+  # ---- config loading (with helpful error) ----
+  configPath = if builtins.pathExists ../local/config.nix
+               then ../local/config.nix
+               else builtins.throw "Create local/config.nix (see local/config.nix.example)";
+  config = import configPath;
+
+  # ---- repoPath: derive from PWD relative to $HOME (fallback for pure builds) ----
+  repoPath = let
+    pwd  = builtins.getEnv "PWD";
+    home = builtins.getEnv "HOME";
+  in
+  if pwd != "" && home != ""
+  then builtins.substring (builtins.stringLength home + 1) (-1) pwd
+  else "proj/angst";
+
+  # ---- env overrides (require --impure) ----
+  envHost     = builtins.getEnv "ANGST_HOST";
+  envUsername = builtins.getEnv "ANGST_USERNAME";
+  envTheme    = builtins.getEnv "ANGST_THEME";
+  envPassword = builtins.getEnv "ANGST_PASSWORD";
+in
 {
-  # from config.nix + env overrides
-  system, hostname, username, theme, password,
-  monitors, profiles, toolchains,
-  extraNixos, extraHome, repoPath,
+  cfg = {
+    system     = config.system or "x86_64-linux";
+    hostname   = if envHost     != "" then envHost     else config.hostname;
+    username   = if envUsername != "" then envUsername else config.username;
+    theme      = if envTheme    != "" then envTheme    else config.theme;
+    password   = if envPassword != "" then envPassword else config.password;
+    monitors   = config.monitors or {};
+    profiles   = config.profiles or [ "base" ];
+    toolchains = config.toolchains or "*";
+    extraNixos = config.nixos or {};
+    extraHome  = config.home or {};
+    inherit repoPath;
 
-  # resolved from scan (evaluated once here, not by builders)
-  scan = {
-    domains = import ./lib/domains/default.nix { ... };
-    themes = import ./themes/default.nix { ... };
-    allToolchainPackages = [ ... ];  # flat list from toolchains/
-    treesitterGrammars = [ ... ];
-    capabilities = import ./capabilities/default.nix;
+    # resolved from scan (evaluated once here, not by builders)
+    scan = {
+      domains = import ../lib/domains/default.nix { ... };
+      themes = import ../themes/default.nix { ... };
+      allToolchainPackages = [ ... ];
+      treesitterGrammars = [ ... ];
+      capabilities = import ../capabilities/default.nix;
+    };
+
+    toolchainModules = [ ... ];  # resolved toolchain paths
   };
-
-  # resolved toolchain modules ready to import
-  toolchainModules = [ ... ];   # flat list of module paths
 }
 ```
+
+All builders receive the same `cfg` — no duplicate scanning, no env re-parsing.
 
 **No `lib/scan/` directory** — the scan is just calling existing modules. The duplication was that they were called in 7 places; now they're called once in `resolve.nix`.
 
@@ -99,13 +141,20 @@ Domain custom modules (e.g., `domains/wm/i3/module.nix`) depend on `config.domai
 **Profile resolution** (`lib/profiles.nix`):
 
 ```nix
-resolve = names: {
-  hm  = lib.concatMap (n: profileMap.${n}.hm)  names;
-  nixos = lib.concatMap (n: profileMap.${n}.nixos) names;
-};
+resolve = names:
+  let
+    validNames = builtins.attrNames profileMap;
+    unknown = builtins.filter (n: !builtins.elem n validNames) names;
+  in
+  if unknown != []
+  then builtins.throw "Unknown profiles: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " validNames}"
+  else {
+    hm  = lib.concatMap (n: profileMap.${n}.hm)  names;
+    nixos = lib.concatMap (n: profileMap.${n}.nixos) names;
+  };
 ```
 
-No toolchain imports in profiles — toolchain selection is driven by `config.nix.toolchains`.
+No toolchain imports in profiles — toolchain selection is driven by `config.nix.toolchains`. Same validation pattern applies to toolchain names in `resolve.nix`.
 
 **Files to create:** `profiles/base.nix`, `profiles/desktop.nix`, `profiles/development.nix`, `profiles/server.nix`, `profiles/vm.nix`, `lib/profiles.nix`
 
@@ -231,7 +280,7 @@ inputs.nixpkgs.lib.nixosSystem {
 
 #### `lib/outputs.nix` — single output file
 
-Replaces `lib/flake/default.nix` (397 LOC, fan-out 12) with one file:
+Replaces `lib/flake/default.nix` (397 LOC, fan-out 12). Checks are split into `lib/checks/default.nix` for readability; `outputs.nix` imports it and merges the result:
 
 ```nix
 { self, inputs, cfg, profiles }:
@@ -317,7 +366,7 @@ let
     vmOutputs.packages.${cfg.system}.res
   ];
 
-  # checks
+  # rendered domain outputs (used by checks + lib export)
   renderDomainOutputsFor = hostName: themeName:
     let
       themesLib = cfg.scan.themes;
@@ -329,7 +378,7 @@ let
     in lib.concatLists (map (path: import path {
       inherit lib themesLib themeName checkHelpers fontsLib;
       fontFamily = fontsLib.defaultFamily;
-      monitors = cfg.monitors;
+      monitors = cfg.monitors or {};
       homeDirectory = "/home/${cfg.username}";
     }) domainRendererPaths);
 
@@ -339,46 +388,17 @@ let
     in if matches == [] then builtins.throw "Unknown domain render output: ${outputPath}"
       else (builtins.head matches).text;
 
-  testHostname = cfg.hostname;
+  # checks (extracted to lib/checks/default.nix for readability)
+  mkChecks = import ./checks/default.nix {
+    inherit self inputs cfg profiles pkgs lib renderDomainOutputsFor renderDomainOutputFor;
+  };
 
+  # used by lib export (the rest of the check logic lives in lib/checks/default.nix)
   themeLint = import ../checks/theme {
     inherit lib;
     themesLib = cfg.scan.themes;
-    renderDomainOutputsFor = renderDomainOutputsFor testHostname;
+    renderDomainOutputsFor = renderDomainOutputsFor cfg.hostname;
   };
-
-  lintDesktop = import ../checks/desktop.nix {
-    inherit lib pkgs;
-    themesLib = cfg.scan.themes;
-    renderDomainOutputFor = renderDomainOutputFor testHostname;
-    testHostname = testHostname;
-  };
-
-  lintShell = import ../checks/shell.nix {
-    inherit lib pkgs;
-    themesLib = cfg.scan.themes;
-    renderDomainOutputFor = renderDomainOutputFor testHostname;
-    testHostname = testHostname;
-  };
-
-  themeRenderedChecks = import ../checks/theme/rendered.nix {
-    inherit lib pkgs;
-    themesLib = cfg.scan.themes;
-    renderDomainOutputsFor = renderDomainOutputsFor testHostname;
-    themeName = cfg.theme;
-  };
-
-  themeOverrideCheck = import ../checks/theme/override.nix {
-    inherit lib pkgs;
-    themesLib = cfg.scan.themes;
-    overrideTheme = lib.head (lib.filter (n: n != cfg.theme) (lib.attrNames cfg.scan.themes.themes));
-    renderDomainOutputFor = renderDomainOutputFor testHostname;
-    homeConfiguration = homeConfigurations."${cfg.username}-theme-override-test";
-  };
-
-  checkPassword = import ../checks/password.nix { inherit lib pkgs; };
-
-  homeConfigurationsOrig = homeConfigurations;
 in rec {
   homeConfigurations = {
     current = mkHome { inherit inputs cfg hmModules vmTool shellTool angstTool; };
@@ -490,35 +510,19 @@ in rec {
     };
   };
 
-  checks = {
-    ${cfg.system} = {
-      lint-themes = pkgs.writeText "lint-themes-check" themeLint;
-      lint-desktop = lintDesktop;
-      lint-shell = lintShell;
-      theme-rendered = themeRenderedChecks;
-      theme-override = themeOverrideCheck;
-      home-theme-override-test = homeConfigurations."${cfg.username}-theme-override-test".activationPackage;
-      theme-semantic-distinct = import ../checks/theme/semanticDistinct.nix {
-        inherit lib pkgs;
-        themesLib = cfg.scan.themes;
-        themeName = cfg.theme;
-      };
-      check-password = checkPassword;
-    };
-  };
+  checks = mkChecks homeConfigurations;
 
   formatter.${cfg.system} = pkgs.nixfmt;
 
   lib = {
-    inherit renderDomainOutputsFor renderDomainOutputFor;
-    themeLint = themeLint;
+    inherit renderDomainOutputsFor renderDomainOutputFor themeLint;
   };
 }
 ```
 
 No `common/`, `hosts/`, `user.env`, or env re-parsing involved.
 
-**Files to create:** `lib/outputs.nix`
+**Files to create:** `lib/outputs.nix`, `lib/checks/default.nix`
 
 ______________________________________________________________________
 
@@ -557,7 +561,7 @@ Hardware: `nixos-generate-config --show-hardware-config > local/hardware.nix` (a
 
 Disko: `local/disk.nix`, applied with `sudo nix run github:nix-community/disko -- --mode disko local/disk.nix`.
 
-**Files to create:** `local/config.nix` (template), `.gitignore` entry
+**Files to create:** `local/config.nix.example` (tracked in git, mirrors the schema), `local/config.nix` (gitignored, copy of `.example` with real values), `.gitignore` entry for `local/`
 **Files to delete:** `user.env`, `user.env.example`
 
 #### `flake.nix` — thin wiring (~25 lines)
@@ -568,7 +572,7 @@ Disko: `local/disk.nix`, applied with `sudo nix run github:nix-community/disko -
 
   outputs = { self, nixpkgs, home-manager, vm, shell, ... }@inputs:
     let
-      inherit (import ./lib/resolve.nix { inherit inputs; }) cfg;
+      inherit (import ./lib/resolve.nix { inherit inputs self; }) cfg;
       profiles = import ./lib/profiles.nix { inherit (cfg) profiles; };
       outputs = import ./lib/outputs.nix { inherit self inputs cfg profiles; };
     in
@@ -598,7 +602,7 @@ Delete all dead code:
 | `user.env` | Replaced by `local/config.nix` |
 | `user.env.example` | Replaced by `local/config.nix` template |
 | `lib/checks/parseEnv.nix` | Env file format deleted |
-| Hardcoded `"proj/angst"` (10 files) | Centralized in `resolve.nix` |
+| Hardcoded `"proj/angst"` (16 files) | Auto-derived from `$PWD` in `resolve.nix` (fallback `"proj/angst"`) |
 | Hardcoded `"x86_64-linux"` (5 files) | Centralized in `resolve.nix` |
 | Hardcoded `"allowUnfree"` (3 files) | Centralized in `resolve.nix` |
 
@@ -613,6 +617,19 @@ Files under `lib/virtualisation/` that are **kept** (referenced by `profiles/vm.
 | `vm-variant.nix` | VM variant config |
 | `vm-profile.nix` | VM runtime config |
 | `host-mount.nix` | Host mount symlinks |
+
+#### Tools that need updating
+
+These files still reference `ANGST_PASSWORD` or `user.env` from the old env-based flow and must be updated to read from `local/config.nix` instead:
+
+| File | What needs to change |
+|------|----------------------|
+| `tools/vm/flake.nix` | `res` script exports `ANGST_PASSWORD` from `user.env` — pull from config |
+| `lib/flake/shared.nix` | Same pattern as above (may be deleted in Phase 3) |
+| `tools/vm/crates/vm-cli/src/runner/vm.rs` | Rust runner reads `ANGST_PASSWORD` from env — pass via config |
+| `lib/checks/password.nix` | Tests the env-var flow — rewrite for `local/config.nix` |
+
+These are tracked here so they aren't forgotten, but can be deferred to a follow-up pass after the core refactor lands.
 
 ______________________________________________________________________
 
@@ -672,3 +689,4 @@ ______________________________________________________________________
 - No `hosts/` directory — machine identity comes solely from `local/config.nix`
 - No `angst passwd` CLI needed for bootstrap — `mkpasswd` is a standard system tool
 - No env re-parsing in builders — `resolve.nix` evaluates everything once
+- Env var overrides (`$ANGST_HOST`, `$ANGST_USERNAME`, etc.) require `--impure` at eval time; pure evaluation reads only `local/config.nix`
