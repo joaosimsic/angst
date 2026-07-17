@@ -1,4 +1,5 @@
 # nvim
+
 - [x] vim modes still appear on command prompt
 - [x] refac config
 - [x] test lsp, treesitter, etc...
@@ -14,10 +15,12 @@
 - [ ] add file line length in heirline
 
 # nu
+
 - [x] set ":" to replace ">"
 - [x] fix vim motions
 
 # nix
+
 - [x] add package managers to toolchains
 - [ ] use nixos-generate-config to set hardware
 
