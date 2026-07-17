@@ -66,21 +66,29 @@ function Badge:_refresh()
 		return "Creating badge window: " .. content
 	end)
 
-	local orig_win = vim.api.nvim_get_current_win()
+	local ui = vim.api.nvim_list_uis()[1]
+	local width = vim.fn.strdisplaywidth(content) + 2
 
-	vim.cmd("botright 1new")
-	self.win = vim.api.nvim_get_current_win()
-	vim.api.nvim_win_set_buf(self.win, self.buf)
-	vim.wo[self.win].winfixheight = true
-	vim.wo[self.win].number = false
-	vim.wo[self.win].signcolumn = "no"
-	vim.wo[self.win].statuscolumn = ""
-
-	for _, opt in ipairs({ "foldcolumn", "spell", "cursorline", "cursorcolumn" }) do
-		pcall(vim.api.nvim_set_option_value, opt, false, { win = self.win })
+	local max_bottom = 0
+	for _, win in ipairs(vim.api.nvim_list_wins()) do
+		local config = vim.api.nvim_win_get_config(win)
+		if config.relative == "" then
+			local pos = vim.api.nvim_win_get_position(win)
+			local height = vim.api.nvim_win_get_height(win)
+			max_bottom = math.max(max_bottom, pos[1] + height)
+		end
 	end
 
-	vim.api.nvim_set_current_win(orig_win)
+	self.win = vim.api.nvim_open_win(self.buf, false, {
+		relative = "editor",
+		width = width,
+		height = 1,
+		row = max_bottom - 1,
+		col = ui.width - width,
+		style = "minimal",
+		border = "none",
+		focusable = false,
+	})
 end
 
 ---@param id string
