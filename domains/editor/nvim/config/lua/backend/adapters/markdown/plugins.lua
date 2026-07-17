@@ -18,7 +18,12 @@ return {
 		end,
 		config = function()
 			local Badge = require("common.Badge")
-			local md_badge = Badge.new("md-preview")
+            local palette = require("config.theme")
+			local md_badge = Badge.new({
+				name = "md-preview",
+				fg = "#ffffff",
+				bg = "#2e3440",
+			})
 			local preview_active = false
 
 			vim.api.nvim_create_autocmd("BufEnter", {

@@ -8,11 +8,16 @@ local Logger = require("common.Logger")
 local Badge = {}
 Badge.__index = Badge
 
----@param name? string
+---@param opts? {name?: string, fg?: string, bg?: string, prefix?: string}
 ---@return Badge
-function Badge.new(name)
+function Badge.new(opts)
+	opts = opts or {}
 	local self = setmetatable({ entries = {} }, Badge)
-	self.logger = Logger.new("BADGE:" .. (name and name:upper() or "?"), "debug")
+	self.name = opts.name
+	self.fg = opts.fg
+	self.bg = opts.bg
+	self.prefix = opts.prefix or "●"
+	self.logger = Logger.new("BADGE:" .. (opts.name and opts.name:upper() or "?"), "debug")
 	return self
 end
 
@@ -46,7 +51,7 @@ function Badge:_refresh()
 		table.insert(texts, text)
 	end
 
-	local content = " " .. table.concat(texts, " ┃ ")
+	local content = " " .. self.prefix .. " " .. table.concat(texts, " ┃ " .. self.prefix .. " ")
 
 	vim.bo[self.buf].modifiable = true
 	vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, { content })
@@ -89,6 +94,12 @@ function Badge:_refresh()
 		border = "none",
 		focusable = false,
 	})
+
+	if self.fg or self.bg then
+		local hl_name = "Badge" .. (self.name or "Default")
+		vim.api.nvim_set_hl(0, hl_name, { fg = self.fg, bg = self.bg })
+		vim.api.nvim_set_option_value("winhl", "Normal:" .. hl_name, { win = self.win })
+	end
 end
 
 ---@param id string
