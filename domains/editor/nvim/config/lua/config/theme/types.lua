@@ -28,28 +28,4 @@
 ---@class HighlightModule
 ---@field get fun(): HighlightGroups
 
----@alias ThemeColorKey
----| "fg"
----| "bg"
----| "base"
----| "bright"
----| "dim"
----| "subtle"
----| "accent"
----| "surface"
----| "black"
----| "comment"
----| "green"
----| "green_bright"
----| "red"
----| "red_bright"
----| "yellow"
----| "yellow_bright"
----| "blue"
----| "blue_bright"
----| "magenta"
----| "magenta_bright"
----| "cyan"
----| "cyan_bright"
 
----@alias ThemePaletteKey ThemeColorKey

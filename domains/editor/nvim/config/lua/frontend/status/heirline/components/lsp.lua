@@ -1,8 +1,8 @@
 local conditions = require("heirline.conditions")
 local utils = require("frontend.status.heirline.utils")
 
-local palette = require("config.theme.palette").get()
-local p = palette.palette
+local palette = require("config.theme.palette")
+local p = palette.p
 local provider = utils.to_small_caps(" lsp ")
 
 ---@type HeirlineComponent

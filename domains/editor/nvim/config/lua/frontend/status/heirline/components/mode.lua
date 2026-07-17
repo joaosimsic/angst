@@ -1,5 +1,5 @@
-local palette = require("config.theme.palette").get()
-local p = palette.palette
+local palette = require("config.theme.palette")
+local p = palette.p
 local modes = require("frontend.status.heirline.modes")
 local utils = require("frontend.status.heirline.utils")
 
