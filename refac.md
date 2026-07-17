@@ -21,7 +21,7 @@ ______________________________________________________________________
 
 ### Core idea
 
-`local/config.nix` (gitignored) is the **source of truth** for machine identity — includes `repoPath`, hostname, username, theme, monitors, profiles, toolchains, and machine-local settings. **Profiles** (under `profiles/`) are reusable bundles of co-dependent configs — e.g., `desktop` enables i3 + bar + launcher + graphical capabilities as a unit. `lib/read-config.nix` reads `local/config.nix` purely; `lib/apply-overrides.nix` layers `ANGST_*` env vars on top (requires `--impure`). All scan functions are called once, centrally — no duplicate scanning, no I/O in builders.
+`local/config.nix` (gitignored) is the **source of truth** for machine identity — includes `repoPath`, hostname, username, theme, monitors, profiles, toolchains, and machine-local settings. **Profiles** (under `profiles/`) are reusable bundles of co-dependent configs — e.g., `desktop` enables i3 + bar + launcher + graphical capabilities as a unit. `lib/read-config.nix` reads `local/config.nix` purely — no impurity, no env vars. All scan functions are called once, centrally — no duplicate scanning, no I/O in builders.
 
 Existing domain/theme/capability/toolchain structure is **untouched** — only the wiring around them changes.
 
@@ -36,6 +36,8 @@ All new files created; existing code still works alongside them.
 Reads `local/config.nix` only — no `builtins.getEnv`, no impurity. Resolves toolchains (unset/`"*"` → all, list → specific), calls existing scan functions once.
 
 > Pure evaluation: `nix flake show`, `nix flake check`, `nix build .#...` all work without `--impure`.
+>
+> **Self-flake only:** `local/` is gitignored so `builtins.pathExists ../local/config.nix` will never find the file when evaluated from the Nix store (e.g., when pinned as a remote input). This flake is designed to be evaluated from a working `git clone` only.
 
 ```nix
 # lib/read-config.nix — pure config reader
@@ -46,13 +48,13 @@ Reads `local/config.nix` only — no `builtins.getEnv`, no impurity. Resolves to
 { inputs, self }:
 
 let
-  pkgs = import inputs.nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; };
-  lib = pkgs.lib;
-
   configPath = if builtins.pathExists ../local/config.nix
                then ../local/config.nix
                else builtins.throw "Create local/config.nix (see local/config.nix.example)";
   config = import configPath;
+  system = config.system or "x86_64-linux";
+  pkgs = import inputs.nixpkgs { inherit system; config.allowUnfree = true; };
+  lib = pkgs.lib;
 
   # Toolchain evaluation — once, indexed by bare name
   _toolchainDir = ../toolchains;
@@ -113,31 +115,6 @@ in
 }
 ```
 
-#### `lib/apply-overrides.nix` — impure env override layer
-
-Wraps pure `cfg` with `ANGST_HOST`/`ANGST_USERNAME`/`ANGST_THEME`/`ANGST_PASSWORD` overrides. Only evaluates when `--impure` is passed:
-
-```nix
-# lib/apply-overrides.nix
-{ cfg }:
-cfg // {
-  hostname = let e = builtins.getEnv "ANGST_HOST";     in if e != "" then e else cfg.hostname;
-  username = let e = builtins.getEnv "ANGST_USERNAME"; in if e != "" then e else cfg.username;
-  theme    = let e = builtins.getEnv "ANGST_THEME";    in if e != "" then e else cfg.theme;
-  password = let e = builtins.getEnv "ANGST_PASSWORD"; in if e != "" then e else cfg.password;
-}
-```
-
-> Env var overrides require `--impure` at eval time (e.g., `nix build --impure .#...`). Pure evaluation reads only `local/config.nix`.
-
-> **`ANGST_PASSWORD` must be a pre-hashed password** (`mkpasswd -m sha-512` output), not plaintext. This matches the format of the `password` field in `local/config.nix`. The override exists for CI/automation scenarios where writing the hash to a file is impractical. For interactive use, set `password` in `local/config.nix` instead.
-
-All builders receive the same `cfg` — no duplicate scanning, no env re-parsing.
-
-**No `lib/scan/` directory** — the scan is just calling existing modules. The duplication was that they were called in 7 places; now they're called once in `read-config.nix`.
-
-**Files to create:** `lib/read-config.nix`, `lib/apply-overrides.nix`
-
 #### Profiles (`profiles/`)
 
 Each profile returns `{ hm, nixos }` — two lists of NixOS/HM modules (paths or inline attrsets).
@@ -173,9 +150,9 @@ else {
     (mkDomainEnable "terminal.ghostty")
   ];
   nixos = [
-    ../../capabilities/graphical.nix
-    ../../capabilities/audio.nix
-    ../../capabilities/clipboard.nix
+    ../capabilities/graphical.nix
+    ../capabilities/audio.nix
+    ../capabilities/clipboard.nix
   ];
 }
 ```
@@ -193,7 +170,7 @@ else {
 | `server` | (none) | ssh capability |
 | `vm` | (none) | `lib/virtualisation/vm-profile.nix` (virtio/9p/SPICE, qemu mounts, VM detected keys) |
 
-> **Migration note:** The current `common/home.nix` enables terminal via `zellij` (not `ghostty`) and does not enable `rofi`. If migrating from the existing setup, your `common/home.nix` enablements won't automatically carry over — adjust your profile selection or add `config.nix.home` overrides to retain previous behavior.
+> **Migration note:** The current `common/home.nix` enables everything from `base` + `development` (nushell, starship, zellij, nvim, yazi, lazygit, opencode, cursor-cli, sqlit, posting) plus `common/capabilities.nix` (network, git, search, monitoring, containers). To match the old setup, use `profiles = ["base" "development"]`. Note `desktop` is a superset that adds i3, i3status, rofi, ghostty and graphical/audio/clipboard capabilities — you'd still include `base` + `development` alongside it if you want those tools.
 
 **Profile resolution** (`lib/profiles.nix`):
 
@@ -227,7 +204,7 @@ in
 resolve profiles
 ```
 
-No toolchain imports in profiles — toolchain selection is driven by `config.nix.toolchains`. Same validation pattern applies to toolchain names in `resolve.nix`.
+No toolchain imports in profiles — toolchain selection is driven by `config.nix.toolchains`. Same validation pattern applies to toolchain names in `profiles.nix`.
 
 **Files to create:** `profiles/base.nix`, `profiles/desktop.nix`, `profiles/development.nix`, `profiles/server.nix`, `profiles/vm.nix`, `lib/profiles.nix`, `lib/mkDomainEnable.nix`
 
@@ -277,7 +254,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
 
 #### `lib/build/mkHost.nix` — pure builder
 
-Same pattern as `mkHome.nix`: imports all domain NixOS modules from scan, then profile nixos modules on top. `hardware.nix` path is derived from `self.sourceInfo.outPath + "/local/hardware.nix"` (relative path avoided for robustness). Must pass `userConfig`/`repoPath` in `specialArgs` for `vm-variant.nix`, `host-mount.nix`, etc.
+Same pattern as `mkHome.nix`: imports all domain NixOS modules from scan, then profile nixos modules on top. `hardware.nix` path is derived from `${toString self}/local/hardware.nix` (resolves the flake root at eval time). Must pass `userConfig`/`repoPath` in `specialArgs` for `vm-variant.nix`, `host-mount.nix`, etc.
 
 The NixOS-embedded HM config also imports domain home modules (via `mkDomainModule`), so domain enable options are available inside HM.
 
@@ -311,7 +288,7 @@ inputs.nixpkgs.lib.nixosSystem {
     ++ nixosModules
     ++ appNixosModules
     ++ [ ../../lib/nixos ]
-    ++ (if builtins.pathExists (builtins.toString self.outPath + "/local/hardware.nix") then [ (import (builtins.toString self.sourceInfo.outPath + "/local/hardware.nix")) ] else [])
+    ++ (if builtins.pathExists "${toString self}/local/hardware.nix" then [ (import "${toString self}/local/hardware.nix") ] else [])
     ++ (if cfg.extraNixos != {} then [ cfg.extraNixos ] else [])
     ++ [
       ({ lib, ... }: {
@@ -352,9 +329,7 @@ inputs.nixpkgs.lib.nixosSystem {
 }
 ```
 
-> **Note:** `lib/nixos/default.nix` currently reads `ANGST_PASSWORD` from env (`builtins.getEnv "ANGST_PASSWORD"`). This must be changed — password is now set directly by the `{ users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password; }` line in `mkHost.nix`. Remove the env-read from `lib/nixos/default.nix` so it becomes a pure module using only its function arguments.
-
-**Files to modify:** `lib/build/mkHost.nix`, `lib/nixos/default.nix` (remove `ANGST_PASSWORD` env read)
+**Files to modify:** `lib/build/mkHost.nix`
 
 #### `lib/outputs.nix` — pure wiring
 
@@ -464,7 +439,7 @@ in rec {
 { pkgs }: {
   angstCli = pkgs.writeShellApplication {
     name = "angst";
-    runtimeInputs = with pkgs; [ coreutils findutils git nix watchexec jq mkpasswd ];
+    runtimeInputs = with pkgs; [ coreutils findutils git nix watchexec jq ];
     text = builtins.readFile ./scripts/angst.sh;
   };
 }
@@ -677,7 +652,7 @@ Hardware: `nixos-generate-config --show-hardware-config > local/hardware.nix` (a
 
 Disko: `local/disk.nix`, applied with `sudo nix run github:nix-community/disko -- --mode disko local/disk.nix`.
 
-**Files to create:** `local/config.nix.example` (tracked in git, mirrors the schema), `local/config.nix` (gitignored, copy of `.example` with real values), `.gitignore` entry for `local/` (add `local/` to `.gitignore` alongside existing `user.env`)
+**Files to create:** `local/config.nix.example` (tracked in git, mirrors the schema), `local/config.nix` (gitignored, copy of `.example` with real values), `.gitignore` entry for `local/` (add `local/` and `!local/config.nix.example` to `.gitignore` alongside existing `user.env`)
 **Files to delete:** `user.env`, `user.env.example`
 
 #### `flake.nix` — thin wiring (~25 lines)
@@ -689,8 +664,7 @@ Disko: `local/disk.nix`, applied with `sudo nix run github:nix-community/disko -
   outputs = { self, nixpkgs, home-manager, vm, shell, ... }@inputs:
     let
       pure  = import ./lib/read-config.nix { inherit inputs self; };
-      # --impure additionally applies ANGST_HOST/USERNAME/THEME/PASSWORD overrides
-      cfg   = import ./lib/apply-overrides.nix { cfg = pure.cfg; };
+      cfg   = pure.cfg;
       pkgs  = import nixpkgs { system = cfg.system; config.allowUnfree = true; };
       profiles = import ./lib/profiles.nix {
         inherit (cfg) profiles;
@@ -702,7 +676,21 @@ Disko: `local/disk.nix`, applied with `sudo nix run github:nix-community/disko -
 }
 ```
 
-`current` aliases exposed by `lib/outputs.nix` — `nixosConfigurations.current` and `homeConfigurations.current` always resolve from `local/config.nix`. No env vars needed at build time. Pure commands (`nix flake show`, `nix flake check`) work **without** `--impure`; only env-override scenarios need it.
+`current` aliases exposed by `lib/outputs.nix` — `nixosConfigurations.current` and `homeConfigurations.current` always resolve from `local/config.nix`. No env vars needed at build time. All commands (`nix flake show`, `nix flake check`, `nix build`) work **without** `--impure`.
+
+#### Scripts — update from `user.env`/`hosts/` to `local/config.nix`
+
+These scripts currently read `user.env` and/or rely on the `hosts/` directory — they must be updated before Phase 3 deletes both:
+
+| File | Current behavior | New behavior |
+|---|---|---|
+| `scripts/angst.sh` | `repo_root_default()` checks for `hosts/` dir; `env_default()` reads `HOST`/`THEME` from `user.env`; `watch_cmd` watches `hosts/$host_name` | Detect repo root by checking for `local/config.nix`; parse config via `nix eval --impure --expr '(import $REPO/local/config.nix).hostname' --raw` (and same for `.theme`); watch `local/` instead |
+| `tools/vm/flake.nix` (`vm-run` script) | Reads `HOST` from `user.env` at lines 92-97; has `hostUserCases` hardcoded case statement (lines 78-87) mapping hostname→username | Read hostname via `nix eval --impure --expr '(import $FLAKE_DIR/local/config.nix).hostname' --raw`; username from same file's `.username`; delete the hardcoded `hostUserCases` |
+| `tools/vm/flake.nix` (`res` script) | Reads `HOST`, `USERNAME`, `THEME`, `PASSWORD` from `user.env` at lines 152-184 | Read from `local/config.nix` using same `nix eval --impure` pattern for each field; export `ANGST_PASSWORD` from config's `.password` hash |
+| `tools/vm/crates/vm-cli/src/runner/vm.rs` | `read_env_value()` looks for `user.env`; `ANGST_PASSWORD` read from env (lines 270-273) | Remove `user.env` fallback; `ANGST_PASSWORD` is exported by the wrapper script (bash reads `local/config.nix` and sets env var before calling the Rust binary) |
+| `tools/shell/src/runner.rs` | `read_env_value()` looks for `user.env` (lines 56-60) | Remove `user.env` fallback; config is passed via env vars from `devshell.nix` |
+
+No new files — these are modifications to existing scripts.
 
 ______________________________________________________________________
 
@@ -712,7 +700,7 @@ Delete all dead code:
 
 | File/Dir | Reason |
 |---|---|
-| `lib/parseEnv.nix` | Replaced by `resolve.nix` |
+| `lib/parseEnv.nix` | Replaced by `read-config.nix` |
 | `lib/build/scanHosts.nix` | No more `hosts/` to scan |
 | `lib/flake/default.nix` | Replaced by `lib/outputs.nix` |
 | `lib/flake/homeConfigurations.nix` | Replaced by `lib/outputs.nix` |
@@ -721,12 +709,15 @@ Delete all dead code:
 | `common/` (entire dir) | Replaced by profiles |
 | `hosts/` (entire dir) | Replaced by `local/config.nix` |
 | `lib/virtualisation/default.nix` | Aggregator no longer needed — profiles import individual files directly |
+| `capabilities/default.nix` | Aggregator no longer needed — profiles import individual capability files directly |
 | `user.env` | Replaced by `local/config.nix` |
 | `user.env.example` | Replaced by `local/config.nix` template |
 | `lib/checks/parseEnv.nix` | Env file format deleted |
 | Hardcoded `"proj/angst"` (16 files) | Explicit field in `local/config.nix` — each machine sets its own `repoPath` |
 | Hardcoded `"x86_64-linux"` (5 files) | Centralized in `read-config.nix` |
 | Hardcoded `"allowUnfree"` (3 files) | Centralized in `read-config.nix` |
+| `hostUserCases` case statement (`tools/vm/flake.nix:78-87`) | Replaced by `local/config.nix` read at runtime |
+| `lib/checks/password.nix` | Rewrite for `local/config.nix` (deferred) |
 
 Files under `lib/virtualisation/` that are **kept** (referenced by `profiles/vm.nix` or needed at runtime):
 
@@ -742,12 +733,8 @@ Files under `lib/virtualisation/` that are **kept** (referenced by `profiles/vm.
 
 #### Deferred — follow-up pass after core refactor
 
-- [ ] `tools/vm/flake.nix` — `res` script exports `ANGST_PASSWORD` from `user.env` → read from `local/config.nix`
-- [ ] `tools/vm/crates/vm-cli/src/runner/vm.rs` — Rust runner reads `ANGST_PASSWORD` from env → read from config
 - [ ] `lib/checks/password.nix` — rewrite tests for `local/config.nix`
 - [ ] `lib/checks/parseEnv.nix` — delete (no longer needed after env file format removed)
-- [ ] `tools/vm/flake.nix` — expose `vm-run` package so `outputs.nix` can reference it instead of inlining
-- [ ] `tools/shell/flake.nix` — expose `res` package so `outputs.nix` can reference it instead of inlining
 
 ______________________________________________________________________
 
@@ -773,14 +760,8 @@ bootstrap: disko hardware
 build:
     nix build .#nixosConfigurations.current
 
-build-impure:
-    nix build --impure .#nixosConfigurations.current
-
 switch:
     sudo nixos-rebuild switch --flake .#current
-
-switch-impure:
-    sudo nixos-rebuild switch --impure --flake .#current
 
 hm:
     nix build .#homeConfigurations.current.activationPackage
@@ -788,23 +769,15 @@ hm:
 hm-switch:
     nix build .#homeConfigurations.current.activationPackage && ./result/activate
 
-hm-switch-impure:
-    nix build --impure .#homeConfigurations.current.activationPackage && ./result/activate
-
 check:
     nix flake check
-
-check-impure:
-    nix flake check --impure
 
 dev:
     nix develop
 
-dev-impure:
-    nix develop --impure
 ```
 
-`current` aliases derive user/host from `local/config.nix` via `resolve.nix` — no shell env vars, no `$USER@$HOST` guesswork.
+`current` aliases derive user/host from `local/config.nix` — no shell env vars, no `$USER@$HOST` guesswork.
 
 ______________________________________________________________________
 
@@ -820,10 +793,10 @@ ______________________________________________________________________
 - `flake.nix` stays thin (~25 lines) — just inputs + output wiring
 - Profiles compose via module ordering: later modules override earlier ones
 - No `hosts/` directory — machine identity comes solely from `local/config.nix`
-- No `angst passwd` CLI needed for bootstrap — `mkpasswd` is a standard system tool
+- `angst passwd` CLI removed — use `just setup` instead
 - No env re-parsing in builders — `read-config.nix` evaluates everything once
-- Pure operations (`nix flake show`, `nix flake check`) work **without** `--impure`
-- Env var overrides (`$ANGST_HOST`, `$ANGST_USERNAME`, etc.) are applied by `apply-overrides.nix` and require `--impure` at eval time
+- All operations (`nix flake show`, `nix flake check`, `nix build`) work **without** `--impure` — no env var overrides, `local/config.nix` is the sole source of truth
+- Self-flake only: must be evaluated from a working `git clone` — `local/` is gitignored so it won't be found if the flake is used as a remote input
 - `repoPath` is an explicit field in `local/config.nix` (not auto-derived) — each machine declares its own checkout path
 - `vmRunShim`/`resWrapper` live in `tools/vm` and `tools/shell` flakes, not inlined in the main flake output
 - `outputs.nix` stays under 150 LOC by splitting dev shells (`devshell.nix`), renders (`render.nix`), tools (`tools.nix`), and checks (`checks/default.nix`) into separate files
