@@ -46,6 +46,17 @@ return {
 				end,
 			})
 
+			vim.api.nvim_create_autocmd({ "BufLeave", "BufWipeout" }, {
+				group = group,
+				pattern = "*.md",
+				callback = function()
+					if preview_active then
+						preview_active = false
+						md_badge:hide("md-preview")
+					end
+				end,
+			})
+
 			local binder = Keybinder.new(nil, "MD_PREVIEW")
 			binder:nmap("<leader>mp", function()
 				vim.cmd("MarkdownPreviewToggle")
