@@ -40,7 +40,7 @@ Reads `local/config.nix` (or `$ANGST_CONFIG` env var override), applies `ANGST_H
   # from config.nix + env overrides
   system, hostname, username, theme, password,
   monitors, profiles, toolchains,
-  extraNixos, extraHome,
+  extraNixos, extraHome, repoPath,
 
   # resolved from scan (evaluated once here, not by builders)
   scan = {
@@ -62,16 +62,18 @@ Reads `local/config.nix` (or `$ANGST_CONFIG` env var override), applies `ANGST_H
 
 #### Profiles (`profiles/`)
 
-Each profile returns `{ hm, nixos }` — two lists of module paths:
+Each profile returns `{ hm, nixos }` — two lists of NixOS/HM modules (paths or inline attrsets).
+
+Domain custom modules (e.g., `domains/wm/i3/module.nix`) depend on `config.domains.wm.i3.enable` which is **defined by `mkDomainModule` from the scan system**, not by the module file itself. So profiles can't list domain `module.nix` paths directly. Instead, profile `hm` lists **inline enable modules** — simple attrsets that set `enable = true`. The builders still import all domain modules via `mkDomainModule` from `cfg.scan.domains`; profiles just decide which ones are active.
 
 ```nix
 # profiles/desktop.nix
 {
   hm = [
-    ../../domains/wm/i3/module.nix
-    ../../domains/bar/i3status/module.nix
-    ../../domains/launcher/rofi/module.nix
-    ../../domains/terminal/ghostty/module.nix
+    ({ ... }: { domains.wm.i3.enable = true; })
+    ({ ... }: { domains.bar.i3status.enable = true; })
+    ({ ... }: { domains.launcher.rofi.enable = true; })
+    ({ ... }: { domains.terminal.ghostty.enable = true; })
   ];
   nixos = [
     ../../capabilities/graphical.nix
@@ -107,98 +109,416 @@ No toolchain imports in profiles — toolchain selection is driven by `config.ni
 
 **Files to create:** `profiles/base.nix`, `profiles/desktop.nix`, `profiles/development.nix`, `profiles/server.nix`, `profiles/vm.nix`, `lib/profiles.nix`
 
+#### `lib/build/mkHome.nix` — pure builder
+
+Imports the scan's `mkDomainModule` for all home entries (so domain options exist), plus infrastructure modules (`lib/home`, theme module, i3Fragments). Profile `hm` modules just enable the subset of domains the user wants.
+
+```nix
+{ inputs, cfg, hmModules, vmTool, shellTool, angstTool }:
+
+let
+  pkgs = import inputs.nixpkgs { system = cfg.system; config.allowUnfree = true; };
+  lib = pkgs.lib;
+
+  userCfg = { username = cfg.username; homeDirectory = "/home/${cfg.username}"; };
+
+  # all domain modules imported (enable defaults to false)
+  appHomeModules = map cfg.scan.domains.mkDomainModule cfg.scan.domains.homeEntries;
+
+  themeModule = import ../home/themeModule.nix {
+    inherit lib; themesLib = cfg.scan.themes; hostTheme = cfg.theme;
+  };
+in
+inputs.home-manager.lib.homeManagerConfiguration {
+  pkgs = pkgs;
+
+  extraSpecialArgs = {
+    inherit (cfg) hostname theme monitors repoPath;
+    inherit (cfg.scan) themes;
+    userConfig = userCfg;
+  };
+
+  modules =
+    [ ../../lib/home ]
+    ++ [ themeModule ../../lib/home/i3Fragments.nix ]
+    ++ appHomeModules               # all domain modules from scan
+    ++ hmModules                    # profile enable modules
+    ++ cfg.toolchainModules
+    ++ [({ ... }: { home.packages = [ vmTool shellTool angstTool ]; })]
+    ++ (if cfg.extraHome != {} then [ cfg.extraHome ] else []);
+}
+```
+
+**Files to modify:** `lib/build/mkHome.nix`
+
+#### `lib/build/mkHost.nix` — pure builder
+
+Same pattern as `mkHome.nix`: imports all domain NixOS modules from scan, then profile nixos modules on top. `hardware.nix` path is relative to flake root via `./../../local/hardware.nix`. Must pass `userConfig`/`repoPath` in `specialArgs` for `vm-variant.nix`, `host-mount.nix`, etc.
+
+The NixOS-embedded HM config also imports domain home modules (via `mkDomainModule`), so domain enable options are available inside HM.
+
+```nix
+{ inputs, cfg, hmModules, nixosModules }:
+
+let
+  pkgs = import inputs.nixpkgs { system = cfg.system; config.allowUnfree = true; };
+  lib = pkgs.lib;
+
+  userCfg = { username = cfg.username; homeDirectory = "/home/${cfg.username}"; };
+
+  appNixosModules = map cfg.scan.domains.mkNixosDomainModule cfg.scan.domains.nixosEntries;
+  appHomeModules  = map cfg.scan.domains.mkDomainModule cfg.scan.domains.homeEntries;
+
+  themeModule = import ../home/themeModule.nix {
+    inherit lib; themesLib = cfg.scan.themes; hostTheme = cfg.theme;
+  };
+in
+inputs.nixpkgs.lib.nixosSystem {
+  specialArgs = {
+    inherit (cfg) hostname theme monitors repoPath;
+    inherit (cfg.scan) themes;
+    userConfig = userCfg;
+  };
+
+  modules =
+    [ { nixpkgs.hostPlatform = cfg.system; } ]
+    ++ nixosModules
+    ++ appNixosModules
+    ++ [ ../../lib/nixos ]
+    ++ (if builtins.pathExists ./../../local/hardware.nix then [ ./../../local/hardware.nix ] else [])
+    ++ (if cfg.extraNixos != {} then [ cfg.extraNixos ] else [])
+    ++ [
+      ({ lib, ... }: {
+        users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password;
+      })
+
+      inputs.home-manager.nixosModules.home-manager {
+        home-manager = {
+          useGlobalPkgs = true;
+          useUserPackages = true;
+          backupFileExtension = "hm-backup";
+
+          extraSpecialArgs = {
+            inherit (cfg) hostname theme monitors repoPath;
+            inherit (cfg.scan) themes;
+            userConfig = userCfg;
+          };
+
+          users.${cfg.username} = {
+            imports =
+              [ ../../lib/home ]
+              ++ [ themeModule ../../lib/home/i3Fragments.nix ]
+              ++ appHomeModules     # domain modules (so enable options exist)
+              ++ hmModules          # profile enable modules
+              ++ cfg.toolchainModules;
+          };
+        };
+      }
+
+      ({ config, lib, ... }: {
+        systemd.services."home-manager-${cfg.username}".before =
+          lib.mkIf (!config.angst.isQemuVm) [
+            "getty@.service" "serial-getty@.service"
+          ];
+      })
+    ];
+}
+```
+
+> **Note:** `lib/nixos/default.nix` currently reads `ANGST_PASSWORD` from env (`builtins.getEnv "ANGST_PASSWORD"`). This must be changed — password is now set directly by the `{ users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password; }` line in `mkHost.nix`. Remove the env-read from `lib/nixos/default.nix` so it becomes a pure module using only its function arguments.
+
+**Files to modify:** `lib/build/mkHost.nix`, `lib/nixos/default.nix` (remove `ANGST_PASSWORD` env read)
+
 #### `lib/outputs.nix` — single output file
 
 Replaces `lib/flake/default.nix` (397 LOC, fan-out 12) with one file:
 
 ```nix
-# lib/outputs.nix
 { self, inputs, cfg, profiles }:
+
 let
+  pkgs = import inputs.nixpkgs { system = cfg.system; config.allowUnfree = true; };
+  lib = pkgs.lib;
+
   mkHome = import ./build/mkHome.nix;
   mkHost = import ./build/mkHost.nix;
 
-  hmModules = profiles.hm;
-  nixosModules = profiles.nixos;
-in
-{
+  hmModules     = profiles.hm;
+  nixosModules  = profiles.nixos;
+
+  # local tool outputs (vm-cli, shell-cli)
+  vmOutputs    = inputs.vm.mkOutputs self;
+  shellOutputs = inputs.shell.mkOutputs self;
+
+  vmTool    = vmOutputs.packages.${cfg.system}.default;
+  shellTool = shellOutputs.packages.${cfg.system}.default;
+
+  # tools built here (previously in shared.nix)
+  angstCli = pkgs.writeShellApplication {
+    name = "angst";
+    runtimeInputs = with pkgs; [ coreutils findutils git nix watchexec jq mkpasswd ];
+    text = builtins.readFile ./scripts/angst.sh;
+  };
+
+  vmRunShim = pkgs.writeShellScriptBin "vm-run" ''
+    TARGET_HOST="${cfg.hostname}"
+    KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
+    KEY_FILE="$KEY_DIR/authorized_keys"
+    mkdir -p "$KEY_DIR"
+    TMP_KEYS="$(mktemp)"; trap 'rm -f "$TMP_KEYS"' EXIT
+    ssh-add -L 2>/dev/null >> "$TMP_KEYS" || true
+    for pubkey in "$HOME"/.ssh/*.pub; do
+      [ -r "$pubkey" ] && cat "$pubkey" >> "$TMP_KEYS"
+    done
+    awk '/^(ssh-rsa|ssh-ed25519|ecdsa-sha2-|sk-ssh-|sk-ecdsa-)/ { print }' "$TMP_KEYS" | sort -u > "$KEY_FILE"
+    chmod 600 "$KEY_FILE"
+    [ -s "$KEY_FILE" ] || { echo "Error: no SSH public keys found" >&2; exit 1; }
+    export NIX_DISK_IMAGE="''${NIX_DISK_IMAGE:-$PWD/$TARGET_HOST.qcow2}"
+    export SHARED_DIR="$KEY_DIR"
+    export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
+    exec nix run "git+file://$PWD#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" -- "$@"
+  '';
+
+  resWrapper = pkgs.writeShellScriptBin "res" ''
+    cd "$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")" || exit 1
+    exec nix run ".#res" --impure --refresh -- "$@"
+  '';
+
+  # dev shell — all toolchains always available
+  allToolchainPkgs = cfg.scan.allToolchainPackages;
+  treesitter = cfg.scan.treesitter;
+
+  treesitterShellHook = ''
+    mkdir -p ~/.local/share/tree-sitter
+    rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
+    ln -sf ${treesitter.treesitterParsers} ~/.local/share/tree-sitter/parser
+    ln -sf ${treesitter.treesitterQueries} ~/.local/share/tree-sitter/queries
+    export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
+  '';
+
+  shellDevHook = pkgs.writeText "shell-dev-hook" ''
+    export VM_SSH_PORT=2222
+    export NIX_DEFAULT_TARGET_HOST=${cfg.hostname}
+    export CARGO_BUILD_TARGET_DIR="$PWD/target"
+    if [ -z "$SSH_AUTH_SOCK" ]; then
+      eval $(ssh-agent -s) > /dev/null
+      trap "ssh-agent -k > /dev/null" EXIT
+    fi
+    for key in "$HOME"/.ssh/id_ed25519 "$HOME"/.ssh/id_rsa; do
+      [ -f "$key" ] && ssh-add "$key" 2>/dev/null || true
+    done
+  '';
+
+  fullDevPackages = with pkgs; [
+    neovim git angstCli openssh qemu cargo rustc rust-analyzer
+  ] ++ allToolchainPkgs ++ [
+    vmOutputs.packages.${cfg.system}.wrapped
+    vmOutputs.packages.${cfg.system}.vm-run
+    vmOutputs.packages.${cfg.system}.res
+  ];
+
+  # checks
+  renderDomainOutputsFor = hostName: themeName:
+    let
+      themesLib = cfg.scan.themes;
+      fontsLib = import ../home/fonts.nix;
+      checkHelpers = import ../checks/theme/assertions.nix { inherit lib; theme = themesLib.get themeName; inherit themeName; };
+      domainRendererPaths = map (e: "${e.path}/render.nix") (
+        lib.filter (e: e.hasRender or false) cfg.scan.domains.homeEntries
+      );
+    in lib.concatLists (map (path: import path {
+      inherit lib themesLib themeName checkHelpers fontsLib;
+      fontFamily = fontsLib.defaultFamily;
+      monitors = cfg.monitors;
+      homeDirectory = "/home/${cfg.username}";
+    }) domainRendererPaths);
+
+  renderDomainOutputFor = hostName: themeName: outputPath:
+    let
+      matches = lib.filter (output: output.path == outputPath) (renderDomainOutputsFor hostName themeName);
+    in if matches == [] then builtins.throw "Unknown domain render output: ${outputPath}"
+      else (builtins.head matches).text;
+
+  testHostname = cfg.hostname;
+
+  themeLint = import ../checks/theme {
+    inherit lib;
+    themesLib = cfg.scan.themes;
+    renderDomainOutputsFor = renderDomainOutputsFor testHostname;
+  };
+
+  lintDesktop = import ../checks/desktop.nix {
+    inherit lib pkgs;
+    themesLib = cfg.scan.themes;
+    renderDomainOutputFor = renderDomainOutputFor testHostname;
+    testHostname = testHostname;
+  };
+
+  lintShell = import ../checks/shell.nix {
+    inherit lib pkgs;
+    themesLib = cfg.scan.themes;
+    renderDomainOutputFor = renderDomainOutputFor testHostname;
+    testHostname = testHostname;
+  };
+
+  themeRenderedChecks = import ../checks/theme/rendered.nix {
+    inherit lib pkgs;
+    themesLib = cfg.scan.themes;
+    renderDomainOutputsFor = renderDomainOutputsFor testHostname;
+    themeName = cfg.theme;
+  };
+
+  themeOverrideCheck = import ../checks/theme/override.nix {
+    inherit lib pkgs;
+    themesLib = cfg.scan.themes;
+    overrideTheme = lib.head (lib.filter (n: n != cfg.theme) (lib.attrNames cfg.scan.themes.themes));
+    renderDomainOutputFor = renderDomainOutputFor testHostname;
+    homeConfiguration = homeConfigurations."${cfg.username}-theme-override-test";
+  };
+
+  checkPassword = import ../checks/password.nix { inherit lib pkgs; };
+
+  homeConfigurationsOrig = homeConfigurations;
+in rec {
   homeConfigurations = {
-    current = mkHome cfg hmModules;
-    ${cfg.username}@${cfg.hostname} = mkHome cfg hmModules;
+    current = mkHome { inherit inputs cfg hmModules vmTool shellTool angstTool; };
+    "${cfg.username}@${cfg.hostname}" = mkHome { inherit inputs cfg hmModules vmTool shellTool angstTool; };
+  } // {
+    "${cfg.username}-theme-override-test" =
+      let
+        overrideTheme = lib.head (lib.filter (n: n != cfg.theme) (lib.attrNames cfg.scan.themes.themes));
+      in
+      mkHome {
+        inherit inputs cfg hmModules vmTool shellTool angstTool;
+        extraHome = { theme = overrideTheme; };
+      };
   };
 
   nixosConfigurations = {
-    current = mkHost cfg hmModules nixosModules;
-    ${cfg.hostname} = mkHost cfg hmModules nixosModules;
+    current = mkHost { inherit inputs cfg hmModules nixosModules; };
+    "${cfg.hostname}" = mkHost { inherit inputs cfg hmModules nixosModules; };
   };
 
-  packages = { ... };      # angst CLI, vm CLI, shell wrapper
-  apps = { ... };           # angst render/watch, vm, shell, lint-*, ssh deploy
-  devShells = { ... };      # dev, safe, vm — all toolchains always available
-  checks = { ... };         # lint-themes, lint-desktop, lint-shell, password, theme-rendered, etc.
-}
-```
-
-All checks consume `cfg` directly — no re-parsing, no re-scanning. `check-parse-env` is deleted (no env file). Password check simplified to verify `password != "CHANGE_ME"`.
-
-**Files to create:** `lib/outputs.nix`
-
-#### `lib/build/mkHome.nix` — pure builder
-
-```nix
-# inputs, cfg → hmModules → homeManagerConfiguration
-{ inputs, cfg, hmModules }:
-inputs.home-manager.lib.homeManagerConfiguration {
-  pkgs = import inputs.nixpkgs {
-    system = cfg.system;
-    config.allowUnfree = true;
-  };
-  extraSpecialArgs = {
-    inherit (cfg) theme hostname monitors;
-    inherit (cfg.scan) themes;
-    userConfig = {
-      username = cfg.username;
-      homeDirectory = "/home/${cfg.username}";
+  packages = {
+    ${cfg.system} = {
+      default = homeConfigurations.current.activationPackage;
+      angst   = angstCli;
+      vm-cli  = vmOutputs.packages.${cfg.system}.wrapped;
+      vm      = vmOutputs.packages.${cfg.system}.wrapped;
+      vm-run  = vmOutputs.packages.${cfg.system}.vm-run;
+      res     = vmOutputs.packages.${cfg.system}.res;
+      shell   = shellTool;
     };
   };
-  modules =
-    hmModules
-    ++ cfg.toolchainModules
-    ++ (if cfg.extraHome != {} then [ cfg.extraHome ] else []);
-}
-```
 
-#### `lib/build/mkHost.nix` — pure builder
+  devShells = {
+    ${cfg.system} = {
+      safe = pkgs.mkShell {
+        packages = with pkgs; [ neovim git ] ++ allToolchainPkgs;
+        shellHook = treesitterShellHook;
+      };
 
-```nix
-# inputs, cfg, hmModules, nixosModules → nixosSystem
-let
-  hmConfig = mkHomeInternal { inherit inputs cfg; hmModules = hmModules; };
-in
-inputs.nixpkgs.lib.nixosSystem {
-  specialArgs = { ... };
-  modules =
-    nixosModules
-    ++ (if builtins.pathExists ./local/hardware.nix then [ ./local/hardware.nix ] else [])
-    ++ (if cfg.extraNixos != {} then [ cfg.extraNixos ] else [])
-    ++ [
-      { nixpkgs.hostPlatform = cfg.system; }
-      inputs.home-manager.nixosModules.home-manager {
-        home-manager = {
-          useGlobalPkgs = true;
-          useUserPackages = true;
-          inherit (hmConfig) extraSpecialArgs;
-          users.${cfg.username} = { imports = hmConfig.modules; };
-        };
-      }
-      { users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password; }
-    ];
+      dev = pkgs.mkShell {
+        packages = fullDevPackages;
+        shellHook = "${treesitterShellHook}\n. ${shellDevHook}";
+      };
+
+      vm = pkgs.mkShell {
+        inputsFrom = [ inputs.vm.devShells.${cfg.system}.default ];
+        packages = fullDevPackages;
+        shellHook = "${treesitterShellHook}\n. ${shellDevHook}";
+      };
+    };
+  };
+
+  apps = {
+    ${cfg.system} = {
+      vm = {
+        type = "app";
+        program = "${vmOutputs.packages.${cfg.system}.wrapped}/bin/vm";
+      };
+      shell = {
+        type = "app";
+        program = "${shellTool}/bin/shell";
+      };
+      angst = {
+        type = "app";
+        program = "${angstCli}/bin/angst";
+      };
+      render = {
+        type = "app";
+        program = "${pkgs.writeShellScript "angst-render" ''exec ${angstCli}/bin/angst render "$@"''}";
+      };
+      watch = {
+        type = "app";
+        program = "${pkgs.writeShellScript "angst-watch" ''exec ${angstCli}/bin/angst watch "$@"''}";
+      };
+      check = {
+        type = "app";
+        program = "${pkgs.writeShellScript "check" ''set -euo pipefail; ${pkgs.nix}/bin/nix flake check --print-build-logs''}";
+      };
+      lint-themes = {
+        type = "app";
+        program = "${pkgs.writeShellScript "lint-themes" ''set -euo pipefail; ${pkgs.nix}/bin/nix eval ${self}#lib.themeLint --raw''}";
+      };
+      lint-desktop = {
+        type = "app";
+        program = "${pkgs.writeShellScript "lint-desktop" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${cfg.system}.lint-desktop --no-link --print-build-logs; echo "All desktop config checks passed."''}";
+      };
+      lint-shell = {
+        type = "app";
+        program = "${pkgs.writeShellScript "lint-shell" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${cfg.system}.lint-shell --no-link --print-build-logs; echo "All shell config checks passed."''}";
+      };
+      analyze = {
+        type = "app";
+        program = "${pkgs.writeShellScript "analyze" ''exec python3 -m scripts.analyze_flake "$@"''}";
+      };
+      analyze-to-file = {
+        type = "app";
+        program = "${pkgs.writeShellScript "analyze-to-file" ''cd "$(git rev-parse --show-toplevel)" && exec python3 -m scripts.analyze_flake --output analysis.md "$@"''}";
+      };
+      ssh = {
+        type = "app";
+        program = "${pkgs.writeShellScript "angst-ssh-deploy" ''
+          set -euo pipefail
+          echo "==> Building & activating ${cfg.username}@${cfg.hostname}..."
+          nix build ${self}#homeConfigurations.${cfg.username}@${cfg.hostname}.activationPackage --print-build-logs
+          echo "==> Activating..."; ./result/activate
+          echo "==> Cleaning old Nix store..."; nix-collect-garbage -d; nix store gc; echo "==> Done."
+        ''}";
+      };
+    };
+  };
+
+  checks = {
+    ${cfg.system} = {
+      lint-themes = pkgs.writeText "lint-themes-check" themeLint;
+      lint-desktop = lintDesktop;
+      lint-shell = lintShell;
+      theme-rendered = themeRenderedChecks;
+      theme-override = themeOverrideCheck;
+      home-theme-override-test = homeConfigurations."${cfg.username}-theme-override-test".activationPackage;
+      theme-semantic-distinct = import ../checks/theme/semanticDistinct.nix {
+        inherit lib pkgs;
+        themesLib = cfg.scan.themes;
+        themeName = cfg.theme;
+      };
+      check-password = checkPassword;
+    };
+  };
+
+  formatter.${cfg.system} = pkgs.nixfmt;
+
+  lib = {
+    inherit renderDomainOutputsFor renderDomainOutputFor;
+    themeLint = themeLint;
+  };
 }
 ```
 
 No `common/`, `hosts/`, `user.env`, or env re-parsing involved.
 
-**Files to modify:** `lib/build/mkHome.nix`, `lib/build/mkHost.nix`
+**Files to create:** `lib/outputs.nix`
 
 ______________________________________________________________________
 
@@ -274,12 +594,25 @@ Delete all dead code:
 | `lib/flake/shared.nix` | Toolchain logic moved into `resolve.nix`; dev shell logic into `outputs.nix` |
 | `common/` (entire dir) | Replaced by profiles |
 | `hosts/` (entire dir) | Replaced by `local/config.nix` |
-| `lib/virtualisation/` (entire dir) | `vm-profile.nix` moved to `profiles/vm.nix`; utility files kept only if still referenced |
+| `lib/virtualisation/default.nix` | Aggregator no longer needed — profiles import individual files directly |
 | `user.env` | Replaced by `local/config.nix` |
 | `user.env.example` | Replaced by `local/config.nix` template |
+| `lib/checks/parseEnv.nix` | Env file format deleted |
 | Hardcoded `"proj/angst"` (10 files) | Centralized in `resolve.nix` |
 | Hardcoded `"x86_64-linux"` (5 files) | Centralized in `resolve.nix` |
 | Hardcoded `"allowUnfree"` (3 files) | Centralized in `resolve.nix` |
+
+Files under `lib/virtualisation/` that are **kept** (referenced by `profiles/vm.nix` or needed at runtime):
+
+| File | Why kept |
+|---|---|
+| `is-qemu-vm.nix` | Used by `detect.nix` |
+| `detect.nix` | Defines `angst.isQemuVm` option |
+| `runtime.nix` | Boot loader logic |
+| `specialisation.nix` | VM specialisation |
+| `vm-variant.nix` | VM variant config |
+| `vm-profile.nix` | VM runtime config |
+| `host-mount.nix` | Host mount symlinks |
 
 ______________________________________________________________________
 
@@ -328,8 +661,9 @@ ______________________________________________________________________
 ### Invariants
 
 - `local/` is **never tracked by git** (entire directory in `.gitignore`)
-- Profiles are pure lists of NixOS/HM module paths — no special framework required
+- Profiles are pure lists of NixOS/HM modules (paths or inline attrsets) — no special framework required
 - Existing domain, theme, capability, toolchain structure is untouched
+- Domain enablement comes from profiles (inline enable attrsets), domain option definitions come from scan via `mkDomainModule` in builders
 - Dev shell always has all toolchains available regardless of profile selection
 - Toolchain selection is driven by `config.nix.toolchains`, not by profiles
 - No fallback files — `config.nix.nixos` and `config.nix.home` are the only escape hatches
