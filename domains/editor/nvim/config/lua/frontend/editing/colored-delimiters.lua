@@ -25,7 +25,7 @@ return {
 		if not ok then
 			return
 		end
-		local p = pal.get().palette
+		local p = pal.p
 		local rainbow = { p.accent.base, p.accent.base, p.foreground.variant, p.foreground.base, p.surface.base }
 
 		local semantic_colors = {

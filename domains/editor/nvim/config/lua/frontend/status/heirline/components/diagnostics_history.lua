@@ -1,6 +1,5 @@
-local palette = require("config.theme.palette").get()
-local p = palette.palette
-local a = palette.ansi
+local palette = require("config.theme.palette")
+local p, a = palette.p, palette.a
 local utils = require("frontend.status.heirline.utils")
 
 ---@type HeirlineComponent
