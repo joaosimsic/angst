@@ -1,4 +1,5 @@
 local Hydra = require("common.Hydra")
+local p, a = require("config.theme.palette")
 
 -- BEFORE U WANT TO REFAC, THIS IS TO PREVENT
 -- INVALID DIAGNOSTIC TO JUMP MESSAGE SPAM
@@ -28,10 +29,8 @@ local M = {}
 function M.create_diagnostics(bufnr)
 	return Hydra.new({
 		name = "Diagnostic",
-		---@type ThemeColorKey
-		fg_color = "red",
-		---@type ThemeColorKey
-		bg_color = "black",
+		fg_color = a.error,
+		bg_color = p.background.base,
 		enter = "<leader>d",
 		heads = {
 			{

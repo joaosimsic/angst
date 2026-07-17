@@ -1,6 +1,4 @@
-local palette = require("config.theme.palette").get()
-local p = palette.palette
-local a = palette.ansi
+local p, a = require("config.theme.palette")
 
 ---@param name string
 ---@param opts vim.api.keyset.highlight

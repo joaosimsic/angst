@@ -1,6 +1,5 @@
 local Keybinder = require("common.Keybinder")
 local Logger = require("common.Logger")
-local resolve = require("config.theme.resolve").resolve
 
 ---@class HydraHead
 ---@field [1] string
@@ -12,8 +11,8 @@ local resolve = require("config.theme.resolve").resolve
 ---@field name string
 ---@field enter string
 ---@field heads HydraHead[]
----@field fg_color ThemeColorKey
----@field bg_color ThemeColorKey
+---@field fg_color string
+---@field bg_color string
 ---@field debug_level? Level
 ---@field exit_keys? string[]
 ---@field global? boolean
@@ -67,11 +66,8 @@ function Hydra.new(cfg, bufnr)
 	self.name = cfg.name
 	self.enter = cfg.enter
 
-	local fg_color_key = cfg.fg_color or "fg"
-	local bg_color_key = cfg.bg_color or "bg"
-
-	self.fg_color_hex = resolve(fg_color_key)
-	self.bg_color_hex = resolve(bg_color_key)
+	self.fg_color_hex = cfg.fg_color
+	self.bg_color_hex = cfg.bg_color
 
 	self.heads = cfg.heads
 	self.exit_keys = cfg.exit_keys or { "<Esc>", "<C-c>" }

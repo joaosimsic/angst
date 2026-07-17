@@ -5,6 +5,8 @@ local Logger = require("common.Logger")
 ---@type table
 local Resize = require("frontend.window.resize")
 
+local p, a = require("config.theme.palette")
+
 local M = {}
 
 function M.setup()
@@ -12,8 +14,8 @@ function M.setup()
 
 	Hydra.new({
 		name = "Window",
-		fg_color = "blue_bright",
-		bg_color = "black",
+		fg_color = p.surface.base,
+		bg_color = p.background.base,
 		enter = "<leader>w",
 		logger = logger,
 		heads = {

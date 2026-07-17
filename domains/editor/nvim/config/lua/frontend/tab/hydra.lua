@@ -3,6 +3,8 @@ local Hydra = require("common.Hydra")
 ---@type Logger
 local Logger = require("common.Logger")
 
+local p, a = require("config.theme.palette")
+
 local M = {}
 
 local function goto_tab(n)
@@ -16,8 +18,8 @@ function M.setup()
 
 	Hydra.new({
 		name = "Tab",
-		fg_color = "blue_bright",
-		bg_color = "black",
+		fg_color = p.surface.base,
+		bg_color = p.background.base,
 		enter = "<leader>t",
 		persist = true,
 		logger = logger,

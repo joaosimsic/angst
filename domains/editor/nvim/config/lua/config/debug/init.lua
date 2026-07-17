@@ -2,6 +2,7 @@
 local Hydra = require("common.Hydra")
 ---@type Logger
 local Logger = require("common.Logger")
+local p, a = require("config.theme.palette")
 local reload = require("config.debug.reload")
 local ui = require("config.debug.ui")
 local profiler = require("config.debug.profiler")
@@ -15,8 +16,8 @@ return {
 		local logger = Logger.new("HYDRA:DEBUG")
 		ui.hydra = Hydra.new({
 			name = "Debug",
-			fg_color = "yellow_bright",
-			bg_color = "black",
+			fg_color = p.accent.base,
+			bg_color = p.background.base,
 			enter = "<leader>v",
 			logger = logger,
 			heads = {

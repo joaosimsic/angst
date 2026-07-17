@@ -1,5 +1,4 @@
-local palette = require("config.theme.palette").get()
-local p = palette.palette
+local p = require("config.theme.palette")
 
 ---@meta
 

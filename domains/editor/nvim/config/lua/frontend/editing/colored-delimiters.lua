@@ -21,11 +21,10 @@ return {
 			},
 		}
 
-		local ok, pal = pcall(require, "config.theme.palette")
+		local ok, p = pcall(require, "config.theme.palette")
 		if not ok then
 			return
 		end
-		local p = pal.get().palette
 		local rainbow = { p.accent.base, p.accent.base, p.foreground.variant, p.foreground.base, p.surface.base }
 
 		local semantic_colors = {
