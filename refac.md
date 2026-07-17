@@ -87,10 +87,47 @@ The dev shell always includes **all toolchains** (full auto-scan), regardless of
 
 `nixos-generate-config --show-hardware-config > local/hardware.nix` generates machine-specific hardware config (filesystems, kernel modules, etc.). `mkHost.nix` auto-imports `local/hardware.nix` if it exists, keeping `local/config.nix` clean — just identity + profile selection.
 
-Minimal setup for a new machine is:
-1. `nixos-generate-config --show-hardware-config > local/hardware.nix`
-2. Edit `local/config.nix` — pick profiles, set username/theme
-3. Build or switch
+#### Disko (disk partitioning)
+
+`local/disk.nix` defines the disk layout for each machine (dual boot, full disk, LVM, etc.) using disko. Applied with:
+
+```
+sudo nix run github:nix-community/disko -- --mode disko local/disk.nix
+```
+
+Example for a full-disk ext4 system:
+
+```nix
+{
+  disk.main = {
+    type = "disk";
+    device = "/dev/nvme0n1";
+    content = {
+      type = "gpt";
+      partitions = {
+        ESP = {
+          size = "512M";
+          type = "EF00";
+          content = { type = "filesystem"; format = "vfat"; mountpoint = "/boot"; };
+        };
+        root = {
+          size = "100%";
+          content = { type = "filesystem"; format = "ext4"; mountpoint = "/"; };
+        };
+      };
+    };
+  };
+}
+```
+
+Machines that don't need disko (existing installs, non-NixOS) simply don't have `local/disk.nix`.
+
+Full bootstrap on a blank machine:
+1. Write `local/disk.nix`
+2. `sudo nix run github:nix-community/disko -- --mode disko local/disk.nix`
+3. `nixos-generate-config --show-hardware-config > local/hardware.nix`
+4. Write `local/config.nix` — pick profiles, set username/theme
+5. Build or switch
 
 ### Phase 5 — Output splitting
 
@@ -117,8 +154,14 @@ Split `lib/flake/default.nix` (397 LOC, fan-out 12) into focused submodules:
 A `justfile` automates common workflows, keeping setup minimal:
 
 ```just
+disko:
+    sudo nix run github:nix-community/disko -- --mode disko local/disk.nix
+
 hardware:
     nixos-generate-config --show-hardware-config > local/hardware.nix
+
+bootstrap: disko hardware
+    @echo "Now write local/config.nix and run: just build"
 
 build:
     nix build .#nixosConfigurations.default
@@ -141,7 +184,7 @@ dev:
 
 ### Invariants
 
-- `local/config.nix` is **never tracked by git**
+- `local/` is **never tracked by git**
 - Profiles are pure NixOS/HM modules — no special framework required
 - Existing domain, theme, capability, toolchain structure is untouched
 - Dev shell always has all toolchains available regardless of profile selection
