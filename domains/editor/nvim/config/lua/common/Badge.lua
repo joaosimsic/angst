@@ -77,7 +77,7 @@ function Badge:_refresh()
 	vim.wo[self.win].statuscolumn = ""
 
 	for _, opt in ipairs({ "foldcolumn", "spell", "cursorline", "cursorcolumn" }) do
-		pcall(vim.wo.__newindex, vim.wo, self.win, opt, false)
+		pcall(vim.api.nvim_set_option_value, opt, false, { win = self.win })
 	end
 
 	vim.api.nvim_set_current_win(orig_win)
