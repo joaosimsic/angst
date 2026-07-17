@@ -45,13 +45,7 @@ function Badge:_refresh()
 		self.buf = vim.api.nvim_create_buf(false, true)
 	end
 
-	local texts = {}
-
-	for _, text in pairs(self.entries) do
-		table.insert(texts, text)
-	end
-
-	local content = " " .. self.prefix .. " " .. table.concat(texts, " ┃ " .. self.prefix .. " ")
+	local content = " " .. self.prefix .. " " .. (select(2, next(self.entries)) or "")
 
 	vim.bo[self.buf].modifiable = true
 	vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, { content })
@@ -132,7 +126,7 @@ function Badge:show(id, text)
 	self.logger:debug(function()
 		return string.format("show('%s', '%s')", id, text)
 	end)
-	self.entries[id] = text
+	self.entries = { [id] = text }
 	self:_refresh()
 end
 
