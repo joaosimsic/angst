@@ -34,6 +34,8 @@
 
 - [x] screen freeze when exit or close last pane
 
-# print
+# miscellaneous
 
+- [ ] login screen
+- [ ] firefox
 - [ ] persistent and not persistent prints

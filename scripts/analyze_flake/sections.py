@@ -30,7 +30,7 @@ def section_overview(no_eval_cost: bool = False) -> str:
     total_rust_loc = sum(
         len(read_nix(f).splitlines())
         for f in Path("tools").rglob("*.rs")
-        if ".git" not in f.parts
+        if ".git" not in f.parts and "target" not in f.parts
     )
     total_sh_loc = sum(
         len(read_nix(f).splitlines())
@@ -106,8 +106,8 @@ def section_directory_breakdown() -> str:
         )
         extra = ""
         if d == "tools":
-            rc = sum(1 for _ in Path("tools").rglob("*.rs"))
-            rl = sum(len(read_nix(f).splitlines()) for f in Path("tools").rglob("*.rs"))
+            rc = sum(1 for _ in Path("tools").rglob("*.rs") if "target" not in _.parts)
+            rl = sum(len(read_nix(f).splitlines()) for f in Path("tools").rglob("*.rs") if "target" not in f.parts)
             if rc:
                 extra = f" (+{rc} .rs files, {rl} LOC)"
         elif d == "scripts":

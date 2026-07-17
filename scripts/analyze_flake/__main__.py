@@ -2,9 +2,9 @@
 """angst flake analysis — Markdown report.
 
 Usage:
-    python -m scripts.analyze_flake [--no-eval-cost] [--no-graph]
+    python -m scripts.analyze_flake [--no-eval-cost] [--no-graph] [-o output.md]
 
-Outputs a Markdown report to stdout.
+Outputs a Markdown report to stdout (or -o FILE).
 """
 
 import argparse
@@ -59,6 +59,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--no-graph", action="store_true", help="Skip Mermaid dependency graph"
     )
+    p.add_argument(
+        "-o", "--output", help="Write report to FILE instead of stdout"
+    )
     return p.parse_args(argv)
 
 
@@ -67,6 +70,7 @@ def main() -> None:
     args = parse_args()
     no_eval_cost = args.no_eval_cost
     no_graph = args.no_graph
+    out_file = args.output
 
     def slug(s: str) -> str:
         """Convert a heading to an anchor slug."""
@@ -112,23 +116,33 @@ def main() -> None:
         ("35. Theme Token Usage Audit", section_token_usage()),
     ]
 
-    print("# angst flake analysis\n")
-    print(f"*Generated: {datetime.now():%Y-%m-%d %H:%M}*\n")
+    def emit(text: str) -> None:
+        if out_file:
+            with open(out_file, "w") as f:
+                f.write(text)
+        else:
+            print(text, end="")
 
-    print("## Table of Contents\n")
+    report = ""
+    report += "# angst flake analysis\n\n"
+    report += f"*Generated: {datetime.now():%Y-%m-%d %H:%M}*\n\n"
+
+    report += "## Table of Contents\n\n"
     for heading, _ in section_fns:
         num_dot = heading.index(".")
         rest = heading[num_dot + 1 :].strip()
-        print(f"- [{heading}](#{slug(rest)})")
-    print()
+        report += f"- [{heading}](#{slug(rest)})\n"
+    report += "\n"
 
     for heading, result in section_fns:
         if result:
-            print(result)
+            report += result
 
-    print()
-    print("---")
-    print("\n*Analysis complete.*")
+    report += "\n"
+    report += "---\n"
+    report += "\n*Analysis complete.*\n"
+
+    emit(report)
 
 
 if __name__ == "__main__":

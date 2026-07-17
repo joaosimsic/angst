@@ -363,6 +363,15 @@ in
         meta.description = "Analyze flake structure for refactoring insight.";
       };
 
+      analyze-to-file = {
+        type = "app";
+        program = "${pkgs.writeShellScript "analyze-to-file" ''
+          cd "$(git rev-parse --show-toplevel)"
+          exec python3 -m scripts.analyze_flake --output analysis.md "$@"
+        ''}";
+        meta.description = "Analyze flake and write analysis.md.";
+      };
+
       ssh =
         let
           sshHostUser = envUsername;
