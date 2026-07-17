@@ -64,7 +64,7 @@ The dev shell always includes **all toolchains** (full auto-scan), regardless of
 - `lib/build/mkHost.nix` refactored to accept `resolvedConfig` + `profileModules` — compose NixOS + HM cleanly
 - Both become thin, predictable functions with explicit inputs
 
-### Phase 4 — `local/config.nix`
+### Phase 4 — `local/` directory
 
 - Create `local/` directory, add to `.gitignore`
 - `local/config.nix` becomes the source of truth:
@@ -82,6 +82,15 @@ The dev shell always includes **all toolchains** (full auto-scan), regardless of
   ```
 - Delete `user.env` + `user.env.example`
 - Update `lib/resolve.nix` to default to `local/config.nix`
+
+#### Hardware configuration
+
+`nixos-generate-config --show-hardware-config > local/hardware.nix` generates machine-specific hardware config (filesystems, kernel modules, etc.). `mkHost.nix` auto-imports `local/hardware.nix` if it exists, keeping `local/config.nix` clean — just identity + profile selection.
+
+Minimal setup for a new machine is:
+1. `nixos-generate-config --show-hardware-config > local/hardware.nix`
+2. Edit `local/config.nix` — pick profiles, set username/theme
+3. Build or switch
 
 ### Phase 5 — Output splitting
 
@@ -102,6 +111,33 @@ Split `lib/flake/default.nix` (397 LOC, fan-out 12) into focused submodules:
 - Remove `common/` directory
 - Remove `hosts/` directory — config now lives in `local/config.nix` or profiles
 - Remove `user.env` + `user.env.example`
+
+### Justfile
+
+A `justfile` automates common workflows, keeping setup minimal:
+
+```just
+hardware:
+    nixos-generate-config --show-hardware-config > local/hardware.nix
+
+build:
+    nix build .#nixosConfigurations.default
+
+switch:
+    sudo nixos-rebuild switch --flake .#default
+
+hm:
+    nix build .#homeConfigurations.${USER}@${HOST}
+
+hm-switch:
+    nix build .#homeConfigurations.${USER}@${HOST}.activationPackage && ./result/activate
+
+check:
+    nix flake check
+
+dev:
+    nix develop
+```
 
 ### Invariants
 
