@@ -17,7 +17,7 @@ function Badge.new(opts)
 	self.fg = opts.fg
 	self.bg = opts.bg
 	self.prefix = opts.prefix or "●"
-	self.logger = Logger.new("BADGE:" .. (opts.name and opts.name:upper() or "?"), "debug")
+	self.logger = Logger.new("BADGE:" .. (opts.name and opts.name:upper() or "?"))
 	return self
 end
 
