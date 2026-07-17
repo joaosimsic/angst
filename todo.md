@@ -9,6 +9,9 @@
 - [x] break distance based either on tab space or formatters
 - [x] leave yazi returns heirline in terminal mode
 - [x] update scratch plugin to allow run compiler on it
+- [ ] better git handling(neogit/diffview)
+- [ ] md handling(md-preview/render-md)
+- [ ] add file line length in heirline
 
 # nu
 - [x] set ":" to replace ">"
@@ -16,6 +19,7 @@
 
 # nix
 - [x] add package managers to toolchains
+- [ ] use nixos-generate-config to set hardware
 
 # vm
 
@@ -30,6 +34,8 @@
 
 - [x] screen freeze when exit or close last pane
 
-# print
+# miscellaneous
 
+- [ ] login screen
+- [ ] firefox
 - [ ] persistent and not persistent prints

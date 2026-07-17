@@ -9,9 +9,11 @@
 
   programs.home-manager.enable = true;
 
-  home.username = lib.mkDefault userConfig.username;
-  home.homeDirectory = lib.mkDefault userConfig.homeDirectory;
-  home.stateVersion = "24.05";
+  home = {
+    username = lib.mkDefault userConfig.username;
+    homeDirectory = lib.mkDefault userConfig.homeDirectory;
+    stateVersion = "24.05";
+  };
 
   fonts.fontconfig.enable = true;
 }

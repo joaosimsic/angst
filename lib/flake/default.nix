@@ -20,15 +20,26 @@ let
   pwd = builtins.getEnv "PWD";
   pwdEnvPath = if pwd != "" then pwd + "/user.env" else "";
   homeEnvPath = builtins.getEnv "HOME" + "/proj/angst/user.env";
-  userEnv = let
-    fromFile = if builtins.pathExists envPath then parseEnvFile envPath
-      else if builtins.pathExists homeEnvPath then parseEnvFile homeEnvPath
-      else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then parseEnvFile pwdEnvPath
-      else { };
-  in fromFile // (
-    let h = builtins.getEnv "ANGST_HOST"; u = builtins.getEnv "ANGST_USERNAME"; in
-    (if h != "" then { HOST = h; } else {}) // (if u != "" then { USERNAME = u; } else {})
-  );
+  userEnv =
+    let
+      fromFile =
+        if builtins.pathExists envPath then
+          parseEnvFile envPath
+        else if builtins.pathExists homeEnvPath then
+          parseEnvFile homeEnvPath
+        else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then
+          parseEnvFile pwdEnvPath
+        else
+          { };
+    in
+    fromFile
+    // (
+      let
+        h = builtins.getEnv "ANGST_HOST";
+        u = builtins.getEnv "ANGST_USERNAME";
+      in
+      (if h != "" then { HOST = h; } else { }) // (if u != "" then { USERNAME = u; } else { })
+    );
   envHost = userEnv.HOST or testHostname;
   envUsername = userEnv.USERNAME or (loadHost testHostname).user.username;
 
@@ -84,11 +95,21 @@ let
       (builtins.head matches).text;
 
   themeContext = import ../checks/theme/context.nix {
-    inherit loadHost themesLib lib testHostname;
+    inherit
+      loadHost
+      themesLib
+      lib
+      testHostname
+      ;
   };
 
   themeLint = import ../checks/theme {
-    inherit lib themesLib renderDomainOutputsFor testHostname;
+    inherit
+      lib
+      themesLib
+      renderDomainOutputsFor
+      testHostname
+      ;
   };
 
   lintDesktop = import ../checks/desktop.nix {
@@ -152,10 +173,23 @@ let
   };
 
   shared = import ./shared.nix {
-    inherit pkgs lib shellOutputs vmOutputs system hostShellBinPaths;
+    inherit
+      pkgs
+      lib
+      shellOutputs
+      vmOutputs
+      system
+      hostShellBinPaths
+      ;
   };
 
-  inherit (shared) allToolchainPackages treesitter angstCli shellWrapped shellDevHook;
+  inherit (shared)
+    allToolchainPackages
+    treesitter
+    angstCli
+    shellWrapped
+    shellDevHook
+    ;
 
   treesitterShellHook = ''
     mkdir -p ~/.local/share/tree-sitter
@@ -171,7 +205,13 @@ let
     angstCli
   ]
   ++ allToolchainPackages
-  ++ (with pkgs; [ openssh qemu cargo rustc rust-analyzer ])
+  ++ (with pkgs; [
+    openssh
+    qemu
+    cargo
+    rustc
+    rust-analyzer
+  ])
   ++ [
     vmOutputs.packages.${system}.wrapped
     vmOutputs.packages.${system}.vm-run
@@ -313,6 +353,23 @@ in
           echo "All shell config checks passed."
         ''}";
         meta.description = "Lint shell script configuration profiles.";
+      };
+
+      analyze = {
+        type = "app";
+        program = "${pkgs.writeShellScript "analyze" ''
+          exec python3 -m scripts.analyze_flake "$@"
+        ''}";
+        meta.description = "Analyze flake structure for refactoring insight.";
+      };
+
+      analyze-to-file = {
+        type = "app";
+        program = "${pkgs.writeShellScript "analyze-to-file" ''
+          cd "$(git rev-parse --show-toplevel)"
+          exec python3 -m scripts.analyze_flake --output analysis.md "$@"
+        ''}";
+        meta.description = "Analyze flake and write analysis.md.";
       };
 
       ssh =

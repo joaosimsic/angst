@@ -51,7 +51,7 @@ let
               lib.optional (meta ? xdg || (meta ? xdgFile && relPath == meta.xdgFile)) (
                 lib.nameValuePair (
                   if meta ? xdg then ".config/${meta.xdg}/${relPath}" else ".config/${meta.xdgFile}"
-                ) { text = output.text; }
+                ) { inherit (output) text; }
               );
           in
           lib.listToAttrs (lib.concatMap entryForOutput outputs);
