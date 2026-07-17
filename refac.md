@@ -41,17 +41,36 @@ Central config resolver. Single entry point that:
 
 ### Phase 2 — Unified profiles (`profiles/`)
 
-Each profile is a standard NixOS/HM module that enables a bundle of related domains, capabilities, packages, and toolchains:
+Each profile is a function returning `{ hm, nixos }` — two separate modules that share the same package set and theme context:
+
+```nix
+# profiles/desktop.nix
+{ pkgs, themesLib, hostTheme, ... }: {
+  hm = {
+    domains.wm.i3.enable = true;
+    domains.bar.i3status.enable = true;
+    domains.launcher.rofi.enable = true;
+    domains.terminal.ghostty.enable = true;
+  };
+  nixos = {
+    capabilities.graphical.enable = true;
+  };
+}
+```
+
+- On **NixOS**: `mkHost.nix` applies both `hm` + `nixos` parts
+- On **non-NixOS** (Mint, Debian, etc.): `mkHome.nix` applies only the `hm` part
+- No conditionals, no `mkIf` tricks — the builder functions each pick the relevant sub-attr
+
+Initial profiles:
 
 - `profiles/base.nix` — shell, terminal, editor, `bash`, `nix`, `conf` toolchains (replaces `common/home.nix`)
-- `profiles/desktop.nix` — i3, bar, rofi, ghostty, graphical capabilities
-- `profiles/development.nix` — git, LLMs, **auto-scans all toolchains** (dynamic, like `toolchains/default.nix` does today)
+- `profiles/desktop.nix` — i3, bar, rofi, ghostty + graphical capabilities
+- `profiles/development.nix` — git, LLMs, **auto-scans all toolchains** (dynamic)
 - `profiles/server.nix` — SSH, monitoring, `php`, `javascript` toolchains
 - `profiles/default.nix` — helper to resolve a list of profile names → module list
 
 Toolchains are explicitly imported per-profile (not auto-imported for every host). Profiles compose — `server.nix` only adds what `base.nix` doesn't already provide.
-
-Domain routing is already handled by `meta.building` — profiles just enable things and the existing system dispatches them correctly.
 
 The dev shell always includes **all toolchains** (full auto-scan), regardless of which profiles the host selects.
 
@@ -60,8 +79,8 @@ The dev shell always includes **all toolchains** (full auto-scan), regardless of
 
 ### Phase 3 — Pure builders
 
-- `lib/build/mkHome.nix` refactored to accept `resolvedConfig` + `profileModules` — no internal env/theme/domain resolution
-- `lib/build/mkHost.nix` refactored to accept `resolvedConfig` + `profileModules` — compose NixOS + HM cleanly
+- `lib/build/mkHome.nix` refactored to accept `resolvedConfig` + list of profile `hm` modules — no internal env/theme/domain resolution
+- `lib/build/mkHost.nix` refactored to accept `resolvedConfig` + list of profile `hm` + `nixos` modules — compose NixOS + HM cleanly
 - Both become thin, predictable functions with explicit inputs
 
 ### Phase 4 — `local/` directory
