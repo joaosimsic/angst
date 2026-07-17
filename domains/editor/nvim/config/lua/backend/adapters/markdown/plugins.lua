@@ -18,16 +18,20 @@ return {
 		end,
 		config = function()
 			local Badge = require("common.Badge")
+			local Keybinder = require("common.Keybinder")
 			local palette = require("config.theme.palette")
 			local p = palette.p
 			local md_badge = Badge.new({
 				name = "md-preview",
-				fg = p.foreground.variant,
-				bg = p.background.base,
+				fg = p.background.base,
+				bg = p.surface.base,
 			})
 			local preview_active = false
 
+			local group = vim.api.nvim_create_augroup("MarkdownPreview", { clear = true })
+
 			vim.api.nvim_create_autocmd("BufEnter", {
+				group = group,
 				pattern = "*.md",
 				callback = function()
 					vim.api.nvim_buf_create_user_command(0, "MarkdownPreviewToggle", function()
@@ -41,6 +45,11 @@ return {
 					end, { force = true })
 				end,
 			})
+
+			local binder = Keybinder.new(nil, "MD_PREVIEW")
+			binder:nmap("<leader>mp", function()
+				vim.cmd("MarkdownPreviewToggle")
+			end, { desc = "Toggle markdown preview" })
 		end,
 	},
 }
