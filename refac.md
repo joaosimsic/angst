@@ -33,11 +33,11 @@ All new files created; existing code still works alongside them.
 
 #### `lib/resolve.nix` — single entry point
 
-Reads `local/config.nix` (or `$ANGST_CONFIG` env var override), applies `ANGST_HOST`/`ANGST_USERNAME`/`ANGST_THEME`/`ANGST_PASSWORD` overrides, resolves toolchains (unset/`"*"` → all, list → specific), calls existing scan functions once, and derives `repoPath` from the flake's filesystem path:
+Reads `local/config.nix` (or `$ANGST_CONFIG` env var override), applies `ANGST_HOST`/`ANGST_USERNAME`/`ANGST_THEME`/`ANGST_PASSWORD` overrides, resolves toolchains (unset/`"*"` → all, list → specific), calls existing scan functions once, and derives `repoPath` from `self.sourceInfo.outPath`:
 
 > Env var overrides require `--impure` at eval time (e.g., `nix build --impure .#...`). Pure evaluation reads only `local/config.nix`.
 
-The implementation guards against a missing config file and auto-derives `repoPath` from the working directory:
+The implementation guards against a missing config file and auto-derives `repoPath` from `self.sourceInfo.outPath` (with fallback):
 
 ```nix
 # lib/resolve.nix
@@ -53,13 +53,13 @@ let
                else builtins.throw "Create local/config.nix (see local/config.nix.example)";
   config = import configPath;
 
-  # ---- repoPath: derive from PWD relative to $HOME (fallback for pure builds) ----
+  # ---- repoPath: derive from flake root path (self.sourceInfo.outPath) ----
   repoPath = let
-    pwd  = builtins.getEnv "PWD";
+    flakePath = builtins.toString self.sourceInfo.outPath;
     home = builtins.getEnv "HOME";
   in
-  if pwd != "" && home != ""
-  then builtins.substring (builtins.stringLength home + 1) (-1) pwd
+  if flakePath != "" && home != ""
+  then builtins.substring (builtins.stringLength home + 1) (-1) flakePath
   else "proj/angst";
 
   # ---- env overrides (require --impure) ----
@@ -83,15 +83,42 @@ in
     inherit repoPath;
 
     # resolved from scan (evaluated once here, not by builders)
-    scan = {
-      domains = import ../lib/domains/default.nix { ... };
-      themes = import ../themes/default.nix { ... };
-      allToolchainPackages = [ ... ];
-      treesitterGrammars = [ ... ];
-      capabilities = import ../capabilities/default.nix;
+    scan = let
+      domainsLib = import ../lib/domains/default.nix { inherit lib; domainsPath = ../domains; };
+      themesLib  = import ../themes/default.nix { inherit lib; };
+      toolchainDir = ../toolchains;
+      toolchainFiles = builtins.attrNames (
+        lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".nix" name && name != "default.nix")
+          (builtins.readDir toolchainDir)
+      );
+      evaluatedToolchains = map (f: import (toolchainDir + "/${f}") { inherit lib pkgs; }) toolchainFiles;
+      allGrammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or []) evaluatedToolchains);
+    in {
+      domains = domainsLib;
+      themes = themesLib;
+      allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or []) evaluatedToolchains);
+      treesitter = import ../lib/treesitter.nix { inherit lib pkgs; grammars = allGrammars; };
+      capabilities = import ../capabilities { };
     };
 
-    toolchainModules = [ ... ];  # resolved toolchain paths
+    # toolchain modules — resolved once based on config.toolchains
+    toolchainModules =
+      let
+        resolveOne = name: import (../toolchains + "/${name}.nix") { inherit lib pkgs; };
+        allNames = builtins.attrNames (
+          lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "default.nix")
+            (builtins.readDir ../toolchains)
+        );
+        bareNames = map (lib.removeSuffix ".nix") allNames;
+      in
+      if config.toolchains == "*" then map resolveOne bareNames
+      else if builtins.isList config.toolchains
+      then let
+        unknown = builtins.filter (n: !builtins.elem n bareNames) config.toolchains;
+      in if unknown != []
+        then builtins.throw "Unknown toolchains: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " bareNames}"
+        else map resolveOne config.toolchains
+      else builtins.throw "toolchains must be \"*\" or a list";
   };
 }
 ```
@@ -124,6 +151,8 @@ Domain custom modules (e.g., `domains/wm/i3/module.nix`) depend on `config.domai
   ];
 }
 ```
+
+> **Safety note:** The inline enable attrsets silently no-op if the domain option path changes (e.g., a rename of `i3` to `i3wm`). Consider adding a `lib/mkDomainEnable.nix` helper that validates domain names against `cfg.scan.domains.homeEntries` at eval time — e.g., `lib.mkDomainEnable "wm.i3"` which looks up the domain entry and returns the enable attrset, or throws with an available-list error if not found. This is optional but recommended for early failure.
 
 - Later profiles in the list override earlier ones (NixOS/HM module import order)
 - On **NixOS**: `mkHost.nix` applies both `hm` + `nixos` parts
@@ -163,28 +192,30 @@ No toolchain imports in profiles — toolchain selection is driven by `config.ni
 Imports the scan's `mkDomainModule` for all home entries (so domain options exist), plus infrastructure modules (`lib/home`, theme module, i3Fragments). Profile `hm` modules just enable the subset of domains the user wants.
 
 ```nix
-{ inputs, cfg, hmModules, vmTool, shellTool, angstTool }:
+{ inputs, cfg, hmModules, vmTool, shellTool, angstTool, themeOverride ? null }:
 
 let
   pkgs = import inputs.nixpkgs { system = cfg.system; config.allowUnfree = true; };
   lib = pkgs.lib;
 
+  effectiveTheme = if themeOverride != null then themeOverride else cfg.theme;
   userCfg = { username = cfg.username; homeDirectory = "/home/${cfg.username}"; };
 
   # all domain modules imported (enable defaults to false)
   appHomeModules = map cfg.scan.domains.mkDomainModule cfg.scan.domains.homeEntries;
 
   themeModule = import ../home/themeModule.nix {
-    inherit lib; themesLib = cfg.scan.themes; hostTheme = cfg.theme;
+    inherit lib; themesLib = cfg.scan.themes; hostTheme = effectiveTheme;
   };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   pkgs = pkgs;
 
   extraSpecialArgs = {
-    inherit (cfg) hostname theme monitors repoPath;
+    inherit (cfg) hostname monitors repoPath;
     inherit (cfg.scan) themes;
     userConfig = userCfg;
+    theme = effectiveTheme;
   };
 
   modules =
@@ -202,31 +233,33 @@ inputs.home-manager.lib.homeManagerConfiguration {
 
 #### `lib/build/mkHost.nix` — pure builder
 
-Same pattern as `mkHome.nix`: imports all domain NixOS modules from scan, then profile nixos modules on top. `hardware.nix` path is relative to flake root via `./../../local/hardware.nix`. Must pass `userConfig`/`repoPath` in `specialArgs` for `vm-variant.nix`, `host-mount.nix`, etc.
+Same pattern as `mkHome.nix`: imports all domain NixOS modules from scan, then profile nixos modules on top. `hardware.nix` path is derived from `self.sourceInfo.outPath + "/local/hardware.nix"` (relative path avoided for robustness). Must pass `userConfig`/`repoPath` in `specialArgs` for `vm-variant.nix`, `host-mount.nix`, etc.
 
 The NixOS-embedded HM config also imports domain home modules (via `mkDomainModule`), so domain enable options are available inside HM.
 
 ```nix
-{ inputs, cfg, hmModules, nixosModules }:
+{ inputs, self, cfg, hmModules, nixosModules, themeOverride ? null }:
 
 let
   pkgs = import inputs.nixpkgs { system = cfg.system; config.allowUnfree = true; };
   lib = pkgs.lib;
 
+  effectiveTheme = if themeOverride != null then themeOverride else cfg.theme;
   userCfg = { username = cfg.username; homeDirectory = "/home/${cfg.username}"; };
 
   appNixosModules = map cfg.scan.domains.mkNixosDomainModule cfg.scan.domains.nixosEntries;
   appHomeModules  = map cfg.scan.domains.mkDomainModule cfg.scan.domains.homeEntries;
 
   themeModule = import ../home/themeModule.nix {
-    inherit lib; themesLib = cfg.scan.themes; hostTheme = cfg.theme;
+    inherit lib; themesLib = cfg.scan.themes; hostTheme = effectiveTheme;
   };
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
-    inherit (cfg) hostname theme monitors repoPath;
+    inherit (cfg) hostname monitors repoPath;
     inherit (cfg.scan) themes;
     userConfig = userCfg;
+    theme = effectiveTheme;
   };
 
   modules =
@@ -234,7 +267,7 @@ inputs.nixpkgs.lib.nixosSystem {
     ++ nixosModules
     ++ appNixosModules
     ++ [ ../../lib/nixos ]
-    ++ (if builtins.pathExists ./../../local/hardware.nix then [ ./../../local/hardware.nix ] else [])
+    ++ (if builtins.pathExists (builtins.toString self.sourceInfo.outPath + "/local/hardware.nix") then [ (import (builtins.toString self.sourceInfo.outPath + "/local/hardware.nix")) ] else [])
     ++ (if cfg.extraNixos != {} then [ cfg.extraNixos ] else [])
     ++ [
       ({ lib, ... }: {
@@ -248,9 +281,10 @@ inputs.nixpkgs.lib.nixosSystem {
           backupFileExtension = "hm-backup";
 
           extraSpecialArgs = {
-            inherit (cfg) hostname theme monitors repoPath;
+            inherit (cfg) hostname monitors repoPath;
             inherit (cfg.scan) themes;
             userConfig = userCfg;
+            theme = effectiveTheme;
           };
 
           users.${cfg.username} = {
@@ -280,7 +314,7 @@ inputs.nixpkgs.lib.nixosSystem {
 
 #### `lib/outputs.nix` — single output file
 
-Replaces `lib/flake/default.nix` (397 LOC, fan-out 12). Checks are split into `lib/checks/default.nix` for readability; `outputs.nix` imports it and merges the result:
+Replaces `lib/flake/default.nix` (397 LOC, fan-out 12). Checks are split into `lib/checks/default.nix` for readability; shared inline tools (`vmRunShim`, `resWrapper`, `angstCli`, dev shell packages, `fullDevPackages`, `shellDevHook`) can live in `lib/shared/default.nix` to keep `outputs.nix` under 250 LOC. `outputs.nix` imports both and merges the result:
 
 ```nix
 { self, inputs, cfg, profiles }:
@@ -410,13 +444,13 @@ in rec {
       in
       mkHome {
         inherit inputs cfg hmModules vmTool shellTool angstTool;
-        extraHome = { theme = overrideTheme; };
+        themeOverride = overrideTheme;
       };
   };
 
   nixosConfigurations = {
-    current = mkHost { inherit inputs cfg hmModules nixosModules; };
-    "${cfg.hostname}" = mkHost { inherit inputs cfg hmModules nixosModules; };
+    current = mkHost { inherit inputs self cfg hmModules nixosModules; };
+    "${cfg.hostname}" = mkHost { inherit inputs self cfg hmModules nixosModules; };
   };
 
   packages = {
@@ -542,7 +576,8 @@ ______________________________________________________________________
   profiles = ["base" "desktop" "development"];
   toolchains = "*";  # or ["bash" "nix" "php"] for server
 
-  password = "CHANGE_ME";  # generated with `mkpasswd -m sha-512`
+  # Hashed password — NOT plaintext. Generate with: mkpasswd -m sha-512
+  password = "$6$CHANGE_ME_REPLACE_WITH_REAL_HASH";
 
   monitors.primary = {
     name = "DP-1";
@@ -602,7 +637,7 @@ Delete all dead code:
 | `user.env` | Replaced by `local/config.nix` |
 | `user.env.example` | Replaced by `local/config.nix` template |
 | `lib/checks/parseEnv.nix` | Env file format deleted |
-| Hardcoded `"proj/angst"` (16 files) | Auto-derived from `$PWD` in `resolve.nix` (fallback `"proj/angst"`) |
+| Hardcoded `"proj/angst"` (16 files) | Auto-derived from `self.sourceInfo.outPath` in `resolve.nix` (fallback `"proj/angst"`) |
 | Hardcoded `"x86_64-linux"` (5 files) | Centralized in `resolve.nix` |
 | Hardcoded `"allowUnfree"` (3 files) | Centralized in `resolve.nix` |
 
@@ -618,18 +653,12 @@ Files under `lib/virtualisation/` that are **kept** (referenced by `profiles/vm.
 | `vm-profile.nix` | VM runtime config |
 | `host-mount.nix` | Host mount symlinks |
 
-#### Tools that need updating
+#### Deferred — follow-up pass after core refactor
 
-These files still reference `ANGST_PASSWORD` or `user.env` from the old env-based flow and must be updated to read from `local/config.nix` instead:
-
-| File | What needs to change |
-|------|----------------------|
-| `tools/vm/flake.nix` | `res` script exports `ANGST_PASSWORD` from `user.env` — pull from config |
-| `lib/flake/shared.nix` | Same pattern as above (may be deleted in Phase 3) |
-| `tools/vm/crates/vm-cli/src/runner/vm.rs` | Rust runner reads `ANGST_PASSWORD` from env — pass via config |
-| `lib/checks/password.nix` | Tests the env-var flow — rewrite for `local/config.nix` |
-
-These are tracked here so they aren't forgotten, but can be deferred to a follow-up pass after the core refactor lands.
+- [ ] `tools/vm/flake.nix` — `res` script exports `ANGST_PASSWORD` from `user.env` → read from `local/config.nix`
+- [ ] `tools/vm/crates/vm-cli/src/runner/vm.rs` — Rust runner reads `ANGST_PASSWORD` from env → read from config
+- [ ] `lib/checks/password.nix` — rewrite tests for `local/config.nix`
+- [ ] `lib/checks/parseEnv.nix` — delete (no longer needed after env file format removed)
 
 ______________________________________________________________________
 
@@ -641,7 +670,7 @@ setup:
     read -s -p "Confirm password: " pass2; echo; \
     if [ "$$pass" != "$$pass2" ]; then echo "Passwords don't match"; exit 1; fi; \
     hash=$$(mkpasswd -m sha-512 <<<"$$pass"); \
-    sed -i "s/CHANGE_ME/$$hash/" local/config.nix
+    sed -i "s|\$6\$CHANGE_ME_REPLACE_WITH_REAL_HASH|$$hash|" local/config.nix
 
 disko:
     sudo nix run github:nix-community/disko -- --mode disko local/disk.nix
@@ -653,22 +682,22 @@ bootstrap: disko hardware
     @echo "Now write local/config.nix, run 'just setup', then 'just build'"
 
 build:
-    nix build .#nixosConfigurations.current
+    nix build --impure .#nixosConfigurations.current
 
 switch:
-    sudo nixos-rebuild switch --flake .#current
+    sudo nixos-rebuild switch --impure --flake .#current
 
 hm:
-    nix build .#homeConfigurations.current.activationPackage
+    nix build --impure .#homeConfigurations.current.activationPackage
 
 hm-switch:
-    nix build .#homeConfigurations.current.activationPackage && ./result/activate
+    nix build --impure .#homeConfigurations.current.activationPackage && ./result/activate
 
 check:
-    nix flake check
+    nix flake check --impure
 
 dev:
-    nix develop
+    nix develop --impure
 ```
 
 `current` aliases derive user/host from `local/config.nix` via `resolve.nix` — no shell env vars, no `$USER@$HOST` guesswork.
