@@ -41,18 +41,22 @@ Central config resolver. Single entry point that:
 
 ### Phase 2 — Unified profiles (`profiles/`)
 
-Each profile is a standard NixOS/HM module that enables a bundle of related domains, capabilities, and packages:
+Each profile is a standard NixOS/HM module that enables a bundle of related domains, capabilities, packages, and toolchains:
 
-- `profiles/base.nix` — shell, terminal, editor, toolchains (replaces `common/home.nix`)
+- `profiles/base.nix` — shell, terminal, editor, `bash`, `nix`, `conf` toolchains (replaces `common/home.nix`)
 - `profiles/desktop.nix` — i3, bar, rofi, ghostty, graphical capabilities
-- `profiles/development.nix` — git, LLMs, dev toolchains
-- `profiles/server.nix` — SSH, monitoring, minimal
+- `profiles/development.nix` — git, LLMs, **auto-scans all toolchains** (dynamic, like `toolchains/default.nix` does today)
+- `profiles/server.nix` — SSH, monitoring, `php`, `javascript` toolchains
 - `profiles/default.nix` — helper to resolve a list of profile names → module list
+
+Toolchains are explicitly imported per-profile (not auto-imported for every host). Profiles compose — `server.nix` only adds what `base.nix` doesn't already provide.
 
 Domain routing is already handled by `meta.building` — profiles just enable things and the existing system dispatches them correctly.
 
+The dev shell always includes **all toolchains** (full auto-scan), regardless of which profiles the host selects.
+
 **Files to create:** `profiles/` directory with modules
-**Files to remove:** `common/home.nix`, `common/capabilities.nix`, `common/user.nix`
+**Files to remove:** `common/` directory (home.nix, capabilities.nix, user.nix)
 
 ### Phase 3 — Pure builders
 
@@ -96,11 +100,13 @@ Split `lib/flake/default.nix` (397 LOC, fan-out 12) into focused submodules:
 - Move domain/theme/toolchain/capability scanning into `lib/scan/` (evaluate once, pass around)
 - Eliminate hardcoded `"proj/angst"`, `"x86_64-linux"`, `"allowUnfree"` into centralized constants in `lib/resolve.nix`
 - Remove `common/` directory
-- Optionally remove `hosts/` — config now lives in `local/config.nix` or profiles
+- Remove `hosts/` directory — config now lives in `local/config.nix` or profiles
+- Remove `user.env` + `user.env.example`
 
 ### Invariants
 
 - `local/config.nix` is **never tracked by git**
 - Profiles are pure NixOS/HM modules — no special framework required
 - Existing domain, theme, capability, toolchain structure is untouched
+- Dev shell always has all toolchains available regardless of profile selection
 - `flake.nix` stays thin — just inputs + output wiring
