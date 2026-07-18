@@ -6,18 +6,9 @@ use tokio::{process::Command, time};
 use vm_core::process::io::StateManager;
 use vm_core::{SshEngine, VmConfig, VmProcessController};
 
-fn read_env_value(key: &str) -> Option<String> {
-    let paths = [
-        env::var("ANGST_REPO")
-            .ok()
-            .map(|p| Path::new(&p).join("user.env")),
-        env::current_dir().ok().map(|d| d.join("user.env")),
-    ];
-    for path in paths.iter().flatten() {
-        if let Some(val) = read_from_env_file(path, key) {
-            return Some(val);
-        }
-    }
+fn read_env_value(_key: &str) -> Option<String> {
+    // Config is now passed via environment variables from the bash wrapper
+    // (e.g., ANGST_PASSWORD). No file-based fallback needed.
     None
 }
 

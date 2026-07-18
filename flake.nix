@@ -18,154 +18,16 @@
     };
   };
 
-  outputs =
-    {
-      self,
-      nixpkgs,
-      vm,
-      shell,
-      ...
-    }@inputs:
+  outputs = { self, nixpkgs, home-manager, vm, shell, ... }@inputs:
     let
-      hosts = import ./lib/build/scanHosts.nix inputs;
-
-      env = {
-        inherit inputs;
-
-        flakeSelf = self;
-
-        loadHost = hostname: import (./hosts + "/${hostname}");
-      };
-
-      system = "x86_64-linux";
-
-      pkgs = import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-      };
-
-      vmOutputs = vm.mkOutputs self;
-      shellOutputs = shell.mkOutputs self;
-
-      domainsLib = import ./lib/domains/default.nix {
-        inherit (pkgs) lib;
-        domainsPath = ./domains;
-      };
-      shellEntries = builtins.filter (e: e.category == "shell") domainsLib.homeEntries;
-      commonHomeEnables = import ./common/home.nix { };
-      enabledShellEntries = builtins.filter (
-        e:
-        (e.meta.interactive or false)
-        && pkgs.lib.attrByPath [ "domains" "shell" e.name "enable" ] false commonHomeEnables
-      ) shellEntries;
-      hostShellBinPaths = pkgs.lib.concatStringsSep ":" (
-        map (e: "${pkgs.${e.meta.package}}/bin/${e.meta.binary}") enabledShellEntries
-      );
-
-      shared = import ./lib/flake/shared.nix {
-        inherit
-          pkgs
-          shellOutputs
-          vmOutputs
-          system
-          hostShellBinPaths
-          ;
-        inherit (pkgs) lib;
-        defaultHost = builtins.head hosts;
-      };
-
-      homeLib = import ./lib/build/mkHome.nix (
-        env
-        // {
-          vmTool = vmOutputs.packages.${system}.default;
-          inherit (shared) shellTool;
-          angstTool = shared.angstCli;
-        }
-      );
-
-      mkHost = import ./lib/build/mkHost.nix (
-        env
-        // {
-          inherit (homeLib) mkHomeProfile;
-          flakeSelf = self;
-        }
-      );
-
-      inherit (homeLib) mkHome mkHomeWithExtraModules;
-
-      flakeLib = import ./lib/flake/default.nix {
-        inherit
-          self
-          system
-          pkgs
-          hosts
-          mkHome
-          mkHomeWithExtraModules
-          hostShellBinPaths
-          ;
-        inherit vmOutputs shellOutputs;
-        inherit (env) loadHost;
-        inherit (pkgs) lib;
+      pure  = import ./lib/read-config.nix { inherit inputs self; };
+      cfg   = pure.cfg;
+      pkgs  = import nixpkgs { system = cfg.system; config.allowUnfree = true; };
+      profiles = import ./lib/profiles.nix {
+        inherit (cfg) profiles;
+        lib = pkgs.lib;
+        scan = cfg.scan;
       };
     in
-    {
-      nixosConfigurations =
-        let
-          parseEnv = import ./lib/parseEnv.nix { inherit (nixpkgs) lib; };
-          envPath = ./user.env;
-          pwd = builtins.getEnv "PWD";
-          pwdEnvPath = if pwd != "" then pwd + "/user.env" else "";
-          homeEnvPath = builtins.getEnv "HOME" + "/proj/angst/user.env";
-          userEnv =
-            let
-              fromFile =
-                if builtins.pathExists envPath then
-                  parseEnv envPath
-                else if builtins.pathExists homeEnvPath then
-                  parseEnv homeEnvPath
-                else if pwdEnvPath != "" && builtins.pathExists pwdEnvPath then
-                  parseEnv pwdEnvPath
-                else
-                  { };
-            in
-            fromFile
-            // (
-              let
-                h = builtins.getEnv "ANGST_HOST";
-              in
-              if h != "" then { HOST = h; } else { }
-            );
-          configs = nixpkgs.lib.genAttrs (builtins.filter (
-            h: builtins.pathExists (./hosts + "/${h}/configuration.nix")
-          ) hosts) mkHost;
-        in
-        configs
-        // {
-          default =
-            let
-              hostname = userEnv.HOST or (builtins.head hosts);
-            in
-            configs.${hostname}
-              or (throw "HOST '${hostname}' not found. Available: ${toString (builtins.attrNames configs)}");
-        };
-
-      inherit (flakeLib)
-        homeConfigurations
-        checks
-        packages
-        apps
-        devShells
-        ;
-
-      formatter.${system} = pkgs.nixfmt;
-
-      lib = {
-        inherit (flakeLib)
-          themeLint
-          renderDomainOutputsFor
-          renderDomainOutputPathsFor
-          renderDomainOutputFor
-          ;
-      };
-    };
+    import ./lib/outputs.nix { inherit self inputs cfg profiles; };
 }

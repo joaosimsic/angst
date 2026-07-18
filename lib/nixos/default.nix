@@ -2,6 +2,7 @@
   lib,
   pkgs,
   userConfig,
+  hostname ? "nixos",
   ...
 }:
 
@@ -19,6 +20,7 @@
   i18n.defaultLocale = lib.mkDefault "en_US.UTF-8";
 
   networking.networkmanager.enable = true;
+  networking.hostName = lib.mkDefault hostname;
 
   nix.settings.experimental-features = [
     "nix-command"
@@ -35,11 +37,6 @@
       "video"
       "audio"
     ];
-    hashedPassword = lib.mkDefault (
-      let envPass = builtins.getEnv "ANGST_PASSWORD"; in
-      if envPass != "" then envPass
-      else null
-    );
     shell = pkgs.nushell;
   };
 

@@ -43,6 +43,7 @@ in
     '';
 
     home.activation.renderDomainConfigs = lib.hm.dag.entryAfter [ "seedAngstRepo" ] ''
+      ANGST_REPO=${lib.escapeShellArg hostSrc}
       JSON_DATA=$(${lib.getBin pkgs.nix}/bin/nix eval --impure \
         "${flakeSelf}#lib.renderDomainOutputsFor" \
         --apply "f: builtins.toJSON (f \"${hostName}\" \"${config.theme}\")" \

@@ -1,88 +1,74 @@
-{
-  inputs,
-  loadHost,
-  mkHomeProfile,
-  flakeSelf,
-  ...
-}:
+{ inputs, self, cfg, hmModules, nixosModules, themeOverride ? null }:
 
-hostname:
 let
-  hostConfig = loadHost hostname;
+  pkgs = import inputs.nixpkgs { system = cfg.system; config.allowUnfree = true; };
+  lib = pkgs.lib;
 
-  parseEnv = import ../parseEnv.nix { lib = inputs.nixpkgs.lib; };
-  envPath = ../../user.env;
-  userEnv = if builtins.pathExists envPath then parseEnv envPath else { };
+  effectiveTheme = if themeOverride != null then themeOverride else cfg.theme;
+  userCfg = { username = cfg.username; homeDirectory = "/home/${cfg.username}"; };
 
-  effectiveUsername = let
-    envUser = builtins.getEnv "ANGST_USERNAME";
-  in
-    if envUser != "" then envUser
-    else hostConfig.user.username;
-  effectiveUserConfig = hostConfig.user // {
-    username = effectiveUsername;
-    homeDirectory = "/home/${effectiveUsername}";
+  appNixosModules = map cfg.scan.domains.mkNixosDomainModule cfg.scan.domains.nixosEntries;
+  appHomeModules  = map cfg.scan.domains.mkDomainModule cfg.scan.domains.homeEntries;
+
+  themeModule = import ../home/themeModule.nix {
+    inherit lib; themesLib = cfg.scan.themes; hostTheme = effectiveTheme;
   };
-  effectiveTheme = let
-    envTheme = builtins.getEnv "ANGST_THEME";
-  in
-    if envTheme != "" then envTheme
-    else userEnv.THEME or hostConfig.theme or "monochrome";
-
-  capabilities = import ../../capabilities { };
-  profile = mkHomeProfile hostname;
-
-  domainsLib = import ../domains/default.nix {
-    inherit (inputs.nixpkgs) lib;
-    domainsPath = ../../domains;
-  };
-  domainNixosModules = map domainsLib.mkNixosDomainModule domainsLib.nixosEntries;
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
-    inherit
-      inputs
-      hostname
-      capabilities
-      flakeSelf
-      userEnv
-      ;
-
-    userConfig = effectiveUserConfig;
-
-    monitors = hostConfig.monitors or { };
-
+    inherit (cfg) hostname monitors repoPath;
+    inherit (cfg.scan) themes;
+    themesLib = cfg.scan.themes;
+    hostName = cfg.hostname;
+    flakeSelf = self;
+    userConfig = userCfg;
     theme = effectiveTheme;
-
-    repoPath = hostConfig.repoPath or "proj/angst";
   };
 
-  modules = [
-    { nixpkgs.hostPlatform = hostConfig.system; }
-    ../../lib/nixos
-    ../../hosts/${hostname}/configuration.nix
-    inputs.home-manager.nixosModules.home-manager
-    {
-      home-manager = {
-        useGlobalPkgs = true;
-        useUserPackages = true;
-        backupFileExtension = "hm-backup";
-        inherit (profile) extraSpecialArgs;
-        users.${effectiveUsername} = {
-          imports = profile.modules;
-        };
-      };
-    }
+  modules =
+    [ { nixpkgs.hostPlatform = cfg.system; } ]
+    ++ nixosModules
+    ++ appNixosModules
+    ++ [ ../../lib/nixos ]
+    ++ (if builtins.pathExists "${toString self}/local/hardware.nix" then [ (import "${toString self}/local/hardware.nix") ] else [])
+    ++ (if cfg.extraNixos != {} then [ cfg.extraNixos ] else [])
+    ++ [
+      ({ lib, ... }: {
+        users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password;
+      })
 
-    
-    
-    ({ config, lib, ... }: {
-      systemd.services."home-manager-${effectiveUsername}".before = lib.mkIf (!config.angst.isQemuVm) [
-        "getty@.service"
-        "serial-getty@.service"
-      ];
-    })
-  ]
-  ++ builtins.attrValues capabilities
-  ++ domainNixosModules;
+      inputs.home-manager.nixosModules.home-manager {
+        home-manager = {
+          useGlobalPkgs = true;
+          useUserPackages = true;
+          backupFileExtension = "hm-backup";
+
+          extraSpecialArgs = {
+            inherit (cfg) hostname monitors repoPath;
+            inherit (cfg.scan) themes;
+            themesLib = cfg.scan.themes;
+            hostName = cfg.hostname;
+            flakeSelf = self;
+            userConfig = userCfg;
+            theme = effectiveTheme;
+          };
+
+          users.${cfg.username} = {
+            imports =
+              [ ../../lib/home ]
+              ++ [ themeModule ../../lib/home/i3Fragments.nix ]
+              ++ appHomeModules     # domain modules (so enable options exist)
+              ++ hmModules          # profile enable modules
+              ++ cfg.toolchainModules;
+          };
+        };
+      }
+
+      ({ config, lib, ... }: {
+        systemd.services."home-manager-${cfg.username}".before =
+          lib.mkIf (!config.angst.isQemuVm) [
+            "getty@.service" "serial-getty@.service"
+          ];
+      })
+    ];
 }
