@@ -14,7 +14,9 @@ let
         if h != "" then h + "/proj/angst/local/config.nix" else "";
       fromHost9p = let h = builtins.getEnv "HOME"; in
         if h != "" then "/host${h}/proj/angst/local/config.nix" else "";
-      candidates = lib.filter (p: p != "" && builtins.pathExists p) [ fromEnv fromPwd fromHome fromHost9p ];
+      fromExample = let p = builtins.getEnv "PWD"; in
+        if p != "" then p + "/local/config.nix.example" else "";
+      candidates = lib.filter (p: p != "" && builtins.pathExists p) [ fromEnv fromPwd fromHome fromHost9p fromExample ];
     in
     if candidates != [] then builtins.head candidates
     else builtins.throw ''

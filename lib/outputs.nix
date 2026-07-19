@@ -80,7 +80,7 @@ in rec {
     ''}"; };
   };
 
-  checks = mkChecks;
+  checks.${cfg.system} = mkChecks;
 
   formatter.${cfg.system} = pkgs.nixfmt;
 
