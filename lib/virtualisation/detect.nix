@@ -2,7 +2,7 @@
   lib,
   flakeSelf ? null,
   userConfig ? null,
-  repoPath ? "proj/angst",
+  repoPath,
   ...
 }:
 

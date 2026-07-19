@@ -1,4 +1,4 @@
-{ inputs, self, cfg, hmModules, vmTool, shellTool, angstTool, themeOverride ? null }:
+{ inputs, cfg, hmModules, vmTool, shellTool, angstTool, themeOverride ? null }:
 
 let
   pkgs = import inputs.nixpkgs { system = cfg.system; config.allowUnfree = true; };
@@ -20,9 +20,6 @@ inputs.home-manager.lib.homeManagerConfiguration {
   extraSpecialArgs = {
     inherit (cfg) hostname monitors repoPath;
     inherit (cfg.scan) themes;
-    themesLib = cfg.scan.themes;
-    hostName = cfg.hostname;
-    flakeSelf = self;
     userConfig = userCfg;
     theme = effectiveTheme;
   };

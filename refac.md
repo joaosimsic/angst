@@ -761,7 +761,7 @@ Files under `lib/virtualisation/` that are **kept** (referenced by `profiles/vm.
 
 #### Deferred — follow-up pass after core refactor
 
-- [ ] `lib/checks/password.nix` — rewrite tests for `local/config.nix` (env var test replaced, CLI test removed)
+- [x] `lib/checks/password.nix` — rewrite tests for `local/config.nix` (env var test replaced, CLI test removed)
 
 > **Known:`nix flake check` will show `check-password` as failed after Phase 2** since it tests the old `angst passwd` CLI and `user.env` file. The failure is non-fatal (doesn't block builds). Rewrite `lib/checks/password.nix` before considering the refactor finished.
 
@@ -836,14 +836,14 @@ ______________________________________________________________________
 
 Issues found during evaluation that diverge from the plan or are incomplete:
 
-- [ ] **`lib/read-config.nix`** — config path resolution uses `builtins.getEnv` (`ANGST_REPO`, `PWD`, `HOME`) instead of plain `builtins.pathExists ../local/config.nix` with a throw. The plan specifies "no `builtins.getEnv`". Revert to the spec's single-line path check.
-- [ ] **`lib/build/mkHost.nix`** — hardware path resolution (lines 18-29) uses `builtins.getEnv` chain (`ANGST_REPO`, `PWD`, `HOME`, `/host$HOME`) instead of `${toString self}/local/hardware.nix` with `builtins.pathExists` as specified.
-- [ ] **`lib/build/mkHome.nix`** — accepts `self` parameter not in spec; `extraSpecialArgs` exposes `themesLib`, `hostName`, `flakeSelf` beyond the spec's `hostname monitors repoPath themes userConfig theme`.
-- [ ] **`lib/build/mkHost.nix`** — same extra params as mkHome. Plan's interface: `{ inputs, self, cfg, hmModules, nixosModules, themeOverride ? null }`. Current adds extra special args.
-- [ ] **`lib/outputs.nix`** — passes `self` to `mkHome`/`mkHost` (plan didn't specify this); `checks` are wrapped in `checks.${cfg.system}` instead of bare `checks`.
-- [ ] **`lib/virtualisation/detect.nix:5`** — still has hardcoded `repoPath ? "proj/angst"`. Should receive `repoPath` from `specialArgs` (already passed by `mkHost.nix`).
-- [ ] **`lib/virtualisation/is-qemu-vm.nix:5`** — still has hardcoded `repoPath ? "proj/angst"`. Same fix as above.
-- [ ] **`justfile` `setup` recipe** — sed replaces `$6$CHANGE_ME_REPLACE_WITH_REAL_HASH` but `local/config.nix.example` uses `$6$CI_DUMMY_SALT$CI_DUMMY_HASH_VALUE_FOR_TESTING_ONLY`. Align the placeholder or the sed command.
-- [ ] **`tools/vm/crates/vm-cli/src/runner/vm.rs`** — dead `read_from_env_file` function (lines 15-32). Remove or mark `#[allow(dead_code)]`.
-- [ ] **`tools/shell/src/runner.rs`** — dead `read_from_env_file` function (lines 63-80). Same as above.
-- [ ] **`lib/checks/password.nix`** — rewrite tests for `local/config.nix` (was deferred in plan, marked `[ ]`). Verify it actually works with current `cfg.password` from `read-config.nix`. (Check: it does work — `cfg.password` is used, no `user.env` dependency. The deferred checkbox just needs ticking.)
+- [x] **`lib/read-config.nix`** — config path resolution uses `builtins.getEnv` (`ANGST_REPO`, `PWD`, `HOME`) instead of plain `builtins.pathExists ../local/config.nix` with a throw. The plan specifies "no `builtins.getEnv`". Revert to the spec's single-line path check.
+- [x] **`lib/build/mkHost.nix`** — hardware path resolution (lines 18-29) uses `builtins.getEnv` chain (`ANGST_REPO`, `PWD`, `HOME`, `/host$HOME`) instead of `${toString self}/local/hardware.nix` with `builtins.pathExists` as specified.
+- [x] **`lib/build/mkHome.nix`** — accepts `self` parameter not in spec; `extraSpecialArgs` exposes `themesLib`, `hostName`, `flakeSelf` beyond the spec's `hostname monitors repoPath themes userConfig theme`.
+- [x] **`lib/build/mkHost.nix`** — same extra params as mkHome. Plan's interface: `{ inputs, self, cfg, hmModules, nixosModules, themeOverride ? null }`. Current adds extra special args.
+- [x] **`lib/outputs.nix`** — passes `self` to `mkHome`/`mkHost` (plan didn't specify this); `checks` are wrapped in `checks.${cfg.system}` instead of bare `checks`.
+- [x] **`lib/virtualisation/detect.nix:5`** — still has hardcoded `repoPath ? "proj/angst"`. Should receive `repoPath` from `specialArgs` (already passed by `mkHost.nix`).
+- [x] **`lib/virtualisation/is-qemu-vm.nix:5`** — still has hardcoded `repoPath ? "proj/angst"`. Same fix as above.
+- [x] **`justfile` `setup` recipe** — sed replaces `$6$CHANGE_ME_REPLACE_WITH_REAL_HASH` but `local/config.nix.example` uses `$6$CI_DUMMY_SALT$CI_DUMMY_HASH_VALUE_FOR_TESTING_ONLY`. Align the placeholder or the sed command.
+- [x] **`tools/vm/crates/vm-cli/src/runner/vm.rs`** — dead `read_from_env_file` function (lines 15-32). Remove or mark `#[allow(dead_code)]`.
+- [x] **`tools/shell/src/runner.rs`** — dead `read_from_env_file` function (lines 63-80). Same as above.
+- [x] **`lib/checks/password.nix`** — rewrite tests for `local/config.nix` (was deferred in plan, marked `[ ]`). Verify it actually works with current `cfg.password` from `read-config.nix`. (Check: it does work — `cfg.password` is used, no `user.env` dependency. The deferred checkbox just needs ticking.)

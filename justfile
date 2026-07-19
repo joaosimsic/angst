@@ -3,7 +3,7 @@ setup:
     read -s -p "Confirm password: " pass2; echo; \
     if [ "$$pass" != "$$pass2" ]; then echo "Passwords don't match"; exit 1; fi; \
     hash=$$(mkpasswd -m sha-512 <<<"$$pass"); \
-    sed -i "s|\$6\$CHANGE_ME_REPLACE_WITH_REAL_HASH|$$hash|" local/config.nix
+    sed -i "s|\$6\$CI_DUMMY_SALT\$CI_DUMMY_HASH_VALUE_FOR_TESTING_ONLY|$$hash|" local/config.nix
 
 
 disko:

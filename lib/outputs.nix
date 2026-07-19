@@ -29,15 +29,15 @@ let
   };
 in rec {
   homeConfigurations = {
-    current = mkHome { inherit self inputs cfg hmModules vmTool shellTool angstTool; };
-    "${cfg.username}@${cfg.hostname}" = mkHome { inherit self inputs cfg hmModules vmTool shellTool angstTool; };
+    current = mkHome { inherit inputs cfg hmModules vmTool shellTool angstTool; };
+    "${cfg.username}@${cfg.hostname}" = mkHome { inherit inputs cfg hmModules vmTool shellTool angstTool; };
   } // {
     "${cfg.username}-theme-override-test" =
       let
         overrideTheme = builtins.head (builtins.filter (n: n != cfg.theme) (builtins.attrNames cfg.scan.themes.themes));
       in
       mkHome {
-        inherit self inputs cfg hmModules vmTool shellTool angstTool;
+        inherit inputs cfg hmModules vmTool shellTool angstTool;
         themeOverride = overrideTheme;
       };
   };
@@ -67,8 +67,8 @@ in rec {
     watch = { type = "app"; program = "${pkgs.writeShellScript "angst-watch" ''exec ${angstTool}/bin/angst watch "$@"''}"; };
     check = { type = "app"; program = "${pkgs.writeShellScript "check" ''set -euo pipefail; ${pkgs.nix}/bin/nix flake check --print-build-logs''}"; };
     lint-themes = { type = "app"; program = "${pkgs.writeShellScript "lint-themes" ''set -euo pipefail; ${pkgs.nix}/bin/nix eval ${self}#lib.themeLint --raw''}"; };
-    lint-desktop = { type = "app"; program = "${pkgs.writeShellScript "lint-desktop" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${cfg.system}.lint-desktop --no-link --print-build-logs; echo "All desktop config checks passed."''}"; };
-    lint-shell = { type = "app"; program = "${pkgs.writeShellScript "lint-shell" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${cfg.system}.lint-shell --no-link --print-build-logs; echo "All shell config checks passed."''}"; };
+    lint-desktop = { type = "app"; program = "${pkgs.writeShellScript "lint-desktop" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.lint-desktop --no-link --print-build-logs; echo "All desktop config checks passed."''}"; };
+    lint-shell = { type = "app"; program = "${pkgs.writeShellScript "lint-shell" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.lint-shell --no-link --print-build-logs; echo "All shell config checks passed."''}"; };
     analyze = { type = "app"; program = "${pkgs.writeShellScript "analyze" ''exec python3 -m scripts.analyze_flake "$@"''}"; };
     analyze-to-file = { type = "app"; program = "${pkgs.writeShellScript "analyze-to-file" ''cd "$(git rev-parse --show-toplevel)" && exec python3 -m scripts.analyze_flake --output analysis.md "$@"''}"; };
     ssh = { type = "app"; program = "${pkgs.writeShellScript "angst-ssh-deploy" ''
@@ -80,7 +80,7 @@ in rec {
     ''}"; };
   };
 
-  checks.${cfg.system} = mkChecks;
+  checks = mkChecks;
 
   formatter.${cfg.system} = pkgs.nixfmt;
 

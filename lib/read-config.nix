@@ -3,31 +3,9 @@
 let
   lib = inputs.nixpkgs.lib;
 
-  # Resolve local/config.nix from the real filesystem (gitignored, not in Nix store)
-  configPath =
-    let
-      fromEnv = let r = builtins.getEnv "ANGST_REPO"; in
-        if r != "" then r + "/local/config.nix" else "";
-      fromPwd = let p = builtins.getEnv "PWD"; in
-        if p != "" then p + "/local/config.nix" else "";
-      fromHome = let h = builtins.getEnv "HOME"; in
-        if h != "" then h + "/proj/angst/local/config.nix" else "";
-      fromHost9p = let h = builtins.getEnv "HOME"; in
-        if h != "" then "/host${h}/proj/angst/local/config.nix" else "";
-      fromExample = let p = builtins.getEnv "PWD"; in
-        if p != "" then p + "/local/config.nix.example" else "";
-      candidates = lib.filter (p: p != "" && builtins.pathExists p) [ fromEnv fromPwd fromHome fromHost9p fromExample ];
-    in
-    if candidates != [] then builtins.head candidates
-    else builtins.throw ''
-      local/config.nix not found.
-
-      Create it by copying the template:
-        cp local/config.nix.example local/config.nix
-        # then edit local/config.nix with your settings
-
-      Or set ANGST_REPO to the repo root path.
-    '';
+  configPath = if builtins.pathExists ../local/config.nix
+               then ../local/config.nix
+               else builtins.throw "Create local/config.nix (see local/config.nix.example)";
 
   config = import configPath;
   system = config.system or "x86_64-linux";

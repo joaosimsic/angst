@@ -15,26 +15,13 @@ let
   };
 
   hardwarePath =
-    let
-      fromEnv = let r = builtins.getEnv "ANGST_REPO"; in
-        if r != "" then r + "/local/hardware.nix" else "";
-      fromPwd = let p = builtins.getEnv "PWD"; in
-        if p != "" then p + "/local/hardware.nix" else "";
-      fromHome = let h = builtins.getEnv "HOME"; in
-        if h != "" then h + "/proj/angst/local/hardware.nix" else "";
-      fromHost9p = let h = builtins.getEnv "HOME"; in
-        if h != "" then "/host${h}/proj/angst/local/hardware.nix" else "";
-      candidates = lib.filter (p: p != "" && builtins.pathExists p) [ fromEnv fromPwd fromHome fromHost9p ];
-    in
-    if candidates != [] then builtins.head candidates else null;
+    let p = "${toString self}/local/hardware.nix";
+    in if builtins.pathExists p then p else null;
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
     inherit (cfg) hostname monitors repoPath;
     inherit (cfg.scan) themes;
-    themesLib = cfg.scan.themes;
-    hostName = cfg.hostname;
-    flakeSelf = self;
     userConfig = userCfg;
     theme = effectiveTheme;
   };
@@ -60,9 +47,6 @@ inputs.nixpkgs.lib.nixosSystem {
           extraSpecialArgs = {
             inherit (cfg) hostname monitors repoPath;
             inherit (cfg.scan) themes;
-            themesLib = cfg.scan.themes;
-            hostName = cfg.hostname;
-            flakeSelf = self;
             userConfig = userCfg;
             theme = effectiveTheme;
           };
