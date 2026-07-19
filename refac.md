@@ -829,3 +829,21 @@ ______________________________________________________________________
 - `repoPath` is an explicit field in `local/config.nix` (not auto-derived) — each machine declares its own checkout path
 - `vmRunShim`/`resWrapper` live in `tools/vm` and `tools/shell` flakes, not inlined in the main flake output
 - `outputs.nix` stays under 150 LOC by splitting dev shells (`devshell.nix`), renders (`render.nix`), tools (`tools.nix`), and checks (`checks/default.nix`) into separate files
+
+______________________________________________________________________
+
+## Post-implementation fixes
+
+Issues found during evaluation that diverge from the plan or are incomplete:
+
+- [ ] **`lib/read-config.nix`** — config path resolution uses `builtins.getEnv` (`ANGST_REPO`, `PWD`, `HOME`) instead of plain `builtins.pathExists ../local/config.nix` with a throw. The plan specifies "no `builtins.getEnv`". Revert to the spec's single-line path check.
+- [ ] **`lib/build/mkHost.nix`** — hardware path resolution (lines 18-29) uses `builtins.getEnv` chain (`ANGST_REPO`, `PWD`, `HOME`, `/host$HOME`) instead of `${toString self}/local/hardware.nix` with `builtins.pathExists` as specified.
+- [ ] **`lib/build/mkHome.nix`** — accepts `self` parameter not in spec; `extraSpecialArgs` exposes `themesLib`, `hostName`, `flakeSelf` beyond the spec's `hostname monitors repoPath themes userConfig theme`.
+- [ ] **`lib/build/mkHost.nix`** — same extra params as mkHome. Plan's interface: `{ inputs, self, cfg, hmModules, nixosModules, themeOverride ? null }`. Current adds extra special args.
+- [ ] **`lib/outputs.nix`** — passes `self` to `mkHome`/`mkHost` (plan didn't specify this); `checks` are wrapped in `checks.${cfg.system}` instead of bare `checks`.
+- [ ] **`lib/virtualisation/detect.nix:5`** — still has hardcoded `repoPath ? "proj/angst"`. Should receive `repoPath` from `specialArgs` (already passed by `mkHost.nix`).
+- [ ] **`lib/virtualisation/is-qemu-vm.nix:5`** — still has hardcoded `repoPath ? "proj/angst"`. Same fix as above.
+- [ ] **`justfile` `setup` recipe** — sed replaces `$6$CHANGE_ME_REPLACE_WITH_REAL_HASH` but `local/config.nix.example` uses `$6$CI_DUMMY_SALT$CI_DUMMY_HASH_VALUE_FOR_TESTING_ONLY`. Align the placeholder or the sed command.
+- [ ] **`tools/vm/crates/vm-cli/src/runner/vm.rs`** — dead `read_from_env_file` function (lines 15-32). Remove or mark `#[allow(dead_code)]`.
+- [ ] **`tools/shell/src/runner.rs`** — dead `read_from_env_file` function (lines 63-80). Same as above.
+- [ ] **`lib/checks/password.nix`** — rewrite tests for `local/config.nix` (was deferred in plan, marked `[ ]`). Verify it actually works with current `cfg.password` from `read-config.nix`. (Check: it does work — `cfg.password` is used, no `user.env` dependency. The deferred checkbox just needs ticking.)
