@@ -1,0 +1,40 @@
+# local/config.nix.example — machine identity template
+#
+# Copy to local/config.nix and fill in your values.
+# local/ is gitignored — it won't be tracked or overwritten by git pull.
+#
+# Generate password hash:
+#   mkpasswd -m sha-512
+# Then paste the hash as the password value below.
+#
+# repoPath: relative path from $HOME to this git checkout.
+#   The activation scripts resolve config dirs from $HOME/$repoPath.
+#   On NixOS this is typically "proj/angst".
+#   Verify with: git rev-parse --show-prefix
+#
+# toolchains: "*" for all, or a list like ["bash" "nix" "php"]
+#             for a minimal server setup.
+{
+  system = "x86_64-linux";
+  repoPath = "proj/angst";
+  hostname = "personal";
+  username = "joao";
+  theme = "miasma";
+  profiles = ["base" "desktop" "development"];
+  toolchains = "*";
+
+  # Hashed password — NOT plaintext. Generate with: mkpasswd -m sha-512
+  password = "$6$CI_DUMMY_SALT$CI_DUMMY_HASH_VALUE_FOR_TESTING_ONLY";
+
+  monitors = {
+    primary = {
+      name = "DP-1";
+      resolution = "1920x1080";
+      refreshRate = 144;
+      position = "0x0";
+    };
+  };
+
+  nixos = {};  # one-off NixOS config (replaces host-specific configuration.nix)
+  home = {};   # one-off HM config (replaces host-specific home.nix)
+}

@@ -15,5 +15,5 @@ user.env
 *.log
 __pycache__
 node_modules
-local/
+local/*
 !local/config.nix.example
