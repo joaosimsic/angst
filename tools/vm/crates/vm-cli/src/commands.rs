@@ -24,6 +24,8 @@ pub enum Commands {
         lines: u32,
     },
     Ssh {
+        #[arg(short = 't', long = "tty", help = "Force pseudo-terminal allocation")]
+        tty: bool,
         #[arg(last = true)]
         args: Vec<String>,
     },

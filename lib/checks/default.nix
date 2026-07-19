@@ -41,9 +41,12 @@ let
     homeConfiguration = self.homeConfigurations."${cfg.username}-theme-override-test";
   };
 
-  # check-password: deferred to Phase 3 (needs rewrite for local/config.nix)
+  checkPassword = import ./password.nix {
+    inherit lib pkgs cfg;
+  };
 in
 {
+  check-password          = checkPassword;
   lint-themes           = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop          = lintDesktop;
   lint-shell            = lintShell;

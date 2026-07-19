@@ -13,6 +13,20 @@ let
   themeModule = import ../home/themeModule.nix {
     inherit lib; themesLib = cfg.scan.themes; hostTheme = effectiveTheme;
   };
+
+  hardwarePath =
+    let
+      fromEnv = let r = builtins.getEnv "ANGST_REPO"; in
+        if r != "" then r + "/local/hardware.nix" else "";
+      fromPwd = let p = builtins.getEnv "PWD"; in
+        if p != "" then p + "/local/hardware.nix" else "";
+      fromHome = let h = builtins.getEnv "HOME"; in
+        if h != "" then h + "/proj/angst/local/hardware.nix" else "";
+      fromHost9p = let h = builtins.getEnv "HOME"; in
+        if h != "" then "/host${h}/proj/angst/local/hardware.nix" else "";
+      candidates = lib.filter (p: p != "" && builtins.pathExists p) [ fromEnv fromPwd fromHome fromHost9p ];
+    in
+    if candidates != [] then builtins.head candidates else null;
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
@@ -30,7 +44,7 @@ inputs.nixpkgs.lib.nixosSystem {
     ++ nixosModules
     ++ appNixosModules
     ++ [ ../../lib/nixos ]
-    ++ (if builtins.pathExists "${toString self}/local/hardware.nix" then [ (import "${toString self}/local/hardware.nix") ] else [])
+    ++ (if hardwarePath != null then [ (import hardwarePath) ] else [])
     ++ (if cfg.extraNixos != {} then [ cfg.extraNixos ] else [])
     ++ [
       ({ lib, ... }: {

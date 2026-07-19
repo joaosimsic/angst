@@ -350,7 +350,7 @@ pub fn status(ssh: &SshEngine) -> Result<(), String> {
     Ok(())
 }
 
-pub fn ssh(args: Vec<String>) -> Result<(), String> {
+pub fn ssh(tty: bool, args: Vec<String>) -> Result<(), String> {
     use std::process::Command;
 
     let config = VmConfig::load();
@@ -368,8 +368,13 @@ pub fn ssh(args: Vec<String>) -> Result<(), String> {
         .arg("-o")
         .arg("LogLevel=ERROR")
         .arg("-o")
-        .arg("ForwardAgent=yes")
-        .arg(format!("{}@127.0.0.1", config.ssh_user));
+        .arg("ForwardAgent=yes");
+
+    if tty {
+        cmd.arg("-t");
+    }
+
+    cmd.arg(format!("{}@127.0.0.1", config.ssh_user));
 
     if !args.is_empty() {
         cmd.args(args);
