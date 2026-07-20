@@ -6,7 +6,7 @@ NixOS + home-manager flake for a theme-driven, hot-reloadable desktop environmen
 
 ```
 @capabilities/     opt-in NixOS system-level feature modules
-@core/             shared base layer for system, home, and virtualisation
+@core/             shared base layer for system, home, and virtualization
 @domains/          user-space home feature declarations (app/tool configs)
 @hosts/            environment descriptors — pure data describing where config runs
 @lib/              build system, domain framework, theme linting, flake plumbing
@@ -46,7 +46,7 @@ Core is the shared foundation, split into three concerns:
 
 **`core/home/`** — home-manager shared config imported by every home-manager profile: JetBrains Mono Nerd Font with fontconfig, SSH config generation from `userConfig`, tree-sitter parser building from toolchain grammars, and the `domain-config.nix` activation that seeds the angst repo into `~/.config/angst`.
 
-**`core/virtualisation/`** — Multi-layered VM support bridging system and home:
+**`core/virtualization/`** — Multi-layered VM support bridging system and home:
 
 | File | Role |
 |---|---|
@@ -54,7 +54,7 @@ Core is the shared foundation, split into three concerns:
 | `is-qemu-vm.nix` | Detection logic: checks if flake path starts with `/host` (9p host mount indicator), or if a host-mount path exists |
 | `runtime.nix` | Conditional bootloader: `systemd-boot` on bare metal, `grub` disabled in VM |
 | `vm-profile.nix` | Full QEMU VM profile applied when `isQemuVm = true` — 9p filesystem mounts for the angst repo (`/host/.../proj/angst`), the Nix store (overlay of `ro-store` 9p + `rw-store` tmpfs), and shared/tmp directories for SSH keys and clipboard; SPICE vdagent for copy-paste; runtime SSH authorized key injection; monitor override (`Virtual-1 1920x1080`); stripped-down kernel modules and GPU drivers (`modesetting` for `virtio_gpu`) |
-| `vm-variant.nix` | NixOS `virtualisation.vmVariant` — 4 vCPUs, 4 GiB RAM, 16 GB disk, `virtio-vga` display, SPICE vdagent chardev, shared directory mapping |
+| `vm-variant.nix` | NixOS `virtualization.vmVariant` — 4 vCPUs, 4 GiB RAM, 16 GB disk, `virtio-vga` display, SPICE vdagent chardev, shared directory mapping |
 | `specialisation.nix` | Bootable specialisation entry for VM mode without rebuild-vm |
 | `host-mount.nix` | Creates `/home/joao/.config/angst` symlink to the host 9p mount path, enabling live editing from inside the VM with changes reflected on the host |
 

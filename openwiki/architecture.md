@@ -129,7 +129,7 @@ Every consumer follows the same chain: **environment variable** > **user.env val
 
 The repository has sophisticated VM support for development:
 
-1. **Detection** (`/lib/virtualisation/detect.nix`, `is-qemu-vm.nix`): Sets `angst.isQemuVm` based on whether the flake path starts with `/host` (indicating a 9p host mount from QEMU)
+1. **Detection** (`/lib/virtualization/detect.nix`, `is-qemu-vm.nix`): Sets `angst.isQemuVm` based on whether the flake path starts with `/host` (indicating a 9p host mount from QEMU)
 2. **VM Profile** (`vm-profile.nix`): 9p filesystem mounts, SPICE vdagent, SSH key injection, monitor override
 3. **Boot** (`runtime.nix`): `systemd-boot` on bare metal, grub disabled in VM
 4. **Host Mount** (`host-mount.nix`): Symlinks `/home/joao/.config/angst` to the host 9p path for live editing
@@ -181,7 +181,7 @@ lib/parseEnv.nix                   lib/build/mkHome.nix
 | `/lib/flake/default.nix` | Flake outputs: domain renders, checks, dev shells |
 | `/lib/flake/shared.nix` | Shared infra: angst CLI, shells, toolchains, treesitter, vm-run shim, res() wrapper |
 | `/lib/parseEnv.nix` | Parses `user.env` into Nix attrs at build time |
-| `/lib/virtualisation/*.nix` | VM detection, profile, boot, host-mount, specialisation |
+| `/lib/virtualization/*.nix` | VM detection, profile, boot, host-mount, specialisation |
 | `/lib/nixos/default.nix` | Base NixOS module (password resolution from user env) |
 | `/common/home.nix` | Shared home-manager imports |
 | `/common/capabilities.nix` | Shared NixOS capability enables |
@@ -208,10 +208,10 @@ lib/parseEnv.nix                   lib/build/mkHome.nix
 - **Rust consumers** — `tools/vm/crates/vm-cli/src/runner/vm.rs` and `tools/shell/src/runner.rs` both implement `read_env_value()` independently. Keep parsing consistent with the Nix-side `parseEnv.nix`.
 - **Password flow** — `scripts/angst.sh` (`angst passwd`) writes `PASSWORD=<hash>` to `user.env`. `lib/nixos/default.nix` reads it at build time. If you add new secret-like fields, ensure the angst.sh write and nixos read stay in sync.
 
-### Modifying virtualisation
-- **Detection chain**: `/lib/virtualisation/detect.nix` sets `angst.isQemuVm` → `/lib/virtualisation/is-qemu-vm.nix` checks flake path → `/lib/virtualisation/runtime.nix` adjusts bootloader → `/lib/virtualisation/vm-profile.nix` applies full VM config.
-- **To change VM resources**: Edit `/lib/virtualisation/vm-variant.nix` (vCPUs, RAM, disk).
-- **To change 9p mounts or display**: Edit `/lib/virtualisation/vm-profile.nix`.
+### Modifying virtualization
+- **Detection chain**: `/lib/virtualization/detect.nix` sets `angst.isQemuVm` → `/lib/virtualization/is-qemu-vm.nix` checks flake path → `/lib/virtualization/runtime.nix` adjusts bootloader → `/lib/virtualization/vm-profile.nix` applies full VM config.
+- **To change VM resources**: Edit `/lib/virtualization/vm-variant.nix` (vCPUs, RAM, disk).
+- **To change 9p mounts or display**: Edit `/lib/virtualization/vm-profile.nix`.
 - **Testing VM detection**: The `isQemuVm` option is available at `nix eval` time for any host.
 
 ### Common pitfalls

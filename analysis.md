@@ -58,7 +58,7 @@
 | 269 | domains/shell/starship/modules.nix | domains |
 | 258 | domains/terminal/zellij/render.nix | domains |
 | 218 | themes/default.nix | themes |
-| 199 | lib/virtualisation/vm-profile.nix | lib |
+| 199 | lib/virtualization/vm-profile.nix | lib |
 | 162 | domains/shell/starship/render.nix | domains |
 | 150 | domains/terminal/zellij/theme.nix | domains |
 | 147 | domains/wm/i3/render.nix | domains |
@@ -499,7 +499,7 @@ _(none found)_
 | Score | File | Contributing factors |
 |---|---|---|
 | 7 | `themes/default.nix` | depth=3, interp=27, LOC=218 |
-| 6 | `lib/virtualisation/vm-profile.nix` | interp=12, cond=14, LOC=199 |
+| 6 | `lib/virtualization/vm-profile.nix` | interp=12, cond=14, LOC=199 |
 | 6 | `lib/domains/module.nix` | depth=4, interp=18, LOC=104 |
 | 6 | `domains/shell/starship/render.nix` | depth=2, interp=31, LOC=162 |
 | 5 | `lib/domains/activation.nix` | depth=2, interp=31, LOC=91 |
@@ -518,8 +518,8 @@ _(none found)_
 | 2 | `domains/terminal/zellij/layout.nix` | interp=24 |
 | 2 | `domains/terminal/tmux/render.nix` | interp=21 |
 | 2 | `domains/shell/starship/modules.nix` | LOC=269 |
-| 1 | `lib/virtualisation/runtime.nix` | cond=4 |
-| 1 | `lib/virtualisation/host-mount.nix` | interp=9 |
+| 1 | `lib/virtualization/runtime.nix` | cond=4 |
+| 1 | `lib/virtualization/host-mount.nix` | interp=9 |
 | 1 | `lib/treesitter.nix` | interp=15 |
 | 1 | `lib/read-config.nix` | depth=2 |
 | 1 | `lib/profiles.nix` | depth=2 |
@@ -542,9 +542,9 @@ _(none found)_
 | Value | File |
 |---|---|
 | 7 | `domains/terminal/zellij/render.nix` |
-| 6 | `lib/virtualisation/vm-profile.nix` |
+| 6 | `lib/virtualization/vm-profile.nix` |
 | 6 | `capabilities/graphical.nix` |
-| 5 | `lib/virtualisation/vm-variant.nix` |
+| 5 | `lib/virtualization/vm-variant.nix` |
 | 5 | `lib/outputs.nix` |
 | 5 | `domains/terminal/zellij/module.nix` |
 | 5 | `domains/terminal/zellij/layout.nix` |
@@ -581,7 +581,7 @@ _(none found)_
 | Value | File |
 |---|---|
 | 157 | `domains/shell/starship/modules.nix` |
-| 61 | `lib/virtualisation/vm-profile.nix` |
+| 61 | `lib/virtualization/vm-profile.nix` |
 | 56 | `domains/llm/opencode/render.nix` |
 | 41 | `themes/default.nix` |
 | 30 | `lib/outputs.nix` |
@@ -597,7 +597,7 @@ _(none found)_
 | 217 | `domains/terminal/zellij/render.nix` |
 | 203 | `domains/git/lazygit/render.nix` |
 | 200 | `themes/default.nix` |
-| 144 | `lib/virtualisation/vm-profile.nix` |
+| 144 | `lib/virtualization/vm-profile.nix` |
 | 116 | `domains/shell/starship/render.nix` |
 | 113 | `domains/launcher/rofi/render.nix` |
 | 110 | `domains/wm/i3/render.nix` |
@@ -701,7 +701,7 @@ _(none found)_
 | `domains/shell/starship/modules.nix` | 269 | 0 | 0 | 1 | Low | 2 |
 | `domains/terminal/zellij/render.nix` | 258 | 20 | 2 | 0 | High | 5 |
 | `themes/default.nix` | 218 | 12 | 1 | 1 | Very High | 7 |
-| `lib/virtualisation/vm-profile.nix` | 199 | 7 | 0 | 0 | High | 6 |
+| `lib/virtualization/vm-profile.nix` | 199 | 7 | 0 | 0 | High | 6 |
 | `domains/shell/starship/render.nix` | 162 | 14 | 1 | 0 | High | 6 |
 | `domains/terminal/zellij/theme.nix` | 150 | 0 | 0 | 1 | Medium | 4 |
 | `domains/wm/i3/render.nix` | 147 | 3 | 0 | 0 | High | 5 |

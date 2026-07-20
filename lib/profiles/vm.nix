@@ -3,17 +3,17 @@
   hm = [ ];
   nixos = [
     # VM detection — defines options.angst.isQemuVm
-    ../../lib/virtualisation/detect.nix
+    ../../lib/virtualization/detect.nix
     # Bootloader: systemd-boot on bare metal, grub disabled in VM
-    ../../lib/virtualisation/runtime.nix
+    ../../lib/virtualization/runtime.nix
     # VM boot specialisation entry
-    ../../lib/virtualisation/specialisation.nix
+    ../../lib/virtualization/specialisation.nix
     # VM variant config (4 vCPUs, 4 GiB, virtio, SPICE)
-    ../../lib/virtualisation/vm-variant.nix
+    ../../lib/virtualization/vm-variant.nix
     # Full VM runtime profile (9p mounts, SSH keys, SPICE, etc.)
-    ../../lib/virtualisation/vm-profile.nix
+    ../../lib/virtualization/vm-profile.nix
     # Host mount symlink for live editing
-    ../../lib/virtualisation/host-mount.nix
+    ../../lib/virtualization/host-mount.nix
     # SSH capability (vm-profile forces it on)
     ../../capabilities/ssh.nix
     ({ ... }: {
