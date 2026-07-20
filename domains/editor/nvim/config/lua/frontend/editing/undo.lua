@@ -29,6 +29,8 @@ return {
 			gitsigns.toggle_word_diff()
 		end, { desc = "toggle undotree with inline diff" })
 
+		binder:nmap("U", "<C-r>", { desc = "Redo" })
+
 		vim.opt.diffopt:append({
 			"internal",
 			"filler",
