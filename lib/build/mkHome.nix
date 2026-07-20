@@ -1,17 +1,33 @@
-{ inputs, self, cfg, hmModules, vmTool, shellTool, angstTool, themeOverride ? null }:
+{
+  inputs,
+  self,
+  cfg,
+  hmModules,
+  vmTool,
+  shellTool,
+  angstTool,
+  themeOverride ? null,
+}:
 
 let
-  pkgs = import inputs.nixpkgs { system = cfg.system; config = import ../nixpkgs-config.nix; };
+  pkgs = import inputs.nixpkgs {
+    system = cfg.system;
+    config = import ../nixpkgs-config.nix;
+  };
   lib = pkgs.lib;
 
   effectiveTheme = if themeOverride != null then themeOverride else cfg.theme;
-  userCfg = { username = cfg.username; homeDirectory = "/home/${cfg.username}"; };
+  userCfg = {
+    username = cfg.username;
+    homeDirectory = "/home/${cfg.username}";
+  };
 
-  # all domain modules imported (enable defaults to false)
   appHomeModules = map cfg.scan.domains.mkDomainModule cfg.scan.domains.homeEntries;
 
   themeModule = import ../home/themeModule.nix {
-    inherit lib; themesLib = cfg.scan.themes; hostTheme = effectiveTheme;
+    inherit lib;
+    themesLib = cfg.scan.themes;
+    hostTheme = effectiveTheme;
   };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
@@ -27,12 +43,24 @@ inputs.home-manager.lib.homeManagerConfiguration {
     flakeSelf = self;
   };
 
-  modules =
-    [ ../../lib/home ]
-    ++ [ themeModule ../../lib/home/i3Fragments.nix ]
-    ++ appHomeModules               # all domain modules from scan
-    ++ hmModules                    # profile enable modules
-    ++ cfg.toolchainModules
-    ++ [({ ... }: { home.packages = [ vmTool shellTool angstTool ]; })]
-    ++ (if cfg.extraHome != {} then [ cfg.extraHome ] else []);
+  modules = [
+    ../../lib/home
+  ]
+  ++ [
+    themeModule
+    ../../lib/home/i3Fragments.nix
+  ]
+  ++ appHomeModules
+  ++ hmModules
+  ++ cfg.toolchainModules
+  ++ [
+    ({ ... }: {
+      home.packages = [
+        vmTool
+        shellTool
+        angstTool
+      ];
+    })
+  ]
+  ++ (if cfg.extraHome != { } then [ cfg.extraHome ] else [ ]);
 }

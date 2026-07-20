@@ -3,7 +3,7 @@
   lib,
   pkgs,
   theme,
-  themes,
+  themesLib,
   ...
 }:
 
@@ -17,7 +17,7 @@ in
 
   config = lib.mkIf cfg.enable (
     let
-      themeColors = themes.get theme;
+      themeColors = themesLib.get theme;
     in
     {
       services = {
