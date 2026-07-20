@@ -1,1 +1,0 @@
-You are in the host machine, not the nixos vm, so don't try to run commands expecting to get nixos responses

@@ -1,4 +1,4 @@
-$env.config = {
+$env.config = ($env.config | merge {
     show_banner: false
 
     edit_mode: vi
@@ -12,7 +12,7 @@ $env.config = {
         max_size: 10000
         sync_on_enter: true
         file_format: "sqlite"
-        path: ($env.XDG_DATA_HOME | path join "nushell/history.sqlite3")
+        path: ($nu.data-dir | path join "history.sqlite3")
     }
 
     completions: {
@@ -20,6 +20,11 @@ $env.config = {
         quick: true
         partial: true
         algorithm: "fuzzy"
+
+        external: {
+            enable: true
+            completer: $carapace_completer
+        }
     }
 
     table: {
@@ -70,6 +75,7 @@ $env.config = {
         }
     ]
 }
+)
 
 source $"($nu.default-config-dir)/colors.nu"
 

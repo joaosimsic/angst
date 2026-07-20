@@ -14,19 +14,31 @@ $env.PROMPT_MULTILINE_INDICATOR = "::: "
 $env.EDITOR = "nvim"
 $env.VISUAL = "nvim"
 
-$env.XDG_CONFIG_HOME = ($env.HOME | path join ".config")
-$env.XDG_DATA_HOME = ($env.HOME | path join ".local/share")
-$env.XDG_CACHE_HOME = ($env.HOME | path join ".cache")
+const XDG_CONFIG_HOME = ($nu.home-dir | path join ".config")
+const XDG_DATA_HOME = ($nu.data-dir | path dirname)
+const XDG_CACHE_HOME = ($nu.cache-dir | path dirname)
 
-$env.CLAUDE_CONFIG_DIR = ($env.HOME | path join ".config/claude")
+$env.XDG_CONFIG_HOME = $XDG_CONFIG_HOME
+$env.XDG_DATA_HOME = $XDG_DATA_HOME
+$env.XDG_CACHE_HOME = $XDG_CACHE_HOME
+
+$env.CLAUDE_CONFIG_DIR = ($XDG_CONFIG_HOME | path join "claude")
 
 $env.PATH = (
     $env.PATH
     | split row (char esep)
-    | prepend ($env.HOME | path join ".local/bin")
-    | prepend ($env.HOME | path join ".cargo/bin")
+    | prepend ($nu.home-dir | path join ".local/bin")
+    | prepend ($nu.home-dir | path join ".cargo/bin")
     | uniq
 )
 
 # Add nix profile pkgconfig to PKG_CONFIG_PATH for cargo/rust-analyzer builds
 $env.PKG_CONFIG_PATH = ("~/.nix-profile/lib/pkgconfig" | path expand)
+
+const carapace_init = ($XDG_CACHE_HOME | path join "carapace/init.nu")
+
+if not ($carapace_init | path exists) {
+    mkdir ($carapace_init | path dirname)
+    carapace _carapace nushell | save --force $carapace_init
+}
+source $carapace_init

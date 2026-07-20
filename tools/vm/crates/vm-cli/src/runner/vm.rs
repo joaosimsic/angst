@@ -6,45 +6,10 @@ use tokio::{process::Command, time};
 use vm_core::process::io::StateManager;
 use vm_core::{SshEngine, VmConfig, VmProcessController};
 
-fn read_env_value(key: &str) -> Option<String> {
-    let paths = [
-        env::var("ANGST_REPO")
-            .ok()
-            .map(|p| Path::new(&p).join("user.env")),
-        env::current_dir().ok().map(|d| d.join("user.env")),
-    ];
-    for path in paths.iter().flatten() {
-        if let Some(val) = read_from_env_file(path, key) {
-            return Some(val);
-        }
-    }
+fn read_env_value(_key: &str) -> Option<String> {
+    // Config is now passed via environment variables from the bash wrapper
+    // (e.g., ANGST_PASSWORD). No file-based fallback needed.
     None
-}
-
-fn read_from_env_file(path: &Path, key: &str) -> Option<String> {
-    let content = std::fs::read_to_string(path).ok()?;
-    for line in content.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') {
-            continue;
-        }
-        if let Some((k, v)) = trimmed.split_once('=') {
-            if k.trim() == key {
-                let val = v.trim();
-                if !val.is_empty() {
-                    return Some(strip_quotes(val).to_string());
-                }
-            }
-        }
-    }
-    None
-}
-
-fn strip_quotes(s: &str) -> &str {
-    s.strip_prefix('\'')
-        .and_then(|s| s.strip_suffix('\''))
-        .or_else(|| s.strip_prefix('"').and_then(|s| s.strip_suffix('"')))
-        .unwrap_or(s)
 }
 
 fn target_host() -> String {
@@ -75,6 +40,42 @@ fn target_username() -> String {
     }
 
     VmConfig::load().ssh_user
+}
+
+fn ensure_vm_profile() -> Result<(), String> {
+    let repo = env::var("ANGST_REPO")
+        .or_else(|_| env::current_dir().map(|p| p.to_string_lossy().to_string()))
+        .map_err(|e| format!("Cannot determine repo root: {e}"))?;
+
+    let config_path = format!("{repo}/local/config.nix");
+
+    if !Path::new(&config_path).exists() {
+        return Ok(());
+    }
+
+    let expr = format!(
+        r#"builtins.elem "vm" ((import {repo}/local/config.nix).profiles or [])"#
+    );
+
+    let output = std::process::Command::new("nix")
+        .args(["eval", "--impure", "--expr", &expr])
+        .output()
+        .map_err(|e| format!("Failed to check VM profile: {e}"))?;
+
+    if output.status.success() {
+        let result = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if result == "true" {
+            return Ok(());
+        }
+    }
+
+    Err(format!(
+        "VM profile not enabled.\n\
+         Detected config: {config_path}\n\
+         The 'vm' profile is missing from the profiles list.\n\
+         Add \"vm\" to the profiles list in local/config.nix to use VM commands.\n\
+         Example: profiles = [ \"base\" \"desktop\" \"development\" \"vm\" ];"
+    ))
 }
 
 fn kill_stale_qemu(disk: &str) {
@@ -253,6 +254,7 @@ fn detect_display() -> bool {
 }
 
 pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
+    ensure_vm_profile()?;
     let host = target_host();
     let disk = format!("{}.qcow2", host);
     kill_stale_qemu(&disk);
@@ -261,6 +263,12 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
     let effective_headless = headless || !detect_display();
 
     let runner_path = format!("result/bin/run-{}-vm", host);
+    let fallback_path = "result/bin/run-nixos-vm".to_string();
+    let runner_path = if Path::new(&runner_path).exists() {
+        runner_path
+    } else {
+        fallback_path.clone()
+    };
     let runner_exists = Path::new(&runner_path).exists();
 
     if !runner_exists {
@@ -278,10 +286,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
             "--impure",
             "--refresh",
             "--no-write-lock-file",
-            &format!(
-                ".#nixosConfigurations.{}.config.specialisation.vm.configuration.system.build.vm",
-                host
-            ),
+            &format!(".#nixosConfigurations.current.config.system.build.vm"),
         ])
         .env("ANGST_USERNAME", &username);
 
@@ -289,13 +294,17 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
             cmd.env("ANGST_PASSWORD", p);
         }
 
-        let build_status = cmd
-            .status()
+        let output = cmd
+            .output()
             .await
             .map_err(|e| format!("Failed to run nix build: {}", e))?;
 
-        if !build_status.success() {
-            return Err("Nix compilation of the target VM profile failed.".to_string());
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!(
+                "Nix compilation of the target VM profile failed.\n{}",
+                stderr.trim()
+            ));
         }
     }
 
@@ -359,8 +368,17 @@ pub fn status(ssh: &SshEngine) -> Result<(), String> {
     Ok(())
 }
 
-pub fn ssh(args: Vec<String>) -> Result<(), String> {
-    use std::process::Command;
+fn vm_ssh_reachable(ssh: &SshEngine) -> bool {
+    VmProcessController::is_active("vm").as_deref() == Ok("active")
+        && ssh.exec("true").is_ok()
+}
+
+pub async fn ssh(ssh: &SshEngine, auto_start: bool, tty: bool, args: Vec<String>) -> Result<(), String> {
+    ensure_vm_profile()?;
+    if auto_start && !vm_ssh_reachable(ssh) {
+        println!("VM not running. Starting headless...");
+        start(ssh, true).await?;
+    }
 
     let config = VmConfig::load();
 
@@ -377,14 +395,19 @@ pub fn ssh(args: Vec<String>) -> Result<(), String> {
         .arg("-o")
         .arg("LogLevel=ERROR")
         .arg("-o")
-        .arg("ForwardAgent=yes")
-        .arg(format!("{}@127.0.0.1", config.ssh_user));
+        .arg("ForwardAgent=yes");
+
+    if tty {
+        cmd.arg("-t");
+    }
+
+    cmd.arg(format!("{}@127.0.0.1", config.ssh_user));
 
     if !args.is_empty() {
         cmd.args(args);
     }
 
-    let status = cmd.status().map_err(|e| e.to_string())?;
+    let status = cmd.status().await.map_err(|e| e.to_string())?;
 
     if !status.success() {
         println!("Tip: Check 'vm status' and 'vm logs' for VM health.");

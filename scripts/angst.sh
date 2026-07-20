@@ -9,70 +9,21 @@ Usage:
 EOF
 }
 
-env_default() {
-    local repo_root="$1"
-    local key="$2"
-    local env_file="$repo_root/user.env"
-    if [ -f "$env_file" ]; then
-        grep "^${key}=" "$env_file" | tail -1 | cut -d= -f2- || true
-    fi
-}
-
 repo_root_default() {
-    if [ -n "${ANGST_REPO:-}" ]; then
-        printf '%s\n' "$ANGST_REPO"
-        return
-    fi
-
-    local dir
-    dir="$PWD"
+    local dir="$PWD"
     while [ "$dir" != "/" ]; do
-        if [ -f "$dir/flake.nix" ] && [ -d "$dir/hosts" ]; then
+        if [ -f "$dir/local/config.nix" ]; then
             printf '%s\n' "$dir"
             return
         fi
         dir="$(dirname "$dir")"
     done
-
-    if git rev-parse --show-toplevel >/dev/null 2>&1; then
-        local git_root
-        git_root="$(git rev-parse --show-toplevel 2>/dev/null)"
-        if [ -f "$git_root/flake.nix" ] && [ -d "$git_root/hosts" ]; then
-            printf '%s\n' "$git_root"
-            return
-        fi
-    fi
-
-    for candidate in "$HOME/angst" "$HOME/proj/angst"; do
-        if [ -f "$candidate/flake.nix" ] && [ -d "$candidate/hosts" ]; then
-            printf '%s\n' "$candidate"
-            return
-        fi
-    done
-
-    if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/angst/repo" ]; then
-        read -r configured <"${XDG_CONFIG_HOME:-$HOME/.config}/angst/repo"
-        if [ -f "$configured/flake.nix" ] && [ -d "$configured/hosts" ]; then
-            printf '%s\n' "$configured"
-            return
-        fi
-    fi
-
-    pwd
+    git rev-parse --show-toplevel 2>/dev/null || pwd
 }
 
-theme_default() {
-    local repo_root="$1"
-    local host_name="$2"
-    local env_val
-    env_val="$(env_default "$repo_root" "THEME")"
-    if [ -n "$env_val" ]; then
-        printf '%s\n' "$env_val"
-    elif [ -n "${ANGST_THEME:-}" ]; then
-        printf '%s\n' "$ANGST_THEME"
-    else
-        nix eval --impure --raw --expr "let host = import ${repo_root}/hosts/${host_name}; in builtins.toString (host.theme or \"monochrome\")"
-    fi
+config_val() {
+    local repo="$1" key="$2"
+    nix eval --impure --expr "(import $repo/local/config.nix).$key" --raw 2>/dev/null || true
 }
 
 reload_hooks() {
@@ -84,11 +35,11 @@ reload_hooks() {
 passwd_cmd() {
     local repo_root
     repo_root="$(repo_root_default)"
-    local env_file="$repo_root/user.env"
+    local config_file="$repo_root/local/config.nix"
 
-    if [ ! -f "$env_file" ]; then
-        echo "Error: $env_file not found" >&2
-        echo "Copy user.env.example to user.env and set USERNAME and HOST first." >&2
+    if [ ! -f "$config_file" ]; then
+        echo "Error: $config_file not found" >&2
+        echo "Copy local/config.nix.example to local/config.nix and fill in your values first." >&2
         return 1
     fi
 
@@ -117,20 +68,21 @@ passwd_cmd() {
     }
     unset password password_confirm
 
-    if grep -q "^PASSWORD=" "$env_file"; then
-        sed -i "s|^PASSWORD=.*|PASSWORD=$hash|" "$env_file"
+    if grep -q "^[[:space:]]*password[[:space:]]*=" "$config_file"; then
+        sed -i "s|^[[:space:]]*password[[:space:]]*=.*$|  password = \"$hash\";|" "$config_file"
     else
-        printf "\nPASSWORD=%s\n" "$hash" >>"$env_file"
+        echo "Error: could not find 'password' field in $config_file" >&2
+        return 1
     fi
 
-    echo "Password hashed and written to $env_file"
+    echo "Password hashed and written to $config_file"
 }
 
 render_cmd() {
     local repo_root
     repo_root="$(repo_root_default)"
     local host_name
-    host_name="$(env_default "$repo_root" "HOST")"
+    host_name="$(config_val "$repo_root" "hostname")"
     host_name="${host_name:-${ANGST_HOST:-personal}}"
     local theme_name=""
     local should_reload=1
@@ -170,7 +122,8 @@ render_cmd() {
     done
 
     if [ -z "$theme_name" ]; then
-        theme_name="$(theme_default "$repo_root" "$host_name")"
+        theme_name="$(config_val "$repo_root" "theme")"
+        theme_name="${theme_name:-monochrome}"
     fi
 
     if [ ! -d "$repo_root/domains" ]; then
@@ -255,7 +208,7 @@ watch_cmd() {
     local repo_root
     repo_root="$(repo_root_default)"
     local host_name
-    host_name="$(env_default "$repo_root" "HOST")"
+    host_name="$(config_val "$repo_root" "hostname")"
     host_name="${host_name:-${ANGST_HOST:-personal}}"
     local theme_name="${ANGST_THEME:-}"
 
@@ -293,7 +246,7 @@ watch_cmd() {
     watchexec \
         --watch "$repo_root/themes" \
         --watch "$repo_root/domains" \
-        --watch "$repo_root/hosts/$host_name" \
+        --watch "$repo_root/local" \
         -- "$0" "${args[@]}"
 }
 

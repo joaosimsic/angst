@@ -9,6 +9,7 @@ let
       pkgs,
       themesLib,
       repoPath,
+      monitors,
       ...
     }:
     let
@@ -32,13 +33,13 @@ let
         else
           let
             render = import "${path}/render.nix";
-            checkHelpers = import ../checks/theme/assertions.nix {
+            checkHelpers = import ../../checks/theme/assertions.nix {
               inherit lib;
               themeName = config.theme;
               theme = themesLib.get config.theme;
             };
             outputs = render {
-              inherit lib themesLib checkHelpers;
+              inherit lib themesLib checkHelpers monitors;
               themeName = config.theme;
               homeDirectory = config.home.homeDirectory;
             };

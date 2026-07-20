@@ -124,6 +124,6 @@ When working on this repository, follow these guidelines:
 | Domain framework | `/lib/domains/scan.nix`, `/lib/domains/module.nix`, `/lib/domains/activation.nix` |
 | Theme system | `/themes/default.nix`, `/themes/schema.nix` |
 | Theme validation | `/lib/checks/theme/` (6 files) |
-| VM infrastructure | `/lib/virtualisation/*.nix` (8 files) |
+| VM infrastructure | `/lib/virtualization/*.nix` (8 files) |
 | Rust shell CLI | `/tools/shell/src/` |
 | Rust VM CLI | `/tools/vm/Cargo.toml`, `/tools/vm/src/` |
