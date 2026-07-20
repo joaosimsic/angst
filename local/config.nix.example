@@ -23,8 +23,8 @@
   profiles = ["base" "desktop" "development"];
   toolchains = "*";
 
-  # Hashed password — NOT plaintext. Generate with: mkpasswd -m sha-512
-  password = "$6$CI_DUMMY_SALT$CI_DUMMY_HASH_VALUE_FOR_TESTING_ONLY";
+  # Hashed password — NOT plaintext. Generate with: openssl passwd -6
+  password = "$6$CHANGEME$REPLACE_WITH_REAL_HASH";
 
   monitors = {
     primary = {

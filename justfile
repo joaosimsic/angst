@@ -1,9 +1,9 @@
-setup:
+password:
     @read -s -p "Enter password: " pass; echo; \
     read -s -p "Confirm password: " pass2; echo; \
-    if [ "$$pass" != "$$pass2" ]; then echo "Passwords don't match"; exit 1; fi; \
-    hash=$$(mkpasswd -m sha-512 <<<"$$pass"); \
-    sed -i "s|\$6\$CI_DUMMY_SALT\$CI_DUMMY_HASH_VALUE_FOR_TESTING_ONLY|$$hash|" local/config.nix
+    if [ "$pass" != "$pass2" ]; then echo "Passwords don't match"; exit 1; fi; \
+    hash=$(echo "$pass" | openssl passwd -6 -stdin); \
+    sed -i "s|\$6\$CHANGEME\$REPLACE_WITH_REAL_HASH|$hash|" local/config.nix
 
 
 disko:
@@ -13,7 +13,7 @@ hardware:
     nixos-generate-config --show-hardware-config > local/hardware.nix
 
 bootstrap: disko hardware
-    @echo "Now write local/config.nix, run 'just setup', then 'just build'"
+    @echo "Now write local/config.nix, run 'just password', then 'just build'"
 
 build:
     nix build .#nixosConfigurations.current --impure
@@ -26,6 +26,9 @@ hm:
 
 hm-switch:
     nix build .#homeConfigurations.current.activationPackage --impure && ./result/activate
+
+analyze:
+    python3 -m scripts.analyze_flake --output analysis.md
 
 check:
     nix flake check --impure

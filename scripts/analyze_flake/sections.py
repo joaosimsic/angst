@@ -149,7 +149,8 @@ def section_config_matrix() -> str:
     """Section 5: Configuration Matrix."""
     lines = [md_section(5, "Configuration Matrix")]
 
-    hosts = sorted(d.name for d in REPO.joinpath("hosts").iterdir() if d.is_dir())
+    hosts_dir = REPO / "hosts"
+    hosts = sorted(d.name for d in hosts_dir.iterdir() if d.is_dir()) if hosts_dir.is_dir() else []
 
     themes = sorted(
         f.stem
