@@ -6,7 +6,7 @@
 }:
 
 let
-  fontsLib = import ../../lib/home/fonts.nix;
+  fontsLib = import ./fonts.nix;
 in
 {
   options.font.family = lib.mkOption {

@@ -6,7 +6,7 @@
 }:
 
 let
-  treesitter = import ../treesitter.nix {
+  treesitter = import ../../lib/treesitter.nix {
     inherit lib pkgs;
     grammars = config.toolchains.treesitterGrammars;
   };

@@ -43,7 +43,7 @@ let
     domainsPath = ../domains;
   };
   domainsModule = import ./domains/module.nix {
-    mkDomainActivation = (import ./activation.nix).mkDomainActivation;
+    mkDomainActivation = (import ./domains/activation.nix).mkDomainActivation;
   };
   domainsLib = domainsScan // domainsModule;
 
@@ -71,7 +71,7 @@ in
       domains = domainsLib;
       themes = themesLib;
       allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or [ ]) _allTCs);
-      treesitter = import ../lib/treesitter.nix {
+      treesitter = import ./treesitter.nix {
         inherit lib pkgs;
         grammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or [ ]) _allTCs);
       };

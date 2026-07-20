@@ -1,7 +1,7 @@
 { pkgs }:
 
 let
-  repoRoot = ../../.;
+  repoRoot = ../.;
 in
 pkgs.runCommand "lint-nix"
   {

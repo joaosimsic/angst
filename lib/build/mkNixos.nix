@@ -10,7 +10,7 @@
 let
   pkgs = import inputs.nixpkgs {
     system = cfg.system;
-    config = import ./nixpkgs-config.nix;
+    config = import ../nixpkgs-config.nix;
   };
   lib = pkgs.lib;
 
@@ -23,7 +23,7 @@ let
   appNixosModules = map cfg.scan.domains.mkNixosDomainModule cfg.scan.domains.nixosEntries;
   appHomeModules = map cfg.scan.domains.mkDomainModule cfg.scan.domains.homeEntries;
 
-  themeModule = import ./home/themeModule.nix {
+  themeModule = import ../../modules/home/themeModule.nix {
     inherit lib;
     themesLib = cfg.scan.themes;
     hostTheme = effectiveTheme;
@@ -51,16 +51,16 @@ inputs.nixpkgs.lib.nixosSystem {
   ]
   ++ nixosModules
   ++ appNixosModules
-  ++ [ ./nixos ]
+  ++ [ ../../modules/nixos ]
   ++ (if hardwarePath != null then [ (import hardwarePath) ] else [ ])
   ++ (if cfg.extraNixos != { } then [ cfg.extraNixos ] else [ ])
   ++ [
-    ./virtualization/detect.nix
-    ./virtualization/runtime.nix
-    ./virtualization/vm-variant.nix
-    ./virtualization/vm-profile.nix
-    ./virtualization/host-mount.nix
-    ../capabilities/ssh.nix
+    ../../modules/nixos/detect.nix
+    ../../modules/nixos/runtime.nix
+    ../../modules/nixos/vm-variant.nix
+    ../../modules/nixos/vm-profile.nix
+    ../../modules/nixos/host-mount.nix
+    ../../capabilities/ssh.nix
     ({ lib, ... }: {
       users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password;
     })
@@ -84,11 +84,11 @@ inputs.nixpkgs.lib.nixosSystem {
 
         users.${cfg.username} = {
           imports = [
-            ./home
+            ../../modules/home
           ]
           ++ [
             themeModule
-            ./home/i3Fragments.nix
+            ../../modules/home/i3Fragments.nix
           ]
           ++ appHomeModules
           ++ hmModules

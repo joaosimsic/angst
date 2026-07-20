@@ -2,11 +2,11 @@
 {
   hm = [ ];
   nixos = [
-    ../lib/virtualization/detect.nix
-    ../lib/virtualization/runtime.nix
-    ../lib/virtualization/vm-variant.nix
-    ../lib/virtualization/vm-profile.nix
-    ../lib/virtualization/host-mount.nix
+    ../modules/nixos/detect.nix
+    ../modules/nixos/runtime.nix
+    ../modules/nixos/vm-variant.nix
+    ../modules/nixos/vm-profile.nix
+    ../modules/nixos/host-mount.nix
     (mkCap "ssh")
   ];
 }

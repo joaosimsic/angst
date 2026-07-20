@@ -1,12 +1,12 @@
 { cfg, lib }:
 
 let
-  fontsLib = import ./home/fonts.nix;
+  fontsLib = import ../modules/home/fonts.nix;
 in rec {
   renderDomainOutputsFor = themeName:
     let
       themesLib = cfg.scan.themes;
-      checkHelpers = import ./checks/theme/assertions.nix { inherit lib; theme = themesLib.get themeName; inherit themeName; };
+      checkHelpers = import ../checks/theme/assertions.nix { inherit lib; theme = themesLib.get themeName; inherit themeName; };
       domainRendererPaths = map (e: "${e.path}/render.nix") (
         lib.filter (e: e.hasRender or false) cfg.scan.domains.homeEntries
       );

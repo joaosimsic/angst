@@ -34,7 +34,7 @@
       "nix-command"
       "flakes"
     ];
-    nixpkgs.config = import ../nixpkgs-config.nix;
+    nixpkgs.config = import ../../lib/nixpkgs-config.nix;
 
     users.users.${userConfig.username} = {
       isNormalUser = true;

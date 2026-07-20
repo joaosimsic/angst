@@ -8,12 +8,12 @@
 let
   pkgs = import inputs.nixpkgs {
     system = cfg.system;
-    config = import ./nixpkgs-config.nix;
+    config = import ../nixpkgs-config.nix;
   };
   lib = pkgs.lib;
 
-  mkHome = import ./mkHome.nix;
-  mkHost = import ./mkNixos.nix;
+  mkHome = import ../build/mkHome.nix;
+  mkHost = import ../build/mkNixos.nix;
 
   hmModules = profiles.hm;
   nixosModules = profiles.nixos;
@@ -33,11 +33,11 @@ let
         watchexec
         jq
       ];
-      text = builtins.readFile ../scripts/angst.sh;
+      text = builtins.readFile ../../scripts/angst.sh;
     }
   );
 
-  render = import ./render.nix { inherit cfg lib; };
+  render = import ../render.nix { inherit cfg lib; };
 
   devshell = import ./devshell.nix {
     inherit
@@ -50,7 +50,7 @@ let
     angstCli = angstTool;
   };
 
-  mkChecks = import ./checks/default.nix {
+  mkChecks = import ../../checks/default.nix {
     inherit
       self
       inputs
@@ -216,7 +216,7 @@ rec {
   lib = {
     inherit (render) renderDomainOutputsFor renderDomainOutputFor;
     themeLint =
-      mkChecks.themeLint or (import ./checks/theme {
+      mkChecks.themeLint or (import ../../checks/theme {
         inherit lib;
         themesLib = cfg.scan.themes;
         renderDomainOutputsFor = render.renderDomainOutputsFor;

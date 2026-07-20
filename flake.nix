@@ -30,5 +30,5 @@
         scan = cfg.scan;
       };
     in
-    import ./lib/outputs.nix { inherit self inputs cfg profiles; };
+    import ./lib/flake/outputs.nix { inherit self inputs cfg profiles; };
 }

@@ -38,7 +38,7 @@ in
       HOST_SRC=${lib.escapeShellArg hostSrc}
       ANGST_SRC=${lib.escapeShellArg angstSrc}
       ANGST_DST=${lib.escapeShellArg angstDst}
-      ${builtins.readFile ../scripts/seed-angst-repo.sh}
+      ${builtins.readFile ../../scripts/seed-angst-repo.sh}
     '';
 
     home.activation.renderDomainConfigs = lib.hm.dag.entryAfter [ "seedAngstRepo" ] ''

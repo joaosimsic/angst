@@ -33,7 +33,7 @@ let
         else
           let
             render = import "${path}/render.nix";
-            checkHelpers = import ../checks/theme/assertions.nix {
+            checkHelpers = import ../../checks/theme/assertions.nix {
               inherit lib;
               themeName = config.theme;
               theme = themesLib.get config.theme;
