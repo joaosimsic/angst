@@ -219,8 +219,7 @@ rec {
       mkChecks.themeLint or (import ./checks/theme {
         inherit lib;
         themesLib = cfg.scan.themes;
-        renderDomainOutputsFor = render.renderDomainOutputsFor cfg.hostname;
-        testHostname = cfg.hostname;
+        renderDomainOutputsFor = render.renderDomainOutputsFor;
       });
   };
 }

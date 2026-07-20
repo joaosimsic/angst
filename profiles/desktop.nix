@@ -1,4 +1,4 @@
-{ mkDomainEnable }:
+{ mkDomainEnable, mkCap }:
 {
   hm = [
     (mkDomainEnable "wm.i3")
@@ -8,13 +8,8 @@
     (mkDomainEnable "session.x11")
   ];
   nixos = [
-    ({ ... }: {
-      capabilities.graphical.enable = true;
-      capabilities.audio.enable = true;
-      capabilities.clipboard.enable = true;
-    })
-    ../capabilities/graphical.nix
-    ../capabilities/audio.nix
-    ../capabilities/clipboard.nix
+    (mkCap "graphical")
+    (mkCap "audio")
+    (mkCap "clipboard")
   ];
 }

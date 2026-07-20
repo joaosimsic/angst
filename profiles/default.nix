@@ -12,12 +12,17 @@ let
       domains.${domain.category}.${domain.name}.enable = true;
     };
 
+  mkCap = name: { config, ... }: {
+    imports = [ ../capabilities/${name}.nix ];
+    capabilities.${name}.enable = true;
+  };
+
   profileMap = {
-    base        = import ./base.nix        { inherit mkDomainEnable; };
-    desktop     = import ./desktop.nix      { inherit mkDomainEnable; };
-    development = import ./development.nix  { inherit mkDomainEnable; };
-    server      = import ./server.nix       { inherit mkDomainEnable; };
-    vm          = import ./vm.nix           { inherit mkDomainEnable; };
+    base        = import ./base.nix        { inherit mkDomainEnable mkCap; };
+    desktop     = import ./desktop.nix      { inherit mkDomainEnable mkCap; };
+    development = import ./development.nix  { inherit mkDomainEnable mkCap; };
+    server      = import ./server.nix       { inherit mkDomainEnable mkCap; };
+    vm          = import ./vm.nix           { inherit mkDomainEnable mkCap; };
   };
 
   resolve = names:

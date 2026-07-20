@@ -5,25 +5,24 @@ let
 
   themesLib = cfg.scan.themes;
   alternate = head (filter (n: n != cfg.theme) (attrNames themesLib.themes));
-  testHostname = cfg.hostname;
 
   themeLint = import ./theme {
-    inherit lib themesLib testHostname;
+    inherit lib themesLib;
     renderDomainOutputsFor = render.renderDomainOutputsFor;
   };
 
   lintDesktop = import ./desktop.nix {
-    inherit lib pkgs themesLib testHostname;
+    inherit lib pkgs themesLib;
     renderDomainOutputFor = render.renderDomainOutputFor;
   };
 
   lintShell = import ./shell.nix {
-    inherit lib pkgs themesLib testHostname;
+    inherit lib pkgs themesLib;
     renderDomainOutputFor = render.renderDomainOutputFor;
   };
 
   themeRendered = import ./theme/rendered.nix {
-    inherit lib pkgs themesLib testHostname;
+    inherit lib pkgs themesLib;
     renderDomainOutputsFor = render.renderDomainOutputsFor;
     themeName = cfg.theme;
   };
@@ -35,7 +34,7 @@ let
   };
 
   themeOverrideCheck = import ./theme/override.nix {
-    inherit lib pkgs themesLib testHostname;
+    inherit lib pkgs themesLib;
     overrideTheme = alternate;
     renderDomainOutputFor = render.renderDomainOutputFor;
     homeConfiguration = self.homeConfigurations."${cfg.username}-theme-override-test";

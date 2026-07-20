@@ -1,4 +1,4 @@
-{ mkDomainEnable }:
+{ mkDomainEnable, mkCap }:
 {
   hm = [
     (mkDomainEnable "shell.nushell")
@@ -9,17 +9,10 @@
     (mkDomainEnable "git.lazygit")
   ];
   nixos = [
-    ({ ... }: {
-      capabilities.network.enable = true;
-      capabilities.git.enable = true;
-      capabilities.search.enable = true;
-      capabilities.monitoring.enable = true;
-      capabilities.container.enable = true;
-    })
-    ../capabilities/network.nix
-    ../capabilities/git.nix
-    ../capabilities/search.nix
-    ../capabilities/monitoring.nix
-    ../capabilities/container.nix
+    (mkCap "network")
+    (mkCap "git")
+    (mkCap "search")
+    (mkCap "monitoring")
+    (mkCap "container")
   ];
 }

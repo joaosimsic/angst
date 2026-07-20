@@ -3,8 +3,7 @@
 let
   fontsLib = import ./home/fonts.nix;
 in rec {
-  # hostName is accepted for API compat with existing callers (not used — cfg has everything)
-  renderDomainOutputsFor = hostName: themeName:
+  renderDomainOutputsFor = themeName:
     let
       themesLib = cfg.scan.themes;
       checkHelpers = import ./checks/theme/assertions.nix { inherit lib; theme = themesLib.get themeName; inherit themeName; };
@@ -18,9 +17,9 @@ in rec {
       homeDirectory = "/home/${cfg.username}";
     }) domainRendererPaths);
 
-  renderDomainOutputFor = hostName: themeName: outputPath:
+  renderDomainOutputFor = themeName: outputPath:
     let
-      matches = lib.filter (output: output.path == outputPath) (renderDomainOutputsFor hostName themeName);
-    in if matches == [] then builtins.throw "Unknown domain render output: ${outputPath}"
+      matches = lib.filter (output: output.path == outputPath) (renderDomainOutputsFor themeName);
+    in if matches == [] then throw "Unknown domain render output: ${outputPath}"
       else (builtins.head matches).text;
 }

@@ -45,7 +45,7 @@ in
       ANGST_REPO=${lib.escapeShellArg hostSrc}
       JSON_DATA=$(${lib.getBin pkgs.nix}/bin/nix eval --impure \
         "${flakeSelf}#lib.renderDomainOutputsFor" \
-        --apply "f: builtins.toJSON (map (o: { path = o.path; text = o.text; }) (f \"${hostName}\" \"${config.theme}\"))" \
+        --apply "f: builtins.toJSON (map (o: { path = o.path; text = o.text; }) (f \"${config.theme}\"))" \
         --raw 2>/dev/null) || true
 
       if [ -n "$JSON_DATA" ] && [ "$JSON_DATA" != "[]" ]; then

@@ -1,4 +1,4 @@
-{ mkDomainEnable }:
+{ mkDomainEnable, mkCap }:
 {
   hm = [ ];
   nixos = [
@@ -7,9 +7,6 @@
     ../lib/virtualization/vm-variant.nix
     ../lib/virtualization/vm-profile.nix
     ../lib/virtualization/host-mount.nix
-    ../capabilities/ssh.nix
-    ({ ... }: {
-      capabilities.ssh.enable = true;
-    })
+    (mkCap "ssh")
   ];
 }

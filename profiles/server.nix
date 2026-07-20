@@ -1,10 +1,7 @@
-{ mkDomainEnable }:
+{ mkDomainEnable, mkCap }:
 {
   hm = [ ];
   nixos = [
-    ({ ... }: {
-      capabilities.ssh.enable = true;
-    })
-    ../capabilities/ssh.nix
+    (mkCap "ssh")
   ];
 }
