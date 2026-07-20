@@ -17,13 +17,6 @@ in
     (lib.mkAliasOptionModule [ "keyboardLayout" ] [ "angst" "keyboardLayout" ])
   ];
 
-  options.angst.isQemuVm = lib.mkOption {
-    internal = true;
-    type = lib.types.bool;
-    default = false;
-    description = "Whether the system is a QEMU dev VM.";
-  };
-
   options.angst.keyboardLayout = lib.mkOption {
     type = lib.types.str;
     default = "us";

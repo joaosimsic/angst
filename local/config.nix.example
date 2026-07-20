@@ -13,7 +13,7 @@
 {
   system = "x86_64-linux";
   repoPath = "proj/angst";
-  hostname = "personal";
+  hostname = "nixos";
   username = "joao";
   theme = "miasma";
   profiles = ["base" "desktop" "development"];
