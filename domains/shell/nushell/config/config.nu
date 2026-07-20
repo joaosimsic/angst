@@ -1,4 +1,4 @@
-$env.config = {
+$env.config = ($env.config | merge {
     show_banner: false
 
     edit_mode: vi
@@ -20,6 +20,11 @@ $env.config = {
         quick: true
         partial: true
         algorithm: "fuzzy"
+
+        external: {
+            enable: true
+            completer: $carapace_completer
+        }
     }
 
     table: {
@@ -70,6 +75,7 @@ $env.config = {
         }
     ]
 }
+)
 
 source $"($nu.default-config-dir)/colors.nu"
 
