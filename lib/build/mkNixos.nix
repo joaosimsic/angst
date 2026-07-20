@@ -86,10 +86,7 @@ inputs.nixpkgs.lib.nixosSystem {
         users.${cfg.username} = {
           imports = [
             ../../modules/home
-          ]
-          ++ [
             themeModule
-            ../../modules/home/i3Fragments.nix
           ]
           ++ appHomeModules
           ++ hmModules
