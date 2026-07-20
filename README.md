@@ -124,7 +124,7 @@ Managed domains:
 | `lib/domains/` | Domain discovery, module generation, activation scripts |
 | `lib/checks/` | Evaluation-time validation: `desktop.nix` (i3 + i3status per theme), `shell.nix` (starship + nushell per theme), `theme/` (6-file theme validation suite) |
 | `lib/flake/` | Flake output assembly: `checks.nix`, `homeConfigurations.nix`, packages (`angst` CLI, `vm-cli`, devShells), apps (`render`, `watch`, `check`, `lint-*`, `vm`) |
-| `lib/home/` | Shared home-manager helpers: `themeModule.nix` (propagates theme tokens into home config), `i3Fragments.nix` (i3 keybinding fragments), `fonts.nix` (font family configuration) |
+| `lib/home/` | Shared home-manager helpers: `themeModule.nix` (propagates theme tokens into home config), `fonts.nix` (font family configuration) |
 
 The theme validation system at `lib/checks/theme/` enforces correctness at evaluation time:
 

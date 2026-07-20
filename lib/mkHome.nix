@@ -45,10 +45,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
 
   modules = [
     ./home
-  ]
-  ++ [
     themeModule
-    ./home/i3Fragments.nix
   ]
   ++ appHomeModules
   ++ hmModules
