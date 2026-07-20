@@ -56,8 +56,7 @@ endfunction
 
 " open browser
 function! mkdp#util#open_browser() abort
-  call mkdp#rpc#open_browser()
-  call mkdp#autocmd#init()
+  lua require("mkdp").open_browser()
 endfunction
 
 function! mkdp#util#stop_preview() abort
