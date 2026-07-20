@@ -46,7 +46,7 @@ return {
 				end,
 			})
 
-			vim.api.nvim_create_autocmd({ "BufLeave", "BufWipeout" }, {
+			vim.api.nvim_create_autocmd({ "BufUnload", "BufDelete", "BufWipeout" }, {
 				group = group,
 				pattern = "*.md",
 				callback = function()
