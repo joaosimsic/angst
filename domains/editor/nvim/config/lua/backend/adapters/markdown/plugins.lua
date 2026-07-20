@@ -16,6 +16,9 @@ return {
 	{
 		dir = plugin_dir,
 		ft = "markdown",
+		build = function()
+			vim.system({ "bun", "install" }, { cwd = plugin_dir .. "/app" }):wait()
+		end,
 		config = function()
 			local md_badge = Badge.new({
 				name = "md-preview",

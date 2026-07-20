@@ -1,7 +1,7 @@
 local M = {}
 
 local source = debug.getinfo(1, "S").source:gsub("^@", "")
-local root_dir = vim.fn.fnamemodify(source, ":p:h:h:h")
+local root_dir = vim.fn.fnamemodify(vim.fn.resolve(source), ":p:h:h:h")
 
 local channel_id = -1
 local intentional_stop = false
@@ -41,6 +41,11 @@ function M.get_server_status()
 end
 
 function M.start_server()
+  local app_dir = root_dir .. "/app"
+  if vim.fn.isdirectory(app_dir .. "/node_modules/@chemzqm/neovim") == 0 then
+    vim.system({ "bun", "install" }, { cwd = app_dir }):wait()
+  end
+
   local server_script = root_dir .. "/app/bin/markdown-preview-" .. require("mkdp").get_platform()
 
   local cmd
