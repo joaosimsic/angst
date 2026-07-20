@@ -16,10 +16,10 @@
       capabilities.monitoring.enable = true;
       capabilities.container.enable = true;
     })
-    ../capabilities/network.nix
-    ../capabilities/git.nix
-    ../capabilities/search.nix
-    ../capabilities/monitoring.nix
-    ../capabilities/container.nix
+    ../../capabilities/network.nix
+    ../../capabilities/git.nix
+    ../../capabilities/search.nix
+    ../../capabilities/monitoring.nix
+    ../../capabilities/container.nix
   ];
 }

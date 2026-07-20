@@ -27,6 +27,7 @@ let
 
   fullDevPackages = with pkgs; [
     neovim git angstCli openssh qemu cargo rustc rust-analyzer
+    deadnix statix
   ] ++ allToolchainPkgs ++ [
     vmOutputs.packages.${cfg.system}.wrapped
     vmOutputs.packages.${cfg.system}.vm-run
@@ -35,7 +36,7 @@ let
 in {
   shells = {
     safe = pkgs.mkShell {
-      packages = with pkgs; [ neovim git ] ++ allToolchainPkgs;
+      packages = with pkgs; [ neovim git deadnix statix ] ++ allToolchainPkgs;
       shellHook = treesitterShellHook;
     };
 

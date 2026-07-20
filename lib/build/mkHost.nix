@@ -1,7 +1,7 @@
 { inputs, self, cfg, hmModules, nixosModules, themeOverride ? null }:
 
 let
-  pkgs = import inputs.nixpkgs { system = cfg.system; config.allowUnfree = true; };
+  pkgs = import inputs.nixpkgs { system = cfg.system; config = import ../nixpkgs-config.nix; };
   lib = pkgs.lib;
 
   effectiveTheme = if themeOverride != null then themeOverride else cfg.theme;

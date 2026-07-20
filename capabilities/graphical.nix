@@ -3,6 +3,7 @@
   lib,
   pkgs,
   theme,
+  themes,
   ...
 }:
 
@@ -16,8 +17,7 @@ in
 
   config = lib.mkIf cfg.enable (
     let
-      themesLib = import ../themes/default.nix { inherit lib; };
-      themeColors = themesLib.get theme;
+      themeColors = themes.get theme;
     in
     {
       services = {

@@ -26,7 +26,7 @@
     "nix-command"
     "flakes"
   ];
-  nixpkgs.config.allowUnfree = true;
+  nixpkgs.config = import ../nixpkgs-config.nix;
 
   users.users.${userConfig.username} = {
     isNormalUser = true;

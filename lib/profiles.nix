@@ -4,11 +4,11 @@ let
   mkDomainEnable = import ./mkDomainEnable.nix { inherit lib scan; };
 
   profileMap = {
-    base        = import ../profiles/base.nix        { inherit mkDomainEnable; };
-    desktop     = import ../profiles/desktop.nix      { inherit mkDomainEnable; };
-    development = import ../profiles/development.nix  { inherit mkDomainEnable; };
-    server      = import ../profiles/server.nix       { inherit mkDomainEnable; };
-    vm          = import ../profiles/vm.nix           { inherit mkDomainEnable; };
+    base        = import ./profiles/base.nix        { inherit mkDomainEnable; };
+    desktop     = import ./profiles/desktop.nix      { inherit mkDomainEnable; };
+    development = import ./profiles/development.nix  { inherit mkDomainEnable; };
+    server      = import ./profiles/server.nix       { inherit mkDomainEnable; };
+    vm          = import ./profiles/vm.nix           { inherit mkDomainEnable; };
   };
 
   resolve = names:

@@ -1,7 +1,7 @@
 { self, inputs, cfg, profiles }:
 
 let
-  pkgs = import inputs.nixpkgs { system = cfg.system; config.allowUnfree = true; };
+  pkgs = import inputs.nixpkgs { system = cfg.system; config = import ./nixpkgs-config.nix; };
   lib = pkgs.lib;
 
   mkHome = import ./build/mkHome.nix;

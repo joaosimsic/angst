@@ -5,6 +5,6 @@
     ({ ... }: {
       capabilities.ssh.enable = true;
     })
-    ../capabilities/ssh.nix
+    ../../capabilities/ssh.nix
   ];
 }

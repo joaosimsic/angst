@@ -44,9 +44,12 @@ let
   checkPassword = import ./password.nix {
     inherit lib pkgs cfg;
   };
+
+  lintNix = import ./lint-nix.nix { inherit pkgs; };
 in
 {
   check-password          = checkPassword;
+  lint-nix                = lintNix;
   lint-themes           = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop          = lintDesktop;
   lint-shell            = lintShell;

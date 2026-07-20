@@ -20,9 +20,10 @@
 
   outputs = { self, nixpkgs, home-manager, vm, shell, ... }@inputs:
     let
-      pure  = import ./lib/read-config.nix { inherit inputs self; };
+      themesLib = import ./themes/default.nix { lib = inputs.nixpkgs.lib; };
+      pure  = import ./lib/read-config.nix { inherit inputs self themesLib; };
       cfg   = pure.cfg;
-      pkgs  = import nixpkgs { system = cfg.system; config.allowUnfree = true; };
+      pkgs  = import nixpkgs { system = cfg.system; config = import ./lib/nixpkgs-config.nix; };
       profiles = import ./lib/profiles.nix {
         inherit (cfg) profiles;
         lib = pkgs.lib;
