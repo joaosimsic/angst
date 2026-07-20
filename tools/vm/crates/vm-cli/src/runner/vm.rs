@@ -226,6 +226,12 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
     let effective_headless = headless || !detect_display();
 
     let runner_path = format!("result/bin/run-{}-vm", host);
+    let fallback_path = "result/bin/run-nixos-vm".to_string();
+    let runner_path = if Path::new(&runner_path).exists() {
+        runner_path
+    } else {
+        fallback_path.clone()
+    };
     let runner_exists = Path::new(&runner_path).exists();
 
     if !runner_exists {
@@ -244,8 +250,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
             "--refresh",
             "--no-write-lock-file",
             &format!(
-                ".#nixosConfigurations.{}.config.specialisation.vm.configuration.system.build.vm",
-                host
+                ".#nixosConfigurations.current.config.system.build.vm",
             ),
         ])
         .env("ANGST_USERNAME", &username);

@@ -35,7 +35,7 @@ in
 
   cfg = {
     system     = system;
-    hostname   = config.hostname or "localhost";
+    hostname   = config.hostname or "nixos";
     username   = config.username or "user";
     theme      = config.theme or "monochrome";
     password   = config.password or "!";

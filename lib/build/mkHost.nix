@@ -21,9 +21,12 @@ in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
     inherit (cfg) hostname monitors repoPath;
+    hostName = cfg.hostname;
     inherit (cfg.scan) themes;
+    themesLib = cfg.scan.themes;
     userConfig = userCfg;
     theme = effectiveTheme;
+    flakeSelf = self;
   };
 
   modules =
@@ -46,9 +49,12 @@ inputs.nixpkgs.lib.nixosSystem {
 
           extraSpecialArgs = {
             inherit (cfg) hostname monitors repoPath;
+            hostName = cfg.hostname;
             inherit (cfg.scan) themes;
+            themesLib = cfg.scan.themes;
             userConfig = userCfg;
             theme = effectiveTheme;
+            flakeSelf = self;
           };
 
           users.${cfg.username} = {

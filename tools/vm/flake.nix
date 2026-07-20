@@ -118,7 +118,7 @@
                 RUNNER="result/bin/run-nixos-vm"
               fi
               if [ ! -f "$RUNNER" ]; then
-                echo "Error: VM runner not found at result/bin/run-''${TARGET_HOST}-vm or result/bin/run-nixos-vm. Build the VM first (e.g. 'nix build .#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm')."
+                echo "Error: VM runner not found at result/bin/run-''${TARGET_HOST}-vm or result/bin/run-nixos-vm. Build the VM first (e.g. 'nix build .#nixosConfigurations.current.config.system.build.vm')."
                 exit 1
               fi
 
@@ -153,7 +153,7 @@
 
               echo "Building VM for host '$TARGET_HOST' (user: $SSH_USER)..."
               git -C "$FLAKE_DIR" update-index -q --refresh 2>/dev/null || true
-              nix build ".#nixosConfigurations.$TARGET_HOST.config.specialisation.vm.configuration.system.build.vm" --impure --refresh --no-write-lock-file 2>&1
+              nix build ".#nixosConfigurations.current.config.system.build.vm" --impure --refresh --no-write-lock-file 2>&1
 
               RUNNER="result/bin/run-$TARGET_HOST-vm"
               if [ ! -f "$RUNNER" ]; then
