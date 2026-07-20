@@ -4,7 +4,7 @@ angst has a **compact color-theme system** that powers consistent theming across
 
 ## Compact Token Format (v2)
 
-The theme schema (`/themes/schema.nix`) defines only 13 tokens total:
+The theme schema (`/themes/schema.nix`) defines 13 tokens total:
 
 ### Palette (9 values)
 
@@ -35,7 +35,7 @@ Semantic diagnostic colors:
 
 ## Available Themes
 
-All 8 themes are defined in `/themes/*.nix`:
+All 9 themes are defined in `/themes/*.nix`:
 
 | Theme | Style | Background | Accent |
 |-------|-------|------------|--------|
@@ -47,6 +47,7 @@ All 8 themes are defined in `/themes/*.nix`:
 | `lotus` | Light/warm lotus | `#f2ecbc` | `#c84053` |
 | `miasma` | Earthy/desert tones | `#222222` | `#b36d43` |
 | `noctis` | Dark teal/blue | `#03191b` | `#e4b781` |
+| `rose-pine` | Rose-pine dusk | `#191724` | `#eb6f92` |
 
 Each theme file exports a compact attrset matching the schema:
 
@@ -96,7 +97,7 @@ The default theme name: `"monochrome"`.
 
 ## How Domains Consume Themes
 
-1. **Theme module** (`/lib/home/themeModule.nix`): Defines a `theme` option as an enum of available theme names, defaulting to the host's configured theme.
+1. **Theme module** (`/modules/home/themeModule.nix`): Defines a `theme` option as an enum of available theme names, defaulting to the host's configured theme.
 
 2. **Domain module** (`/lib/domains/module.nix`): When rendering a domain's config, calls:
    ```nix
@@ -122,7 +123,7 @@ The default theme name: `"monochrome"`.
    }]
    ```
 
-4. **Flake outputs** (`/lib/flake/default.nix`): Provides `renderDomainOutputsFor`, `renderDomainOutputFor`, and `renderDomainOutputPathsFor` that aggregate all domain renders with injected theme and host context.
+4. **Flake outputs** (`/lib/flake/outputs.nix`): Provides packages and apps built from the render engine. The render functions (`renderDomainOutputsFor`, `renderDomainOutputFor`, `renderDomainOutputPathsFor`) live in `/lib/render.nix` and aggregate all domain renders with injected theme and host context.
 
 ## Validation & Checks
 
@@ -138,7 +139,7 @@ The theme system has robust validation:
 | **theme-semantic-distinct** | All ANSI semantic colors are distinct (error, warn, info, success) |
 | **home-theme-override-test** | Full home-manager activation with an overridden theme |
 
-The assertion library (`/lib/checks/theme/assertions.nix`) provides `require`, `requireDistinct`, and `requireInfix` helpers. Many domain render files embed inline checks.
+The assertion library (`/checks/theme/assertions.nix`) provides `require`, `requireDistinct`, and `requireInfix` helpers. Many domain render files embed inline checks.
 
 ## Source Map
 
@@ -154,9 +155,10 @@ The assertion library (`/lib/checks/theme/assertions.nix`) provides `require`, `
 | `/themes/miasma.nix` | Miasma (earthy/desert) theme |
 | `/themes/monochrome.nix` | Default grayscale theme |
 | `/themes/noctis.nix` | Noctis (teal/blue) theme |
-| `/lib/home/themeModule.nix` | `theme` option definition for home-manager |
-| `/lib/checks/theme/` | Theme validation checks |
-| `/lib/checks/theme/assertions.nix` | Check helper functions |
+| `/themes/rose-pine.nix` | Rose-pine dusk theme |
+| `/modules/home/themeModule.nix` | `theme` option definition for home-manager |
+| `/checks/theme/` | Theme validation checks |
+| `/checks/theme/assertions.nix` | Check helper functions |
 
 ## Changing or Adding a Theme
 
@@ -164,22 +166,22 @@ The assertion library (`/lib/checks/theme/assertions.nix`) provides `require`, `
 2. It will be auto-discovered by `/themes/default.nix`
 3. Run `nix run .#lint-themes` to validate
 4. Run `nix run .#lint-desktop` and `nix run .#lint-shell` to test renders
-5. Set the theme in a host's `default.nix` via `theme = "your-theme-name";`
+5. Set the theme in `local/config.nix` via `theme = "your-theme-name";`
 
 ## Change Guidance
 
 ### Modifying theme system internals
-- **`/themes/schema.nix`** — Defines the required token structure. Adding a new token here requires updating all 8 theme files (`/themes/*.nix`) and potentially every `render.nix` that consumes them.
-- **`/themes/default.nix`** — Theme library with normalization, validation, and RGB conversion. Changes here affect all theme consumers and may break the existing 8 themes.
+- **`/themes/schema.nix`** — Defines the required token structure. Adding a new token here requires updating all 9 theme files (`/themes/*.nix`) and potentially every `render.nix` that consumes them.
+- **`/themes/default.nix`** — Theme library with normalization, validation, and RGB conversion. Changes here affect all theme consumers and may break the existing 9 themes.
   - `normalizeTheme` strips `#` prefixes; consumers receive bare hex values and must add `#` themselves.
   - `withRgb` generates `_RGB` suffixed space-separated decimal variants recursively for all leaf values.
-- **`/lib/home/themeModule.nix`** — The `theme` option definition. The option type is `enum` constrained to `lib.attrNames themesLib.themes`. Adding a theme updates this automatically.
+- **`/modules/home/themeModule.nix`** — The `theme` option definition. The option type is `enum` constrained to `lib.attrNames themesLib.themes`. Adding a theme updates this automatically.
 
 ### Modifying theme validation
-- **`/lib/checks/theme/assertions.nix`** — Provides `require`, `requireDistinct`, `requireInfix` helpers used by many domain `render.nix` files for inline checks. Token paths use dot-separated notation (e.g., `"palette.dim"`, `"ansi.error"`).
-- **`/lib/checks/theme/semanticDistinct.nix`** — Ensures `ansi.error`, `ansi.success`, `ansi.warn`, `ansi.info` are all distinct.
-- **`/lib/checks/theme/rendered.nix`** — Verifies rendered domain configs contain expected theme tokens. Update when adding domains or changing render output paths.
-- **`/lib/checks/theme/override.nix`** — Tests theme override propagation. Works by picking an alternate theme (first alphabetically different from the host's theme) and verifying the rendered output changes.
+- **`/checks/theme/assertions.nix`** — Provides `require`, `requireDistinct`, `requireInfix` helpers used by many domain `render.nix` files for inline checks. Token paths use dot-separated notation (e.g., `"palette.dim"`, `"ansi.error"`).
+- **`/checks/theme/semanticDistinct.nix`** — Ensures `ansi.error`, `ansi.success`, `ansi.warn`, `ansi.info` are all distinct.
+- **`/checks/theme/rendered.nix`** — Verifies rendered domain configs contain expected theme tokens. Update when adding domains or changing render output paths.
+- **`/checks/theme/override.nix`** — Tests theme override propagation. Works by picking an alternate theme (first alphabetically different from the host's theme) and verifying the rendered output changes.
 
 ### When adding a new domain that consumes themes
 1. Create `render.nix` that uses `themesLib.get themeName` to access theme tokens
@@ -189,6 +191,6 @@ The assertion library (`/lib/checks/theme/assertions.nix`) provides `require`, `
 5. Run `nix run .#lint-themes` to verify
 
 ### Important constraints
-- All 8 themes must always define the same tokens. Adding a token to the schema breaks all themes until they're updated.
+- All 9 themes must always define the same tokens. Adding a token to the schema breaks all themes until they're updated.
 - There are no legacy uppercase aliases (`FG`, `BG`, etc.) — consumers use full paths like `t.palette.background.base`.
 - `_RGB` variants are generated for every leaf string color value. Applications that consume these (i3) expect space-separated decimal `R G B` format.

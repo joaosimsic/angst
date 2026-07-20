@@ -63,5 +63,10 @@ in
     ];
 
     programs.nix-ld.enable = true;
+
+    fileSystems."/" = lib.mkDefault {
+      device = "/dev/disk/by-label/nixos";
+      fsType = "ext4";
+    };
   };
 }

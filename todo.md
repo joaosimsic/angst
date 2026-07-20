@@ -23,7 +23,11 @@
 # nix
 
 - [x] add package managers to toolchains
-- [ ] use nixos-generate-config to set hardware
+- [x] use nixos-generate-config to set hardware
+
+# analyzer
+
+- [ ] make dynamic scanning
 
 # vm
 

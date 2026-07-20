@@ -4,7 +4,7 @@ angst ships three CLI tools and an OpenCode MCP integration for VM management.
 
 ## angst CLI — Hot-Reload Renderer and Password Manager
 
-A shell script (`/lib/flake/shared.nix` → `angst`) for rendering theme-aware domain configs without a full Nix rebuild and managing user passwords.
+A shell script (`/lib/flake/outputs.nix` → `angst` package) for rendering theme-aware domain configs without a full Nix rebuild and managing user passwords.
 
 ### Commands
 
@@ -57,7 +57,7 @@ The `angst passwd` subcommand (`/scripts/angst.sh`) handles user password setup:
 4. Writes or updates `PASSWORD=<hash>` in `user.env`
 5. Securely clears password variables from memory after hashing
 
-The hashed password is consumed at Nix build time by `/lib/nixos/default.nix`, which resolves it via `ANGST_PASSWORD` env > `user.env.PASSWORD` > `null` (no password).
+The hashed password is consumed at Nix build time through the `cfg.password` field, resolved by `lib/read-config.nix` from `local/config.nix`. The password can also be overridden via the `ANGST_PASSWORD` environment variable at build time.
 
 ## shell CLI — Nix-Aware Dev Shell Entry
 
@@ -198,7 +198,7 @@ This enables AI coding agents to start, stop, and interact with NixOS VMs during
 
 | Tool | Source | Key Files |
 |------|--------|-----------|
-| **angst CLI** | `/lib/flake/shared.nix` | Render/watch shell script |
+| **angst CLI** | `/lib/flake/outputs.nix` (angst package), `/scripts/angst.sh` | Render/watch shell script |
 | **shell CLI** | `/tools/shell/` | `src/main.rs`, `src/runner.rs`, `src/commands.rs`, `Cargo.toml`, `flake.nix` |
 | **VM CLI** | `/tools/vm/` | `src/main.rs`, `Cargo.toml`, `flake.nix`, `crates/vm-core/`, `crates/vm-cli/`, `crates/vm-mcp/` |
 | **MCP config** | `/opencode.json` | Remote MCP server config |
@@ -206,8 +206,8 @@ This enables AI coding agents to start, stop, and interact with NixOS VMs during
 ## Change Guidance
 
 ### Modifying the angst CLI
-- Source: `/lib/flake/shared.nix` (the `angstCli` `writeShellApplication`), with the implementation in `/scripts/angst.sh`
-- The `render` command calls `nix eval --impure "$repo_root#lib.renderDomainOutputsFor"` — any change to the `renderDomainOutputsFor` function in `/lib/flake/default.nix` affects the CLI output
+- Source: `/lib/flake/outputs.nix` (the `angst` package), with the implementation in `/scripts/angst.sh`
+- The `render` command calls `nix eval --impure "$repo_root#lib.renderDomainOutputsFor"` — any change to the `renderDomainOutputsFor` function in `/lib/render.nix` affects the CLI output
 - The `watch` command uses `watchexec` — ensure it's available as a runtime input (`pkgs.watchexec` in `angstCli` definition)
 - The `passwd` subcommand calls `mkpasswd` — ensure it's in the `angstCli` runtime inputs (`pkgs.mkpasswd`)
 - Environment variable fallback chain: `$ANGST_REPO` → `git rev-parse` → `pwd`
@@ -224,9 +224,9 @@ This enables AI coding agents to start, stop, and interact with NixOS VMs during
 - Key env vars baked in at build time via `makeWrapper`:
   - `SHELL_SAFE_PATH`, `SHELL_DEV_PATH` — PATH overrides (set in `shared.nix`)
   - `SHELL_TS_PARSERS`, `SHELL_TS_QUERIES` — Tree-sitter paths
-  - `SHELL_DEV_ENTRY` — Dev hook entry script (sources `shellDevHook` in `shared.nix`)
+  - `SHELL_DEV_ENTRY` — Dev hook entry script (sources `shellDevHook` in `lib/flake/devshell.nix`)
   - `SHELL_ENABLED_SHELLS` — Colon-separated shell paths for host-specific shells
-- **Build**: Built by `tools/shell/flake.nix` as a local flake input. The wrapper (`shellWrapped`) is constructed in `/lib/flake/shared.nix`
+- **Build**: Built by `tools/shell/flake.nix` as a local flake input. The wrapper (`shellTool`) is constructed in `/lib/flake/outputs.nix`
 - **Testing**: Run `cargo test` from `/tools/shell/`
 
 ### Modifying the VM CLI
@@ -239,7 +239,7 @@ This enables AI coding agents to start, stop, and interact with NixOS VMs during
   - `target_host()`/`target_username()`: Priority chain for host/user resolution
 - **`vm-mcp`** — MCP server for AI agent integration. The MCP endpoint is configured in `/opencode.json` (port 8765).
 - **Build**: Built by `tools/vm/flake.nix`. The flake constructs `allHostVms` by mapping over NixOS configurations.
-- **Runtime wrapper**: `vmRunShim` in `/lib/flake/shared.nix` is a script that collects SSH keys, validates them, writes them to `$XDG_STATE_HOME/vm/keys/$TARGET_HOST/authorized_keys`, and defers to `nix run` for the actual VM launch.
+- **Runtime wrapper**: `vm-run` package in `/lib/flake/outputs.nix` is a script that collects SSH keys, validates them, writes them to `$XDG_STATE_HOME/vm/keys/$TARGET_HOST/authorized_keys`, and defers to `nix run` for the actual VM launch.
 - **Testing**: CI runs `cargo fmt --check`, `cargo test --workspace` in a dev shell (`.github/workflows/checks.yml`). Run locally: `nix develop .#vm` then `cargo test --workspace`.
 - **Important**: The VM CLI flake is a separate local flake input (`inputs.vm = { url = "./tools/vm"; ... }`). Changes to the VM crate structure (adding/removing crates) must be reflected in the workspace `Cargo.toml`.
 

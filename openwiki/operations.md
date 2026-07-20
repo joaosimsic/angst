@@ -12,9 +12,9 @@ A controlled editing environment providing neovim with Tree-sitter parsers, LSPs
 nix develop .#safe
 ```
 
-### Dev Shell (`nix develop .#dev`)
+### Full Dev Shell (`nix develop .#dev`)
 
-Full development environment with everything from safe plus Rust, QEMU, angst CLI, and VM CLI. The dev shell hook (`shellDevHook` in `/lib/flake/shared.nix`) automatically:
+Full development environment with everything from safe plus Rust, QEMU, angst CLI, and VM CLI. The dev shell hook (`shellDevHook` in `/lib/flake/devshell.nix`) automatically:
 
 - Sets `NIX_DEFAULT_TARGET_HOST=generic` (VM builds default to the generic host)
 - Sets `VM_SSH_PORT=2222` for consistent port forwarding
@@ -98,7 +98,7 @@ nix run .#vm-run -- --headless
 
 ### SSH Key Provisioning
 
-The `vm-run` shim (`/lib/flake/shared.nix`) automatically handles SSH access:
+The `vm-run` shim (`/lib/flake/outputs.nix`, `vm-run` package) automatically handles SSH access:
 
 1. **Target resolution**: Reads `NIX_TARGET_HOST` env > `user.env HOST` > `NIX_DEFAULT_TARGET_HOST` > `ANGST_HOST` > `generic`
 2. **Key collection**: Gathers public keys from `ssh-add -L` (SSH agent) and `~/.ssh/*.pub` files
@@ -185,14 +185,12 @@ cargo test --workspace                                      # Test
 
 ## Common Tasks
 
-### Adding a new host
-1. Create `hosts/<name>/default.nix` with `system`, `theme`, `user`, `monitors`
-2. Create `hosts/<name>/configuration.nix` for NixOS config
-3. Create `hosts/<name>/hardware.nix` for hardware-specific config
-4. Create `hosts/<name>/home.nix` enabling desired domains
-5. Optionally create `hosts/<name>/user.nix` for a dedicated user definition
-6. The host is auto-discovered by `scanHosts.nix`
-7. Set `HOST=<name>` in your `user.env` to make it the active target for VM and dev shell commands
+### Configuring a machine
+1. Copy `local/config.nix.example` to `local/config.nix`
+2. Set `hostname`, `username`, `theme`, and `profiles` to match your machine
+3. Optionally add hardware-specific config via `local/hardware.nix` (auto-imported by `mkNixos.nix`)
+4. Optionally add one-off NixOS or home-manager config via `nixos = {}` / `home = {}` in `local/config.nix`
+5. Run `nixos-rebuild switch --flake .#current` to apply
 
 ### Adding a new domain
 1. Create `domains/<category>/<name>/meta.nix` with package metadata
@@ -200,12 +198,12 @@ cargo test --workspace                                      # Test
 3. Optionally add `config/` directory for static files
 4. Optionally add `module.nix` for custom home-manager logic
 5. Optionally add `nixos.nix` for system integration
-6. Enable it in a host's `home.nix` or `/common/home.nix`
+6. Enable it in the appropriate profile (`profiles/base.nix`, `profiles/desktop.nix`, etc.) or via `local/config.nix` extras
 
 ### Adding a new theme
 1. Create `/themes/<name>.nix` following the schema
 2. Run `nix run .#lint-themes` to validate
-3. Set `theme = "<name>";` in a host's `default.nix`
+3. Set `theme = "<name>";` in `local/config.nix`
 
 ### Adding a new toolchain
 1. Create `/toolchains/<name>.nix` using `mkToolchain`
@@ -218,7 +216,8 @@ cargo test --workspace                                      # Test
 | `/shell.md` | Controlled dev shell documentation |
 | `/docs/checks.md` | Check suite documentation |
 | `/docs/vm/README.md` | VM CLI documentation |
-| `/lib/flake/shared.nix` | Dev shell definitions, angst CLI |
+| `/lib/flake/devshell.nix` | Dev shell definitions |
+| `/lib/flake/outputs.nix` | angst CLI, vm-run, res() wrapper |
 | `/.github/workflows/checks.yml` | CI workflow |
 | `/tools/vm/flake.nix` | VM build and run scripts |
 | `/lib/treesitter.nix` | Tree-sitter grammar builder |
@@ -228,28 +227,28 @@ cargo test --workspace                                      # Test
 ## Change Guidance
 
 ### Dev Shells
-- **Safe shell** (editing environment): defined in `/lib/flake/default.nix` (lines ~155-163). Contains `neovim`, `git`, and `allToolchainPackages`.
-- **Dev shell** (full development): defined in `/lib/flake/default.nix` (lines ~165-171). Adds `angstCli`, Rust toolchain, QEMU, VM tools.
-- **Shell CLI** (standalone): `shellWrapped` in `/lib/flake/shared.nix` (lines ~308-321). Environment variables are baked in via `makeWrapper`.
+- **Safe shell** (editing environment): defined in `/lib/flake/devshell.nix`. Contains `neovim`, `git`, and `allToolchainPackages`.
+- **Dev shell** (full development): defined in `/lib/flake/devshell.nix`. Adds `angstCli`, Rust toolchain, QEMU, VM tools.
+- **Shell CLI** (standalone): `shellTool` in `/lib/flake/outputs.nix`. Environment variables are baked in via `makeWrapper`.
 - **Tree-sitter hook** (`treesitterShellHook`): creates symlinks for parsers/queries. If you change the tree-sitter output structure in `/lib/treesitter.nix`, update this hook.
 - **SSH host shell paths** (`SHELL_ENABLED_SHELLS`): constructed in `flake.nix` from interactive domains. Adding `interactive = true` to a shell domain's `meta.nix` includes it here.
 
 ### Checks / CI
 - **CI workflow** (`.github/workflows/checks.yml`): runs individual checks as separate jobs on every push/PR. Each job builds a single check derivation.
-- **Check definitions** (`/lib/flake/checks.nix`): assembles all checks from theme lint modules and NixOS/home-manager evaluations.
-- **Adding a new check**: Create a check file in `/lib/checks/`, then wire it into `/lib/flake/checks.nix`.
+- **Check definitions** (`/checks/default.nix`): assembles all checks from theme lint modules (`/checks/theme/`) and NixOS/home-manager evaluations.
+- **Adding a new check**: Create a check file in `/checks/`, then wire it into `/checks/default.nix`.
 - **CI secrets**: None required — Nix evaluation and builds use the public Nix cache. The VM tests use the `magic-nix-cache` action.
 
 ### VM Workflow
-- **VM run shim** (`vmRunShim` in `shared.nix`, lines ~220-269): handles SSH key provisioning, headless mode, disk image management, and QEMU port forwarding.
-- **VM build** (`tools/vm/flake.nix`): constructs `allHostVms` by iterating over NixOS configurations. Adding a new host with `specialisation.vm` automatically includes it.
+- **VM run shim** (in `/lib/flake/outputs.nix`, `vm-run` package): handles SSH key provisioning, headless mode, disk image management, and QEMU port forwarding.
+- **VM build** (`tools/vm/flake.nix`): constructs `allHostVms` by iterating over NixOS configurations.
 - **SSH key injection**: reads from `ssh-agent` and `~/.ssh/*.pub`, writes to `~/.local/state/vm/keys/<host>/authorized_keys`.
 - **Port forwarding**: hardcoded as `hostfwd=tcp::2222-:22` in `vmRunShim`. Change in `QEMU_NET_OPTS`.
 
 ### Hot-Reload
 - `angst render` calls `nix eval --impure "$repo_root#lib.renderDomainOutputsFor"` — requires an `angstCli` flake app that's kept up to date.
 - The `--reload` flag runs `i3-msg reload` — only works when `I3SOCK` is set (i3 running).
-- `angst watch` monitors `themes/`, `domains/`, and `hosts/<host>/` directories. Adding a new watched directory requires editing the `watch_cmd` function.
+- `angst watch` monitors `themes/`, `domains/`, and `local/` directories. Adding a new watched directory requires editing the `watch_cmd` function.
 
 ### Lint and Format
 - **Statix** (Nix lint) checks for anti-patterns in `*.nix` files. Run `statix check .` after structural changes.

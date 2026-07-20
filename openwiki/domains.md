@@ -101,6 +101,7 @@ Creates home-manager activation scripts that symlink the domain's `config/` dire
 |--------|-------------|------------|------------|-----------|
 | `shell/nushell` | `nushell` | Yes | Yes | — |
 | `shell/starship` | `starship` | Yes | Yes | — |
+| `shell/carapace` | `carapace` | — | Yes | — |
 
 ### Terminal
 | Domain | meta.package | render.nix | module.nix | nixos.nix |
@@ -132,13 +133,13 @@ Creates home-manager activation scripts that symlink the domain's `config/` dire
 ### Git
 | Domain | meta.package | render.nix | module.nix | nixos.nix |
 |--------|-------------|------------|------------|-----------|
-| `git/lazygit` | `lazygit` | Yes | — | — |
+| `git/lazygit` | `lazygit` | Yes | Yes | — |
 
-### LLM
+### Agents (formerly LLM)
 | Domain | meta.package | render.nix | module.nix | nixos.nix |
 |--------|-------------|------------|------------|-----------|
-| `llm/opencode` | `opencode` | Yes | — | — |
-| `llm/cursor-cli` | `cursor-cli` | — | — | — |
+| `agents/opencode` | `opencode` | Yes | Yes | — |
+| `agents/cursor-cli` | `cursor-cli` | — | — | — |
 
 ### HTTP Client
 | Domain | meta.package | render.nix | module.nix | nixos.nix |
@@ -165,6 +166,7 @@ toolchains/
 ├── bash.nix
 ├── blade.nix
 ├── c.nix
+├── clojure.nix
 ├── conf.nix      # INI/config syntax highlighting (tree-sitter-ini)
 ├── css.nix
 ├── docker.nix
@@ -173,7 +175,9 @@ toolchains/
 ├── java.nix
 ├── javascript.nix
 ├── json.nix
+├── just.nix      # Justfile support
 ├── lua.nix
+├── markdown.nix  # Markdown rendering + tree-sitter
 ├── nix.nix
 ├── php.nix
 ├── python.nix
@@ -186,38 +190,32 @@ toolchains/
 Each toolchain calls `mkToolchain` (`/lib/toolchain.nix`) which takes an attrset with `runtime`, `packageManager`, `lsp`, `linter`, `formatter`, `treesitter`, `tools` keys.
 
 Toolchains are consumed by:
-- **home-manager**: All toolchain packages are added to `home.packages` via `/common/home.nix` importing `../toolchains`
-- **Dev shells**: `allToolchainPackages` is aggregated in `/lib/flake/shared.nix` and included in dev shell packages
+- **home-manager**: All toolchain packages are added to `home.packages` via the base profile or `cfg.toolchainModules` in `lib/build/mkHome.nix`
+- **Dev shells**: `allToolchainPackages` is aggregated in `lib/read-config.nix` and included in dev shell packages via `lib/flake/devshell.nix`
 - **Tree-sitter**: `allGrammars` are built by `/lib/treesitter.nix` for cross-glibc compatibility
 
-## Common Configuration
+## Profile Composition (replaces common/ home.nix)
 
-`/common/home.nix` enables the core set of domains for all hosts:
+Instead of a shared `/common/home.nix`, domains are enabled through **profile composition**:
 
-- `shell/nushell`, `shell/starship`
-- `terminal/zellij`
-- `llm/opencode`, `llm/cursor-cli`
-- `editor/nvim`
-- `files/yazi`
-- `sql-client/sqlit`
-- `git/lazygit`
-- `http-client/posting`
+- **`profiles/base.nix`** — Applied to all machines. Enables core domains: `shell.nushell`, `shell.carapace`, `shell.starship`, `terminal.zellij`, `editor.nvim`, `files.yazi`, `git.lazygit`.
+- **`profiles/desktop.nix`** — Workstation GUI. Enables `wm.i3`, `bar.i3status`, `launcher.rofi`, `terminal.ghostty`, `session.x11`.
+- **`profiles/development.nix`** — Developer tooling. Enables `agents.opencode`, `agents.cursor-cli`, `sql-client.sqlit`, `http-client.posting`.
 
-Host-specific `home.nix` files add domain enables on top (e.g., `wm/i3`, `bar/i3status`, `launcher/rofi`, `session/x11` for the personal workstation).
+A host's profile list is set in `local/config.nix`: `profiles = ["base" "desktop" "development"]`.
 
 ## Source Map
 
 | File | Role |
 |------|------|
-| `/lib/domains/default.nix` | Framework entry: combines scan + module |
 | `/lib/domains/scan.nix` | Auto-discovers all domains |
 | `/lib/domains/module.nix` | Generates home-manager modules per domain |
 | `/lib/domains/activation.nix` | XDG symlink activation scripts |
 | `/lib/toolchain.nix` | `mkToolchain` builder |
 | `/lib/treesitter.nix` | Tree-sitter grammar builder (glibc-safe) |
-| `/common/home.nix` | Shared domain enables |
-| `/common/user.nix` | User definition |
-| `/common/capabilities.nix` | Shared NixOS capability enables |
+| `/profiles/base.nix` | Core domain enables (replaces old common/home.nix) |
+| `/profiles/desktop.nix` | Desktop domain + capability enables |
+| `/profiles/development.nix` | Development tooling enables |
 
 ## Change Guidance
 
@@ -227,17 +225,17 @@ Host-specific `home.nix` files add domain enables on top (e.g., `wm/i3`, `bar/i3
 3. Add static `config/` files for non-themed defaults
 4. Add `module.nix` only if the auto-generated module (`/lib/domains/module.nix`) isn't sufficient — common reasons: `programs.neovim` enable, custom activation scripts, `customXdg = true`
 5. Add `nixos.nix` only if system-level integration is needed (e.g., X11 WM enablement)
-6. Enable in `common/home.nix` for all hosts, or in a host-specific `home.nix`
+6. Add to the appropriate profile in `profiles/` — `base.nix` for core domains, `desktop.nix` for GUI, `development.nix` for tooling, or `local/config.nix` extras for one-off machines
 7. Run `nix run .#lint-themes` and the relevant domain rendering check
 
 ### Modifying domain framework
 - `/lib/domains/scan.nix` — Controls how domains are discovered and validated. Key behavior: validates `xdg` / `xdgFile` / `customXdg` mutual exclusion
 - `/lib/domains/module.nix` — Auto-generated home-manager module for each domain. Creates `home.file` entries from `render.nix` output or symlinks `config/` directory
 - `/lib/domains/activation.nix` — Creates activation script entries for XDG symlinks with VM host-mount fallback
-- `/lib/build/mkHome.nix` — Orchestrates domain module injection into home-manager; passes `themesLib`, `hostTheme`, `userConfig`, `monitors` as `extraSpecialArgs`
+- `/lib/build/mkHome.nix` — Orchestrates domain module injection into home-manager; passes `themesLib`, `theme`, `userConfig`, `monitors`, `hostname`, `repoPath` as `extraSpecialArgs`
 
 ### Adding a toolchain
 1. Create `/toolchains/<name>.nix` with `mkToolchain { runtime = [...]; lsp = [...]; formatter = [...]; linter = [...]; tools = [...]; treesitter = [...]; }`
-2. Auto-discovered by `/lib/flake/shared.nix` — no registration needed
+2. Auto-discovered by `lib/read-config.nix` — no registration needed
 3. Packages appear in `allToolchainPackages` (dev shells) and `allGrammars` (tree-sitter)
-4. Toolchains are imported via `/common/home.nix` which does `imports = [ ../toolchains ]`
+4. Toolchains are included via `cfg.toolchainModules` in the build pipeline

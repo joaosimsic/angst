@@ -8,35 +8,59 @@ It manages every layer of the system — from hardware detection and bootloader 
 
 | Area | Purpose |
 |------|---------|
-| `/hosts/` | Machine definitions (pure data: system, theme, user, monitors) |
-| `/domains/` | User-space app configs — the unit of configuration |
-| `/themes/` | Color theme definitions (8 themes, strict schema) |
+| `/local/config.nix` | Machine identity — single file defining hostname, username, theme, profiles, monitors |
+| `/profiles/` | Reusable profile compositions (base, desktop, development, server, vm) that enable domains + capabilities |
+| `/modules/` | Core NixOS and home-manager modules: `home/`, `nixos/`, `vm/` (detection, runtime) |
+| `/domains/` | User-space app configs — the unit of configuration (17 domains) |
+| `/themes/` | Color theme definitions (9 themes across 13 tokens, strict schema) |
 | `/capabilities/` | Opt-in NixOS system feature modules |
-| `/toolchains/` | Declarative dev language toolchains (19 languages) |
+| `/toolchains/` | Declarative dev language toolchains (22 languages) |
 | `/tools/` | Rust CLI tools: `shell` (dev shell entry), `vm` (QEMU lifecycle) |
-| `/lib/` | Build system, domain framework, theme linting, flake plumbing, env parsing |
-| `/common/` | Shared config fragments (user, capabilities, home imports) |
+| `/lib/` | Build system, domain framework, flake outputs, config loading, theme rendering |
+| `/checks/` | Build-time validation: theme linting, syntax checks, override tests |
 | `/scripts/` | Auxiliary shell scripts (repo seeding, password hashing) |
-| `/user.env.example` | Template for per-host runtime overrides (host, username, theme, password) |
 | `/docs/` | Additional documentation (checks, VM usage) |
 
 ## Key Concepts
 
-- **Domains** — The unit of user-space configuration. Each `domains/<category>/<name>/` describes one application with `meta.nix` (package info), `render.nix` (theme-aware config generator), and optionally `module.nix`, `config/` directory, and `nixos.nix`.
-- **Themes** — A compact color token system (palette + ansi) with 13 tokens. All 8 themes are validated at build time.
+- **Configuration** — A single `local/config.nix` file (gitignored) defines the full machine identity: hostname, username, theme, password, profiles, monitors, NixOS extras, and toolchain selection. No per-host directories, no `.env` file. It replaces the old `hosts/` and `user.env` systems.
+- **Profiles** — Reusable composition units (`profiles/base.nix`, `desktop.nix`, `development.nix`, `server.nix`, `vm.nix`) that enable domains and capabilities. A machine selects its profiles via `config.profiles = ["base" "desktop" "development"]`. Profiles use `mkDomainEnable` and `mkCap` helpers to safely reference domains and capabilities.
+- **Domains** — The unit of user-space configuration. Each `domains/<category>/<name>/` describes one application with `meta.nix` (package info), `render.nix` (theme-aware config generator), and optionally `module.nix`, `config/` directory, and `nixos.nix`. 17 domains available.
+- **Themes** — A compact color token system (palette + ansi) with 13 tokens. All 9 themes are validated at build time.
 - **Capabilities** — Opt-in NixOS modules auto-discovered from `/capabilities/`. System-level analogue of domains.
-- **Hosts** — Pure-data machine descriptors in `/hosts/<name>/`. Each defines system arch, theme, user info, monitors. No logic. The `generic` host serves as the default fallback.
-- **Toolchains** — Declarative language environment definitions (runtime, LSP, formatter, linter, tree-sitter grammar). 19 toolchains for languages from bash to rust.
-- **User Env** — A `user.env` file at the repo root provides runtime overrides for host, username, theme, and password without modifying Nix files. Parsed at build time by `lib/parseEnv.nix` and at runtime by the Rust CLI tools.
+- **Toolchains** — Declarative language environment definitions (runtime, LSP, formatter, linter, tree-sitter grammar). 22 toolchains for languages from bash to rust to markdown.
+- **Modules** — Core NixOS and home-manager modules in `modules/home/` (treesitter, domain framework, theme), `modules/nixos/` (font, keyboard layout), and `modules/vm/` (detection, runtime, profile, variant).
 - **Hot-reload** — The `angst render`/`angst watch` CLI regenerates theme-rendered configs without a full Nix rebuild.
+
+## Configuration
+
+A single `local/config.nix` file defines the full machine environment:
+
+```nix
+{
+  system = "x86_64-linux";
+  hostname = "nixos";
+  username = "joao";
+  theme = "miasma";
+  profiles = ["base" "desktop" "development"];   # profile composition
+  toolchains = "*";                                # all languages
+  password = "$y$j9T$...";                         # hashed, NOT plaintext
+  monitors = {
+    primary = { name = "DP-1"; resolution = "1920x1080"; ... };
+  };
+  nixos = { keyboardLayout = "br-abnt2"; };        # per-machine extras
+}
+```
+
+Start from `local/config.nix.example` — copy it, edit, and the build system (`lib/read-config.nix`) loads it automatically. No per-host directories, no `.env` parsing.
 
 ## Getting Started
 
-### Build and activate your host configuration
+### Build and activate your configuration
 
 ```bash
-# Build the NixOS config for your host
-nixos-rebuild switch --flake .#personal
+# Build the NixOS config (reads local/config.nix for hostname/profiles)
+nixos-rebuild switch --flake .#current
 
 # Or build just the home-manager profile
 home-manager switch --flake .#joao
@@ -85,19 +109,23 @@ nix run .#lint-desktop
 nix run .#lint-shell
 ```
 
-## Hosts
+## Profiles
 
-| Host | Type | Theme | Config |
-|------|------|-------|--------|
-| `personal` | Physical workstation (AMD, dual monitor, i3) | github | `/hosts/personal/` |
-| `generic` | Default/fallback (used in VMs, CI, or generic hardware) | monochrome | `/hosts/generic/` |
-| `ssh` | Headless server (SSH-only) | miasma | `/hosts/ssh/` |
+| Profile | Includes | Domains | Capabilities |
+|---------|----------|---------|-------------|
+| `base` | Always applied | nushell, carapace, starship, zellij, nvim, yazi, lazygit | network, git, search, monitoring, container |
+| `desktop` | Workstation GUI | i3, i3status, rofi, ghostty, x11 | graphical, audio, clipboard |
+| `development` | Dev tooling | opencode, cursor-cli, sqlit, posting | — |
+| `server` | Headless server | — | ssh |
+| `vm` | QEMU VM overlay | — | vm detection + runtime + profile + ssh |
+
+Profiles are composed via `profiles = ["base" "desktop" "development"]` in `local/config.nix`. Each profile uses `mkDomainEnable` and `mkCap` helpers that validate domain/capability names at build time.
 
 ## Quick Links
 
-- [Architecture](architecture.md) — Flake structure, build system, hosts, capabilities, VM detection
-- [Domains](domains.md) — Domain framework, available domains, toolchains, common config
-- [Themes](themes.md) — Theme schema, tokens, validation, domain integration
+- [Architecture](architecture.md) — Flake structure, build system, configuration, profiles, capabilities, VM detection
+- [Domains](domains.md) — Domain framework, 17 available domains, toolchains (22 langs)
+- [Themes](themes.md) — Theme schema, 13 tokens, 9 themes, validation, domain integration
 - [Tools](tools.md) — CLI tools: angst, shell, vm, OpenCode MCP
 - [Operations](operations.md) — Dev shells, checks/CI, VM workflow, hot-reload, lint/format
 
@@ -105,8 +133,9 @@ nix run .#lint-shell
 
 When working on this repository, follow these guidelines:
 
-- **Adding a new host**: Create `hosts/<name>/` with `default.nix` (pure data), `configuration.nix` (NixOS), `hardware.nix`, and `home.nix` (domain enables). Auto-discovered by `/lib/build/scanHosts.nix`.
-- **Adding a new domain**: Create `domains/<category>/<name>/meta.nix`, optionally `render.nix` (theme-aware config), `module.nix` (custom logic), `config/` (static files), and/or `nixos.nix` (system integration). Enable in host's `home.nix` or `/common/home.nix`.
+- **Configuring a machine**: Edit `local/config.nix` — set hostname, username, theme, and compose profiles. No per-host directory is needed. Start from `local/config.nix.example`.
+- **Adding a profile composition**: Create `profiles/<name>.nix` using `mkDomainEnable` and `mkCap` helpers, then add it to `profiles/default.nix`'s `profileMap`. Reference it in `config.profiles` in `local/config.nix`.
+- **Adding a new domain**: Create `domains/<category>/<name>/meta.nix`, optionally `render.nix` (theme-aware config), `module.nix` (custom logic), `config/` (static files), and/or `nixos.nix` (system integration). Enable via profile composition or local config extras.
 - **Adding a new theme**: Create `/themes/<name>.nix` following the schema in `/themes/schema.nix`. Validate with `nix run .#lint-themes`.
 - **Adding a new toolchain**: Create `/toolchains/<name>.nix` using `mkToolchain`. Auto-discovered and included in dev shells.
 - **Changing renders**: Edit `render.nix` in the domain, then run `angst render` to write configs. Run `nix run .#lint-shell` or `nix run .#lint-desktop` to validate.
@@ -118,12 +147,15 @@ When working on this repository, follow these guidelines:
 | Concern | Files |
 |---------|-------|
 | Flake orchestration | `/flake.nix` |
-| Flake outputs | `/lib/flake/default.nix`, `/lib/flake/shared.nix` |
+| Flake outputs | `/lib/flake/outputs.nix` |
 | Home-manager build | `/lib/build/mkHome.nix` |
-| NixOS build | `/lib/build/mkHost.nix` |
+| NixOS build | `/lib/build/mkNixos.nix` |
+| Config loading | `/lib/read-config.nix`, `/local/config.nix` |
+| Profile composition | `/profiles/default.nix`, `/profiles/base.nix`, `desktop.nix`, `development.nix`, `server.nix`, `vm.nix` |
 | Domain framework | `/lib/domains/scan.nix`, `/lib/domains/module.nix`, `/lib/domains/activation.nix` |
 | Theme system | `/themes/default.nix`, `/themes/schema.nix` |
-| Theme validation | `/lib/checks/theme/` (6 files) |
-| VM infrastructure | `/lib/virtualization/*.nix` (8 files) |
+| Theme validation | `/checks/theme/` (7 files) |
+| VM infrastructure | `/modules/vm/*.nix` (7 files) |
 | Rust shell CLI | `/tools/shell/src/` |
-| Rust VM CLI | `/tools/vm/Cargo.toml`, `/tools/vm/src/` |
+| Rust VM CLI | `/tools/vm/Cargo.toml`, `/tools/vm/crates/` |
+| Render system | `/lib/render.nix` |
