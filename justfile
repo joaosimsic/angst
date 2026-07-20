@@ -1,5 +1,6 @@
 password:
-    @read -s -p "Enter password: " pass; echo; \
+    #!/usr/bin/env bash
+    read -s -p "Enter password: " pass; echo; \
     read -s -p "Confirm password: " pass2; echo; \
     if [ "$pass" != "$pass2" ]; then echo "Passwords don't match"; exit 1; fi; \
     hash=$(echo "$pass" | openssl passwd -6 -stdin); \

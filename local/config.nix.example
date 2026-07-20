@@ -3,10 +3,6 @@
 # Copy to local/config.nix and fill in your values.
 # local/ is gitignored — it won't be tracked or overwritten by git pull.
 #
-# Generate password hash:
-#   mkpasswd -m sha-512
-# Then paste the hash as the password value below.
-#
 # repoPath: relative path from $HOME to this git checkout.
 #   The activation scripts resolve config dirs from $HOME/$repoPath.
 #   On NixOS this is typically "proj/angst".
@@ -23,8 +19,8 @@
   profiles = ["base" "desktop" "development"];
   toolchains = "*";
 
-  # Hashed password — NOT plaintext. Generate with: openssl passwd -6
-  password = "$6$haQ8CpxZKIKofsQP$siI9kLovUUYV9ASqKuPDdC1ytCiXFlRYptPsGKL4G8qND4/wRZkIPP6t.nLvaz3kclfb04nRFzkSjTsinh5qn.";
+  # Hashed password — NOT plaintext. Generate with: just password
+  password = "$6$exampleSalt1234$abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdef";
 
   monitors = {
     primary = {
