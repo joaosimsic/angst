@@ -26,13 +26,17 @@ let
   ) _rawFiles);
   _allTCs = builtins.attrValues _tcIndex;
 
-  domainsLib = import ../lib/domains/default.nix { inherit lib; domainsPath = ../domains; };
+  domainsScan = import ./domains/scan.nix { inherit lib; domainsPath = ../domains; };
+  domainsModule = import ./domains/module.nix {
+    mkDomainActivation = (import ./activation.nix).mkDomainActivation;
+  };
+  domainsLib = domainsScan // domainsModule;
 
   _toolchains = config.toolchains or "*";
   _bareNames = builtins.attrNames _tcIndex;
 in
 
-# Helpers exported alongside cfg (used by lib/profiles.nix)
+# Helpers exported alongside cfg
 {
   inherit _tcIndex _allTCs;
 

@@ -24,7 +24,7 @@
       pure  = import ./lib/read-config.nix { inherit inputs self themesLib; };
       cfg   = pure.cfg;
       pkgs  = import nixpkgs { system = cfg.system; config = import ./lib/nixpkgs-config.nix; };
-      profiles = import ./lib/profiles.nix {
+      profiles = import ./profiles/default.nix {
         inherit (cfg) profiles;
         lib = pkgs.lib;
         scan = cfg.scan;

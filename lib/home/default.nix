@@ -4,7 +4,7 @@
   imports = [
     ./font.nix
     ./treesitter.nix
-    ../domains/domain-config.nix
+    ../domain.nix
   ];
 
   programs.home-manager.enable = true;

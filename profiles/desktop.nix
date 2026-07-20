@@ -13,8 +13,8 @@
       capabilities.audio.enable = true;
       capabilities.clipboard.enable = true;
     })
-    ../../capabilities/graphical.nix
-    ../../capabilities/audio.nix
-    ../../capabilities/clipboard.nix
+    ../capabilities/graphical.nix
+    ../capabilities/audio.nix
+    ../capabilities/clipboard.nix
   ];
 }

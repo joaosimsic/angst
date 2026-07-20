@@ -190,8 +190,8 @@ def section_config_matrix() -> str:
 
 
 def section_render_coverage() -> str:
-    """Section 6: Render Coverage."""
-    lines = [md_section(6, "Render Coverage")]
+    """Section 6: Domain Feature Coverage."""
+    lines = [md_section(6, "Domain Feature Coverage")]
     total = 0
     counts: Counter[str] = Counter()
     domains_path = REPO / "domains"
@@ -206,12 +206,8 @@ def section_render_coverage() -> str:
             total += 1
             if (d / "render.nix").exists():
                 counts["render"] += 1
-            if (d / "module.nix").exists():
-                counts["home module"] += 1
             if (d / "nixos.nix").exists():
-                counts["nixos module"] += 1
-            if (d / "activation.nix").exists():
-                counts["activation"] += 1
+                counts["nixos"] += 1
             if (d / "meta.nix").exists():
                 checks_dir = d / "checks"
                 if checks_dir.exists():
@@ -219,11 +215,9 @@ def section_render_coverage() -> str:
 
     rows: list[list[Any]] = []
     labels = {
-        "render": "render module",
-        "home module": "home module",
-        "nixos module": "nixos module",
-        "activation": "activation script",
-        "checks": "check files",
+        "render": "render.nix",
+        "nixos": "nixos.nix",
+        "checks": "domain checks",
     }
     for key, label in labels.items():
         n = counts.get(key, 0)
@@ -652,18 +646,12 @@ def section_domain_inventory_condensed() -> str:
             for f in d.rglob("*.nix")
             if ".git" not in f.parts
         )
-        has_render = sum(
-            1 for d in cat.iterdir() if d.is_dir() and (d / "render.nix").exists()
-        )
-        has_module = sum(
-            1 for d in cat.iterdir() if d.is_dir() and (d / "module.nix").exists()
-        )
         rows.append(
-            [cat.name, len(doms), ",".join(doms), has_render, has_module, cat_loc]
+            [cat.name, len(doms), ",".join(doms), cat_loc]
         )
     if rows:
         lines.append(
-            md_table(["Category", "Domains", "Names", "Render", "Module", "LOC"], rows)
+            md_table(["Category", "Domains", "Names", "LOC"], rows)
         )
     return "\n".join(lines)
 
@@ -1833,33 +1821,7 @@ def section_stability_index() -> str:
     return "\n".join(lines)
 
 
-def section_module_summary() -> str:
-    """Section 29: Module Summary."""
-    lines = [md_section(29, "Module Summary")]
-    lines.append(
-        "> Per-domain availability of module types. ✓ = present, — = absent.\n"
-    )
 
-    domains_path = REPO / "domains"
-    if not domains_path.is_dir():
-        return lines[0] + "\n(no domains/)"
-
-    rows: list[list[Any]] = []
-    for cat in sorted(domains_path.iterdir()):
-        if not cat.is_dir():
-            continue
-        for d in sorted(cat.iterdir()):
-            if not d.is_dir():
-                continue
-            domain_name = f"{cat.name}/{d.name}"
-            hm = "✓" if (d / "module.nix").exists() else "—"
-            nixos = "✓" if (d / "nixos.nix").exists() else "—"
-            render = "✓" if (d / "render.nix").exists() else "—"
-            activation = "✓" if (d / "activation.nix").exists() else "—"
-            rows.append([domain_name, hm, nixos, render, activation])
-
-    lines.append(md_table(["Domain", "HM", "NixOS", "Render", "Activation"], rows))
-    return "\n".join(lines)
 
 
 def _discover_domains() -> list[Path]:
@@ -1983,63 +1945,33 @@ def section_theme_domain_coverage(no_eval_cost: bool = False) -> str:
     return "\n".join(lines)
 
 
-def section_domain_maturity() -> str:
-    """Section 31: Domain Maturity Score."""
-    lines = [md_section(31, "Domain Maturity Score")]
-    lines.append("> Composite score per domain. 5 = Complete, 0 = Skeleton.\n")
+def section_domain_features() -> str:
+    """Section 31: Domain Features."""
+    lines = [md_section(31, "Domain Features")]
+    lines.append("> Which optional features each domain provides.\n")
 
     all_domains = _discover_domains()
     if not all_domains:
         lines.append("(no domains)")
         return "\n".join(lines)
 
-    labels_map = {
-        5: "Complete",
-        4: "Operational",
-        3: "Rendering",
-        2: "Partial",
-        1: "Minimal",
-        0: "Skeleton",
-    }
-
     rows: list[list[Any]] = []
     for d in all_domains:
         dn = _domain_name(d)
-        features = {
-            "render": (d / "render.nix").exists(),
-            "module": (d / "module.nix").exists(),
-            "nixos": (d / "nixos.nix").exists(),
-            "activation": (d / "activation.nix").exists(),
-            "checks": (d / "checks").is_dir() and any((d / "checks").rglob("*.nix")),
-        }
-        score = sum(1 for v in features.values() if v)
-        label = labels_map.get(score, str(score))
         rows.append(
             [
                 dn,
-                score,
-                label,
-                "✓" if features["render"] else "—",
-                "✓" if features["module"] else "—",
-                "✓" if features["nixos"] else "—",
-                "✓" if features["activation"] else "—",
-                "✓" if features["checks"] else "—",
+                "✓" if (d / "render.nix").exists() else "—",
+                "✓" if (d / "nixos.nix").exists() else "—",
+                "✓" if (d / "config").is_dir() else "—",
+                "✓" if (d / "module.nix").exists() else "—",
             ]
         )
 
-    rows.sort(key=lambda r: (-r[1], str(r[0])))
+    rows.sort(key=lambda r: str(r[0]))
     lines.append(
         md_table(
-            [
-                "Domain",
-                "Score",
-                "Label",
-                "render",
-                "module",
-                "nixos",
-                "activation",
-                "checks",
-            ],
+            ["Domain", "render", "nixos", "config/", "module"],
             rows,
         )
     )

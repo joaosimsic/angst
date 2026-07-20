@@ -1,5 +1,3 @@
-_:
-
 let
   mkDomainActivation =
     {
@@ -17,7 +15,6 @@ let
       hasConfigDir = builtins.pathExists configDir;
 
       mkXdgScript = xdgName: ''
-        # Domain ${category}/${name}: directory symlink
         if [ -d "/host${homeDirectory}/${repoPath}" ]; then
           CFG_SRC="/host${homeDirectory}/${repoPath}"
         else
@@ -32,7 +29,6 @@ let
           exit 1
         fi
 
-        # Backup existing non-symlink directory
         if [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
           $DRY_RUN_CMD mv "$TARGET" "$TARGET.hm-backup"
         fi
@@ -42,7 +38,6 @@ let
       '';
 
       mkXdgFileScript = xdgFile: ''
-        # Domain ${category}/${name}: single-file symlink
         if [ -d "/host${homeDirectory}/${repoPath}" ]; then
           CFG_SRC="/host${homeDirectory}/${repoPath}"
         else
@@ -52,7 +47,6 @@ let
         DOMAIN_SRC="$CFG_SRC/domains/${category}/${name}/config"
         TARGET="${homeDirectory}/.config/${xdgFile}"
 
-        # Ensure source dir exists
         $DRY_RUN_CMD mkdir -p "$DOMAIN_SRC"
 
         if [ ! -f "$DOMAIN_SRC/${xdgFile}" ]; then
@@ -60,7 +54,6 @@ let
           exit 1
         fi
 
-        # Backup existing non-symlink
         if [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
           $DRY_RUN_CMD mv "$TARGET" "$TARGET.hm-backup"
         fi

@@ -4,8 +4,8 @@ let
   pkgs = import inputs.nixpkgs { system = cfg.system; config = import ./nixpkgs-config.nix; };
   lib = pkgs.lib;
 
-  mkHome = import ./build/mkHome.nix;
-  mkHost = import ./build/mkHost.nix;
+  mkHome = import ./mkHome.nix;
+  mkHost = import ./mkNixos.nix;
 
   hmModules    = profiles.hm;
   nixosModules = profiles.nixos;
@@ -15,7 +15,11 @@ let
   shellOutputs = inputs.shell.mkOutputs self;
   vmTool       = vmOutputs.packages.${cfg.system}.default;
   shellTool    = shellOutputs.packages.${cfg.system}.default;
-  angstTool    = (import ./tools.nix { inherit pkgs; }).angstCli;
+  angstTool    = (pkgs.writeShellApplication {
+    name = "angst";
+    runtimeInputs = with pkgs; [ coreutils findutils git nix watchexec jq ];
+    text = builtins.readFile ../scripts/angst.sh;
+  });
 
   # render logic
   render = import ./render.nix { inherit cfg lib; };

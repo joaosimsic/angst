@@ -1,6 +1,6 @@
 # angst flake analysis
 
-*Generated: 2026-07-19 21:31*
+*Generated: 2026-07-20 13:28*
 
 ## Table of Contents
 
@@ -9,7 +9,7 @@
 - [3. Directory Size Breakdown](#directory-size-breakdown)
 - [4. Attribute Surface](#attribute-surface)
 - [5. Configuration Matrix](#configuration-matrix)
-- [6. Render Coverage](#render-coverage)
+- [6. Domain Feature Coverage](#domain-feature-coverage)
 - [7. Dependency Fan-in / Fan-out](#dependency-fan-in-fan-out)
 - [8. Module Coupling Graph](#module-coupling-graph)
 - [9. Build Graph Depth](#build-graph-depth)
@@ -32,24 +32,23 @@
 - [26. Technical Debt Score](#technical-debt-score)
 - [27. Hotspot Table](#hotspot-table)
 - [28. Stability Index](#stability-index)
-- [29. Module Summary](#module-summary)
-- [30. Theme × Domain Coverage](#theme-domain-coverage)
-- [31. Domain Maturity Score](#domain-maturity-score)
-- [32. Check Results Breakdown](#check-results-breakdown)
-- [33. Rendered Output Sizes](#rendered-output-sizes)
-- [34. Growth Velocity](#growth-velocity)
-- [35. Theme Token Usage Audit](#theme-token-usage-audit)
+- [29. Theme × Domain Coverage](#theme-domain-coverage)
+- [30. Domain Features](#domain-features)
+- [31. Check Results Breakdown](#check-results-breakdown)
+- [32. Rendered Output Sizes](#rendered-output-sizes)
+- [33. Growth Velocity](#growth-velocity)
+- [34. Theme Token Usage Audit](#theme-token-usage-audit)
 
 
 ## 1. Overview
 
 | Metric | Value |
 |---|---|
-| Files | 143 .nix files, 5340 LOC |
-| Rust | 2171 LOC (tools/vm + tools/shell) |
+| Files | 140 .nix files, 5367 LOC |
+| Rust | 2174 LOC (tools/vm + tools/shell) |
 | Scripts | 286 LOC (bash) |
 | Docs | 1294 LOC (openwiki) |
-| Flake check | ✗           732\|           ) |
+| Flake check | ✗        - You must set the option ‘boot.loader.grub.devices’ or 'boot.loader.grub.mirroredBoots' to make the system bootable. |
 ## 2. File Size Heatmap (top 30)
 
 | LOC | File | Section |
@@ -64,32 +63,32 @@
 | 147 | domains/wm/i3/render.nix | domains |
 | 130 | domains/shell/nushell/render.nix | domains |
 | 128 | domains/launcher/rofi/render.nix | domains |
+| 105 | lib/domains/module.nix | lib |
 | 105 | domains/sql-client/sqlit/render.nix | domains |
-| 104 | lib/domains/module.nix | lib |
-| 96 | lib/outputs.nix | lib |
-| 91 | lib/domains/activation.nix | lib |
+| 101 | lib/outputs.nix | lib |
 | 89 | domains/terminal/ghostty/render.nix | domains |
-| 76 | domains/llm/opencode/render.nix | domains |
+| 84 | lib/activation.nix | lib |
+| 78 | lib/mkNixos.nix | lib |
+| 77 | lib/read-config.nix | lib |
+| 76 | domains/agents/opencode/render.nix | domains |
 | 73 | lib/domains/scan.nix | lib |
-| 72 | lib/build/mkHost.nix | lib |
-| 70 | lib/read-config.nix | lib |
-| 65 | lib/domains/domain-config.nix | lib |
+| 66 | lib/mkHome.nix | lib |
 | 65 | domains/terminal/zellij/layout.nix | domains |
+| 64 | lib/domain.nix | lib |
 | 63 | domains/terminal/tmux/render.nix | domains |
 | 62 | domains/terminal/zellij/module.nix | domains |
+| 60 | lib/nixos/default.nix | lib |
 | 60 | lib/checks/default.nix | lib |
 | 57 | lib/checks/desktop.nix | lib |
 | 54 | lib/devshell.nix | lib |
 | 53 | capabilities/graphical.nix | capabilities |
-| 51 | lib/nixos/default.nix | lib |
 | 50 | lib/checks/shell.nix | lib |
-| 47 | lib/treesitter.nix | lib |
 ## 3. Directory Size Breakdown
 
 | Directory | .nix files | LOC | Extra |
 |---|---|---|---|
-| lib/ | 48 | 1735 |  |
-| domains/ | 50 | 2528 |  |
+| lib/ | 39 | 1644 |  |
+| domains/ | 50 | 2527 |  |
 | toolchains/ | 23 | 299 |  |
 | themes/ | 11 | 449 |  |
 | capabilities/ | 9 | 272 |  |
@@ -101,9 +100,9 @@
 | packages | 7 | angst, default, res, shell, vm, vm-cli, vm-run |
 | devShells | 3 | dev, safe, vm |
 | apps | 12 | analyze, analyze-to-file, angst, check, lint-desktop, lint-shell, lint-themes, render... |
-| checks | 0 |  |
-| nixosConfig | 2 | current, localhost |
-| homeConfig | 3 | current, user-theme-override-test, user@localhost |
+| checks | 9 | check-password, home-theme-override-test, lint-desktop, lint-nix, lint-shell, lint-themes, theme-override, theme-rendered... |
+| nixosConfig | 2 | current, nixos |
+| homeConfig | 4 | current, user, user-theme-override-test, user@nixos |
 ## 5. Configuration Matrix
 
 | Dimension | Count | Values |
@@ -114,15 +113,13 @@
 | Domains | 16 | 16 domains in 12 categories |
 
 > **Possible host/theme configurations:** 0 × 9 = 0
-## 6. Render Coverage
+## 6. Domain Feature Coverage
 
 | Feature | Count | Coverage |
 |---|---|---|
-| render module | 15 | 93% |
-| home module | 15 | 93% |
-| nixos module | 1 | 6% |
-| activation script | 0 | 0% |
-| check files | 0 | 0% |
+| render.nix | 15 | 93% |
+| nixos.nix | 1 | 6% |
+| domain checks | 0 | 0% |
 | **total domains** | 16 | 100% |
 ## 7. Dependency Fan-in / Fan-out
 
@@ -133,16 +130,16 @@
 |---|---|---|
 | 22 | 22 | lib/toolchain.nix |
 | 6 | 6 | lib/nixpkgs-config.nix |
-| 4 | 9 | lib/checks/theme/assertions.nix |
-| 2 | 4 | lib/home/themeModule.nix |
+| 4 | 8 | lib/checks/theme/assertions.nix |
 | 2 | 4 | lib/home/fonts.nix |
 | 2 | 3 | lib/treesitter.nix |
+| 2 | 4 | lib/home/themeModule.nix |
 | 1 | 1 | domains/shell/starship/modules.nix |
 | 1 | 1 | domains/terminal/zellij/theme.nix |
 | 1 | 1 | domains/terminal/zellij/layout.nix |
 | 1 | 1 | themes/default.nix |
 | 1 | 1 | lib/read-config.nix |
-| 1 | 1 | lib/profiles.nix |
+| 1 | 1 | profiles/default.nix |
 | 1 | 1 | lib/outputs.nix |
 | 1 | 3 | lib/checks/desktop.nix |
 | 1 | 3 | lib/checks/shell.nix |
@@ -152,20 +149,20 @@
 | Imports | File |
 |---|---|
 | 7 | lib/checks/default.nix |
-| 7 | lib/outputs.nix |
-| 6 | lib/profiles.nix |
+| 6 | lib/outputs.nix |
 | 5 | flake.nix |
-| 3 | lib/domains/default.nix |
-| 3 | lib/read-config.nix |
+| 5 | lib/read-config.nix |
+| 5 | profiles/default.nix |
 | 2 | domains/terminal/zellij/render.nix |
-| 2 | lib/build/mkHome.nix |
-| 2 | lib/build/mkHost.nix |
+| 2 | lib/mkHome.nix |
+| 2 | lib/mkNixos.nix |
 | 2 | lib/render.nix |
 | 1 | domains/shell/starship/render.nix |
 | 1 | lib/checks/theme/default.nix |
 | 1 | lib/checks/theme/rendered.nix |
 | 1 | lib/checks/theme/semanticDistinct.nix |
 | 1 | lib/domains/module.nix |
+| 1 | lib/home/font.nix |
 ## 8. Module Coupling Graph
 
 
@@ -177,29 +174,26 @@ flake.nix
 │   └── themes/schema.nix
 ├── lib/read-config.nix
 │   ├── lib/nixpkgs-config.nix
-│   ├── lib/domains/default.nix
-│   │   ├── lib/domains/scan.nix
-│   │   ├── lib/domains/activation.nix
-│   │   └── lib/domains/module.nix
-│   │       └── lib/checks/theme/assertions.nix
+│   ├── lib/domains/scan.nix
+│   ├── lib/domains/module.nix
+│   │   └── lib/checks/theme/assertions.nix
+│   ├── lib/activation.nix
 │   └── lib/treesitter.nix
 ├── lib/nixpkgs-config.nix
-├── lib/profiles.nix
-│   ├── lib/mkDomainEnable.nix
-│   ├── lib/profiles/base.nix
-│   ├── lib/profiles/desktop.nix
-│   ├── lib/profiles/development.nix
-│   ├── lib/profiles/server.nix
-│   └── lib/profiles/vm.nix
+├── profiles/default.nix
+│   ├── profiles/base.nix
+│   ├── profiles/desktop.nix
+│   ├── profiles/development.nix
+│   ├── profiles/server.nix
+│   └── profiles/vm.nix
 └── lib/outputs.nix
     ├── lib/nixpkgs-config.nix
-    ├── lib/build/mkHome.nix
+    ├── lib/mkHome.nix
     │   ├── lib/nixpkgs-config.nix
     │   └── lib/home/themeModule.nix
-    ├── lib/build/mkHost.nix
+    ├── lib/mkNixos.nix
     │   ├── lib/nixpkgs-config.nix
     │   └── lib/home/themeModule.nix
-    ├── lib/tools.nix
     ├── lib/render.nix
     │   ├── lib/home/fonts.nix
     │   └── lib/checks/theme/assertions.nix
@@ -253,43 +247,40 @@ flowchart LR
     n1["themes/default.nix"] --> n2["themes/schema.nix"]
     n0["flake.nix"] --> n3["lib/read-config.nix"]
     n3["lib/read-config.nix"] --> n4["lib/nixpkgs-config.nix"]
-    n3["lib/read-config.nix"] --> n5["lib/domains/default.nix"]
-    n5["lib/domains/default.nix"] --> n6["lib/domains/scan.nix"]
-    n5["lib/domains/default.nix"] --> n7["lib/domains/activation.nix"]
-    n5["lib/domains/default.nix"] --> n8["lib/domains/module.nix"]
-    n8["lib/domains/module.nix"] --> n9["lib/checks/theme/assertions.nix"]
-    n3["lib/read-config.nix"] --> n10["lib/treesitter.nix"]
+    n3["lib/read-config.nix"] --> n5["lib/domains/scan.nix"]
+    n3["lib/read-config.nix"] --> n6["lib/domains/module.nix"]
+    n6["lib/domains/module.nix"] --> n7["lib/checks/theme/assertions.nix"]
+    n3["lib/read-config.nix"] --> n8["lib/activation.nix"]
+    n3["lib/read-config.nix"] --> n9["lib/treesitter.nix"]
     n0["flake.nix"] --> n4["lib/nixpkgs-config.nix"]
-    n0["flake.nix"] --> n11["lib/profiles.nix"]
-    n11["lib/profiles.nix"] --> n12["lib/mkDomainEnable.nix"]
-    n11["lib/profiles.nix"] --> n13["lib/profiles/base.nix"]
-    n11["lib/profiles.nix"] --> n14["lib/profiles/desktop.nix"]
-    n11["lib/profiles.nix"] --> n15["lib/profiles/development.nix"]
-    n11["lib/profiles.nix"] --> n16["lib/profiles/server.nix"]
-    n11["lib/profiles.nix"] --> n17["lib/profiles/vm.nix"]
-    n0["flake.nix"] --> n18["lib/outputs.nix"]
-    n18["lib/outputs.nix"] --> n4["lib/nixpkgs-config.nix"]
-    n18["lib/outputs.nix"] --> n19["lib/build/mkHome.nix"]
-    n19["lib/build/mkHome.nix"] --> n4["lib/nixpkgs-config.nix"]
-    n19["lib/build/mkHome.nix"] --> n20["lib/home/themeModule.nix"]
-    n18["lib/outputs.nix"] --> n21["lib/build/mkHost.nix"]
-    n21["lib/build/mkHost.nix"] --> n4["lib/nixpkgs-config.nix"]
-    n21["lib/build/mkHost.nix"] --> n20["lib/home/themeModule.nix"]
-    n18["lib/outputs.nix"] --> n22["lib/tools.nix"]
-    n18["lib/outputs.nix"] --> n23["lib/render.nix"]
-    n23["lib/render.nix"] --> n24["lib/home/fonts.nix"]
-    n23["lib/render.nix"] --> n9["lib/checks/theme/assertions.nix"]
-    n18["lib/outputs.nix"] --> n25["lib/devshell.nix"]
-    n18["lib/outputs.nix"] --> n26["lib/checks/default.nix"]
-    n26["lib/checks/default.nix"] --> n27["lib/checks/desktop.nix"]
-    n26["lib/checks/default.nix"] --> n28["lib/checks/shell.nix"]
-    n26["lib/checks/default.nix"] --> n29["lib/checks/theme/rendered.nix"]
-    n29["lib/checks/theme/rendered.nix"] --> n9["lib/checks/theme/assertions.nix"]
-    n26["lib/checks/default.nix"] --> n30["lib/checks/theme/semanticDistinct.nix"]
-    n30["lib/checks/theme/semanticDistinct.nix"] --> n9["lib/checks/theme/assertions.nix"]
-    n26["lib/checks/default.nix"] --> n31["lib/checks/theme/override.nix"]
-    n26["lib/checks/default.nix"] --> n32["lib/checks/password.nix"]
-    n26["lib/checks/default.nix"] --> n33["lib/checks/lint-nix.nix"]
+    n0["flake.nix"] --> n10["profiles/default.nix"]
+    n10["profiles/default.nix"] --> n11["profiles/base.nix"]
+    n10["profiles/default.nix"] --> n12["profiles/desktop.nix"]
+    n10["profiles/default.nix"] --> n13["profiles/development.nix"]
+    n10["profiles/default.nix"] --> n14["profiles/server.nix"]
+    n10["profiles/default.nix"] --> n15["profiles/vm.nix"]
+    n0["flake.nix"] --> n16["lib/outputs.nix"]
+    n16["lib/outputs.nix"] --> n4["lib/nixpkgs-config.nix"]
+    n16["lib/outputs.nix"] --> n17["lib/mkHome.nix"]
+    n17["lib/mkHome.nix"] --> n4["lib/nixpkgs-config.nix"]
+    n17["lib/mkHome.nix"] --> n18["lib/home/themeModule.nix"]
+    n16["lib/outputs.nix"] --> n19["lib/mkNixos.nix"]
+    n19["lib/mkNixos.nix"] --> n4["lib/nixpkgs-config.nix"]
+    n19["lib/mkNixos.nix"] --> n18["lib/home/themeModule.nix"]
+    n16["lib/outputs.nix"] --> n20["lib/render.nix"]
+    n20["lib/render.nix"] --> n21["lib/home/fonts.nix"]
+    n20["lib/render.nix"] --> n7["lib/checks/theme/assertions.nix"]
+    n16["lib/outputs.nix"] --> n22["lib/devshell.nix"]
+    n16["lib/outputs.nix"] --> n23["lib/checks/default.nix"]
+    n23["lib/checks/default.nix"] --> n24["lib/checks/desktop.nix"]
+    n23["lib/checks/default.nix"] --> n25["lib/checks/shell.nix"]
+    n23["lib/checks/default.nix"] --> n26["lib/checks/theme/rendered.nix"]
+    n26["lib/checks/theme/rendered.nix"] --> n7["lib/checks/theme/assertions.nix"]
+    n23["lib/checks/default.nix"] --> n27["lib/checks/theme/semanticDistinct.nix"]
+    n27["lib/checks/theme/semanticDistinct.nix"] --> n7["lib/checks/theme/assertions.nix"]
+    n23["lib/checks/default.nix"] --> n28["lib/checks/theme/override.nix"]
+    n23["lib/checks/default.nix"] --> n29["lib/checks/password.nix"]
+    n23["lib/checks/default.nix"] --> n30["lib/checks/lint-nix.nix"]
 ```
 ## 9. Build Graph Depth
 
@@ -300,9 +291,9 @@ Longest import chain:
 
 ```
 flake.nix
- └─ lib/read-config.nix
-     └─ lib/domains/default.nix
-         └─ lib/domains/module.nix
+ └─ lib/outputs.nix
+     └─ lib/checks/default.nix
+         └─ lib/checks/theme/rendered.nix
              └─ lib/checks/theme/assertions.nix
 ```
 ## 10. Duplication Hotspots
@@ -330,9 +321,9 @@ _(none found)_
 
 | String | Occurrences | Files | Description |
 |---|---|---|---|
-| "angst" | 63 | 23 | project name |
+| "angst" | 63 | 22 | project name |
 | "ANGST" | 5 | 3 | env var prefix |
-| "nixpkgs" | 15 | 6 | flake input |
+| "nixpkgs" | 16 | 6 | flake input |
 | "home-manager" | 13 | 6 | flake input |
 | "proj/angst" | 1 | 1 | repo path |
 | "x86_64" | 1 | 1 | architecture |
@@ -343,20 +334,20 @@ _(none found)_
 | "ANGST_" | 5 | 3 | angst env vars |
 ## 12. Domain Inventory
 
-| Category | Domains | Names | Render | Module | LOC |
-|---|---|---|---|---|---|
-| bar | 1 | i3status | 1 | 1 | 46 |
-| editor | 1 | nvim | 1 | 1 | 54 |
-| files | 1 | yazi | 1 | 1 | 46 |
-| git | 1 | lazygit | 1 | 1 | 358 |
-| http-client | 1 | posting | 1 | 1 | 64 |
-| launcher | 1 | rofi | 1 | 1 | 148 |
-| llm | 2 | cursor-cli,opencode | 1 | 1 | 99 |
-| session | 1 | x11 | 1 | 1 | 55 |
-| shell | 2 | nushell,starship | 2 | 2 | 597 |
-| sql-client | 1 | sqlit | 1 | 1 | 122 |
-| terminal | 3 | ghostty,tmux,zellij | 3 | 3 | 726 |
-| wm | 1 | i3 | 1 | 1 | 213 |
+| Category | Domains | Names | LOC |
+|---|---|---|---|
+| agents | 2 | cursor-cli,opencode | 98 |
+| bar | 1 | i3status | 46 |
+| editor | 1 | nvim | 54 |
+| files | 1 | yazi | 46 |
+| git | 1 | lazygit | 358 |
+| http-client | 1 | posting | 64 |
+| launcher | 1 | rofi | 148 |
+| session | 1 | x11 | 55 |
+| shell | 2 | nushell,starship | 597 |
+| sql-client | 1 | sqlit | 122 |
+| terminal | 3 | ghostty,tmux,zellij | 726 |
+| wm | 1 | i3 | 213 |
 ## 13. Theme Inventory
 
 > **See `nix flake show` for the full list.**
@@ -431,20 +422,20 @@ _(none found)_
 | Namespace | References |
 |---|---|
 | capabilities | 9 |
-| angst | 2 |
 | domains | 2 |
+| angst | 1 |
 | domainConfig | 1 |
-| theme | 1 |
 | font | 1 |
 | toolchains | 1 |
+| theme | 1 |
 ## 18. Nix Idiom Usage
 
 | Idiom | Count |
 |---|---|
 | lib.mkIf | 33 |
 | lib.mkForce | 17 |
+| lib.mkDefault | 12 |
 | lib.mkEnableOption | 11 |
-| lib.mkDefault | 11 |
 | lib.types | 9 |
 | lib.concatMap | 7 |
 | lib.mapAttrs | 3 |
@@ -467,7 +458,7 @@ _(none found)_
 | Construct | Count | Files |
 |---|---|---|
 | mkIf | 35 | 30 |
-| mkDefault | 11 | 4 |
+| mkDefault | 12 | 5 |
 | mkForce | 17 | 5 |
 | mkOption | 7 | 7 |
 | mkEnableOption | 11 | 10 |
@@ -481,16 +472,16 @@ _(none found)_
 | builtins.attrNames | 6 |
 | builtins.readDir | 5 |
 | builtins.concatStringsSep | 5 |
-| builtins.readFile | 3 |
 | builtins.filter | 3 |
+| builtins.readFile | 3 |
 | builtins.toJSON | 3 |
-| builtins.head | 2 |
-| builtins.elem | 2 |
 | builtins.match | 2 |
+| builtins.elem | 2 |
+| builtins.head | 2 |
+| builtins.removeAttrs | 1 |
+| builtins.isString | 1 |
+| builtins.isAttrs | 1 |
 | builtins.dirOf | 1 |
-| builtins.attrValues | 1 |
-| builtins.isList | 1 |
-| builtins.baseNameOf | 1 |
 ## 20. Complexity Metrics
 
 
@@ -500,21 +491,22 @@ _(none found)_
 |---|---|---|
 | 7 | `themes/default.nix` | depth=3, interp=27, LOC=218 |
 | 6 | `lib/virtualization/vm-profile.nix` | interp=12, cond=14, LOC=199 |
-| 6 | `lib/domains/module.nix` | depth=4, interp=18, LOC=104 |
+| 6 | `lib/domains/module.nix` | depth=4, interp=18, LOC=105 |
 | 6 | `domains/shell/starship/render.nix` | depth=2, interp=31, LOC=162 |
-| 5 | `lib/domains/activation.nix` | depth=2, interp=31, LOC=91 |
 | 5 | `domains/wm/i3/render.nix` | depth=2, interp=43, LOC=147 |
 | 5 | `domains/terminal/zellij/render.nix` | interp=49, LOC=258 |
-| 4 | `lib/outputs.nix` | interp=31, LOC=96 |
+| 4 | `lib/outputs.nix` | interp=33, LOC=101 |
+| 4 | `lib/activation.nix` | depth=2, interp=27, LOC=84 |
 | 4 | `domains/terminal/zellij/theme.nix` | interp=94, LOC=150 |
 | 4 | `domains/sql-client/sqlit/render.nix` | interp=48, LOC=105 |
 | 4 | `domains/shell/nushell/render.nix` | interp=72, LOC=130 |
 | 4 | `domains/git/lazygit/render.nix` | interp=11, LOC=341 |
 | 3 | `domains/terminal/ghostty/render.nix` | interp=28, LOC=89 |
-| 3 | `domains/llm/opencode/render.nix` | interp=50 |
+| 3 | `domains/agents/opencode/render.nix` | interp=50 |
+| 2 | `profiles/default.nix` | depth=2, interp=10 |
 | 2 | `lib/nixos/default.nix` | cond=7 |
 | 2 | `lib/domains/scan.nix` | depth=2, interp=9 |
-| 2 | `lib/domains/domain-config.nix` | depth=2, interp=15 |
+| 2 | `lib/domain.nix` | depth=2, interp=15 |
 | 2 | `domains/terminal/zellij/layout.nix` | interp=24 |
 | 2 | `domains/terminal/tmux/render.nix` | interp=21 |
 | 2 | `domains/shell/starship/modules.nix` | LOC=269 |
@@ -522,12 +514,10 @@ _(none found)_
 | 1 | `lib/virtualization/host-mount.nix` | interp=9 |
 | 1 | `lib/treesitter.nix` | interp=15 |
 | 1 | `lib/read-config.nix` | depth=2 |
-| 1 | `lib/profiles.nix` | depth=2 |
-| 1 | `lib/mkDomainEnable.nix` | interp=6 |
+| 1 | `lib/mkNixos.nix` | depth=2 |
 | 1 | `lib/devshell.nix` | interp=12 |
 | 1 | `lib/checks/theme/assertions.nix` | depth=2 |
 | 1 | `lib/checks/desktop.nix` | interp=6 |
-| 1 | `lib/build/mkHost.nix` | depth=2 |
 | 1 | `domains/wm/i3/module.nix` | interp=6 |
 | 1 | `domains/session/x11/render.nix` | interp=6 |
 | 1 | `domains/launcher/rofi/render.nix` | LOC=128 |
@@ -574,7 +564,7 @@ _(none found)_
 
 | Value | File |
 |---|---|
-| 1 | `lib/domains/domain-config.nix` |
+| 1 | `lib/domain.nix` |
 
 ### Largest Attrset
 
@@ -582,12 +572,12 @@ _(none found)_
 |---|---|
 | 157 | `domains/shell/starship/modules.nix` |
 | 61 | `lib/virtualization/vm-profile.nix` |
-| 56 | `domains/llm/opencode/render.nix` |
+| 56 | `domains/agents/opencode/render.nix` |
 | 41 | `themes/default.nix` |
-| 30 | `lib/outputs.nix` |
+| 34 | `lib/outputs.nix` |
 | 19 | `lib/checks/default.nix` |
-| 16 | `lib/read-config.nix` |
-| 14 | `themes/miasma.nix` |
+| 18 | `lib/nixos/default.nix` |
+| 17 | `lib/read-config.nix` |
 
 ### Largest List
 
@@ -629,26 +619,24 @@ _(none found)_
 
 ### Throw locations
 
-- `lib/read-config.nix:66:          then builtins.throw "Unknown toolchains: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " _bareNames}"`
-- `lib/read-config.nix:68:      else builtins.throw "toolchains must be \"*\" or a list";`
-- `lib/domains/scan.nix:18:      builtins.throw "domains/${category}/${name}/meta.nix: 'xdg' and 'xdgFile' are mutually exclusive"`
-- `lib/domains/scan.nix:20:      builtins.throw "domains/${category}/${name}/meta.nix: must set 'xdg', 'xdgFile', or 'customXdg = true'"`
-- `lib/render.nix:24:    in if matches == [] then builtins.throw "Unknown domain render output: ${outputPath}"`
-- `lib/checks/theme/override.nix:20:  throw "expected config.theme = ${overrideTheme}, got ${theme}"`
-- `lib/checks/theme/override.nix:22:  throw "theme override did not reach rendered ghostty colors (expected ${overrideTheme} background.variant)"`
 - `themes/default.nix:131:      builtins.throw "Theme '${name}' missing tokens: ${`
 - `themes/default.nix:135:      builtins.throw "Theme '${name}' has invalid hex for: ${`
 - `themes/default.nix:215:      builtins.throw "Unknown theme '${name}'. Available themes: ${`
-- `lib/mkDomainEnable.nix:9:  builtins.throw "Unknown domain '${name}'. Available: ${builtins.concatStringsSep ", " (map (e: "${e.category}.${e.name}") entries)}"`
+- `profiles/default.nix:10:      builtins.throw "Unknown domain '${name}'. Available: ${builtins.concatStringsSep ", " (map (e: "${e.category}.${e.name}") entries)}"`
+- `profiles/default.nix:29:    then builtins.throw "Unknown profiles: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " validNames}"`
 - `lib/checks/theme/context.nix:21:      builtins.throw "No alternate theme available for override test (host uses ${hostTheme})"`
+- `lib/checks/theme/override.nix:20:  throw "expected config.theme = ${overrideTheme}, got ${theme}"`
+- `lib/checks/theme/override.nix:22:  throw "theme override did not reach rendered ghostty colors (expected ${overrideTheme} background.variant)"`
+- `lib/render.nix:24:    in if matches == [] then builtins.throw "Unknown domain render output: ${outputPath}"`
+- `lib/domains/scan.nix:18:      builtins.throw "domains/${category}/${name}/meta.nix: 'xdg' and 'xdgFile' are mutually exclusive"`
+- `lib/domains/scan.nix:20:      builtins.throw "domains/${category}/${name}/meta.nix: must set 'xdg', 'xdgFile', or 'customXdg = true'"`
+- `lib/read-config.nix:73:          then builtins.throw "Unknown toolchains: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " _bareNames}"`
 ## 23. Dead Code
 
-> `deadnix` not found. Install with `nix shell nixpkgs#deadnix`.
-
+✓ No dead code detected.
 ## 24. Anti-Patterns (statix)
 
-> `statix` not found. Install with `nix shell nixpkgs#statix`.
-
+✓ No anti-patterns detected.
 ## 25. Evaluation Cost
 
 
@@ -656,16 +644,16 @@ _(none found)_
 
 | Command | Result | Time |
 |---|---|---|
-| nix flake show | ✓ | 1.29s |
-| packages.x86_64-linux | ✓ | 0.04s |
-| apps.x86_64-linux | ✓ | 0.04s |
-| checks.x86_64-linux | ✗ | 0.03s |
+| nix flake show | ✓ | 2.47s |
+| packages.x86_64-linux | ✓ | 0.05s |
+| apps.x86_64-linux | ✓ | 0.05s |
+| checks.x86_64-linux | ✓ | 0.05s |
 
 ### Build (realisation)
 
 | Command | Result | Time |
 |---|---|---|
-| nix flake check | ✗ | 1.94s |
+| nix flake check | ✗ | 10.85s |
 ## 26. Technical Debt Score
 
 
@@ -698,47 +686,46 @@ _(none found)_
 | File | LOC | Churn | Imports | Dependents | Complexity | Score |
 |---|---|---|---|---|---|---|
 | `domains/git/lazygit/render.nix` | 341 | 2 | 0 | 0 | Medium | 4 |
-| `domains/shell/starship/modules.nix` | 269 | 0 | 0 | 1 | Low | 2 |
-| `domains/terminal/zellij/render.nix` | 258 | 20 | 2 | 0 | High | 5 |
+| `domains/shell/starship/modules.nix` | 269 | 1 | 0 | 1 | Low | 2 |
+| `domains/terminal/zellij/render.nix` | 258 | 21 | 2 | 0 | High | 5 |
 | `themes/default.nix` | 218 | 12 | 1 | 1 | Very High | 7 |
-| `lib/virtualization/vm-profile.nix` | 199 | 7 | 0 | 0 | High | 6 |
-| `domains/shell/starship/render.nix` | 162 | 14 | 1 | 0 | High | 6 |
-| `domains/terminal/zellij/theme.nix` | 150 | 0 | 0 | 1 | Medium | 4 |
+| `lib/virtualization/vm-profile.nix` | 199 | 1 | 0 | 0 | High | 6 |
+| `domains/shell/starship/render.nix` | 162 | 15 | 1 | 0 | High | 6 |
+| `domains/terminal/zellij/theme.nix` | 150 | 1 | 0 | 1 | Medium | 4 |
 | `domains/wm/i3/render.nix` | 147 | 3 | 0 | 0 | High | 5 |
 | `domains/shell/nushell/render.nix` | 130 | 6 | 0 | 0 | Very High | 7 |
 | `domains/launcher/rofi/render.nix` | 128 | 3 | 0 | 0 | Low | 1 |
+| `lib/domains/module.nix` | 105 | 12 | 1 | 1 | High | 6 |
 | `domains/sql-client/sqlit/render.nix` | 105 | 7 | 0 | 0 | Medium | 4 |
-| `lib/domains/module.nix` | 104 | 11 | 1 | 1 | High | 6 |
-| `lib/outputs.nix` | 96 | 3 | 7 | 1 | Medium | 4 |
-| `lib/domains/activation.nix` | 91 | 10 | 0 | 1 | High | 5 |
+| `lib/outputs.nix` | 101 | 6 | 6 | 1 | Medium | 4 |
 | `domains/terminal/ghostty/render.nix` | 89 | 6 | 0 | 0 | Medium | 3 |
-| `domains/llm/opencode/render.nix` | 76 | 4 | 0 | 0 | Medium | 3 |
+| `lib/activation.nix` | 84 | 0 | 0 | 1 | Medium | 4 |
+| `lib/mkNixos.nix` | 78 | 0 | 2 | 1 | Low | 1 |
+| `lib/read-config.nix` | 77 | 6 | 5 | 1 | Low | 1 |
+| `domains/agents/opencode/render.nix` | 76 | 1 | 0 | 0 | Medium | 3 |
 | `lib/domains/scan.nix` | 73 | 3 | 0 | 1 | Low | 2 |
-| `lib/build/mkHost.nix` | 72 | 15 | 2 | 1 | Low | 1 |
-| `lib/read-config.nix` | 70 | 3 | 3 | 1 | Low | 1 |
-| `lib/domains/domain-config.nix` | 65 | 8 | 0 | 0 | Low | 2 |
-| `domains/terminal/zellij/layout.nix` | 65 | 0 | 0 | 1 | Low | 2 |
-| `domains/terminal/tmux/render.nix` | 63 | 0 | 0 | 0 | Low | 2 |
+| `lib/mkHome.nix` | 66 | 11 | 2 | 1 | Minimal | 0 |
+| `domains/terminal/zellij/layout.nix` | 65 | 1 | 0 | 1 | Low | 2 |
+| `lib/domain.nix` | 64 | 0 | 0 | 0 | Low | 2 |
+| `domains/terminal/tmux/render.nix` | 63 | 1 | 0 | 0 | Low | 2 |
 | `domains/terminal/zellij/module.nix` | 62 | 3 | 0 | 0 | Minimal | 0 |
-| `lib/checks/default.nix` | 60 | 2 | 7 | 1 | Minimal | 0 |
-| `lib/checks/desktop.nix` | 57 | 7 | 0 | 1 | Low | 1 |
+| `lib/nixos/default.nix` | 60 | 10 | 1 | 0 | Low | 2 |
 ## 28. Stability Index
 
 > Cross-references git churn with file recency. **Hot** = high churn + recently modified, **Active** = moderate churn, **Stable** = low churn, **Archived** = no changes in 6+ months.
 
 | File | Churn | Last changed | Label |
 |---|---|---|---|
-| `flake.nix` | 30 | 2026-07-17 | Hot |
-| `lib/build/mkHome.nix` | 22 | 2026-07-19 | Hot |
-| `domains/terminal/zellij/render.nix` | 20 | 2026-07-15 | Hot |
-| `lib/build/mkHost.nix` | 15 | 2026-07-19 | Hot |
-| `domains/shell/starship/render.nix` | 14 | 2026-07-16 | Hot |
+| `flake.nix` | 31 | 2026-07-19 | Hot |
+| `domains/terminal/zellij/render.nix` | 21 | 2026-07-19 | Hot |
+| `domains/shell/starship/render.nix` | 15 | 2026-07-19 | Hot |
 | `themes/miasma.nix` | 13 | 2026-07-16 | Hot |
 | `themes/default.nix` | 12 | 2026-07-16 | Hot |
-| `lib/domains/module.nix` | 11 | 2026-07-16 | Hot |
+| `lib/domains/module.nix` | 12 | 2026-07-20 | Hot |
+| `lib/mkHome.nix` | 11 | 2026-06-12 | Hot |
 | `themes/catppuccin-mocha.nix` | 10 | 2026-07-10 | Hot |
 | `themes/kanagawa.nix` | 10 | 2026-07-10 | Hot |
-| `lib/domains/activation.nix` | 10 | 2026-07-16 | Hot |
+| `lib/nixos/default.nix` | 10 | 2026-07-19 | Hot |
 | `toolchains/php.nix` | 9 | 2026-07-02 | Active |
 | `domains/editor/nvim/module.nix` | 9 | 2026-07-06 | Active |
 | `themes/monochrome.nix` | 9 | 2026-07-10 | Active |
@@ -747,69 +734,66 @@ _(none found)_
 | `lib/checks/theme/rendered.nix` | 9 | 2026-07-12 | Active |
 | `toolchains/javascript.nix` | 9 | 2026-07-14 | Active |
 | `themes/schema.nix` | 8 | 2026-07-10 | Active |
-| `lib/domains/domain-config.nix` | 8 | 2026-07-17 | Active |
-## 29. Module Summary
-
-> Per-domain availability of module types. ✓ = present, — = absent.
-
-| Domain | HM | NixOS | Render | Activation |
-|---|---|---|---|---|
-| bar/i3status | ✓ | — | ✓ | — |
-| editor/nvim | ✓ | — | ✓ | — |
-| files/yazi | ✓ | — | ✓ | — |
-| git/lazygit | ✓ | — | ✓ | — |
-| http-client/posting | ✓ | — | ✓ | — |
-| launcher/rofi | ✓ | — | ✓ | — |
-| llm/cursor-cli | — | — | — | — |
-| llm/opencode | ✓ | — | ✓ | — |
-| session/x11 | ✓ | — | ✓ | — |
-| shell/nushell | ✓ | — | ✓ | — |
-| shell/starship | ✓ | — | ✓ | — |
-| sql-client/sqlit | ✓ | — | ✓ | — |
-| terminal/ghostty | ✓ | — | ✓ | — |
-| terminal/tmux | ✓ | — | ✓ | — |
-| terminal/zellij | ✓ | — | ✓ | — |
-| wm/i3 | ✓ | ✓ | ✓ | — |
+| `domains/session/x11/module.nix` | 7 | 2026-07-06 | Active |
+| `domains/sql-client/sqlit/render.nix` | 7 | 2026-07-10 | Active |
 ## 30. Theme × Domain Coverage
 
 > ✓ = render produces output, ✗ = render throws, — = no render.nix
 
-| Theme | bar/i3status | editor/nvim | files/yazi | git/lazygit | http-client/posting | launcher/rofi | llm/cursor-cli | llm/opencode | session/x11 | shell/nushell | shell/starship | sql-client/sqlit | terminal/ghostty | terminal/tmux | terminal/zellij | wm/i3 |
+| Theme | agents/cursor-cli | agents/opencode | bar/i3status | editor/nvim | files/yazi | git/lazygit | http-client/posting | launcher/rofi | session/x11 | shell/nushell | shell/starship | sql-client/sqlit | terminal/ghostty | terminal/tmux | terminal/zellij | wm/i3 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `catppuccin-mocha` |  |  |  |  |  |  | — |  |  |  |  |  |  |  |  |  |
-| `github` |  |  |  |  |  |  | — |  |  |  |  |  |  |  |  |  |
-| `gotham` |  |  |  |  |  |  | — |  |  |  |  |  |  |  |  |  |
-| `kanagawa` |  |  |  |  |  |  | — |  |  |  |  |  |  |  |  |  |
-| `lotus` |  |  |  |  |  |  | — |  |  |  |  |  |  |  |  |  |
-| `miasma` |  |  |  |  |  |  | — |  |  |  |  |  |  |  |  |  |
-| `monochrome` |  |  |  |  |  |  | — |  |  |  |  |  |  |  |  |  |
-| `noctis` |  |  |  |  |  |  | — |  |  |  |  |  |  |  |  |  |
-| `rose-pine` |  |  |  |  |  |  | — |  |  |  |  |  |  |  |  |  |
-## 31. Domain Maturity Score
+| `catppuccin-mocha` | — |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `github` | — |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `gotham` | — |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `kanagawa` | — |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `lotus` | — |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `miasma` | — |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `monochrome` | — |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `noctis` | — |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| `rose-pine` | — |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+## 31. Domain Features
 
-> Composite score per domain. 5 = Complete, 0 = Skeleton.
+> Which optional features each domain provides.
 
-| Domain | Score | Label | render | module | nixos | activation | checks |
-|---|---|---|---|---|---|---|---|
-| wm/i3 | 3 | Rendering | ✓ | ✓ | ✓ | — | — |
-| bar/i3status | 2 | Partial | ✓ | ✓ | — | — | — |
-| editor/nvim | 2 | Partial | ✓ | ✓ | — | — | — |
-| files/yazi | 2 | Partial | ✓ | ✓ | — | — | — |
-| git/lazygit | 2 | Partial | ✓ | ✓ | — | — | — |
-| http-client/posting | 2 | Partial | ✓ | ✓ | — | — | — |
-| launcher/rofi | 2 | Partial | ✓ | ✓ | — | — | — |
-| llm/opencode | 2 | Partial | ✓ | ✓ | — | — | — |
-| session/x11 | 2 | Partial | ✓ | ✓ | — | — | — |
-| shell/nushell | 2 | Partial | ✓ | ✓ | — | — | — |
-| shell/starship | 2 | Partial | ✓ | ✓ | — | — | — |
-| sql-client/sqlit | 2 | Partial | ✓ | ✓ | — | — | — |
-| terminal/ghostty | 2 | Partial | ✓ | ✓ | — | — | — |
-| terminal/tmux | 2 | Partial | ✓ | ✓ | — | — | — |
-| terminal/zellij | 2 | Partial | ✓ | ✓ | — | — | — |
-| llm/cursor-cli | 0 | Skeleton | — | — | — | — | — |
+| Domain | render | nixos | config/ | module |
+|---|---|---|---|---|
+| agents/cursor-cli | — | — | — | — |
+| agents/opencode | ✓ | — | ✓ | ✓ |
+| bar/i3status | ✓ | — | ✓ | ✓ |
+| editor/nvim | ✓ | — | ✓ | ✓ |
+| files/yazi | ✓ | — | ✓ | ✓ |
+| git/lazygit | ✓ | — | ✓ | ✓ |
+| http-client/posting | ✓ | — | ✓ | ✓ |
+| launcher/rofi | ✓ | — | ✓ | ✓ |
+| session/x11 | ✓ | — | — | ✓ |
+| shell/nushell | ✓ | — | ✓ | ✓ |
+| shell/starship | ✓ | — | ✓ | ✓ |
+| sql-client/sqlit | ✓ | — | ✓ | ✓ |
+| terminal/ghostty | ✓ | — | ✓ | ✓ |
+| terminal/tmux | ✓ | — | ✓ | ✓ |
+| terminal/zellij | ✓ | — | ✓ | ✓ |
+| wm/i3 | ✓ | ✓ | ✓ | ✓ |
 ## 32. Check Results Breakdown
 
-_(no checks found)_
+| Check | Result | Time | Details |
+|---|---|---|---|
+| `check-password` | ✓ | 0.46s |  |
+| `home-theme-override-test` | ✓ | 16.50s |  |
+| `lint-desktop` | ✓ | 23.71s |  |
+| `lint-nix` | ✓ | 1.52s |  |
+| `lint-shell` | ✓ | 3.95s |  |
+| `lint-themes` | ✓ | 0.63s |  |
+| `theme-override` | ✓ | 1.37s |  |
+| `theme-rendered` | ✓ | 0.54s |  |
+| `theme-semantic-distinct` | ✓ | 0.54s |  |
+
+**9 passed, 0 failed**
+
+
+### Theme lint detail
+
+_(could not evaluate themeLint)_
+
 ## 33. Rendered Output Sizes
 
 > Estimated output lines from multi-line string literals in render.nix.
@@ -830,17 +814,17 @@ _(no checks found)_
 | bar/i3status | 1 | 14 |
 | files/yazi | 1 | 14 |
 | session/x11 | 1 | 9 |
-| llm/opencode | 2 | 0 |
+| agents/opencode | 2 | 0 |
 ## 34. Growth Velocity
 
 > Monthly lines added/removed across .nix, .sh, and .rs files (excludes merges).
 
 | Month | Added | Removed | Net | Commits |
 |---|---|---|---|---|
-| 2026-06 | 10478 | 4437 | +6041 | 108 |
-| 2026-07 | 9079 | 7227 | +1852 | 119 |
+| 2026-06 | 10483 | 4442 | +6041 | 108 |
+| 2026-07 | 9978 | 7842 | +2136 | 128 |
 
-> **12-month totals:** +19557 added, −11664 removed, net +7893
+> **12-month totals:** +20461 added, −12284 removed, net +8177
 ## 35. Theme Token Usage Audit
 
 > How many times each schema token is referenced in each render.nix.
@@ -852,13 +836,13 @@ _(no checks found)_
 
 | Domain | bg·base | bg·variant | sf·base | sf·variant | fg·base | fg·variant | ac·base | ac·variant | dim | ansi·error | ansi·warn | ansi·info | ansi·success |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| agents/opencode | 3 | 6 | — | 1 | 5 | 11 | 13 | — | 3 | 3 | 1 | 1 | 3 |
 | bar/i3status | — | — | — | — | — | 1 | — | — | — | 1 | 1 | — | 1 |
 | editor/nvim | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
 | files/yazi | 1 | 2 | 1 | 1 | — | 2 | — | 1 | 1 | — | — | — | — |
 | git/lazygit | — | — | — | 2 | 3 | 1 | 2 | 2 | — | 1 | — | — | — |
 | http-client/posting | 1 | 1 | 1 | — | 1 | 1 | — | 1 | — | 1 | 1 | — | 1 |
 | launcher/rofi | — | 1 | — | — | — | 2 | 1 | — | — | — | — | — | — |
-| llm/opencode | 3 | 6 | — | 1 | 5 | 11 | 13 | — | 3 | 3 | 1 | 1 | 3 |
 | session/x11 | 1 | — | — | — | — | — | — | — | — | — | — | — | — |
 | shell/nushell | 1 | — | 3 | 2 | 24 | 11 | 12 | 1 | 16 | — | — | — | — |
 | shell/starship | — | — | — | 3 | 3 | 1 | 3 | 1 | 1 | 7 | 1 | — | 2 |

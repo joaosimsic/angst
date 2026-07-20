@@ -1,7 +1,7 @@
 { inputs, self, cfg, hmModules, nixosModules, themeOverride ? null }:
 
 let
-  pkgs = import inputs.nixpkgs { system = cfg.system; config = import ../nixpkgs-config.nix; };
+  pkgs = import inputs.nixpkgs { system = cfg.system; config = import ./nixpkgs-config.nix; };
   lib = pkgs.lib;
 
   effectiveTheme = if themeOverride != null then themeOverride else cfg.theme;
@@ -10,7 +10,7 @@ let
   appNixosModules = map cfg.scan.domains.mkNixosDomainModule cfg.scan.domains.nixosEntries;
   appHomeModules  = map cfg.scan.domains.mkDomainModule cfg.scan.domains.homeEntries;
 
-  themeModule = import ../home/themeModule.nix {
+  themeModule = import ./home/themeModule.nix {
     inherit lib; themesLib = cfg.scan.themes; hostTheme = effectiveTheme;
   };
 
@@ -33,7 +33,7 @@ inputs.nixpkgs.lib.nixosSystem {
     [ { nixpkgs.hostPlatform = cfg.system; } ]
     ++ nixosModules
     ++ appNixosModules
-    ++ [ ../../lib/nixos ]
+    ++ [ ./nixos ]
     ++ (if hardwarePath != null then [ (import hardwarePath) ] else [])
     ++ (if cfg.extraNixos != {} then [ cfg.extraNixos ] else [])
     ++ [
@@ -59,10 +59,10 @@ inputs.nixpkgs.lib.nixosSystem {
 
           users.${cfg.username} = {
             imports =
-              [ ../../lib/home ]
-              ++ [ themeModule ../../lib/home/i3Fragments.nix ]
-              ++ appHomeModules     # domain modules (so enable options exist)
-              ++ hmModules          # profile enable modules
+              [ ./home ]
+              ++ [ themeModule ./home/i3Fragments.nix ]
+              ++ appHomeModules
+              ++ hmModules
               ++ cfg.toolchainModules;
           };
         };
