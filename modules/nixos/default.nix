@@ -14,6 +14,7 @@ let
 in
 {
   imports = [
+    ./font.nix
     (lib.mkAliasOptionModule [ "keyboardLayout" ] [ "angst" "keyboardLayout" ])
   ];
 

@@ -2,7 +2,6 @@
 
 {
   imports = [
-    ./font.nix
     ./treesitter.nix
     ./domain.nix
   ];

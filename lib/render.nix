@@ -1,7 +1,7 @@
 { cfg, lib }:
 
 let
-  fontsLib = import ../modules/home/fonts.nix;
+  defaultFontFamily = "JetBrainsMono Nerd Font";
 in rec {
   renderDomainOutputsFor = themeName:
     let
@@ -11,8 +11,8 @@ in rec {
         lib.filter (e: e.hasRender or false) cfg.scan.domains.homeEntries
       );
     in lib.concatLists (map (path: import path {
-      inherit lib themesLib themeName checkHelpers fontsLib;
-      fontFamily = fontsLib.defaultFamily;
+      inherit lib themesLib themeName checkHelpers;
+      fontFamily = defaultFontFamily;
       monitors = cfg.monitors or {};
       homeDirectory = "/home/${cfg.username}";
     }) domainRendererPaths);

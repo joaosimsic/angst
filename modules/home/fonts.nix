@@ -1,3 +1,0 @@
-{
-  defaultFamily = "JetBrainsMono Nerd Font";
-}

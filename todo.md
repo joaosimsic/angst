@@ -11,7 +11,7 @@
 - [x] leave yazi returns heirline in terminal mode
 - [x] update scratch plugin to allow run compiler on it
 - [ ] better git handling(neogit/diffview)
-- [ ] md handling(md-preview/render-md)
+- [x] md handling(md-preview/render-md)
 - [ ] add file line length in heirline
 - [ ] fix render md badge and move through zellij
 
