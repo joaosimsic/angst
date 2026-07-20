@@ -53,9 +53,7 @@ fn ensure_vm_profile() -> Result<(), String> {
         return Ok(());
     }
 
-    let expr = format!(
-        r#"builtins.elem "vm" ((import {repo}/local/config.nix).profiles or [])"#
-    );
+    let expr = format!(r#"builtins.elem "vm" ((import {repo}/local/config.nix).profiles or [])"#);
 
     let output = std::process::Command::new("nix")
         .args(["eval", "--impure", "--expr", &expr])
@@ -369,11 +367,15 @@ pub fn status(ssh: &SshEngine) -> Result<(), String> {
 }
 
 fn vm_ssh_reachable(ssh: &SshEngine) -> bool {
-    VmProcessController::is_active("vm").as_deref() == Ok("active")
-        && ssh.exec("true").is_ok()
+    VmProcessController::is_active("vm").as_deref() == Ok("active") && ssh.exec("true").is_ok()
 }
 
-pub async fn ssh(ssh: &SshEngine, auto_start: bool, tty: bool, args: Vec<String>) -> Result<(), String> {
+pub async fn ssh(
+    ssh: &SshEngine,
+    auto_start: bool,
+    tty: bool,
+    args: Vec<String>,
+) -> Result<(), String> {
     ensure_vm_profile()?;
     if auto_start && !vm_ssh_reachable(ssh) {
         println!("VM not running. Starting headless...");

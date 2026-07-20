@@ -18,7 +18,11 @@ pub async fn run_cli() -> Result<(), String> {
         }
         Commands::Status => vm::status(&ssh),
         Commands::Logs { lines } => vm_core::VmProcessController::stream_logs("vm", lines),
-        Commands::Ssh { auto_start, tty, args } => vm::ssh(&ssh, auto_start, tty, args).await,
+        Commands::Ssh {
+            auto_start,
+            tty,
+            args,
+        } => vm::ssh(&ssh, auto_start, tty, args).await,
         Commands::Exec { command } => vm::exec(&ssh, command),
         Commands::Health => vm::health(&ssh),
         Commands::CopyTo { src, dest } => ssh.copy_to(&src, &dest),
