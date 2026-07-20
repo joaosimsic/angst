@@ -30,6 +30,21 @@ let
 in
 {
   config = lib.mkIf cfg {
+    assertions = [{
+      assertion = config.services.openssh.enable or false;
+      message = ''
+        angst: VM is running without SSH. Headless VM access requires an SSH server.
+
+        Ensure the VM profile modules are loaded. Add to your NixOS modules:
+          ../capabilities/ssh.nix
+          ../lib/virtualization/vm-profile.nix
+
+        And enable SSH:
+          capabilities.ssh.enable = true;
+          capabilities.ssh.server.enable = true;
+      '';
+    }];
+
     documentation.nixos.enable = lib.mkForce false;
 
     boot = {
@@ -56,6 +71,7 @@ in
       };
     };
 
+    capabilities.ssh.enable = lib.mkForce true;
     capabilities.ssh.server.enable = lib.mkForce true;
 
     environment = {

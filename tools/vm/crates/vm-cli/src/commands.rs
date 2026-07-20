@@ -24,6 +24,8 @@ pub enum Commands {
         lines: u32,
     },
     Ssh {
+        #[arg(short = 'a', long = "auto-start", help = "Start the VM if not running")]
+        auto_start: bool,
         #[arg(short = 't', long = "tty", help = "Force pseudo-terminal allocation")]
         tty: bool,
         #[arg(last = true)]

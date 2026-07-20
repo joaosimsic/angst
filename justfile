@@ -4,7 +4,7 @@ password:
     read -s -p "Confirm password: " pass2; echo; \
     if [ "$pass" != "$pass2" ]; then echo "Passwords don't match"; exit 1; fi; \
     hash=$(echo "$pass" | openssl passwd -6 -stdin); \
-    sed -i "s|\$6\$CHANGEME\$REPLACE_WITH_REAL_HASH|$hash|" local/config.nix
+    grep -q '^  password = ' local/config.nix && sed -i 's|^  password = ".*";$|  password = "'"$hash"'";|' local/config.nix || sed -i '/^  toolchains = /a\  password = "'"$hash"'";' local/config.nix
 
 
 disko:
@@ -41,8 +41,4 @@ vm:
     @nix shell ./tools/vm#wrapped -c vm start
 
 vm-ssh:
-    @if ! ss -tlnp 'sport = :2222' | grep -q LISTEN 2>/dev/null; then \
-        echo "VM not running. Starting headless..."; \
-        nix shell ./tools/vm#wrapped -c vm start --headless; \
-    fi; \
-    nix shell ./tools/vm#wrapped -c vm ssh
+    @nix shell ./tools/vm#wrapped -c vm ssh --auto-start

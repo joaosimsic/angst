@@ -55,6 +55,12 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if hardwarePath != null then [ (import hardwarePath) ] else [ ])
   ++ (if cfg.extraNixos != { } then [ cfg.extraNixos ] else [ ])
   ++ [
+    ./virtualization/detect.nix
+    ./virtualization/runtime.nix
+    ./virtualization/vm-variant.nix
+    ./virtualization/vm-profile.nix
+    ./virtualization/host-mount.nix
+    ../capabilities/ssh.nix
     ({ lib, ... }: {
       users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password;
     })

@@ -83,7 +83,7 @@
               NEW_ARGS=()
               for arg in "$@"; do
                 if [ "$arg" = "--headless" ]; then
-                  export QEMU_OPTS="''${QEMU_OPTS:-} -display none -vga none"
+                  export QEMU_OPTS="''${QEMU_OPTS:-} -display none"
                 else
                   NEW_ARGS+=("$arg")
                 fi
