@@ -249,9 +249,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
             "--impure",
             "--refresh",
             "--no-write-lock-file",
-            &format!(
-                ".#nixosConfigurations.current.config.system.build.vm",
-            ),
+            &format!(".#nixosConfigurations.current.config.system.build.vm"),
         ])
         .env("ANGST_USERNAME", &username);
 

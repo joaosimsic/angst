@@ -24,7 +24,7 @@
   toolchains = "*";
 
   # Hashed password — NOT plaintext. Generate with: openssl passwd -6
-  password = "$6$CHANGEME$REPLACE_WITH_REAL_HASH";
+  password = "$6$haQ8CpxZKIKofsQP$siI9kLovUUYV9ASqKuPDdC1ytCiXFlRYptPsGKL4G8qND4/wRZkIPP6t.nLvaz3kclfb04nRFzkSjTsinh5qn.";
 
   monitors = {
     primary = {
