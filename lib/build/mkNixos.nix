@@ -63,6 +63,7 @@ inputs.nixpkgs.lib.nixosSystem {
     ../../capabilities/ssh.nix
     ({ lib, ... }: {
       users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password;
+      users.users.root.hashedPassword = lib.mkDefault cfg.password;
     })
 
     inputs.home-manager.nixosModules.home-manager

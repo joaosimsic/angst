@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   userConfig,
@@ -6,6 +7,11 @@
   ...
 }:
 
+let
+  kbdParts = lib.splitString "-" config.angst.keyboardLayout;
+  kbdLayout = lib.head kbdParts;
+  kbdVariant = lib.optionalString (lib.length kbdParts > 1) (lib.elemAt kbdParts 1);
+in
 {
   options.angst.isQemuVm = lib.mkOption {
     internal = true;
@@ -14,14 +20,19 @@
     description = "Whether the system is a QEMU dev VM.";
   };
 
+  options.angst.keyboardLayout = lib.mkOption {
+    type = lib.types.str;
+    default = "us";
+  };
+
   config = {
     system.stateVersion = "25.11";
 
-    console.keyMap = lib.mkDefault "br-abnt2";
+    console.keyMap = lib.mkDefault config.angst.keyboardLayout;
 
     services.xserver.xkb = {
-      layout = lib.mkDefault "br";
-      variant = lib.mkDefault "abnt2";
+      layout = lib.mkDefault kbdLayout;
+      variant = lib.mkDefault kbdVariant;
     };
 
     time.timeZone = lib.mkDefault "America/Sao_Paulo";
@@ -52,8 +63,6 @@
       pkgs.bash
       pkgs.nushell
     ];
-
-    users.users.root.initialPassword = lib.mkDefault "changeme";
 
     programs.nix-ld.enable = true;
   };

@@ -31,6 +31,8 @@
     };
   };
 
-  nixos = {};  # one-off NixOS config (replaces host-specific configuration.nix)
+  nixos = {
+    keyboardLayout = "br-abnt2";  # console keymap + X11 layout ("layout-variant" or just "layout")
+  };
   home = {};   # one-off HM config (replaces host-specific home.nix)
 }
