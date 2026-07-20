@@ -3,11 +3,14 @@
 let
   lib = inputs.nixpkgs.lib;
 
-  configPath = if builtins.pathExists ../local/config.nix
-               then ../local/config.nix
-               else null;
-
-  config = if configPath != null then import configPath else {};
+  config =
+    let
+      pwd = builtins.getEnv "PWD";
+      absPath = pwd + "/local/config.nix";
+    in
+    if pwd != "" && builtins.pathExists absPath
+    then import absPath
+    else {};
   system = config.system or "x86_64-linux";
   pkgs = import inputs.nixpkgs { inherit system; config = import ./nixpkgs-config.nix; };
 

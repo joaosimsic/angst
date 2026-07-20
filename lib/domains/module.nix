@@ -9,6 +9,7 @@ let
       pkgs,
       themesLib,
       repoPath,
+      monitors,
       ...
     }:
     let
@@ -38,7 +39,7 @@ let
               theme = themesLib.get config.theme;
             };
             outputs = render {
-              inherit lib themesLib checkHelpers;
+              inherit lib themesLib checkHelpers monitors;
               themeName = config.theme;
               homeDirectory = config.home.homeDirectory;
             };

@@ -29,15 +29,16 @@ let
   };
 in rec {
   homeConfigurations = {
-    current = mkHome { inherit inputs cfg hmModules vmTool shellTool angstTool; };
-    "${cfg.username}@${cfg.hostname}" = mkHome { inherit inputs cfg hmModules vmTool shellTool angstTool; };
+    current = mkHome { inherit self inputs cfg hmModules vmTool shellTool angstTool; };
+    "${cfg.username}" = mkHome { inherit self inputs cfg hmModules vmTool shellTool angstTool; };
+    "${cfg.username}@${cfg.hostname}" = mkHome { inherit self inputs cfg hmModules vmTool shellTool angstTool; };
   } // {
     "${cfg.username}-theme-override-test" =
       let
         overrideTheme = builtins.head (builtins.filter (n: n != cfg.theme) (builtins.attrNames cfg.scan.themes.themes));
       in
       mkHome {
-        inherit inputs cfg hmModules vmTool shellTool angstTool;
+        inherit self inputs cfg hmModules vmTool shellTool angstTool;
         themeOverride = overrideTheme;
       };
   };
