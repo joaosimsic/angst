@@ -13,6 +13,10 @@ let
   kbdVariant = lib.optionalString (lib.length kbdParts > 1) (lib.elemAt kbdParts 1);
 in
 {
+  imports = [
+    (lib.mkAliasOptionModule [ "keyboardLayout" ] [ "angst" "keyboardLayout" ])
+  ];
+
   options.angst.isQemuVm = lib.mkOption {
     internal = true;
     type = lib.types.bool;
