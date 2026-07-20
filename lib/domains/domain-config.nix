@@ -16,7 +16,7 @@ let
     filter =
       path: _:
       let
-        base = builtins.baseNameOf path;
+        base = baseNameOf path;
       in
       base != ".git" && base != "result" && !(lib.hasSuffix ".qcow2" base);
   };
@@ -33,7 +33,6 @@ in
     };
   };
 
-  
   config = lib.mkIf (!lib.hasPrefix "/host" (toString flakeSelf)) {
     home.activation.seedAngstRepo = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       HOST_SRC=${lib.escapeShellArg hostSrc}
@@ -46,7 +45,7 @@ in
       ANGST_REPO=${lib.escapeShellArg hostSrc}
       JSON_DATA=$(${lib.getBin pkgs.nix}/bin/nix eval --impure \
         "${flakeSelf}#lib.renderDomainOutputsFor" \
-        --apply "f: builtins.toJSON (f \"${hostName}\" \"${config.theme}\")" \
+        --apply "f: builtins.toJSON (map (o: { path = o.path; text = o.text; }) (f \"${hostName}\" \"${config.theme}\"))" \
         --raw 2>/dev/null) || true
 
       if [ -n "$JSON_DATA" ] && [ "$JSON_DATA" != "[]" ]; then
