@@ -55,11 +55,11 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if hardwarePath != null then [ (import hardwarePath) ] else [ ])
   ++ (if cfg.extraNixos != { } then [ cfg.extraNixos ] else [ ])
   ++ [
-    ../../modules/nixos/detect.nix
-    ../../modules/nixos/runtime.nix
-    ../../modules/nixos/vm-variant.nix
-    ../../modules/nixos/vm-profile.nix
-    ../../modules/nixos/host-mount.nix
+    ../../modules/vm/detect.nix
+    ../../modules/vm/runtime.nix
+    ../../modules/vm/vm-variant.nix
+    ../../modules/vm/vm-profile.nix
+    ../../modules/vm/host-mount.nix
     ../../capabilities/ssh.nix
     ({ lib, ... }: {
       users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password;
