@@ -6,7 +6,7 @@
 }:
 
 {
-  config = lib.mkIf config.domains.llm.opencode.enable {
+  config = lib.mkIf config.domains.agents.opencode.enable {
     home.packages = [ pkgs.opencode ];
   };
 }

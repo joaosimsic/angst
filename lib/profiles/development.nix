@@ -1,8 +1,8 @@
 { mkDomainEnable }:
 {
   hm = [
-    (mkDomainEnable "llm.opencode")
-    (mkDomainEnable "llm.cursor-cli")
+    (mkDomainEnable "agents.opencode")
+    (mkDomainEnable "agents.cursor-cli")
     (mkDomainEnable "sql-client.sqlit")
     (mkDomainEnable "http-client.posting")
   ];

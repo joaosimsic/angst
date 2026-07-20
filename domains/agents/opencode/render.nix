@@ -66,11 +66,11 @@ let
 in
 [
   {
-    path = "domains/llm/opencode/config/tui.json";
+    path = "domains/agents/opencode/config/tui.json";
     text = tuiConfig;
   }
   {
-    path = "domains/llm/opencode/config/themes/angst.json";
+    path = "domains/agents/opencode/config/themes/angst.json";
     text = theme;
   }
 ]
