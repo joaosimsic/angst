@@ -326,6 +326,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
     for _ in 0..300 {
         if ssh.exec("true").is_ok() {
             println!("VM was initialized and ready via SSH");
+            setup_9093_tunnel(&VmConfig::load());
             return Ok(());
         }
 
@@ -340,6 +341,24 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
     };
 
     Err(format!("VM started but SSH connection timed out.{}", extra))
+}
+
+fn setup_9093_tunnel(config: &VmConfig) -> Result<(), String> {
+    let mut cmd = std::process::Command::new("ssh");
+    cmd.args([
+        "-F", "/dev/null",
+        "-p", &config.ssh_port,
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "UserKnownHostsFile=/dev/null",
+        "-o", "LogLevel=ERROR",
+        "-o", "ForwardAgent=yes",
+        "-fNL", "9093:localhost:9093",
+        &format!("{}@127.0.0.1", config.ssh_user),
+    ]);
+    cmd.status().map_err(|e| format!("Failed to create SSH tunnel: {}", e)).and_then(|s| {
+        if s.success() { Ok(()) }
+        else { Err(format!("SSH tunnel exited with: {}", s)) }
+    })
 }
 
 pub fn status_message(ssh: &SshEngine) -> Result<String, String> {
@@ -383,6 +402,7 @@ pub async fn ssh(
     }
 
     let config = VmConfig::load();
+    let _ = setup_9093_tunnel(&config);
 
     let mut cmd = Command::new("ssh");
 

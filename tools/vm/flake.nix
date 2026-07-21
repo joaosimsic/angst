@@ -123,7 +123,7 @@
               fi
 
               export ANGST_REPO="$PWD"
-              export QEMU_NET_OPTS="hostfwd=tcp::2222-:22,hostfwd=tcp::9093-:9093"
+              export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
               export NIX_DISK_IMAGE="''${NIX_DISK_IMAGE:-$PWD/$TARGET_HOST.qcow2}"
               export SHARED_DIR="$KEY_DIR"
 
@@ -194,7 +194,7 @@
               export ANGST_REPO="$PWD"
               export QEMU_OPTS="-display none -vga none"
               export SHARED_DIR="$KEY_DIR"
-              export QEMU_NET_OPTS="hostfwd=tcp::2222-:22,hostfwd=tcp::9093-:9093"
+              export QEMU_NET_OPTS="hostfwd=tcp::2222-:22"
               nohup "$RUNNER" > /tmp/vm-boot.log 2>&1 &
 
               SSH_OPTS="-p $SSH_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=1 -o LogLevel=ERROR -o ForwardAgent=yes"
@@ -206,6 +206,8 @@
                 fi
                 sleep 1
               done
+
+              ssh $SSH_OPTS -fNL 9093:localhost:9093 "$SSH_USER@localhost" 2>/dev/null && echo "Forwarding localhost:9093 to VM"
 
               exec ssh $SSH_OPTS "$SSH_USER@localhost"
             '';

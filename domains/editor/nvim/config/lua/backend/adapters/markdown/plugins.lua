@@ -21,7 +21,13 @@ return {
 		end,
 		config = function()
 			vim.g.mkdp_port = 9093
-			vim.g.mkdp_open_to_the_world = 1
+			vim.g.mkdp_browserfunc = 'MkdpOpenOnHost'
+
+			vim.cmd([[
+				function! MkdpOpenOnHost(url) abort
+				  call jobstart(['curl', '-s', '-X', 'POST', '-d', a:url, 'http://10.0.2.2:19093/'])
+				endfunction
+			]])
 
 			local md_badge = Badge.new({
 				name = "md-preview",
