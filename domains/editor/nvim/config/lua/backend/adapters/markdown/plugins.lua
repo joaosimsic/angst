@@ -20,6 +20,9 @@ return {
 			vim.system({ "bun", "install" }, { cwd = plugin_dir .. "/app" }):wait()
 		end,
 		config = function()
+			vim.g.mkdp_port = 9093
+			vim.g.mkdp_open_to_the_world = 1
+
 			local md_badge = Badge.new({
 				name = "md-preview",
 				fg = p.background.base,

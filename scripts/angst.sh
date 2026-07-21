@@ -158,7 +158,7 @@ render_cmd() {
     echo "Evaluating templates in a single optimized batch..."
     local json_data
     json_data=$(nix eval --impure "$repo_root#lib.renderDomainOutputsFor" \
-        --apply "f: builtins.toJSON (f \"$host_name\" \"$theme_name\")" --raw)
+        --apply "f: builtins.toJSON (map (o: { path = o.path; text = o.text; }) (f \"$theme_name\"))" --raw)
 
     while IFS= read -r path; do
         [ -n "$path" ] || continue

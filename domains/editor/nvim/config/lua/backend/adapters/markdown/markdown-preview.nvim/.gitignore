@@ -73,3 +73,6 @@ typings/
 
 app/.next/
 app/bin/
+app/out/
+app/lib/
+app/tsconfig.tsbuildinfo

@@ -4,7 +4,7 @@
 
 
 
-hsetroot -solid "#272727"
+hsetroot -solid "#010409"
 
 exec i3
 
