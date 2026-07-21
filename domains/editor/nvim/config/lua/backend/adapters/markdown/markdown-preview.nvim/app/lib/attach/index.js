@@ -36,8 +36,7 @@ function default_1(options) {
                     content
                 }
             });
-        }
-        else if (method === 'close_page') {
+        } else if (method === 'close_page') {
             app.closePage({
                 bufnr
             });

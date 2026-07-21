@@ -22,15 +22,17 @@ local function on_stderr(_, msgs)
   end
 end
 
-local function on_exit(_, code)
-  channel_id = -1
-  vim.g.mkdp_clients_active = 0
-  if not intentional_stop then
-    vim.schedule(function()
-      vim.api.nvim_exec_autocmds("User", { pattern = "MkdpPreviewStop" })
-    end)
+local function on_exit(id, code)
+  if channel_id == id then
+    channel_id = -1
+    vim.g.mkdp_clients_active = 0
+    if not intentional_stop then
+      vim.schedule(function()
+        vim.api.nvim_exec_autocmds("User", { pattern = "MkdpPreviewStop" })
+      end)
+    end
+    intentional_stop = false
   end
-  intentional_stop = false
 end
 
 function M.get_server_status()
@@ -41,6 +43,7 @@ function M.get_server_status()
 end
 
 function M.start_server()
+  intentional_stop = false
   local app_dir = root_dir .. "/app"
   if vim.fn.isdirectory(app_dir .. "/node_modules/@chemzqm/neovim") == 0 then
     vim.system({ "bun", "install" }, { cwd = app_dir }):wait()
