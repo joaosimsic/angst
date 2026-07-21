@@ -21,6 +21,7 @@ return {
 		end,
 		config = function()
 			vim.g.mkdp_port = 9093
+			vim.g.mkdp_refresh_slow = 1
 			vim.g.mkdp_browserfunc = 'MkdpOpenOnHost'
 
 			vim.cmd([[
@@ -38,11 +39,14 @@ return {
 
 			local group = vim.api.nvim_create_augroup("MarkdownPreview", { clear = true })
 
+			local orig_updatetime
 			vim.api.nvim_create_autocmd("User", {
 				group = group,
 				pattern = "MkdpPreviewStart",
 				callback = function()
 					preview_active = true
+					orig_updatetime = vim.o.updatetime
+					vim.o.updatetime = 300
 					md_badge:show("md-preview", "MD Preview")
 				end,
 			})
@@ -53,6 +57,7 @@ return {
 				callback = function()
 					if preview_active then
 						preview_active = false
+						if orig_updatetime then vim.o.updatetime = orig_updatetime end
 						md_badge:hide("md-preview")
 					end
 				end,
