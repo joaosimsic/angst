@@ -13,7 +13,7 @@ function M.setup(bufnr)
 
 	binder:nmap("gd", vim.lsp.buf.definition, { desc = "Go to definition" })
 	binder:nmap("td", function()
-		vim.cmd("tabnew")
+		vim.cmd("tab split")
 		vim.lsp.buf.definition()
 	end, { desc = "Go to definition in new tab" })
 	binder:nmap("K", vim.lsp.buf.hover, { desc = "Hover documentation" })
