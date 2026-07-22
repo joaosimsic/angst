@@ -59,10 +59,12 @@ let
         }
 
         pane {
-            bind "h" { MoveFocus "Left"; }
+            bind "h" { MovePane "Left"; }
+            bind "Ctrl h" { MoveFocus "Left"; }
             bind "j" { MoveFocus "Down"; }
             bind "k" { MoveFocus "Up"; }
-            bind "l" { MoveFocus "Right"; }
+            bind "l" { MovePane "Right"; }
+            bind "Ctrl l" { MoveFocus "Right"; }
             bind "n" { NewPane "Right"; }
             bind "x" { CloseFocus; }
             bind "=" { Resize "Increase"; }
