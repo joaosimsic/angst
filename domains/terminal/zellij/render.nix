@@ -56,19 +56,26 @@ let
             bind "Ctrl p" { SwitchToMode "pane"; }
             bind "Ctrl t" { SwitchToMode "tab"; }
             bind "Ctrl s" { SwitchToMode "scroll"; }
+            bind "Ctrl m" { SwitchToMode "move"; }
         }
 
         pane {
-            bind "h" { MovePane "Left"; }
-            bind "Ctrl h" { MoveFocus "Left"; }
-            bind "j" { MoveFocus "Down"; }
-            bind "k" { MoveFocus "Up"; }
-            bind "l" { MovePane "Right"; }
-            bind "Ctrl l" { MoveFocus "Right"; }
+            bind "h" "Left" { MoveFocus "Left"; }
+            bind "j" "Down" { MoveFocus "Down"; }
+            bind "k" "Up" { MoveFocus "Up"; }
+            bind "l" "Right" { MoveFocus "Right"; }
             bind "n" { NewPane "Right"; }
             bind "x" { CloseFocus; }
             bind "=" { Resize "Increase"; }
             bind "-" { Resize "Decrease"; }
+            bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
+        }
+
+        move {
+            bind "h" "Left" { MovePane "Left"; }
+            bind "j" "Down" { MovePane "Down"; }
+            bind "k" "Up" { MovePane "Up"; }
+            bind "l" "Right" { MovePane "Right"; }
             bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
         }
 
