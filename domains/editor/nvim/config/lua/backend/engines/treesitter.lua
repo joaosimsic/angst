@@ -118,28 +118,31 @@ return {
 							lang
 						)
 					end)
-				else
-					local using_custom_query = false
-					for _, path in ipairs(query_files) do
-						if path:find(".local/share/tree-sitter", 1, true) then
-							using_custom_query = true
-						end
-					end
+					return
+				end
 
-					if not using_custom_query then
-						logger:error(function()
-							return string.format(
-								"Language [%s] queries found, but NONE from your custom folder! Neovim picked up: %s",
-								lang,
-								vim.inspect(query_files)
-							)
-						end)
-					else
-						logger:info(function()
-							return string.format("Success! Loaded queries for [%s] from your shared path.", lang)
-						end)
+				local using_custom_query = false
+				for _, path in ipairs(query_files) do
+					if path:find(".local/share/tree-sitter", 1, true)
+						or path:find(vim.fn.stdpath("config"), 1, true) then
+						using_custom_query = true
 					end
 				end
+
+				if not using_custom_query then
+					logger:error(function()
+						return string.format(
+							"Language [%s] queries found, but NONE from your custom folder! Neovim picked up: %s",
+							lang,
+							vim.inspect(query_files)
+						)
+					end)
+					return
+				end
+
+				logger:info(function()
+					return string.format("Success! Loaded queries for [%s] from your shared path.", lang)
+				end)
 
 				local ok, err = pcall(vim.treesitter.start, event.buf, lang)
 
@@ -147,14 +150,12 @@ return {
 					logger:error(function()
 						return string.format("Treesitter failed to start for [%s]: %s", filetype, err)
 					end)
-				else
-					vim.b[event.buf].ts_highlight_started = true
-					logger:info(function()
-						return string.format("Highlighting started for [%s] on bufnr=%d", lang, event.buf)
-					end)
+					return
 				end
 
-				if ok and not fold_disabled_filetypes[filetype] then
+				vim.b[event.buf].ts_highlight_started = true
+
+				if not fold_disabled_filetypes[filetype] then
 					vim.wo.foldmethod = "expr"
 					vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 					vim.wo.foldlevel = 99
