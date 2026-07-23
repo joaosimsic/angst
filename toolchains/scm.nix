@@ -4,11 +4,10 @@ let
   inherit (import ../lib/toolchain.nix { inherit lib pkgs; }) mkToolchain;
 in
 mkToolchain {
-  runtime = with pkgs; [
-    chez
-    guile
+  tools = with pkgs; [
+    tree-sitter
   ];
   treesitter = with pkgs.tree-sitter-grammars; [
-    tree-sitter-scheme
+    tree-sitter-query
   ];
 }
