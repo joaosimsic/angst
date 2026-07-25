@@ -79,6 +79,23 @@ function M.place_line_ref(bufnr, linenr, text)
 	})
 end
 
+function M.show_tool_actions(bufnr, extmark_id, extmark_line, actions)
+	if not vim.api.nvim_buf_is_valid(bufnr) then return end
+
+	local indent = M.get_indent(bufnr, extmark_line)
+	local virt_lines = {
+		{ { indent .. "Thinking", "Comment" } },
+	}
+	for _, a in ipairs(actions) do
+		virt_lines[#virt_lines + 1] = { { indent .. "  " .. a, "NonText" } }
+	end
+
+	pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, extmark_line, 0, {
+		id = extmark_id,
+		virt_lines = virt_lines,
+	})
+end
+
 function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer)
 	if not vim.api.nvim_buf_is_valid(bufnr) then
 		return

@@ -1,7 +1,7 @@
 local Keybinder = require("common.Keybinder")
 local Logger = require("common.Logger")
 local display = require("frontend.tools.ask.display")
-local api = require("frontend.tools.ask.api")
+local agent = require("frontend.tools.ask.agent")
 
 local log = Logger.new("ask", "debug")
 
@@ -108,7 +108,7 @@ function M.ask(opts)
 			return
 		end
 
-		api.submit({
+		agent.run({
 			bufnr = bufnr,
 			extmark_line = extmark_line,
 			start_line_1idx = start_line_1idx,
