@@ -18,6 +18,38 @@ local function get_frames(indent)
 	}
 end
 
+local function process_sse(buffer, content)
+	local complete = false
+	while true do
+		local dbl = buffer:find("\n\n")
+		if not dbl then
+			break
+		end
+
+		local event = buffer:sub(1, dbl - 1)
+		buffer = buffer:sub(dbl + 2)
+
+		for line in event:gmatch("[^\r\n]+") do
+			local payload = line:match("^data: (.*)$")
+			if payload then
+				if payload == "[DONE]" then
+					complete = true
+				else
+					local ok, json = pcall(vim.fn.json_decode, payload)
+					if ok and json.choices and json.choices[1] then
+						local delta = json.choices[1].delta or {}
+						local chunk = delta.content
+						if type(chunk) == "string" then
+							content = content .. chunk
+						end
+					end
+				end
+			end
+		end
+	end
+	return buffer, content, complete
+end
+
 local M = {}
 
 function M.submit(opts)
@@ -44,6 +76,7 @@ function M.submit(opts)
 
 	local timer = assert(vim.loop.new_timer())
 	timer:start(0, 350, vim.schedule_wrap(function()
+		if received_first_content then return end
 		frame_idx = (frame_idx + 1) % #frames
 		pcall(vim.api.nvim_buf_set_extmark, bufnr, display.ns_id, extmark_line, 0, {
 			id = extmark_id,
@@ -55,7 +88,39 @@ function M.submit(opts)
 		pcall(timer.close, timer)
 	end
 
-	local handle_response = vim.schedule_wrap(function(response)
+	local sse_buffer = ""
+	local accumulated_content = ""
+	local stream_complete = false
+	local received_first_content = false
+
+	local function update_display()
+		if stream_complete then
+			stop_animating()
+		elseif not received_first_content and #accumulated_content > 0 then
+			received_first_content = true
+			stop_animating()
+		end
+
+		if #accumulated_content > 0 then
+			display.stream_update(bufnr, extmark_id, extmark_line, accumulated_content)
+		end
+	end
+
+	local stream_handler = vim.schedule_wrap(function(err, data)
+		if err or stream_complete or not vim.api.nvim_buf_is_valid(bufnr) then
+			return
+		end
+
+		if data == nil then
+			return
+		end
+
+		sse_buffer = sse_buffer .. data .. "\n"
+		sse_buffer, accumulated_content, stream_complete = process_sse(sse_buffer, accumulated_content)
+		update_display()
+	end)
+
+	local callback = vim.schedule_wrap(function(response)
 		stop_animating()
 
 		if not vim.api.nvim_buf_is_valid(bufnr) then
@@ -63,51 +128,42 @@ function M.submit(opts)
 		end
 
 		log:info(function()
-			return string.format("response received: exit=%d headers=%s body=%s",
-				response.exit, vim.inspect(response.headers), tostring(response.body))
+			return string.format("response: exit=%d status=%s", response.exit, tostring(response.status))
 		end)
 
 		if response.exit ~= 0 then
-			log:error("curl exit=" .. response.exit .. " body=" .. tostring(response.body))
+			log:error("curl exit=" .. response.exit)
 			display.show_response(bufnr, extmark_id, extmark_line, "curl error (exit " .. response.exit .. ")")
 			return
 		end
 
-		local ok, res = pcall(vim.fn.json_decode, response.body)
-		if not ok then
-			log:error("json decode failed body=" .. tostring(response.body))
-			display.show_response(bufnr, extmark_id, extmark_line, "Failed to parse API response")
-			return
-		end
-
-		log:info(function()
-			return string.format("parsed response: %s", vim.inspect(res))
-		end)
-
-		if res.error then
-			local msg = type(res.error) == "table" and (res.error.message or vim.inspect(res.error))
-				or tostring(res.error)
+		if response.status and response.status >= 400 then
+			local body = tostring(response.body)
+			local ok, res = pcall(vim.fn.json_decode, body)
+			local msg = "HTTP " .. response.status
+			if ok and res and res.error then
+				msg = msg .. ": " .. (type(res.error) == "table" and (res.error.message or vim.inspect(res.error)) or tostring(res.error))
+			end
 			log:error("api error=" .. msg)
 			display.show_response(bufnr, extmark_id, extmark_line, msg)
 			return
 		end
 
-		local answer = res.choices and res.choices[1] and res.choices[1].message and res.choices[1].message.content
-		if answer == nil or vim.trim(answer) == "" then
-			log:warn(function()
-				return string.format("content empty: exit=%d answer=%s parsed=%s",
-					response.exit, vim.inspect(answer), vim.inspect(res))
+		if stream_complete or #accumulated_content > 0 then
+			local answer = vim.trim(accumulated_content)
+			if answer == "" then
+				display.show_response(bufnr, extmark_id, extmark_line, "Empty response from API")
+				return
+			end
+			log:info(function()
+				return string.format("distributing answer (%d lines)",
+					#vim.split(answer, "\n"))
 			end)
-			display.show_response(bufnr, extmark_id, extmark_line, "Empty response from API")
+			display.distribute_response(bufnr, extmark_id, start_line_1idx - 1, extmark_line, answer)
 			return
 		end
 
-		log:info(function()
-			return string.format("distributing answer (%d lines): %s",
-				#vim.split(answer, "\n"), vim.trim(answer))
-		end)
-
-		display.distribute_response(bufnr, extmark_id, start_line_1idx - 1, extmark_line, vim.trim(answer))
+		display.show_response(bufnr, extmark_id, extmark_line, "Empty response from API")
 	end)
 
 	local system_prompt = "You are a concise coding assistant. Code lines are prefixed with their line number (L<number>:). "
@@ -123,17 +179,19 @@ function M.submit(opts)
 		return
 	end
 
+	local request_body = vim.fn.json_encode({
+		model = config.model,
+		messages = {
+			{ role = "system", content = system_prompt },
+			{ role = "user", content = user_prompt },
+		},
+		max_tokens = config.max_tokens,
+		stream = true,
+	})
+
 	log:info(function()
-		local safe_body = vim.fn.json_encode({
-			model = config.model,
-			messages = {
-				{ role = "system", content = system_prompt },
-				{ role = "user", content = user_prompt },
-			},
-			max_tokens = config.max_tokens,
-		})
 		return string.format("sending request: url=%s body=%s",
-			config.base_url .. "/chat/completions", safe_body)
+			config.base_url .. "/chat/completions", request_body)
 	end)
 
 	curl.request({
@@ -143,16 +201,10 @@ function M.submit(opts)
 			["Content-Type"] = "application/json",
 			["Authorization"] = "Bearer " .. api_key,
 		},
-		body = vim.fn.json_encode({
-			model = config.model,
-			messages = {
-				{ role = "system", content = system_prompt },
-				{ role = "user", content = user_prompt },
-			},
-			max_tokens = config.max_tokens,
-		}),
+		body = request_body,
 		timeout = 30000,
-		callback = handle_response,
+		stream = stream_handler,
+		callback = callback,
 	})
 end
 
