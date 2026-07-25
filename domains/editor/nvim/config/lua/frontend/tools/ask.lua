@@ -200,7 +200,8 @@ return {
 	config = function()
 		local binder = Keybinder.new(nil, "ASK")
 		binder:set_debug(true)
-		binder:nmap("<leader>r", M.ask, { desc = "Ask about code" })
+		binder:nmap("<leader>m", M.ask, { desc = "Ask about code" })
+		binder:vmap("<leader>m", M.ask, { desc = "Ask about code" })
 		binder:nmap("<leader>q", M.dismiss, { desc = "Dismiss ask response" })
 	end,
 }
