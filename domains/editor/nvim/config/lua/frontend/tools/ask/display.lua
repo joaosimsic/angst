@@ -42,7 +42,7 @@ function M.show_response(bufnr, extmark_id, extmark_line, answer)
 			table.insert(virt_lines, wl)
 		end
 	end
-	table.insert(virt_lines, { { M.get_indent(bufnr, extmark_line) .. "[q]", "NonText" } })
+
 
 	vim.api.nvim_buf_set_extmark(bufnr, ns_id, extmark_line, 0, {
 		id = extmark_id,
@@ -138,16 +138,6 @@ function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer)
 			end
 		end
 
-		local max_linenr = -1
-		for linenr, _ in pairs(chunks) do
-			if linenr > max_linenr then
-				max_linenr = linenr
-			end
-		end
-		if chunks[max_linenr] then
-			table.insert(chunks[max_linenr], { { M.get_indent(bufnr, max_linenr) .. "[q]", "NonText" } })
-		end
-
 		for linenr, chunk in pairs(chunks) do
 			if #chunk > 0 then
 				vim.api.nvim_buf_set_extmark(bufnr, ns_id, linenr, 0, {
@@ -177,13 +167,6 @@ function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer)
 			idx = idx + 1
 		end
 		chunks[linenr] = chunk
-	end
-
-	for linenr = end_0idx, start_0idx, -1 do
-		if chunks[linenr] and #chunks[linenr] > 0 then
-			table.insert(chunks[linenr], { { M.get_indent(bufnr, linenr) .. "[q]", "NonText" } })
-			break
-		end
 	end
 
 	for linenr, chunk in pairs(chunks) do

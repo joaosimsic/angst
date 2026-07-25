@@ -202,11 +202,6 @@ function M.submit(opts)
 
 		if has_refs then
 			pcall(vim.api.nvim_buf_del_extmark, bufnr, display.ns_id, extmark_id)
-			if last_ref_linenr then
-				vim.api.nvim_buf_set_extmark(bufnr, display.ns_id, last_ref_linenr, 0, {
-					virt_lines = { { { display.get_indent(bufnr, last_ref_linenr) .. "[q]", "NonText" } } },
-				})
-			end
 		else
 			display.distribute_response(bufnr, extmark_id, start_line_1idx - 1, extmark_line, answer)
 		end

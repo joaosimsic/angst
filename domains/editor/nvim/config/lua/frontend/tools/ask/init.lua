@@ -60,11 +60,16 @@ function M.ask(opts)
 	vim.api.nvim_buf_set_lines(bufnr, input_line, input_line, false, { "" })
 	vim.api.nvim_win_set_cursor(0, { input_line + 1, 0 })
 
+	local submitting = false
+	local canceling = false
+	local prompt_group = vim.api.nvim_create_augroup("ask_prompt_" .. bufnr, { clear = true })
+
 	local function cleanup()
 		pcall(vim.api.nvim_buf_del_extmark, bufnr, display.ns_id, prompt_extmark_id)
 		pcall(vim.api.nvim_buf_set_lines, bufnr, input_line, input_line + 1, false, {})
 		pcall(vim.api.nvim_buf_del_keymap, bufnr, 'i', '<CR>')
-		pcall(vim.api.nvim_buf_del_keymap, bufnr, 'i', '<Esc>')
+		pcall(vim.api.nvim_buf_del_keymap, bufnr, 'i', '<C-c>')
+		pcall(vim.api.nvim_del_augroup_by_id, prompt_group)
 		vim.diagnostic.enable(true, { bufnr = bufnr })
 		for _, client in ipairs(lsp_clients) do
 			pcall(vim.lsp.buf_attach_client, bufnr, client.id)
@@ -74,11 +79,26 @@ function M.ask(opts)
 	active_cleanup = cleanup
 
 	local function cancel()
+		if canceling then return end
+		canceling = true
 		vim.cmd("stopinsert")
 		cleanup()
 	end
 
+	vim.api.nvim_create_autocmd("InsertLeave", {
+		group = prompt_group,
+		buffer = bufnr,
+		callback = function()
+			if submitting then
+				submitting = false
+				return
+			end
+			cancel()
+		end,
+	})
+
 	vim.keymap.set('i', '<CR>', function()
+		submitting = true
 		vim.cmd("stopinsert")
 		local lines = vim.api.nvim_buf_get_lines(bufnr, input_line, input_line + 1, false)
 		local input = vim.trim(lines[1] or "")
@@ -98,7 +118,7 @@ function M.ask(opts)
 		})
 	end, { buffer = bufnr, noremap = true, silent = true })
 
-	vim.keymap.set('i', '<Esc>', cancel, { buffer = bufnr, noremap = true, silent = true })
+	vim.keymap.set('i', '<C-c>', cancel, { buffer = bufnr, noremap = true, silent = true })
 
 	vim.cmd("startinsert")
 end
