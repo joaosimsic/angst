@@ -9,20 +9,18 @@ function M.get_indent(bufnr, linenr)
 	return line:match("^(%s*)") or ""
 end
 
-local function build_virt_lines(bufnr, extmark_line, lines, suffix)
+local function wrap_text(bufnr, linenr, text)
 	local virt_lines = {}
 	local max_width = math.max(20, vim.fn.winwidth(0) - 2)
-	for _, line in ipairs(lines) do
-		local trimmed = vim.trim(line)
-		while #trimmed > max_width do
-			table.insert(virt_lines, { { M.get_indent(bufnr, extmark_line) .. trimmed:sub(1, max_width), "Comment" } })
-			trimmed = trimmed:sub(max_width + 1)
-		end
-		if #trimmed > 0 then
-			table.insert(virt_lines, { { M.get_indent(bufnr, extmark_line) .. trimmed, "Comment" } })
-		end
+	local trimmed = vim.trim(text)
+	if trimmed == "" then
+		return virt_lines
 	end
-	table.insert(virt_lines, { { M.get_indent(bufnr, extmark_line) .. suffix, "NonText" } })
+	while #trimmed > max_width do
+		table.insert(virt_lines, { { M.get_indent(bufnr, linenr) .. trimmed:sub(1, max_width), "Comment" } })
+		trimmed = trimmed:sub(max_width + 1)
+	end
+	table.insert(virt_lines, { { M.get_indent(bufnr, linenr) .. trimmed, "Comment" } })
 	return virt_lines
 end
 
@@ -37,7 +35,14 @@ function M.show_response(bufnr, extmark_id, extmark_line, answer)
 	end
 
 	local lines = vim.split(answer, "\n")
-	local virt_lines = build_virt_lines(bufnr, extmark_line, lines, "[q]")
+	local virt_lines = {}
+	for _, line in ipairs(lines) do
+		local wrapped = wrap_text(bufnr, extmark_line, line)
+		for _, wl in ipairs(wrapped) do
+			table.insert(virt_lines, wl)
+		end
+	end
+	table.insert(virt_lines, { { M.get_indent(bufnr, extmark_line) .. "[q]", "NonText" } })
 
 	vim.api.nvim_buf_set_extmark(bufnr, ns_id, extmark_line, 0, {
 		id = extmark_id,
@@ -45,16 +50,31 @@ function M.show_response(bufnr, extmark_id, extmark_line, answer)
 	})
 end
 
-function M.stream_update(bufnr, extmark_id, extmark_line, content)
+function M.show_incomplete_line(bufnr, extmark_id, extmark_line, text)
 	if not vim.api.nvim_buf_is_valid(bufnr) then
 		return
 	end
 
-	local lines = vim.split(content, "\n")
-	local virt_lines = build_virt_lines(bufnr, extmark_line, lines, "...")
+	local virt_lines = wrap_text(bufnr, extmark_line, text or "")
+	table.insert(virt_lines, { { M.get_indent(bufnr, extmark_line) .. "...", "NonText" } })
 
 	pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, extmark_line, 0, {
 		id = extmark_id,
+		virt_lines = virt_lines,
+	})
+end
+
+function M.place_line_ref(bufnr, linenr, text)
+	if not vim.api.nvim_buf_is_valid(bufnr) then
+		return
+	end
+
+	local virt_lines = wrap_text(bufnr, linenr, text)
+	if #virt_lines == 0 then
+		return
+	end
+
+	pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, linenr, 0, {
 		virt_lines = virt_lines,
 	})
 end

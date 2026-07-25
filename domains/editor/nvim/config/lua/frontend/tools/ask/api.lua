@@ -90,8 +90,31 @@ function M.submit(opts)
 
 	local sse_buffer = ""
 	local accumulated_content = ""
+	local last_nl_idx = 0
 	local stream_complete = false
 	local received_first_content = false
+	local has_refs = false
+	local last_ref_linenr = nil
+
+	local function process_new_lines()
+		while true do
+			local nl_pos = accumulated_content:find("\n", last_nl_idx + 1)
+			if not nl_pos then break end
+
+			local line_text = accumulated_content:sub(last_nl_idx + 1, nl_pos - 1)
+			last_nl_idx = nl_pos
+
+			local ref, rest = line_text:match("^L(%d+):%s*(.*)$")
+			if ref then
+				has_refs = true
+				local linenr = tonumber(ref) - 1
+				if linenr >= start_line_1idx - 1 and linenr <= end_line_1idx - 1 then
+					last_ref_linenr = linenr
+					display.place_line_ref(bufnr, linenr, rest)
+				end
+			end
+		end
+	end
 
 	local function update_display()
 		if stream_complete then
@@ -101,9 +124,10 @@ function M.submit(opts)
 			stop_animating()
 		end
 
-		if #accumulated_content > 0 then
-			display.stream_update(bufnr, extmark_id, extmark_line, accumulated_content)
-		end
+		process_new_lines()
+
+		local incomplete = accumulated_content:sub(last_nl_idx + 1)
+		display.show_incomplete_line(bufnr, extmark_id, extmark_line, incomplete)
 	end
 
 	local stream_handler = vim.schedule_wrap(function(err, data)
@@ -149,21 +173,43 @@ function M.submit(opts)
 			return
 		end
 
-		if stream_complete or #accumulated_content > 0 then
-			local answer = vim.trim(accumulated_content)
-			if answer == "" then
-				display.show_response(bufnr, extmark_id, extmark_line, "Empty response from API")
-				return
-			end
-			log:info(function()
-				return string.format("distributing answer (%d lines)",
-					#vim.split(answer, "\n"))
-			end)
-			display.distribute_response(bufnr, extmark_id, start_line_1idx - 1, extmark_line, answer)
+		update_display()
+
+		local answer = vim.trim(accumulated_content)
+		if answer == "" then
+			display.show_response(bufnr, extmark_id, extmark_line, "Empty response from API")
 			return
 		end
 
-		display.show_response(bufnr, extmark_id, extmark_line, "Empty response from API")
+		-- Process the final incomplete line (no trailing \n)
+		local incomplete = accumulated_content:sub(last_nl_idx + 1)
+		if #incomplete > 0 then
+			local ref, rest = incomplete:match("^L(%d+):%s*(.*)$")
+			if ref then
+				has_refs = true
+				local linenr = tonumber(ref) - 1
+				if linenr >= start_line_1idx - 1 and linenr <= end_line_1idx - 1 then
+					last_ref_linenr = linenr
+					display.place_line_ref(bufnr, linenr, rest)
+				end
+			end
+		end
+
+		log:info(function()
+			return string.format("finalizing answer (%d lines) has_refs=%s",
+				#vim.split(answer, "\n"), has_refs)
+		end)
+
+		if has_refs then
+			pcall(vim.api.nvim_buf_del_extmark, bufnr, display.ns_id, extmark_id)
+			if last_ref_linenr then
+				vim.api.nvim_buf_set_extmark(bufnr, display.ns_id, last_ref_linenr, 0, {
+					virt_lines = { { { display.get_indent(bufnr, last_ref_linenr) .. "[q]", "NonText" } } },
+				})
+			end
+		else
+			display.distribute_response(bufnr, extmark_id, start_line_1idx - 1, extmark_line, answer)
+		end
 	end)
 
 	local system_prompt = "You are a concise coding assistant. Code lines are prefixed with their line number (L<number>:). "
