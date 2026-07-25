@@ -159,15 +159,15 @@ local function distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answ
 	end
 end
 
-function M.ask()
+function M.ask(opts)
 	local curl = require("plenary.curl")
 
 	local bufnr = vim.api.nvim_get_current_buf()
 
-	local mode = vim.api.nvim_get_mode().mode
 	local start_line_1idx, end_line_1idx
 
-	if mode == "v" or mode == "V" or mode == "" then
+	if opts and opts.visual then
+		vim.cmd("normal! \x1b")
 		local s_start = vim.fn.getpos("'<")
 		local s_end = vim.fn.getpos("'>")
 		start_line_1idx = s_start[2]
@@ -178,6 +178,13 @@ function M.ask()
 		end_line_1idx = cursor[1]
 	end
 
+	local line_count = vim.api.nvim_buf_line_count(bufnr)
+	end_line_1idx = math.min(end_line_1idx, line_count)
+	start_line_1idx = math.max(1, math.min(start_line_1idx, end_line_1idx))
+
+	log:info(string.format("start=%d end=%d line_count=%d",
+		start_line_1idx, end_line_1idx, line_count))
+
 	local buf_lines = vim.api.nvim_buf_get_lines(bufnr, start_line_1idx - 1, end_line_1idx, false)
 	local numbered_lines = {}
 	for i, line in ipairs(buf_lines) do
@@ -185,11 +192,11 @@ function M.ask()
 	end
 	local numbered_code = table.concat(numbered_lines, "\n")
 
-	local extmark_line = end_line_1idx - 1
+	local extmark_line = math.min(end_line_1idx - 1, math.max(0, line_count - 1))
 
 	vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
 
-	local prompt_extmark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_id, extmark_line, 0, {
+	local _, prompt_extmark_id = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, extmark_line, 0, {
 		virt_lines = {
 			{ { "Prompt: ", "Comment" } },
 		},
@@ -224,11 +231,14 @@ function M.ask()
 		}
 		local frame_idx = 0
 
-		local extmark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_id, extmark_line, 0, {
+		local _, extmark_id = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, extmark_line, 0, {
 			virt_lines = {
 				{ { frames[1], "Comment" } },
 			},
 		})
+		if not extmark_id then
+			return
+		end
 
 		local timer = assert(vim.loop.new_timer())
 		timer:start(0, 350, vim.schedule_wrap(function()
@@ -250,6 +260,11 @@ function M.ask()
 				return
 			end
 
+			log:info(function()
+				return string.format("response received: exit=%d headers=%s body=%s",
+					response.exit, vim.inspect(response.headers), tostring(response.body))
+			end)
+
 			if response.exit ~= 0 then
 				log:error("curl exit=" .. response.exit .. " body=" .. tostring(response.body))
 				show_response(bufnr, extmark_id, extmark_line, "curl error (exit " .. response.exit .. ")")
@@ -263,6 +278,10 @@ function M.ask()
 				return
 			end
 
+			log:info(function()
+				return string.format("parsed response: %s", vim.inspect(res))
+			end)
+
 			if res.error then
 				local msg = type(res.error) == "table" and (res.error.message or vim.inspect(res.error))
 					or tostring(res.error)
@@ -274,12 +293,17 @@ function M.ask()
 			local answer = res.choices and res.choices[1] and res.choices[1].message and res.choices[1].message.content
 			if answer == nil or vim.trim(answer) == "" then
 				log:warn(function()
-					return string.format("empty response: exit=%d body=%s parsed=%s",
-						response.exit, vim.inspect(response.body), vim.inspect(res))
+					return string.format("content empty: exit=%d answer=%s parsed=%s",
+						response.exit, vim.inspect(answer), vim.inspect(res))
 				end)
 				show_response(bufnr, extmark_id, extmark_line, "Empty response from API")
 				return
 			end
+
+			log:info(function()
+				return string.format("distributing answer (%d lines): %s",
+					#vim.split(answer, "\n"), vim.trim(answer))
+			end)
 
 			distribute_response(bufnr, extmark_id, start_line_1idx - 1, extmark_line, vim.trim(answer))
 		end)
@@ -296,9 +320,17 @@ function M.ask()
 			return
 		end
 
-		log:debug(function()
-				return string.format("sending request: model=%s max_tokens=%d code_len=%d input=%s",
-					config.model, config.max_tokens, #numbered_code, vim.inspect(input))
+		log:info(function()
+				local safe_body = vim.fn.json_encode({
+					model = config.model,
+					messages = {
+						{ role = "system", content = system_prompt },
+						{ role = "user", content = user_prompt },
+					},
+					max_tokens = config.max_tokens,
+				})
+				return string.format("sending request: url=%s body=%s",
+					config.base_url .. "/chat/completions", safe_body)
 			end)
 
 		curl.request({
@@ -344,7 +376,7 @@ return {
 		local binder = Keybinder.new(nil, "ASK")
 		binder:set_debug(true)
 		binder:nmap("<leader>m", M.ask, { desc = "Ask about code" })
-		binder:vmap("<leader>m", M.ask, { desc = "Ask about code" })
+		binder:vmap("<leader>m", function() M.ask({ visual = true }) end, { desc = "Ask about code" })
 		binder:nmap("<leader>q", M.dismiss, { desc = "Dismiss ask response" })
 	end,
 }
