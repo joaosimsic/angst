@@ -40,6 +40,10 @@ function M.ask(opts)
 
 	local extmark_line = math.min(end_line_1idx - 1, math.max(0, line_count - 1))
 
+	local orig_filetype = vim.bo[bufnr].filetype
+	vim.diagnostic.enable(false, { bufnr = bufnr })
+	vim.bo[bufnr].filetype = ""
+
 	vim.api.nvim_buf_clear_namespace(bufnr, display.ns_id, 0, -1)
 
 	local _, prompt_extmark_id = pcall(vim.api.nvim_buf_set_extmark, bufnr, display.ns_id, extmark_line, 0, {
@@ -57,6 +61,8 @@ function M.ask(opts)
 		pcall(vim.api.nvim_buf_set_lines, bufnr, input_line, input_line + 1, false, {})
 		pcall(vim.api.nvim_buf_del_keymap, bufnr, 'i', '<CR>')
 		pcall(vim.api.nvim_buf_del_keymap, bufnr, 'i', '<Esc>')
+		vim.bo[bufnr].filetype = orig_filetype
+		vim.diagnostic.enable(true, { bufnr = bufnr })
 	end
 
 	local function cancel()
