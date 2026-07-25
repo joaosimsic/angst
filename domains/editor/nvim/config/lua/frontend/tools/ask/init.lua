@@ -42,9 +42,11 @@ function M.ask(opts)
 
 	local extmark_line = math.min(end_line_1idx - 1, math.max(0, line_count - 1))
 
-	local orig_filetype = vim.bo[bufnr].filetype
 	vim.diagnostic.enable(false, { bufnr = bufnr })
-	vim.bo[bufnr].filetype = ""
+	local lsp_clients = vim.lsp.get_clients({ bufnr = bufnr })
+	for _, client in ipairs(lsp_clients) do
+		vim.lsp.buf_detach_client(bufnr, client.id)
+	end
 
 	vim.api.nvim_buf_clear_namespace(bufnr, display.ns_id, 0, -1)
 
@@ -63,8 +65,10 @@ function M.ask(opts)
 		pcall(vim.api.nvim_buf_set_lines, bufnr, input_line, input_line + 1, false, {})
 		pcall(vim.api.nvim_buf_del_keymap, bufnr, 'i', '<CR>')
 		pcall(vim.api.nvim_buf_del_keymap, bufnr, 'i', '<Esc>')
-		vim.bo[bufnr].filetype = orig_filetype
 		vim.diagnostic.enable(true, { bufnr = bufnr })
+		for _, client in ipairs(lsp_clients) do
+			pcall(vim.lsp.buf_attach_client, bufnr, client.id)
+		end
 		active_cleanup = nil
 	end
 	active_cleanup = cleanup
