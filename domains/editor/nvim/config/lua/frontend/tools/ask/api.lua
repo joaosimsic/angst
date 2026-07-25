@@ -74,6 +74,14 @@ function M.submit(opts)
 		return
 	end
 
+	local sse_buffer = ""
+	local accumulated_content = ""
+	local last_nl_idx = 0
+	local stream_complete = false
+	local received_first_content = false
+	local has_refs = false
+	local last_ref_linenr = nil
+
 	local timer = assert(vim.loop.new_timer())
 	timer:start(0, 350, vim.schedule_wrap(function()
 		if received_first_content then return end
@@ -87,14 +95,6 @@ function M.submit(opts)
 	local function stop_animating()
 		pcall(timer.close, timer)
 	end
-
-	local sse_buffer = ""
-	local accumulated_content = ""
-	local last_nl_idx = 0
-	local stream_complete = false
-	local received_first_content = false
-	local has_refs = false
-	local last_ref_linenr = nil
 
 	local function process_new_lines()
 		while true do
