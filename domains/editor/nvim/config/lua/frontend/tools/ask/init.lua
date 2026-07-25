@@ -5,6 +5,8 @@ local api = require("frontend.tools.ask.api")
 
 local log = Logger.new("ask", "debug")
 
+local active_cleanup = nil
+
 local M = {}
 
 function M.ask(opts)
@@ -63,7 +65,9 @@ function M.ask(opts)
 		pcall(vim.api.nvim_buf_del_keymap, bufnr, 'i', '<Esc>')
 		vim.bo[bufnr].filetype = orig_filetype
 		vim.diagnostic.enable(true, { bufnr = bufnr })
+		active_cleanup = nil
 	end
+	active_cleanup = cleanup
 
 	local function cancel()
 		vim.cmd("stopinsert")
@@ -96,6 +100,9 @@ function M.ask(opts)
 end
 
 function M.dismiss()
+	if active_cleanup then
+		active_cleanup()
+	end
 	display.clear()
 end
 
