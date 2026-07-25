@@ -12,6 +12,12 @@ local config = {
 	max_tokens = 2048,
 }
 
+local function get_indent(bufnr, linenr)
+	local line = vim.api.nvim_buf_get_lines(bufnr, linenr, linenr + 1, false)[1]
+	if not line then return "" end
+	return line:match("^(%s*)") or ""
+end
+
 local function show_response(bufnr, extmark_id, extmark_line, answer)
 	if not vim.api.nvim_buf_is_valid(bufnr) then
 		return
@@ -28,14 +34,14 @@ local function show_response(bufnr, extmark_id, extmark_line, answer)
 	for _, line in ipairs(lines) do
 		local trimmed = vim.trim(line)
 		while #trimmed > max_width do
-			table.insert(virt_lines, { { "  " .. trimmed:sub(1, max_width), "Comment" } })
+			table.insert(virt_lines, { { get_indent(bufnr, extmark_line) .. trimmed:sub(1, max_width), "Comment" } })
 			trimmed = trimmed:sub(max_width + 1)
 		end
 		if #trimmed > 0 then
-			table.insert(virt_lines, { { "  " .. trimmed, "Comment" } })
+			table.insert(virt_lines, { { get_indent(bufnr, extmark_line) .. trimmed, "Comment" } })
 		end
 	end
-	table.insert(virt_lines, { { "  [q]", "NonText" } })
+	table.insert(virt_lines, { { get_indent(bufnr, extmark_line) .. "[q]", "NonText" } })
 
 	vim.api.nvim_buf_set_extmark(bufnr, ns_id, extmark_line, 0, {
 		id = extmark_id,
@@ -96,7 +102,7 @@ local function distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answ
 			if linenr >= start_0idx and linenr <= end_0idx and #entry > 0 then
 				local chunk = {}
 				for _, item in ipairs(entry) do
-					table.insert(chunk, { { "  " .. item, "Comment" } })
+					table.insert(chunk, { { get_indent(bufnr, linenr) .. item, "Comment" } })
 				end
 				chunks[linenr] = chunk
 			end
@@ -109,7 +115,7 @@ local function distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answ
 			end
 		end
 		if chunks[max_linenr] then
-			table.insert(chunks[max_linenr], { { "  [q]", "NonText" } })
+			table.insert(chunks[max_linenr], { { get_indent(bufnr, max_linenr) .. "[q]", "NonText" } })
 		end
 
 		for linenr, chunk in pairs(chunks) do
@@ -137,7 +143,7 @@ local function distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answ
 			if idx > #seq_lines then
 				break
 			end
-			table.insert(chunk, { { "  " .. seq_lines[idx], "Comment" } })
+			table.insert(chunk, { { get_indent(bufnr, linenr) .. seq_lines[idx], "Comment" } })
 			idx = idx + 1
 		end
 		chunks[linenr] = chunk
@@ -145,7 +151,7 @@ local function distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answ
 
 	for linenr = end_0idx, start_0idx, -1 do
 		if chunks[linenr] and #chunks[linenr] > 0 then
-			table.insert(chunks[linenr], { { "  [q]", "NonText" } })
+			table.insert(chunks[linenr], { { get_indent(bufnr, linenr) .. "[q]", "NonText" } })
 			break
 		end
 	end
@@ -198,7 +204,7 @@ function M.ask(opts)
 
 	local _, prompt_extmark_id = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, extmark_line, 0, {
 		virt_lines = {
-			{ { "Prompt: ", "Comment" } },
+			{ { get_indent(bufnr, extmark_line) .. "Prompt: ", "Comment" } },
 		},
 	})
 
@@ -223,12 +229,15 @@ function M.ask(opts)
 			return
 		end
 
-		local frames = {
-			"  Thinking   ",
-			"  Thinking.  ",
-			"  Thinking.. ",
-			"  Thinking...",
-		}
+		local function get_frames(indent)
+			return {
+				indent .. "Thinking   ",
+				indent .. "Thinking.  ",
+				indent .. "Thinking.. ",
+				indent .. "Thinking...",
+			}
+		end
+		local frames = get_frames(get_indent(bufnr, extmark_line))
 		local frame_idx = 0
 
 		local _, extmark_id = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, extmark_line, 0, {
