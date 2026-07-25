@@ -389,6 +389,48 @@ fn vm_ssh_reachable(ssh: &SshEngine) -> bool {
     VmProcessController::is_active("vm").as_deref() == Ok("active") && ssh.exec("true").is_ok()
 }
 
+struct WatcherGuard(Option<std::process::Child>);
+
+impl Drop for WatcherGuard {
+    fn drop(&mut self) {
+        if let Some(ref mut child) = self.0 {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+}
+
+fn setup_preview_watcher(config: &VmConfig) -> Result<std::process::Child, String> {
+    let home = env::var("HOME").unwrap_or_else(|_| "/root".to_string());
+    let xdg_state =
+        env::var("XDG_STATE_HOME").unwrap_or_else(|_| format!("{}/.local/state", home));
+    let key_dir = format!("{}/vm/keys/{}", xdg_state, config.default_host);
+    let watch_file = format!("{}/md-preview-url", key_dir);
+
+    let script = format!(
+        "last_url=''
+while true; do
+  if [ -f '{}' ]; then
+    new_url=\"$(cat '{}' 2>/dev/null)\"
+    if [ -n \"$new_url\" ] && [ \"$new_url\" != \"$last_url\" ]; then
+      last_url=\"$new_url\"
+      xdg-open \"$new_url\" 2>/dev/null &
+    fi
+  fi
+  sleep 2
+done",
+        watch_file, watch_file
+    );
+
+    println!("Starting preview URL watcher on {}...", watch_file);
+
+    std::process::Command::new("sh")
+        .arg("-c")
+        .arg(&script)
+        .spawn()
+        .map_err(|e| format!("Failed to start preview watcher: {}", e))
+}
+
 pub async fn ssh(
     ssh: &SshEngine,
     auto_start: bool,
@@ -403,6 +445,7 @@ pub async fn ssh(
 
     let config = VmConfig::load();
     let _ = setup_9093_tunnel(&config);
+    let _watcher = WatcherGuard(setup_preview_watcher(&config).ok());
 
     let mut cmd = Command::new("ssh");
 

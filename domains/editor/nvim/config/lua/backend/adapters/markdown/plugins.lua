@@ -29,6 +29,7 @@ return {
 				function! OpenPreviewOnHost(url) abort
 					let @" = a:url
 					echomsg "MD Preview: " . a:url
+					call writefile([a:url], '/tmp/shared/md-preview-url', 'b')
 					silent! call system('wl-copy ' . shellescape(a:url))
 					if v:shell_error
 						silent! call system('xclip -selection clipboard', a:url)

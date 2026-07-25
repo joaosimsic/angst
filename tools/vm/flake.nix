@@ -209,7 +209,26 @@
 
               ssh $SSH_OPTS -fNL 9093:localhost:9093 "$SSH_USER@localhost" 2>/dev/null && echo "Forwarding localhost:9093 to VM"
 
-              exec ssh $SSH_OPTS "$SSH_USER@localhost"
+              echo "Starting preview URL watcher..."
+              PREVIEW_WATCHER_PID=
+              (
+                last_url=""
+                while true; do
+                  if [ -f "$SHARED_DIR/md-preview-url" ]; then
+                    new_url="$(cat "$SHARED_DIR/md-preview-url" 2>/dev/null)"
+                    if [ -n "$new_url" ] && [ "$new_url" != "$last_url" ]; then
+                      last_url="$new_url"
+                      xdg-open "$new_url" 2>/dev/null &
+                    fi
+                  fi
+                  sleep 2
+                done
+              ) &
+              PREVIEW_WATCHER_PID=$!
+
+              ssh $SSH_OPTS "$SSH_USER@localhost"
+
+              kill $PREVIEW_WATCHER_PID 2>/dev/null || true
             '';
 
             vm-wrapped = pkgs.symlinkJoin {
