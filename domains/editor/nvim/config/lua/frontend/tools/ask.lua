@@ -2,18 +2,11 @@ local M = {}
 
 local ns_id = vim.api.nvim_create_namespace("ask")
 local config = {
-	provider = "openai",
-	openai = {
-		base_url = "https://api.openai.com/v1",
-		model = "gpt-4o-mini",
-	},
-	claude = {
-		model = "claude-sonnet-4-20250514",
-	},
+	base_url = "https://opencode.ai/zen/go/v1",
+	model = "deepseek-v4-flash",
 }
 
-local send_openai
-local send_claude
+local send_request
 local show_response
 
 function M.setup(user_opts)
@@ -61,15 +54,9 @@ function M.ask()
 		local system_prompt = "You are a concise coding assistant. Answer in at most 5 lines. No preamble."
 		local user_prompt = string.format("Code:\n```\n%s\n```\n\nQuestion: %s", code, input)
 
-		if config.provider == "openai" then
-			send_openai(system_prompt, user_prompt, function(answer)
-				show_response(bufnr, extmark_id, answer)
-			end)
-		elseif config.provider == "claude" then
-			send_claude(system_prompt, user_prompt, function(answer)
-				show_response(bufnr, extmark_id, answer)
-			end)
-		end
+		send_request(system_prompt, user_prompt, function(answer)
+			show_response(bufnr, extmark_id, answer)
+		end)
 	end)
 end
 
@@ -77,16 +64,15 @@ function M.dismiss()
 	vim.api.nvim_buf_clear_namespace(0, ns_id, 0, -1)
 end
 
-function send_openai(system_prompt, user_prompt, callback)
-	local cfg = config.openai
-	local api_key = cfg.api_key or vim.env.OPENAI_API_KEY
+function send_request(system_prompt, user_prompt, callback)
+	local api_key = config.api_key or vim.env.OPENAI_API_KEY
 	if not api_key then
-		callback("Set OPENAI_API_KEY or configure openai.api_key")
+		callback("Set OPENAI_API_KEY or configure api_key")
 		return
 	end
 
 	local body = vim.fn.json_encode({
-		model = cfg.model,
+		model = config.model,
 		messages = {
 			{ role = "system", content = system_prompt },
 			{ role = "user", content = user_prompt },
@@ -94,10 +80,8 @@ function send_openai(system_prompt, user_prompt, callback)
 		max_tokens = 300,
 	})
 
-	local url = cfg.base_url .. "/chat/completions"
-
 	vim.system({
-		"curl", "-s", "-X", "POST", url,
+		"curl", "-s", "-X", "POST", config.base_url .. "/chat/completions",
 		"-H", "Content-Type: application/json",
 		"-H", "Authorization: Bearer " .. api_key,
 		"--data-binary", "@-",
@@ -117,53 +101,6 @@ function send_openai(system_prompt, user_prompt, callback)
 			return
 		end
 		local answer = res.choices and res.choices[1] and res.choices[1].message and res.choices[1].message.content
-		if not answer then
-			callback("Unexpected API response format")
-			return
-		end
-		callback(vim.trim(answer))
-	end)
-end
-
-function send_claude(system_prompt, user_prompt, callback)
-	local cfg = config.claude
-	local api_key = cfg.api_key or vim.env.ANTHROPIC_API_KEY
-	if not api_key then
-		callback("Set ANTHROPIC_API_KEY or configure claude.api_key")
-		return
-	end
-
-	local body = vim.fn.json_encode({
-		model = cfg.model,
-		max_tokens = 300,
-		system = system_prompt,
-		messages = {
-			{ role = "user", content = user_prompt },
-		},
-	})
-
-	vim.system({
-		"curl", "-s", "-X", "POST", "https://api.anthropic.com/v1/messages",
-		"-H", "Content-Type: application/json",
-		"-H", "x-api-key: " .. api_key,
-		"-H", "anthropic-version: 2023-06-01",
-		"--data-binary", "@-",
-	}, { stdin = body, text = true, timeout = 30000 }, function(result)
-		if result.code ~= 0 then
-			callback("curl error (exit " .. result.code .. ")")
-			return
-		end
-		local ok, res = pcall(vim.fn.json_decode, result.stdout)
-		if not ok then
-			callback("Failed to parse API response")
-			return
-		end
-		if res.error then
-			local msg = type(res.error) == "table" and (res.error.message or vim.inspect(res.error)) or tostring(res.error)
-			callback(msg)
-			return
-		end
-		local answer = res.content and res.content[1] and res.content[1].text
 		if not answer then
 			callback("Unexpected API response format")
 			return
@@ -208,14 +145,8 @@ return {
 		end, desc = "Ask about selection" },
 	},
 	opts = {
-		provider = "openai",
-		openai = {
-			base_url = "https://api.openai.com/v1",
-			model = "gpt-4o-mini",
-		},
-		claude = {
-			model = "claude-sonnet-4-20250514",
-		},
+		base_url = "https://opencode.ai/zen/go/v1",
+		model = "deepseek-v4-flash",
 	},
 	config = function(_, opts)
 		M.setup(opts)
