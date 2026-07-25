@@ -1,3 +1,5 @@
+local Keybinder = require("common.Keybinder")
+
 local M = {}
 
 local ns_id = vim.api.nvim_create_namespace("ask")
@@ -55,7 +57,7 @@ function M.ask()
 		local user_prompt = string.format("Code:\n```\n%s\n```\n\nQuestion: %s", code, input)
 
 		send_request(system_prompt, user_prompt, function(answer)
-			show_response(bufnr, extmark_id, answer)
+			show_response(bufnr, extmark_id, extmark_line, answer)
 		end)
 	end)
 end
@@ -81,10 +83,17 @@ function send_request(system_prompt, user_prompt, callback)
 	})
 
 	vim.system({
-		"curl", "-s", "-X", "POST", config.base_url .. "/chat/completions",
-		"-H", "Content-Type: application/json",
-		"-H", "Authorization: Bearer " .. api_key,
-		"--data-binary", "@-",
+		"curl",
+		"-s",
+		"-X",
+		"POST",
+		config.base_url .. "/chat/completions",
+		"-H",
+		"Content-Type: application/json",
+		"-H",
+		"Authorization: Bearer " .. api_key,
+		"--data-binary",
+		"@-",
 	}, { stdin = body, text = true, timeout = 30000 }, function(result)
 		if result.code ~= 0 then
 			callback("curl error (exit " .. result.code .. ")")
@@ -96,7 +105,8 @@ function send_request(system_prompt, user_prompt, callback)
 			return
 		end
 		if res.error then
-			local msg = type(res.error) == "table" and (res.error.message or vim.inspect(res.error)) or tostring(res.error)
+			local msg = type(res.error) == "table" and (res.error.message or vim.inspect(res.error))
+				or tostring(res.error)
 			callback(msg)
 			return
 		end
@@ -109,7 +119,7 @@ function send_request(system_prompt, user_prompt, callback)
 	end)
 end
 
-function show_response(bufnr, extmark_id, answer)
+function show_response(bufnr, extmark_id, extmark_line, answer)
 	if not vim.api.nvim_buf_is_valid(bufnr) then
 		return
 	end
@@ -126,7 +136,7 @@ function show_response(bufnr, extmark_id, answer)
 	end
 	table.insert(virt_lines, { { "  [q]", "NonText" } })
 
-	vim.api.nvim_buf_set_extmark(bufnr, ns_id, 0, 0, {
+	vim.api.nvim_buf_set_extmark(bufnr, ns_id, extmark_line, 0, {
 		id = extmark_id,
 		virt_lines = virt_lines,
 	})
@@ -136,22 +146,10 @@ return {
 	"ask",
 	virtual = true,
 	event = "VeryLazy",
-	keys = {
-		{ "n", "<leader>?", function()
-			M.ask()
-		end, desc = "Ask about code" },
-		{ "x", "<leader>?", function()
-			M.ask()
-		end, desc = "Ask about selection" },
-	},
-	opts = {
-		base_url = "https://opencode.ai/zen/go/v1",
-		model = "deepseek-v4-flash",
-	},
-	config = function(_, opts)
-		M.setup(opts)
-		vim.keymap.set("n", "<leader>q", function()
-			M.dismiss()
-		end, { desc = "Dismiss ask response" })
+	config = function()
+		local binder = Keybinder.new(nil, "ASK")
+		binder:set_debug(true)
+		binder:nmap("<leader>?", M.ask, { desc = "Ask about code" })
+		binder:nmap("<leader>q", M.dismiss, { desc = "Dismiss ask response" })
 	end,
 }
