@@ -13,9 +13,6 @@ local function build_messages(numbered_code, input)
 	local system = "You are a concise coding assistant with access to the codebase. "
 		.. "You can use tools to search code and read files. "
 		.. "Use tools to gather relevant context before answering code questions.\n\n"
-		.. "Available tools:\n"
-		.. "- search_code(query, max_results?, include?): Search the codebase using ripgrep. Returns file:line:content.\n"
-		.. "- read_file_lines(path, start_line?, end_line?): Read specific lines from a file.\n\n"
 		.. "When the user asks about code, search for relevant symbols, imports, definitions, and usages. "
 		.. "Code lines are prefixed with their line number (L<number>:). "
 		.. "Explain each line by referencing its number. Return one line per code line, "
@@ -59,9 +56,9 @@ local function tool_preview(tc)
 	local ok, args = pcall(vim.fn.json_decode, tc["function"].arguments)
 	if not ok then args = {} end
 
-	if tc["function"].name == "search_code" then
+	if tc["function"].name == "ask_search_code" then
 		return tc["function"].name .. '("' .. (args.query or "?") .. '")'
-	elseif tc["function"].name == "read_file_lines" then
+	elseif tc["function"].name == "ask_read_file_lines" then
 		local preview = tc["function"].name .. "(" .. (args.path or "?")
 		if args.start_line then
 			preview = preview .. ":" .. args.start_line

@@ -4,7 +4,7 @@ M.definitions = {
 	{
 		type = "function",
 		["function"] = {
-			name = "search_code",
+			name = "ask_search_code",
 			description = "Search the codebase using ripgrep. Returns matching file:line:content results with paths relative to project root.",
 			parameters = {
 				type = "object",
@@ -20,7 +20,7 @@ M.definitions = {
 	{
 		type = "function",
 		["function"] = {
-			name = "read_file_lines",
+			name = "ask_read_file_lines",
 			description = "Read specific lines from a file relative to project root. Defaults to max 5 lines (lines start_line through start_line+4).",
 			parameters = {
 				type = "object",
@@ -93,9 +93,9 @@ local function read_file_lines(path, start_line, end_line, project_root)
 end
 
 function M.execute(name, args, project_root)
-	if name == "search_code" then
+	if name == "ask_search_code" then
 		return search_code(args.query, args.max_results or 15, args.include, project_root)
-	elseif name == "read_file_lines" then
+	elseif name == "ask_read_file_lines" then
 		return read_file_lines(args.path, args.start_line, args.end_line, project_root)
 	end
 	return "Error: unknown tool '" .. name .. "'"
