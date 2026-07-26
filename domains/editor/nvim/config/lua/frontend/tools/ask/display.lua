@@ -3,6 +3,17 @@ local M = {}
 local ns_id = vim.api.nvim_create_namespace("ask")
 M.ns_id = ns_id
 
+M._last_bufnr = nil
+M._last_refs = nil  -- [linenr_0idx] = concatenated explanation text
+
+local function comment_line(text)
+	local cs = vim.bo.commentstring
+	if cs and cs ~= "" and cs:find("%%s") then
+		return cs:gsub("%%s", text)
+	end
+	return "-- " .. text
+end
+
 function M.get_indent(bufnr, linenr)
 	local line = vim.api.nvim_buf_get_lines(bufnr, linenr, linenr + 1, false)[1]
 	if not line then return "" end
@@ -144,6 +155,14 @@ function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer)
 	end
 
 	if has_refs then
+		M._last_bufnr = bufnr
+		M._last_refs = {}
+		for linenr, entry in pairs(line_entries) do
+			if linenr >= start_0idx and linenr <= end_0idx and #entry > 0 then
+				M._last_refs[linenr] = table.concat(entry, " ")
+			end
+		end
+
 		local chunks = {}
 		for linenr, entry in pairs(line_entries) do
 			if linenr >= start_0idx and linenr <= end_0idx and #entry > 0 then
@@ -172,16 +191,24 @@ function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer)
 	local num_source_lines = end_0idx - start_0idx + 1
 	local lines_per_source = math.max(1, math.ceil(#seq_lines / num_source_lines))
 
+	M._last_bufnr = bufnr
+	M._last_refs = {}
+
 	local chunks = {}
 	local idx = 1
 	for linenr = start_0idx, end_0idx do
 		local chunk = {}
+		local items = {}
 		for _ = 1, lines_per_source do
 			if idx > #seq_lines then
 				break
 			end
 			table.insert(chunk, { { M.get_indent(bufnr, linenr) .. seq_lines[idx], "Comment" } })
+			table.insert(items, seq_lines[idx])
 			idx = idx + 1
+		end
+		if #items > 0 then
+			M._last_refs[linenr] = table.concat(items, " ")
 		end
 		chunks[linenr] = chunk
 	end
@@ -193,6 +220,34 @@ function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer)
 			})
 		end
 	end
+end
+
+function M.insert_explanations()
+	local bufnr = vim.api.nvim_get_current_buf()
+	if M._last_bufnr ~= bufnr or not M._last_refs then
+		vim.notify("Ask: no explanations to insert", vim.log.levels.WARN)
+		return
+	end
+
+	local refs = M._last_refs
+	M._last_bufnr = nil
+	M._last_refs = nil
+
+	local linenrs = {}
+	for linenr_0idx, _ in pairs(refs) do
+		table.insert(linenrs, linenr_0idx)
+	end
+	table.sort(linenrs, function(a, b) return a > b end)
+
+	local count = 0
+	for _, linenr_0idx in ipairs(linenrs) do
+		local indent = M.get_indent(bufnr, linenr_0idx)
+		local comment = indent .. comment_line(refs[linenr_0idx])
+		vim.api.nvim_buf_set_lines(bufnr, linenr_0idx + 1, linenr_0idx + 1, false, { comment })
+		count = count + 1
+	end
+	vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+	vim.notify(string.format("Ask: inserted %d explanation line(s)", count))
 end
 
 function M.clear()

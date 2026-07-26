@@ -5,7 +5,7 @@ M.definitions = {
 		type = "function",
 		["function"] = {
 			name = "search_code",
-			description = "Search the codebase using ripgrep. Returns matching file:line:content results.",
+			description = "Search the codebase using ripgrep. Returns matching file:line:content results with paths relative to project root.",
 			parameters = {
 				type = "object",
 				properties = {
@@ -21,13 +21,13 @@ M.definitions = {
 		type = "function",
 		["function"] = {
 			name = "read_file_lines",
-			description = "Read specific lines from a file relative to project root.",
+			description = "Read specific lines from a file relative to project root. Defaults to max 5 lines (lines start_line through start_line+4).",
 			parameters = {
 				type = "object",
 				properties = {
 					path = { type = "string", description = "Relative path from project root" },
 					start_line = { type = "number", description = "First line to read (1-indexed, default 1)" },
-					end_line = { type = "number", description = "Last line to read (inclusive, default 50)" },
+					end_line = { type = "number", description = "Last line to read (inclusive, defaults to start_line + 4)" },
 				},
 				required = { "path" },
 			},
@@ -45,15 +45,18 @@ function M.find_project_root(bufnr)
 end
 
 local function search_code(query, max_results, include, project_root)
+	local saved = vim.uv.cwd()
+	vim.uv.chdir(project_root)
 	local cmd = { "rg", "--no-heading", "--line-number", "--color=never", "--smart-case" }
 	if include then
 		table.insert(cmd, "--glob")
 		table.insert(cmd, include)
 	end
 	table.insert(cmd, query)
-	table.insert(cmd, project_root)
+	table.insert(cmd, ".")
 
 	local output = vim.fn.system(cmd)
+	vim.uv.chdir(saved)
 	if vim.v.shell_error ~= 0 then return "No results found." end
 
 	local lines = vim.split(output, "\n")
@@ -72,13 +75,13 @@ local function read_file_lines(path, start_line, end_line, project_root)
 		full_path = project_root .. "/" .. path
 	end
 
-	local lines = vim.fn.readfile(full_path)
-	if type(lines) ~= "table" then
+	local ok, lines = pcall(vim.fn.readfile, full_path)
+	if not ok or type(lines) ~= "table" then
 		return "Error: could not read file '" .. path .. "'"
 	end
 
 	local s = start_line or 1
-	local e = end_line or math.min(s + 49, #lines)
+	local e = end_line or math.min(s + 4, #lines)
 	s = math.max(1, s)
 	e = math.min(e, #lines)
 

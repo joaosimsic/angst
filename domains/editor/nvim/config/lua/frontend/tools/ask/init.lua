@@ -140,5 +140,6 @@ return {
 		binder:nmap("<leader>m", M.ask, { desc = "Ask about code" })
 		binder:vmap("<leader>m", function() M.ask({ visual = true }) end, { desc = "Ask about code" })
 		binder:nmap("<leader>q", M.dismiss, { desc = "Dismiss ask response" })
+		binder:nmap("<leader>y", display.insert_explanations, { desc = "Insert explanations as comments" })
 	end,
 }
