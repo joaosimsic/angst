@@ -15,8 +15,9 @@ local function build_messages(numbered_code, input)
 		.. "Use tools to gather relevant context before answering code questions.\n\n"
 		.. "When the user asks about code, search for relevant symbols, imports, definitions, and usages. "
 		.. "Code lines are prefixed with their line number (L<number>:). "
-		.. "Explain each line by referencing its number. Return one line per code line, "
+		.. "Explain each line by referencing its number "
 		.. "formatted as L<line_number>: <explanation>. "
+		.. "DO NOT include the code line itself in the explanation. "
 		.. "Skip trivial lines like empty lines, braces, and syntax-only lines unless the question asks about them. No preamble."
 
 	local user = string.format("Code:\n```\n%s\n```\n\nQuestion: %s", numbered_code, input)
