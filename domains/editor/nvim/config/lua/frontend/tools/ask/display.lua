@@ -90,6 +90,26 @@ function M.place_line_ref(bufnr, linenr, text)
 	})
 end
 
+function M.update_line_ref(bufnr, linenr, text, extmark_id)
+	if not vim.api.nvim_buf_is_valid(bufnr) then
+		return nil
+	end
+
+	local virt_lines = wrap_text(bufnr, linenr, text)
+
+	local opts = {}
+	if extmark_id then
+		opts.id = extmark_id
+	end
+	opts.virt_lines = virt_lines
+
+	local ok, id = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_id, linenr, 0, opts)
+	if ok then
+		return id
+	end
+	return nil
+end
+
 function M.show_tool_actions(bufnr, extmark_id, extmark_line, actions)
 	if not vim.api.nvim_buf_is_valid(bufnr) then return end
 
@@ -105,6 +125,14 @@ function M.show_tool_actions(bufnr, extmark_id, extmark_line, actions)
 		id = extmark_id,
 		virt_lines = virt_lines,
 	})
+end
+
+function M.parse_line_tag(line)
+	local ref, rest = line:match("^L(%d+):%s*(.*)$")
+	if ref then return tonumber(ref), rest end
+	ref, rest = line:match("^L(%d+)[–—%-]L%d+:%s*(.*)$")
+	if ref then return tonumber(ref), rest end
+	return nil, nil
 end
 
 function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer)
@@ -137,9 +165,9 @@ function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer)
 	local current_ref = nil
 
 	for _, line in ipairs(lines) do
-		local ref, rest = line:match("^L(%d+):%s*(.*)$")
+		local ref, rest = M.parse_line_tag(line)
 		if ref then
-			current_ref = tonumber(ref) - 1
+			current_ref = ref - 1
 			has_refs = true
 			if not line_entries[current_ref] then
 				line_entries[current_ref] = {}

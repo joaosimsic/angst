@@ -50,6 +50,7 @@ local function show_final(content, state)
 		display.show_response(state.bufnr, state.extmark_id, state.extmark_line, "Empty response from API")
 		return
 	end
+	vim.api.nvim_buf_clear_namespace(state.bufnr, display.ns_id, 0, -1)
 	display.distribute_response(state.bufnr, state.extmark_id, state.start_0idx, state.extmark_line, trimmed)
 end
 
@@ -117,9 +118,26 @@ local function agent_round(messages, state, depth)
 
 			api.chat_stream(messages, state.api_key,
 				function(_, accumulated)
-					if vim.api.nvim_buf_is_valid(state.bufnr) then
-						display.show_incomplete_line(state.bufnr, state.extmark_id, state.extmark_line, accumulated)
+					if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
+
+					local lines = vim.split(accumulated, "\n")
+					local ends_with_nl = accumulated:sub(-1) == "\n"
+					local complete_count = ends_with_nl and #lines or #lines - 1
+
+					for i = state.stream_line_count + 1, complete_count do
+						local line = lines[i]
+						local ref, rest = display.parse_line_tag(line)
+						if ref then
+							local linenr = ref - 1
+							if linenr >= state.start_0idx and linenr <= state.extmark_line
+							   and not state.stream_placed_lines[linenr] then
+								display.place_line_ref(state.bufnr, linenr, rest)
+								state.stream_placed_lines[linenr] = true
+							end
+						end
 					end
+
+					state.stream_line_count = complete_count
 				end,
 				function(full_content)
 					show_final(full_content, state)
@@ -163,6 +181,8 @@ function M.run(opts)
 		api_key = api_key,
 		project_root = project_root,
 		actions = {},
+		stream_line_count = 0,
+		stream_placed_lines = {},
 	}
 
 	local messages = build_messages(numbered_code, input)
