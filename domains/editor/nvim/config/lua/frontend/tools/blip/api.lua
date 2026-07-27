@@ -1,6 +1,12 @@
 local Logger = require("common.Logger")
-local log = Logger.new("ask.api", "debug")
+local log = Logger.new("blip.api", "debug")
 
+---@class BlipApiConfig
+---@field base_url string
+---@field model string
+---@field max_tokens integer
+
+---@type BlipApiConfig
 local config = {
 	base_url = "https://opencode.ai/zen/go/v1",
 	model = "deepseek-v4-flash",
@@ -9,6 +15,8 @@ local config = {
 
 local M = {}
 
+---@param api_key string
+---@return table<string,string>
 local function build_headers(api_key)
 	return {
 		["Content-Type"] = "application/json",
@@ -16,6 +24,11 @@ local function build_headers(api_key)
 	}
 end
 
+---@param messages BlipMessage[]
+---@param tools table[]?
+---@param api_key string
+---@param on_success fun(message: BlipMessage)
+---@param on_error fun(msg: string)
 function M.chat(messages, tools, api_key, on_success, on_error)
 	local curl = require("plenary.curl")
 
@@ -69,6 +82,11 @@ function M.chat(messages, tools, api_key, on_success, on_error)
 	})
 end
 
+---@param messages BlipMessage[]
+---@param api_key string
+---@param on_delta fun(chunk: string, accumulated: string)
+---@param on_complete fun(full_content: string)
+---@param on_error fun(msg: string)
 function M.chat_stream(messages, api_key, on_delta, on_complete, on_error)
 	local curl = require("plenary.curl")
 
@@ -94,9 +112,7 @@ function M.chat_stream(messages, api_key, on_delta, on_complete, on_error)
 			for line in event:gmatch("[^\r\n]+") do
 				local payload = line:match("^data: (.*)$")
 				if payload then
-					if payload == "[DONE]" then
-						return true
-					end
+					if payload == "[DONE]" then return true end
 					local ok, json = pcall(vim.fn.json_decode, payload)
 					if ok and json.choices and json.choices[1] then
 						local delta = json.choices[1].delta or {}
