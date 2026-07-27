@@ -54,6 +54,7 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ [ ../../modules/nixos ]
   ++ (if hardwarePath != null then [ (import hardwarePath) ] else [ ])
   ++ (if cfg.extraNixos != { } then [ cfg.extraNixos ] else [ ])
+  ++ (if cfg.env != { } then [{ environment.sessionVariables = cfg.env; }] else [ ])
   ++ [
     ../../modules/vm/detect.nix
     ../../modules/vm/runtime.nix

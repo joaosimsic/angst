@@ -66,6 +66,7 @@ in
     repoPath = config.repoPath or "proj/angst";
     extraNixos = config.nixos or { };
     extraHome = config.home or { };
+    env = config.env or { };
 
     scan = {
       domains = domainsLib;

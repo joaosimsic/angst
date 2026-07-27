@@ -58,6 +58,7 @@ Instead of per-host directories, a single `local/config.nix` (gitignored) define
 | `cfg.repoPath` | `config.repoPath or "proj/angst"` | Relative repo path from $HOME |
 | `cfg.extraNixos` | `config.nixos or {}` | Per-machine NixOS extras |
 | `cfg.extraHome` | `config.home or {}` | Per-machine home-manager extras |
+| `cfg.env` | `config.env or {}` | Per-machine environment variables |
 | `cfg.scan.domains` | Auto-discovered domain entries | Domain framework |
 | `cfg.scan.themes` | Theme library | Theme access |
 | `cfg.scan.allToolchainPackages` | All enabled toolchain packages | Aggregated packages |

@@ -35,4 +35,10 @@
     keyboardLayout = "br-abnt2";  # console keymap + X11 layout ("layout-variant" or just "layout")
   };
   home = {};   # one-off HM config (replaces host-specific home.nix)
+
+  # Environment variables propagated to both home-manager and NixOS
+  env = {
+    EDITOR = "nvim";
+    BROWSER = "firefox";
+  };
 }

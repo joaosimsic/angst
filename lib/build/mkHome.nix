@@ -59,5 +59,6 @@ inputs.home-manager.lib.homeManagerConfiguration {
       ];
     })
   ]
-  ++ (if cfg.extraHome != { } then [ cfg.extraHome ] else [ ]);
+  ++ (if cfg.extraHome != { } then [ cfg.extraHome ] else [ ])
+  ++ (if cfg.env != { } then [{ home.sessionVariables = cfg.env; }] else [ ]);
 }
