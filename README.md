@@ -13,6 +13,7 @@ All configuration is driven by a single `local/config.nix` file:
   toolchains = "*";                                # all 22 languages, or a list
   password = "$y$j9T$...";                         # hashed via `just password`
   monitors = { primary = { ... }; };
+  db = { connections = { dev = { type = "postgres"; host = "localhost"; ... }; }; };  # sql-client credentials
   nixos = { keyboardLayout = "br-abnt2"; };        # per-machine extras
 }
 ```
@@ -95,7 +96,7 @@ The domain framework in `lib/domains/` provides:
 
 17 domains across 12 categories — see [openwiki/domains.md](openwiki/domains.md) for the full table.
 
-Domain categories: `agents/` (opencode, cursor-cli), `bar/` (i3status), `editor/` (nvim), `files/` (yazi), `git/` (lazygit), `http-client/` (posting), `launcher/` (rofi), `session/` (x11), `shell/` (nushell, starship, carapace), `sql-client/` (sqlit), `terminal/` (ghostty, zellij, tmux), `wm/` (i3).
+Domain categories: `agents/` (opencode, cursor-cli), `bar/` (i3status), `editor/` (nvim), `files/` (yazi), `git/` (lazygit), `http-client/` (posting), `launcher/` (rofi), `session/` (x11), `shell/` (nushell, starship, carapace), `sql-client/` (sqlit, rainfrog), `terminal/` (ghostty, zellij, tmux), `wm/` (i3).
 
 Domains are enabled via **profile composition** (in `profiles/`), not per-host `home.nix` files.
 

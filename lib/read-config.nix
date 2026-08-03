@@ -61,6 +61,7 @@ in
     theme = config.theme or "monochrome";
     password = config.password or "!";
     monitors = config.monitors or { };
+    db = config.db or { };
     profiles = config.profiles or [ "base" ];
     toolchains = _toolchains;
     repoPath = config.repoPath or "proj/angst";
