@@ -14,6 +14,7 @@ in rec {
       inherit lib themesLib themeName checkHelpers;
       fontFamily = defaultFontFamily;
       monitors = cfg.monitors or {};
+      db = cfg.db or {};
       homeDirectory = "/home/${cfg.username}";
     }) domainRendererPaths);
 
