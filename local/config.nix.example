@@ -31,6 +31,31 @@
     };
   };
 
+  # Database connections injected into the sql-client domains (rainfrog, sqlit).
+  # type: postgres | mysql | sqlite | oracle | mssql | mariadb | duckdb | redshift | cockroachdb
+  #   - rainfrog supports: postgres, mysql, sqlite, oracle, duckdb
+  #   - sqlit supports:    postgres, mysql, sqlite, oracle, mssql, mariadb, duckdb, redshift, cockroachdb
+  # For sqlite, give a filesystem path (absolute or relative); it becomes sqlite://<path> in rainfrog.
+  # Passwords are optional; rainfrog stores them in the OS keyring (its config has no password field),
+  # while sqlit reads them from the rendered connections.json.
+  db = {
+    connections = {
+      # dev = {
+      #   type = "postgres";
+      #   host = "localhost";
+      #   port = 5432;
+      #   database = "app";
+      #   username = "app";
+      #   password = "secret";
+      #   default = true;
+      # };
+      # app-sqlite = {
+      #   type = "sqlite";
+      #   path = "/home/joao/proj/app.db";
+      # };
+    };
+  };
+
   nixos = {
     keyboardLayout = "br-abnt2";  # console keymap + X11 layout ("layout-variant" or just "layout")
   };

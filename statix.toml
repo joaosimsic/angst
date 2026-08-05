@@ -1,4 +1,3 @@
-[disabled]
 # Ignore unused let bindings that are used via string interpolation
 # or attr access that statix cannot resolve statically
-unused_let = true
+disabled = ["unused_let"]

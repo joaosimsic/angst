@@ -1,7 +1,9 @@
 {
+  lib,
   themesLib,
   themeName,
   checkHelpers,
+  db,
   ...
 }:
 
@@ -9,6 +11,61 @@ let
   t = themesLib.get themeName;
   p = t.palette;
   inherit (checkHelpers) requireInfix require;
+
+  conns = db.connections or { };
+
+  sqlitDbTypes = {
+    postgres = "postgresql";
+    mysql = "mysql";
+    sqlite = "sqlite";
+    oracle = "oracle";
+    mssql = "mssql";
+    mariadb = "mariadb";
+    duckdb = "duckdb";
+    redshift = "redshift";
+    cockroachdb = "cockroachdb";
+  };
+
+  connections = lib.mapAttrsToList (name: conn:
+    let
+      dbType = sqlitDbTypes.${conn.type} or (throw
+        "sqlit: unsupported db type '${conn.type}' for connection '${name}' (supported: ${builtins.concatStringsSep ", " (builtins.attrNames sqlitDbTypes)})"
+      );
+    in
+    if conn.type == "sqlite" then
+      {
+        inherit name;
+        db_type = dbType;
+        endpoint = {
+          kind = "file";
+          path = conn.path;
+        };
+      }
+    else
+      {
+        inherit name;
+        db_type = dbType;
+        endpoint = {
+          kind = "tcp";
+          host = conn.host;
+          port = toString (conn.port or 5432);
+          database = conn.database;
+          username = conn.username;
+        }
+        // lib.optionalAttrs (conn ? password && conn.password != null) { password = conn.password; };
+      }
+  ) conns;
+
+  connectionsText = builtins.toJSON {
+    version = 2;
+    inherit connections;
+  };
+
+  connChecks = lib.mapAttrsToList (name: conn:
+    (requireInfix connectionsText ''"name":"${name}"''
+      "sqlit connections.json should include connection ${name}"
+    )
+  ) conns;
 
   settingsText = ''
     {
@@ -101,5 +158,10 @@ in
       (require (p.background.base != p.background.variant || true) "sqlit background and variant must differ in ${themeName}")
       (require (t.ansi.error != t.ansi.success) "sqlit ansi.error and ansi.success must differ in ${themeName}")
     ];
+  }
+  {
+    path = "domains/sql-client/sqlit/config/connections.json";
+    text = connectionsText;
+    checks = connChecks;
   }
 ]

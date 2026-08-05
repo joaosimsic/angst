@@ -42,9 +42,16 @@ in
     '';
 
     home.activation.renderDomainConfigs = lib.hm.dag.entryAfter [ "seedAngstRepo" ] ''
-      ANGST_REPO=${lib.escapeShellArg hostSrc}
-      JSON_DATA=$(${lib.getBin pkgs.nix}/bin/nix eval --impure \
-        "${flakeSelf}#lib.renderDomainOutputsFor" \
+      CFG_SRC=${lib.escapeShellArg hostSrc}
+      if [ ! -d "$CFG_SRC" ]; then
+        CFG_SRC=${lib.escapeShellArg "${config.home.homeDirectory}/${repoPath}"}
+      fi
+      if [ ! -d "$CFG_SRC" ]; then
+        CFG_SRC=${lib.escapeShellArg angstDst}
+      fi
+
+      JSON_DATA=$(cd "$CFG_SRC" && ${lib.getBin pkgs.nix}/bin/nix eval --impure \
+        "$CFG_SRC#lib.renderDomainOutputsFor" \
         --apply "f: builtins.toJSON (map (o: { path = o.path; text = o.text; }) (f \"${config.theme}\"))" \
         --raw 2>/dev/null) || true
 
