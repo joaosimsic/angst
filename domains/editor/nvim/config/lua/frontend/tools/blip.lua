@@ -3,8 +3,8 @@ local Keybinder = require("common.Keybinder")
 
 ---@type Plugin
 return {
-	dir = "/home/joao/proj/blip",
-	-- "joaosimsic/blip",
+	-- dir = "/home/joao/proj/blip",
+	"joaosimsic/blip",
 	dependencies = { "nvim-lua/plenary.nvim" },
 	event = "VeryLazy",
 	opts = {
@@ -18,7 +18,6 @@ return {
 		local blip = require("blip")
 		blip.setup(opts)
 		local binder = Keybinder.new(nil, "BLIP")
-		binder:set_debug(true)
 		binder:map({ "n", "v" }, "<leader>m", blip.ask, { desc = "Ask about code" })
 		binder:nmap("<leader>q", blip.dismiss, { desc = "Dismiss blip response" })
 		binder:nmap("<leader>y", blip.comment, { desc = "Insert explanations as comments" })
