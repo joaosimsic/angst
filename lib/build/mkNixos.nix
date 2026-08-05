@@ -62,6 +62,7 @@ inputs.nixpkgs.lib.nixosSystem {
     ../../modules/vm/vm-profile.nix
     ../../modules/vm/host-mount.nix
     ../../capabilities/ssh.nix
+    ../../capabilities/vpn.nix
     ({ lib, ... }: {
       users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password;
       users.users.root.hashedPassword = lib.mkDefault cfg.password;
