@@ -68,9 +68,11 @@
   };
 
   # SSH keys loaded into a persistent SSH agent at login.
-  # A systemd user service runs ssh-agent and adds these keys once per
-  # login (GUI passphrase prompt if protected). If enable is false or
-  # none of the keys exist on disk, the agent is not started at all.
+  # A systemd user service runs ssh-agent and a nushell bootstrap loads these
+  # keys once per login (GUI passphrase prompt on graphical hosts, tty prompt
+  # over SSH). Works on NixOS desktop, headless servers, and home-manager on
+  # non-NixOS hosts. If enable is false or none of the keys exist, the agent
+  # is not started at all.
   sshAgent = {
     enable = true;
     keys = [

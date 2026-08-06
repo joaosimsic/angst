@@ -15,6 +15,7 @@ in rec {
       fontFamily = defaultFontFamily;
       monitors = cfg.monitors or {};
       db = cfg.db or {};
+      sshAgent = cfg.sshAgent or {};
       homeDirectory = "/home/${cfg.username}";
     }) domainRendererPaths);
 

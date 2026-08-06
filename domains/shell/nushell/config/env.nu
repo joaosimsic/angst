@@ -42,3 +42,9 @@ if not ($carapace_init | path exists) {
     carapace _carapace nushell | save --force $carapace_init
 }
 source $carapace_init
+
+# SSH agent bootstrap (rendered by angst) — sets up the shared agent across
+# graphical, SSH, and headless sessions.
+if (($nu.default-config-dir | path join "ssh-agent.nu") | path exists) {
+    source $"($nu.default-config-dir)/ssh-agent.nu"
+}
