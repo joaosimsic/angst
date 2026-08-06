@@ -18,6 +18,7 @@ let
   sshAddScript = pkgs.writeShellApplication {
     name = "ssh-add-keys";
     runtimeInputs = [ pkgs.openssh pkgs.gnugrep pkgs.gawk ];
+    excludeShellChecks = [ "SC2043" ];
     text = ''
       for key in ${toString (map lib.escapeShellArg keys)}; do
         [ -f "$key" ] || continue

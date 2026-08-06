@@ -117,6 +117,32 @@ rec {
           ;
         themeOverride = overrideTheme;
       };
+
+    login-shell-valid = mkHome {
+      inherit
+        self
+        inputs
+        cfg
+        hmModules
+        vmTool
+        shellTool
+        angstTool
+        ;
+      shellOverride = "sh";
+    };
+
+    login-shell-invalid = mkHome {
+      inherit
+        self
+        inputs
+        cfg
+        hmModules
+        vmTool
+        shellTool
+        angstTool
+        ;
+      shellOverride = "__angst_nonexistent_shell__";
+    };
   };
 
   nixosConfigurations = {
@@ -175,7 +201,7 @@ rec {
     };
     check = {
       type = "app";
-      program = "${pkgs.writeShellScript "check" "set -euo pipefail; ${pkgs.nix}/bin/nix flake check --print-build-logs"}";
+      program = "${pkgs.writeShellScript "check" "set -euo pipefail; ${pkgs.nix}/bin/nix flake check --impure --print-build-logs"}";
     };
     lint-themes = {
       type = "app";

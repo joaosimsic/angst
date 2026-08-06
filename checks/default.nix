@@ -44,6 +44,10 @@ let
     inherit lib pkgs cfg;
   };
 
+  loginShell = import ./login-shell.nix {
+    inherit self cfg pkgs;
+  };
+
   lintNix = import ./lint-nix.nix { inherit pkgs; };
 in
 {
@@ -56,4 +60,6 @@ in
   theme-override        = themeOverrideCheck;
   theme-semantic-distinct = themeSemanticDistinct;
   home-theme-override-test = self.homeConfigurations."${cfg.username}-theme-override-test".activationPackage;
+  login-shell-valid     = loginShell.valid;
+  login-shell-invalid   = loginShell.invalid;
 }

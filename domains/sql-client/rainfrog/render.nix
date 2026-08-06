@@ -31,11 +31,12 @@ let
     autopairs_enabled = true
   '';
 
-  mkInlineEntry = name: conn:
+  mkInlineEntry =
+    name: conn:
     let
-      driver = rainfrogDrivers.${conn.type} or (throw
-        "rainfrog: unsupported db type '${conn.type}' for connection '${name}' (supported: ${builtins.concatStringsSep ", " (builtins.attrNames rainfrogDrivers)})"
-      );
+      driver =
+        rainfrogDrivers.${conn.type}
+          or (throw "rainfrog: unsupported db type '${conn.type}' for connection '${name}' (supported: ${builtins.concatStringsSep ", " (builtins.attrNames rainfrogDrivers)})");
       defaultFlag = lib.optionalString (conn.default or false) ", default = true";
     in
     if conn.type == "sqlite" then
@@ -47,16 +48,13 @@ let
     if conns == { } then
       ""
     else
-      "\n[db]\n"
-      + lib.concatStringsSep "\n" (lib.mapAttrsToList mkInlineEntry conns)
-      + "\n";
+      "\n[db]\n" + lib.concatStringsSep "\n" (lib.mapAttrsToList mkInlineEntry conns) + "\n";
 
   configText = settingsText + dbText;
 
-  connChecks = lib.mapAttrsToList (name: conn:
-    (requireInfix configText ''${name} = {''
-      "rainfrog config should include connection ${name}"
-    )
+  connChecks = lib.mapAttrsToList (
+    name: conn:
+    (requireInfix configText "${name} = {" "rainfrog config should include connection ${name}")
   ) conns;
 in
 [
@@ -68,9 +66,9 @@ in
     ]
     ++ connChecks
     ++ [
-      (require (db.connections or { } == { } || lib.all (conn: conn ? type) (lib.attrValues conns))
-        "rainfrog: every db connection must define a 'type'"
-      )
+      (require (
+        db.connections or { } == { } || lib.all (conn: conn ? type) (lib.attrValues conns)
+      ) "rainfrog: every db connection must define a 'type'")
     ];
   }
 ]

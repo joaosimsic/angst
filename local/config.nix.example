@@ -71,7 +71,7 @@
   # needs root or sudo). A shell name available in the nix profile or system, e.g.
   # "nu", "zsh", "bash". Validated at build time against the host. NixOS hosts are
   # skipped (login shell managed by NixOS config).
-  shell = "nu";
+  # shell = "nu";
 
   # SSH keys loaded into a persistent SSH agent at login.
   # A systemd user service runs ssh-agent and a nushell bootstrap loads these

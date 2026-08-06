@@ -7,6 +7,7 @@
   shellTool,
   angstTool,
   themeOverride ? null,
+  shellOverride ? null,
 }:
 
 let
@@ -34,7 +35,8 @@ inputs.home-manager.lib.homeManagerConfiguration {
   pkgs = pkgs;
 
   extraSpecialArgs = {
-    inherit (cfg) hostname monitors repoPath db sshAgent shell;
+    inherit (cfg) hostname monitors repoPath db sshAgent;
+    shell = if shellOverride != null then shellOverride else cfg.shell;
     inherit (cfg.scan) themes;
     themesLib = cfg.scan.themes;
     hostName = cfg.hostname;
