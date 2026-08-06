@@ -68,6 +68,7 @@ in
     extraNixos = config.nixos or { };
     extraHome = config.home or { };
     env = config.env or { };
+    sshAgent = config.sshAgent or { };
 
     scan = {
       domains = domainsLib;

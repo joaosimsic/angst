@@ -4,6 +4,7 @@
   imports = [
     ./treesitter.nix
     ./domain.nix
+    ./ssh-agent.nix
   ];
 
   programs.home-manager.enable = true;

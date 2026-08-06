@@ -66,4 +66,17 @@
     EDITOR = "nvim";
     BROWSER = "firefox";
   };
+
+  # SSH keys loaded into a persistent SSH agent at login.
+  # A systemd user service runs ssh-agent and adds these keys once per
+  # login (GUI passphrase prompt if protected). If enable is false or
+  # none of the keys exist on disk, the agent is not started at all.
+  sshAgent = {
+    enable = true;
+    keys = [
+      "~/.ssh/id_ed25519"
+      # "~/.ssh/id_rsa"
+      # "~/.ssh/github"
+    ];
+  };
 }
