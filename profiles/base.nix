@@ -8,6 +8,7 @@
     (mkDomainEnable "editor.nvim")
     (mkDomainEnable "files.yazi")
     (mkDomainEnable "git.lazygit")
+    (mkDomainEnable "nix.nh")
   ];
   nixos = [
     (mkCap "network")
