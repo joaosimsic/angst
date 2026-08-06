@@ -10,12 +10,17 @@ let
 
   includeLine = "Include ${config.home.homeDirectory}/.ssh/config.d/*";
 
+  renderOption = k: v: if lib.isBool v then "  ${k} ${if v then "yes" else "no"}" else "  ${k} ${v}";
+
   renderHost = h: ''
     Host ${h.host}
     ${lib.optionalString (h.hostName != null) "  HostName ${h.hostName}"}
     ${lib.optionalString (h.user != null) "  User ${h.user}"}
     ${lib.optionalString (h.identityFile != null) "  IdentityFile ${h.identityFile}"}
     ${lib.optionalString h.identitiesOnly "  IdentitiesOnly yes"}
+    ${lib.concatMapStringsSep "\n" (k: renderOption k h.extraOptions.${k}) (
+      builtins.attrNames h.extraOptions
+    )}
   '';
 in
 {
@@ -52,6 +57,17 @@ in
               default = true;
               description = "Only use the configured identity for this host";
             };
+
+            extraOptions = lib.mkOption {
+              type = lib.types.attrsOf (
+                lib.types.oneOf [
+                  lib.types.bool
+                  lib.types.str
+                ]
+              );
+              default = { };
+              description = "Additional ssh_config directives rendered as key/value lines";
+            };
           };
         }
       );
@@ -62,6 +78,7 @@ in
 
   config = lib.mkIf (cfg.hosts != [ ]) {
     home.file.".ssh/config.d/angst.conf" = {
+      force = true;
       text = lib.concatMapStrings renderHost cfg.hosts;
     };
 

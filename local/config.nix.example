@@ -82,7 +82,7 @@
   sshAgent = {
     enable = true;
     keys = [
-      "~/.ssh/id_ed25519"
+      "~/.ssh/my_key"
       # "~/.ssh/id_rsa"
       # "~/.ssh/github"
     ];
@@ -94,10 +94,10 @@
   # for a GitLab instance:
   # ssh = {
   #   hosts = [{
-  #     host = "gitlab.ezvoice.com.br";
-  #     hostName = "gitlab.ezvoice.com.br";
+  #     host = "github.com";
+  #     hostName = "github.com";
   #     user = "git";
-  #     identityFile = "~/.ssh/work_key";
+  #     identityFile = "~/.ssh/my_key";
   #     identitiesOnly = true;
   #   }];
   # };
