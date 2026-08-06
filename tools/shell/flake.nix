@@ -17,7 +17,7 @@
     }:
     let
       eachSystem =
-        rootFlake:
+        _rootFlake:
         flake-utils.lib.eachDefaultSystem (
           system:
           let

@@ -43,7 +43,7 @@ let
     domainsPath = ../domains;
   };
   domainsModule = import ./domains/module.nix {
-    mkDomainActivation = (import ./domains/activation.nix).mkDomainActivation;
+    inherit (import ./domains/activation.nix) mkDomainActivation;
   };
   domainsLib = domainsScan // domainsModule;
 
@@ -55,7 +55,7 @@ in
   inherit _tcIndex _allTCs;
 
   cfg = {
-    system = system;
+    inherit system;
     hostname = config.hostname or "nixos";
     username = config.username or "user";
     theme = config.theme or "monochrome";

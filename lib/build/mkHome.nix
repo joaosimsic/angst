@@ -12,14 +12,14 @@
 
 let
   pkgs = import inputs.nixpkgs {
-    system = cfg.system;
+    inherit (cfg) system;
     config = import ../nixpkgs-config.nix;
   };
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
 
   effectiveTheme = if themeOverride != null then themeOverride else cfg.theme;
   userCfg = {
-    username = cfg.username;
+    inherit (cfg) username;
     homeDirectory = "/home/${cfg.username}";
   };
 
@@ -32,10 +32,16 @@ let
   };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
-  pkgs = pkgs;
+  inherit pkgs;
 
   extraSpecialArgs = {
-    inherit (cfg) hostname monitors repoPath db sshAgent;
+    inherit (cfg)
+      hostname
+      monitors
+      repoPath
+      db
+      sshAgent
+      ;
     shell = if shellOverride != null then shellOverride else cfg.shell;
     inherit (cfg.scan) themes;
     themesLib = cfg.scan.themes;
@@ -53,7 +59,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ++ hmModules
   ++ cfg.toolchainModules
   ++ [
-    ({ ... }: {
+    (_: {
       home.packages = [
         vmTool
         shellTool
@@ -62,5 +68,5 @@ inputs.home-manager.lib.homeManagerConfiguration {
     })
   ]
   ++ (if cfg.extraHome != { } then [ cfg.extraHome ] else [ ])
-  ++ (if cfg.env != { } then [{ home.sessionVariables = cfg.env; }] else [ ]);
+  ++ (if cfg.env != { } then [ { home.sessionVariables = cfg.env; } ] else [ ]);
 }

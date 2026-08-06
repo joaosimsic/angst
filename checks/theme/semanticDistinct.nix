@@ -15,7 +15,7 @@ let
     "ansi.warn"
     "ansi.info"
   ];
-
-  _ = requireDistinct "semantic roles" roles;
 in
-pkgs.writeText "theme-semantic-distinct-check" "ok"
+pkgs.writeText "theme-semantic-distinct-check" (
+  builtins.seq (requireDistinct "semantic roles" roles) "ok"
+)

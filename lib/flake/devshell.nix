@@ -1,4 +1,11 @@
-{ pkgs, cfg, inputs, angstCli, vmOutputs, shellOutputs }:
+{
+  pkgs,
+  cfg,
+  inputs,
+  angstCli,
+  vmOutputs,
+  ...
+}:
 
 let
   allToolchainPkgs = cfg.scan.allToolchainPackages;
@@ -25,18 +32,39 @@ let
     done
   '';
 
-  fullDevPackages = with pkgs; [
-    neovim git angstCli openssh qemu cargo rustc rust-analyzer
-    deadnix statix
-  ] ++ allToolchainPkgs ++ [
-    vmOutputs.packages.${cfg.system}.wrapped
-    vmOutputs.packages.${cfg.system}.vm-run
-    vmOutputs.packages.${cfg.system}.res
-  ];
-in {
+  fullDevPackages =
+    with pkgs;
+    [
+      neovim
+      git
+      angstCli
+      openssh
+      qemu
+      cargo
+      rustc
+      rust-analyzer
+      deadnix
+      statix
+    ]
+    ++ allToolchainPkgs
+    ++ [
+      vmOutputs.packages.${cfg.system}.wrapped
+      vmOutputs.packages.${cfg.system}.vm-run
+      vmOutputs.packages.${cfg.system}.res
+    ];
+in
+{
   shells = {
     safe = pkgs.mkShell {
-      packages = with pkgs; [ neovim git deadnix statix ] ++ allToolchainPkgs;
+      packages =
+        with pkgs;
+        [
+          neovim
+          git
+          deadnix
+          statix
+        ]
+        ++ allToolchainPkgs;
       shellHook = treesitterShellHook;
     };
 

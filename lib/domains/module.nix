@@ -40,7 +40,13 @@ let
               theme = themesLib.get config.theme;
             };
             outputs = render {
-              inherit lib themesLib checkHelpers monitors db;
+              inherit
+                lib
+                themesLib
+                checkHelpers
+                monitors
+                db
+                ;
               themeName = config.theme;
               homeDirectory = config.home.homeDirectory;
             };

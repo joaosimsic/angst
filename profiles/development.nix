@@ -1,4 +1,4 @@
-{ mkDomainEnable, mkCap }:
+{ mkDomainEnable, ... }:
 {
   hm = [
     (mkDomainEnable "agents.opencode")

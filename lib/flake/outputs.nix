@@ -7,10 +7,10 @@
 
 let
   pkgs = import inputs.nixpkgs {
-    system = cfg.system;
+    inherit (cfg) system;
     config = import ../nixpkgs-config.nix;
   };
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
 
   mkHome = import ../build/mkHome.nix;
   mkHost = import ../build/mkNixos.nix;
@@ -22,20 +22,18 @@ let
   shellOutputs = inputs.shell.mkOutputs self;
   vmTool = vmOutputs.packages.${cfg.system}.default;
   shellTool = shellOutputs.packages.${cfg.system}.default;
-  angstTool = (
-    pkgs.writeShellApplication {
-      name = "angst";
-      runtimeInputs = with pkgs; [
-        coreutils
-        findutils
-        git
-        nix
-        watchexec
-        jq
-      ];
-      text = builtins.readFile ../../scripts/angst.sh;
-    }
-  );
+  angstTool = pkgs.writeShellApplication {
+    name = "angst";
+    runtimeInputs = with pkgs; [
+      coreutils
+      findutils
+      git
+      nix
+      watchexec
+      jq
+    ];
+    text = builtins.readFile ../../scripts/angst.sh;
+  };
 
   render = import ../render.nix { inherit cfg lib; };
 
@@ -245,7 +243,7 @@ rec {
       mkChecks.themeLint or (import ../../checks/theme {
         inherit lib;
         themesLib = cfg.scan.themes;
-        renderDomainOutputsFor = render.renderDomainOutputsFor;
+        inherit (render) renderDomainOutputsFor;
       });
   };
 }

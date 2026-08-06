@@ -2,26 +2,47 @@
 
 let
   defaultFontFamily = "JetBrainsMono Nerd Font";
-in rec {
-  renderDomainOutputsFor = themeName:
+in
+rec {
+  renderDomainOutputsFor =
+    themeName:
     let
       themesLib = cfg.scan.themes;
-      checkHelpers = import ../checks/theme/assertions.nix { inherit lib; theme = themesLib.get themeName; inherit themeName; };
+      checkHelpers = import ../checks/theme/assertions.nix {
+        inherit lib;
+        theme = themesLib.get themeName;
+        inherit themeName;
+      };
       domainRendererPaths = map (e: "${e.path}/render.nix") (
         lib.filter (e: e.hasRender or false) cfg.scan.domains.homeEntries
       );
-    in lib.concatLists (map (path: import path {
-      inherit lib themesLib themeName checkHelpers;
-      fontFamily = defaultFontFamily;
-      monitors = cfg.monitors or {};
-      db = cfg.db or {};
-      sshAgent = cfg.sshAgent or {};
-      homeDirectory = "/home/${cfg.username}";
-    }) domainRendererPaths);
+    in
+    lib.concatLists (
+      map (
+        path:
+        import path {
+          inherit
+            lib
+            themesLib
+            themeName
+            checkHelpers
+            ;
+          fontFamily = defaultFontFamily;
+          monitors = cfg.monitors or { };
+          db = cfg.db or { };
+          sshAgent = cfg.sshAgent or { };
+          homeDirectory = "/home/${cfg.username}";
+        }
+      ) domainRendererPaths
+    );
 
-  renderDomainOutputFor = themeName: outputPath:
+  renderDomainOutputFor =
+    themeName: outputPath:
     let
       matches = lib.filter (output: output.path == outputPath) (renderDomainOutputsFor themeName);
-    in if matches == [] then throw "Unknown domain render output: ${outputPath}"
-      else (builtins.head matches).text;
+    in
+    if matches == [ ] then
+      throw "Unknown domain render output: ${outputPath}"
+    else
+      (builtins.head matches).text;
 }

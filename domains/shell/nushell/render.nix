@@ -12,7 +12,11 @@ let
   p = t.palette;
   inherit (checkHelpers) requireInfix;
 
-  sshKeys = sshAgent.keys or [ "~/.ssh/id_ed25519" "~/.ssh/id_rsa" ];
+  sshKeys =
+    sshAgent.keys or [
+      "~/.ssh/id_ed25519"
+      "~/.ssh/id_rsa"
+    ];
   sshEnabled = sshAgent.enable or true;
 
   sshAgentText =

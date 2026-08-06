@@ -79,6 +79,20 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: cp local/config.nix.example local/config.nix
       - run: nix build '.#checks.x86_64-linux.login-shell-invalid' --no-link --print-build-logs --impure
+  lint-nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix build '.#checks.x86_64-linux.lint-nix' --no-link --print-build-logs --impure
+  nixfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix run '.#formatter.x86_64-linux' -- --check $(git ls-files '*.nix')
   vm-tests:
     runs-on: ubuntu-latest
     steps:

@@ -1,7 +1,5 @@
 {
   lib,
-  themesLib,
-  themeName,
   checkHelpers,
   db,
   ...
@@ -53,8 +51,7 @@ let
   configText = settingsText + dbText;
 
   connChecks = lib.mapAttrsToList (
-    name: conn:
-    (requireInfix configText "${name} = {" "rainfrog config should include connection ${name}")
+    name: _: (requireInfix configText "${name} = {" "rainfrog config should include connection ${name}")
   ) conns;
 in
 [

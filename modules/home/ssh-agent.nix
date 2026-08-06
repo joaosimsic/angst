@@ -17,7 +17,11 @@ let
 
   sshAddScript = pkgs.writeShellApplication {
     name = "ssh-add-keys";
-    runtimeInputs = [ pkgs.openssh pkgs.gnugrep pkgs.gawk ];
+    runtimeInputs = [
+      pkgs.openssh
+      pkgs.gnugrep
+      pkgs.gawk
+    ];
     excludeShellChecks = [ "SC2043" ];
     text = ''
       for key in ${toString (map lib.escapeShellArg keys)}; do
@@ -39,39 +43,45 @@ in
 
     keys = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = sshAgent.keys or [ "~/.ssh/id_ed25519" "~/.ssh/id_rsa" ];
+      default =
+        sshAgent.keys or [
+          "~/.ssh/id_ed25519"
+          "~/.ssh/id_rsa"
+        ];
       description = "Private key paths to load into the SSH agent";
     };
   };
 
   config = lib.mkIf (cfg.enable && hasKeys) {
-    systemd.user.sessionVariables.SSH_AUTH_SOCK = "\${XDG_RUNTIME_DIR}/ssh-agent.socket";
+    systemd.user = {
+      sessionVariables.SSH_AUTH_SOCK = "\${XDG_RUNTIME_DIR}/ssh-agent.socket";
 
-    systemd.user.services.ssh-agent = {
-      Unit.Description = "Persistent SSH agent";
-      Service.ExecStart = "${pkgs.openssh}/bin/ssh-agent -a %t/ssh-agent.socket -D";
-      Service.Restart = "on-failure";
-      Install.WantedBy = [ "default.target" ];
-    };
-
-    systemd.user.services.ssh-add = {
-      Unit = {
-        Description = "Add SSH keys to agent";
-        Wants = [ "ssh-agent.service" ];
-        After = [ "ssh-agent.service" ];
+      services.ssh-agent = {
+        Unit.Description = "Persistent SSH agent";
+        Service.ExecStart = "${pkgs.openssh}/bin/ssh-agent -a %t/ssh-agent.socket -D";
+        Service.Restart = "on-failure";
+        Install.WantedBy = [ "default.target" ];
       };
 
-      Service = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        Environment = [
-          "SSH_ASKPASS_REQUIRE=force"
-          "SSH_ASKPASS=${pkgs.x11_ssh_askpass}/libexec/x11-ssh-askpass"
-        ];
-        ExecStart = "${sshAddScript}/bin/ssh-add-keys";
-      };
+      services.ssh-add = {
+        Unit = {
+          Description = "Add SSH keys to agent";
+          Wants = [ "ssh-agent.service" ];
+          After = [ "ssh-agent.service" ];
+        };
 
-      Install.WantedBy = [ "graphical-session.target" ];
+        Service = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          Environment = [
+            "SSH_ASKPASS_REQUIRE=force"
+            "SSH_ASKPASS=${pkgs.x11_ssh_askpass}/libexec/x11-ssh-askpass"
+          ];
+          ExecStart = "${sshAddScript}/bin/ssh-add-keys";
+        };
+
+        Install.WantedBy = [ "graphical-session.target" ];
+      };
     };
   };
 }

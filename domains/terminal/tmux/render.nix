@@ -53,8 +53,8 @@ in
       bind % split-window -h -c "#{pane_current_path}"
     '';
     checks = [
-      (requireInfix ''#${p.surface.variant}'' "tmux status should render ${themeName} surface.variant")
-      (requireInfix ''#${p.accent.base}'' "tmux active window should render ${themeName} accent.base")
+      (requireInfix "#${p.surface.variant}" "tmux status should render ${themeName} surface.variant")
+      (requireInfix "#${p.accent.base}" "tmux active window should render ${themeName} accent.base")
       (require (
         p.surface.variant != p.accent.base
       ) "tmux status and active window must differ in ${themeName}")

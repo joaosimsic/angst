@@ -8,26 +8,34 @@ let
     layer: token:
     let
       pairs = map (sub: {
-        path = [ layer token sub ];
+        path = [
+          layer
+          token
+          sub
+        ];
         label = "${layer}.${token}.${sub}";
       }) subTokens;
     in
     pairs;
 
   dimPath = {
-    path = [ "palette" "dim" ];
+    path = [
+      "palette"
+      "dim"
+    ];
     label = "palette.dim";
   };
 
   ansiPaths = map (token: {
-    path = [ "ansi" token ];
+    path = [
+      "ansi"
+      token
+    ];
     label = "ansi.${token}";
   }) ansiTokens;
 
   requiredColorPaths =
-    (lib.concatMap (token: subPaths "palette" token) paletteTokens)
-    ++ [ dimPath ]
-    ++ ansiPaths;
+    (lib.concatMap (token: subPaths "palette" token) paletteTokens) ++ [ dimPath ] ++ ansiPaths;
 
   stripHash = hex: if lib.hasPrefix "#" hex then lib.removePrefix "#" hex else hex;
 
@@ -66,23 +74,38 @@ let
 
   isValidHex = value: builtins.match "[0-9a-fA-F]{6}" (stripHash value) != null;
 
-  hexToRgbInts = hex:
+  hexToRgbInts =
+    hex:
     let
       h = stripHash hex;
     in
     {
-      r = hexValues.${lib.toLower (lib.substring 0 1 h)} * 16 + hexValues.${lib.toLower (lib.substring 1 1 h)};
-      g = hexValues.${lib.toLower (lib.substring 2 1 h)} * 16 + hexValues.${lib.toLower (lib.substring 3 1 h)};
-      b = hexValues.${lib.toLower (lib.substring 4 1 h)} * 16 + hexValues.${lib.toLower (lib.substring 5 1 h)};
+      r =
+        hexValues.${lib.toLower (lib.substring 0 1 h)} * 16
+        + hexValues.${lib.toLower (lib.substring 1 1 h)};
+      g =
+        hexValues.${lib.toLower (lib.substring 2 1 h)} * 16
+        + hexValues.${lib.toLower (lib.substring 3 1 h)};
+      b =
+        hexValues.${lib.toLower (lib.substring 4 1 h)} * 16
+        + hexValues.${lib.toLower (lib.substring 5 1 h)};
     };
 
-  srgbToLinearChannel = c:
-    let cNorm = c / 255.0;
+  srgbToLinearChannel =
+    c:
+    let
+      cNorm = c / 255.0;
     in
-    if cNorm <= 0.04045 then cNorm / 12.92
-    else let x = (cNorm + 0.055) / 1.055; in x * x;
+    if cNorm <= 0.04045 then
+      cNorm / 12.92
+    else
+      let
+        x = (cNorm + 0.055) / 1.055;
+      in
+      x * x;
 
-  relativeLuminance = hex:
+  relativeLuminance =
+    hex:
     let
       rgb = hexToRgbInts (stripHash hex);
     in
@@ -90,7 +113,8 @@ let
     + 0.7152 * srgbToLinearChannel rgb.g
     + 0.0722 * srgbToLinearChannel rgb.b;
 
-  contrastRatio = hex1: hex2:
+  contrastRatio =
+    hex1: hex2:
     let
       l1 = relativeLuminance hex1;
       l2 = relativeLuminance hex2;
@@ -99,7 +123,13 @@ let
     in
     (lighter + 0.05) / (darker + 0.05);
 
-  ensureContrast = { fg, bg, fallback, threshold ? 4.5 }:
+  ensureContrast =
+    {
+      fg,
+      bg,
+      fallback,
+      threshold ? 4.5,
+    }:
     if contrastRatio fg bg >= threshold then fg else fallback;
 
   normalizeSub = sub: lib.mapAttrs (_: stripHash) sub;
@@ -118,7 +148,11 @@ let
         dim = stripHash p.dim;
       };
       ansi = lib.mapAttrs (_: stripHash) theme.ansi;
-    } // builtins.removeAttrs theme ["palette" "ansi"];
+    }
+    // builtins.removeAttrs theme [
+      "palette"
+      "ansi"
+    ];
 
   validateTheme =
     name: theme:
@@ -141,7 +175,8 @@ let
   withRgb =
     theme:
     let
-      walk = prefix: value:
+      walk =
+        prefix: value:
         if builtins.isString value then
           { "${prefix}_RGB" = hexToRgb value; }
         else if builtins.isAttrs value then
@@ -183,36 +218,46 @@ in
         theme = withRgb (validateTheme name (normalizeTheme raw));
         p = theme.palette;
       in
-      theme // {
+      theme
+      // {
         safe = {
           foregroundOnSurfaceVariant = ensureContrast {
-            fg = p.foreground.variant; bg = p.surface.variant; fallback = p.background.base;
+            fg = p.foreground.variant;
+            bg = p.surface.variant;
+            fallback = p.background.base;
             inherit threshold;
           };
           foregroundOnSurfaceBase = ensureContrast {
-            fg = p.foreground.variant; bg = p.surface.base; fallback = p.background.base;
+            fg = p.foreground.variant;
+            bg = p.surface.base;
+            fallback = p.background.base;
             inherit threshold;
           };
           foregroundOnAccentVariant = ensureContrast {
-            fg = p.foreground.variant; bg = p.accent.variant; fallback = p.background.base;
+            fg = p.foreground.variant;
+            bg = p.accent.variant;
+            fallback = p.background.base;
             inherit threshold;
           };
           foregroundOnAccentBase = ensureContrast {
-            fg = p.foreground.variant; bg = p.accent.base; fallback = p.background.base;
+            fg = p.foreground.variant;
+            bg = p.accent.base;
+            fallback = p.background.base;
             inherit threshold;
           };
           foregroundOnBgVariant = ensureContrast {
-            fg = p.foreground.variant; bg = p.background.variant; fallback = p.background.base;
+            fg = p.foreground.variant;
+            bg = p.background.variant;
+            fallback = p.background.base;
             inherit threshold;
           };
           surfaceVariantOnForegroundVariant =
-            if contrastRatio p.surface.variant p.foreground.variant >= threshold
-            then p.foreground.variant
-            else p.background.base;
+            if contrastRatio p.surface.variant p.foreground.variant >= threshold then
+              p.foreground.variant
+            else
+              p.background.base;
         };
       }
     else
-      builtins.throw "Unknown theme '${name}'. Available themes: ${
-        lib.concatStringsSep ", " (builtins.attrNames themes)
-      }";
+      builtins.throw "Unknown theme '${name}'. Available themes: ${lib.concatStringsSep ", " (builtins.attrNames themes)}";
 }

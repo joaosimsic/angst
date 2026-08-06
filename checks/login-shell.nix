@@ -1,6 +1,5 @@
 {
   self,
-  cfg,
   pkgs,
 }:
 
@@ -19,23 +18,25 @@ let
   validConfig = self.homeConfigurations.login-shell-valid;
   invalidConfig = self.homeConfigurations.login-shell-invalid;
 
-  valid = let
-    res = builtins.tryEval validConfig.config.assertions;
-  in
-  if pureEval then
-    pkgs.writeText "login-shell-valid-check" "skipped (pure eval; run with --impure)"
-  else if res.success then
-    pkgs.writeText "login-shell-valid-check" "ok"
-  else
-    throw "expected shell 'sh' to pass login-shell validation, got: ${builtins.toJSON res.value}";
+  valid =
+    let
+      res = builtins.tryEval validConfig.config.assertions;
+    in
+    if pureEval then
+      pkgs.writeText "login-shell-valid-check" "skipped (pure eval; run with --impure)"
+    else if res.success then
+      pkgs.writeText "login-shell-valid-check" "ok"
+    else
+      throw "expected shell 'sh' to pass login-shell validation, got: ${builtins.toJSON res.value}";
 
-  invalid = let
-    res = builtins.tryEval invalidConfig.config.assertions;
-  in
-  if res.success then
-    throw "expected shell '__angst_nonexistent_shell__' to fail login-shell validation"
-  else
-    pkgs.writeText "login-shell-invalid-check" "ok";
+  invalid =
+    let
+      res = builtins.tryEval invalidConfig.config.assertions;
+    in
+    if res.success then
+      throw "expected shell '__angst_nonexistent_shell__' to fail login-shell validation"
+    else
+      pkgs.writeText "login-shell-invalid-check" "ok";
 in
 {
   inherit valid invalid;

@@ -18,17 +18,28 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, vm, shell, ... }@inputs:
+  outputs =
+    { self, nixpkgs, ... }@inputs:
     let
       themesLib = import ./themes/default.nix { lib = inputs.nixpkgs.lib; };
-      pure  = import ./lib/read-config.nix { inherit inputs themesLib; };
-      cfg   = pure.cfg;
-      pkgs  = import nixpkgs { system = cfg.system; config = import ./lib/nixpkgs-config.nix; };
+      pure = import ./lib/read-config.nix { inherit inputs themesLib; };
+      inherit (pure) cfg;
+      pkgs = import nixpkgs {
+        inherit (cfg) system;
+        config = import ./lib/nixpkgs-config.nix;
+      };
       profiles = import ./profiles/default.nix {
         inherit (cfg) profiles;
-        lib = pkgs.lib;
-        scan = cfg.scan;
+        inherit (pkgs) lib;
+        inherit (cfg) scan;
       };
     in
-    import ./lib/flake/outputs.nix { inherit self inputs cfg profiles; };
+    import ./lib/flake/outputs.nix {
+      inherit
+        self
+        inputs
+        cfg
+        profiles
+        ;
+    };
 }

@@ -1,4 +1,9 @@
-{ config, lib, repoPath, ... }:
+{
+  config,
+  lib,
+  repoPath,
+  ...
+}:
 
 let
   cfg = config.domains.wm.i3;

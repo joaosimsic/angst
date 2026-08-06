@@ -1,4 +1,9 @@
-{ lib, userConfig, repoPath, ... }:
+{
+  lib,
+  userConfig,
+  repoPath,
+  ...
+}:
 
 let
   hostAngstPath = "/host${userConfig.homeDirectory}/${repoPath}";
