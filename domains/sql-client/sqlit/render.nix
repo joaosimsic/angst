@@ -26,11 +26,12 @@ let
     cockroachdb = "cockroachdb";
   };
 
-  connections = lib.mapAttrsToList (name: conn:
+  connections = lib.mapAttrsToList (
+    name: conn:
     let
-      dbType = sqlitDbTypes.${conn.type} or (throw
-        "sqlit: unsupported db type '${conn.type}' for connection '${name}' (supported: ${builtins.concatStringsSep ", " (builtins.attrNames sqlitDbTypes)})"
-      );
+      dbType =
+        sqlitDbTypes.${conn.type}
+          or (throw "sqlit: unsupported db type '${conn.type}' for connection '${name}' (supported: ${builtins.concatStringsSep ", " (builtins.attrNames sqlitDbTypes)})");
     in
     if conn.type == "sqlite" then
       {
@@ -38,7 +39,7 @@ let
         db_type = dbType;
         endpoint = {
           kind = "file";
-          path = conn.path;
+          inherit (conn) path;
         };
       }
     else
@@ -47,12 +48,12 @@ let
         db_type = dbType;
         endpoint = {
           kind = "tcp";
-          host = conn.host;
+          inherit (conn) host database username;
           port = toString (conn.port or 5432);
-          database = conn.database;
-          username = conn.username;
         }
-        // lib.optionalAttrs (conn ? password && conn.password != null) { password = conn.password; };
+        // lib.optionalAttrs (conn ? password && conn.password != null) {
+          inherit (conn) password;
+        };
       }
   ) conns;
 
@@ -61,7 +62,8 @@ let
     inherit connections;
   };
 
-  connChecks = lib.mapAttrsToList (name: conn:
+  connChecks = lib.mapAttrsToList (
+    name: _:
     (requireInfix connectionsText ''"name":"${name}"''
       "sqlit connections.json should include connection ${name}"
     )
@@ -147,16 +149,24 @@ in
       (requireInfix themeFileText ''"background": "#${p.background.base}"''
         "sqlit background should render ${themeName} background.base"
       )
-      (requireInfix themeFileText ''"surface": "#${p.background.base}"'' "sqlit surface should render ${themeName} background.base")
-      (requireInfix themeFileText ''"panel": "#${p.background.base}"'' "sqlit panel should render ${themeName} background.base")
+      (requireInfix themeFileText ''"surface": "#${p.background.base}"''
+        "sqlit surface should render ${themeName} background.base"
+      )
+      (requireInfix themeFileText ''"panel": "#${p.background.base}"''
+        "sqlit panel should render ${themeName} background.base"
+      )
       (requireInfix themeFileText ''"border": "#${p.surface.base}"''
         "sqlit border variable should render ${themeName} surface.base"
       )
       (require (
         p.surface.base != p.accent.variant
       ) "sqlit primary surface.base and secondary accent.variant must differ in ${themeName}")
-      (require (p.background.base != p.background.variant || true) "sqlit background and variant must differ in ${themeName}")
-      (require (t.ansi.error != t.ansi.success) "sqlit ansi.error and ansi.success must differ in ${themeName}")
+      (require (
+        p.background.base != p.background.variant || true
+      ) "sqlit background and variant must differ in ${themeName}")
+      (require (
+        t.ansi.error != t.ansi.success
+      ) "sqlit ansi.error and ansi.success must differ in ${themeName}")
     ];
   }
   {

@@ -1,11 +1,11 @@
 {
-  lib,
   pkgs,
   cfg,
+  ...
 }:
 
 let
-  password = cfg.password;
+  inherit (cfg) password;
   validSha512 = builtins.match ''\$6\$.+\$.+'' password;
 in
 pkgs.runCommand "check-password" { } (

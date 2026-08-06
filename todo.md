@@ -25,6 +25,11 @@
 - [x] add package managers to toolchains
 - [x] use nixos-generate-config to set hardware
 
+# toolchains
+
+- [ ] yaml
+- [ ] json formatter
+
 # analyzer
 
 - [ ] make dynamic scanning

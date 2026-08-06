@@ -20,9 +20,9 @@
   };
 
   ansi = {
-    error = "#ff6e6e"; 
-    warn = "#f2b134";  
-    info = "#58a6ff";  
-    success = "#3fb950"; 
+    error = "#ff6e6e";
+    warn = "#f2b134";
+    info = "#58a6ff";
+    success = "#3fb950";
   };
 }

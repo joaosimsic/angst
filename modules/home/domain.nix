@@ -4,7 +4,6 @@
   pkgs,
   flakeSelf,
   repoPath,
-  hostName,
   ...
 }:
 

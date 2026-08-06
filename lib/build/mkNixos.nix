@@ -9,14 +9,14 @@
 
 let
   pkgs = import inputs.nixpkgs {
-    system = cfg.system;
+    inherit (cfg) system;
     config = import ../nixpkgs-config.nix;
   };
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
 
   effectiveTheme = if themeOverride != null then themeOverride else cfg.theme;
   userCfg = {
-    username = cfg.username;
+    inherit (cfg) username;
     homeDirectory = "/home/${cfg.username}";
   };
 
@@ -37,7 +37,14 @@ let
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
-    inherit (cfg) hostname monitors repoPath db;
+    inherit (cfg)
+      hostname
+      monitors
+      repoPath
+      db
+      sshAgent
+      shell
+      ;
     hostName = cfg.hostname;
     inherit (cfg.scan) themes;
     themesLib = cfg.scan.themes;
@@ -54,7 +61,7 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ [ ../../modules/nixos ]
   ++ (if hardwarePath != null then [ (import hardwarePath) ] else [ ])
   ++ (if cfg.extraNixos != { } then [ cfg.extraNixos ] else [ ])
-  ++ (if cfg.env != { } then [{ environment.sessionVariables = cfg.env; }] else [ ])
+  ++ (if cfg.env != { } then [ { environment.sessionVariables = cfg.env; } ] else [ ])
   ++ [
     ../../modules/vm/detect.nix
     ../../modules/vm/runtime.nix
@@ -75,7 +82,15 @@ inputs.nixpkgs.lib.nixosSystem {
         backupFileExtension = "hm-backup";
 
         extraSpecialArgs = {
-          inherit (cfg) hostname monitors repoPath db;
+          inherit (cfg)
+            hostname
+            monitors
+            repoPath
+            db
+            sshAgent
+            ssh
+            shell
+            ;
           hostName = cfg.hostname;
           inherit (cfg.scan) themes;
           themesLib = cfg.scan.themes;

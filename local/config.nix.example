@@ -66,4 +66,39 @@
     EDITOR = "nvim";
     BROWSER = "firefox";
   };
+
+  # Login shell to sync on non-NixOS hosts (sets /etc/shells + chsh on activation;
+  # needs root or sudo). A shell name available in the nix profile or system, e.g.
+  # "nu", "zsh", "bash". Validated at build time against the host. NixOS hosts are
+  # skipped (login shell managed by NixOS config).
+  shell = "nu";
+
+  # SSH keys loaded into a persistent SSH agent at login.
+  # A systemd user service runs ssh-agent and a nushell bootstrap loads these
+  # keys once per login (GUI passphrase prompt on graphical hosts, tty prompt
+  # over SSH). Works on NixOS desktop, headless servers, and home-manager on
+  # non-NixOS hosts. If enable is false or none of the keys exist, the agent
+  # is not started at all.
+  sshAgent = {
+    enable = true;
+    keys = [
+      "~/.ssh/my_key"
+      # "~/.ssh/id_rsa"
+      # "~/.ssh/github"
+    ];
+  };
+
+  # Per-host SSH client entries written to ~/.ssh/config.d/angst.conf
+  # (the module appends an `Include` line to ~/.ssh/config on activation).
+  # Use for hosts whose keys have non-default names — e.g. a dedicated key
+  # for a GitLab instance:
+  # ssh = {
+  #   hosts = [{
+  #     host = "github.com";
+  #     hostName = "github.com";
+  #     user = "git";
+  #     identityFile = "~/.ssh/my_key";
+  #     identitiesOnly = true;
+  #   }];
+  # };
 }

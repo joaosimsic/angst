@@ -7,6 +7,8 @@
 
 {
   config = lib.mkIf config.domains.shell.nushell.enable {
-    home.packages = [ pkgs.nushell ];
+    home.packages = [
+      pkgs.nushell
+    ];
   };
 }

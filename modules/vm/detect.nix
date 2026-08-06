@@ -7,7 +7,14 @@
 }:
 
 let
-  isQemuVm = import ./is-qemu-vm.nix { inherit lib flakeSelf userConfig repoPath; };
+  isQemuVm = import ./is-qemu-vm.nix {
+    inherit
+      lib
+      flakeSelf
+      userConfig
+      repoPath
+      ;
+  };
 in
 {
   options.angst.isQemuVm = lib.mkOption {

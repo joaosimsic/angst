@@ -24,11 +24,14 @@ $env.XDG_CACHE_HOME = $XDG_CACHE_HOME
 
 $env.CLAUDE_CONFIG_DIR = ($XDG_CONFIG_HOME | path join "claude")
 
+# Nushell does not source /etc/profile.d/nix.sh; add the system nix profile explicitly.
 $env.PATH = (
     $env.PATH
     | split row (char esep)
+    | prepend "/nix/var/nix/profiles/default/bin"
     | prepend ($nu.home-dir | path join ".local/bin")
     | prepend ($nu.home-dir | path join ".cargo/bin")
+    | prepend ($nu.home-dir | path join ".nix-profile/bin")
     | uniq
 )
 
@@ -42,3 +45,9 @@ if not ($carapace_init | path exists) {
     carapace _carapace nushell | save --force $carapace_init
 }
 source $carapace_init
+
+# SSH agent bootstrap (rendered by angst) — sets up the shared agent across
+# graphical, SSH, and headless sessions.
+if (($nu.default-config-dir | path join "ssh-agent.nu") | path exists) {
+    source $"($nu.default-config-dir)/ssh-agent.nu"
+}

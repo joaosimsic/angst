@@ -1,4 +1,4 @@
-{ mkDomainEnable, mkCap }:
+{ mkCap, ... }:
 {
   hm = [ ];
   nixos = [

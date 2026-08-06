@@ -15,7 +15,12 @@ let
   angstCli = pkgs.writeShellApplication {
     name = "angst";
     runtimeInputs = with pkgs; [
-      coreutils findutils git nix watchexec jq
+      coreutils
+      findutils
+      git
+      nix
+      watchexec
+      jq
     ];
     text = builtins.readFile ../../scripts/angst.sh;
   };
@@ -30,20 +35,22 @@ let
 in
 {
   config = lib.mkIf cfg {
-    assertions = [{
-      assertion = config.services.openssh.enable or false;
-      message = ''
-        angst: VM is running without SSH. Headless VM access requires an SSH server.
+    assertions = [
+      {
+        assertion = config.services.openssh.enable or false;
+        message = ''
+          angst: VM is running without SSH. Headless VM access requires an SSH server.
 
-        Ensure the VM profile modules are loaded. Add to your NixOS modules:
-          ../capabilities/ssh.nix
-          ../lib/virtualization/vm-profile.nix
+          Ensure the VM profile modules are loaded. Add to your NixOS modules:
+            ../capabilities/ssh.nix
+            ../lib/virtualization/vm-profile.nix
 
-        And enable SSH:
-          capabilities.ssh.enable = true;
-          capabilities.ssh.server.enable = true;
-      '';
-    }];
+          And enable SSH:
+            capabilities.ssh.enable = true;
+            capabilities.ssh.server.enable = true;
+        '';
+      }
+    ];
 
     documentation.nixos.enable = lib.mkForce false;
 

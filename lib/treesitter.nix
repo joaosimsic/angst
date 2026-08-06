@@ -5,22 +5,25 @@
 }:
 
 let
-  treesitterParsers = pkgs.runCommand "treesitter-parsers" {
-    nativeBuildInputs = [ pkgs.patchelf ];
-  } ''
-    mkdir -p $out
-    ${lib.concatMapStringsSep "\n" (
-      grammar:
-      let
-        lang = lib.replaceStrings [ "-" ] [ "_" ] (lib.removePrefix "tree-sitter-" grammar.pname);
-      in
+  treesitterParsers =
+    pkgs.runCommand "treesitter-parsers"
+      {
+        nativeBuildInputs = [ pkgs.patchelf ];
+      }
       ''
-        cp ${grammar}/parser $out/${lang}.so
-        chmod +w $out/${lang}.so
-        patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/${lang}.so
-      ''
-    ) grammars}
-  '';
+        mkdir -p $out
+        ${lib.concatMapStringsSep "\n" (
+          grammar:
+          let
+            lang = lib.replaceStrings [ "-" ] [ "_" ] (lib.removePrefix "tree-sitter-" grammar.pname);
+          in
+          ''
+            cp ${grammar}/parser $out/${lang}.so
+            chmod +w $out/${lang}.so
+            patchelf --set-rpath ${pkgs.stdenv.cc.cc.lib}/lib $out/${lang}.so
+          ''
+        ) grammars}
+      '';
 
   treesitterQueries = pkgs.runCommand "treesitter-queries" { } ''
     mkdir -p $out

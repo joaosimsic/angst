@@ -63,6 +63,53 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: cp local/config.nix.example local/config.nix
       - run: nix build '.#checks.x86_64-linux.check-password' --no-link --print-build-logs --impure
+  login-shell-valid:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: cp local/config.nix.example local/config.nix
+      - run: nix build '.#checks.x86_64-linux.login-shell-valid' --no-link --print-build-logs --impure
+  login-shell-invalid:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: cp local/config.nix.example local/config.nix
+      - run: nix build '.#checks.x86_64-linux.login-shell-invalid' --no-link --print-build-logs --impure
+  lint-nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix build '.#checks.x86_64-linux.lint-nix' --no-link --print-build-logs --impure
+  nixfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix run '.#formatter.x86_64-linux' -- --check $(git ls-files '*.nix')
+  shellfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix run nixpkgs#shfmt -- --diff $(git ls-files '*.sh')
+  shell-rust-fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Check tools/shell formatting
+        run: |
+          nix develop --impure ./tools/shell#default --command bash -lc \
+            'cd tools/shell && cargo fmt --check'
   vm-tests:
     runs-on: ubuntu-latest
     steps:

@@ -17,7 +17,7 @@
     }:
     let
       eachSystem =
-        rootFlake:
+        _rootFlake:
         flake-utils.lib.eachDefaultSystem (
           system:
           let
@@ -223,7 +223,7 @@
 
           in
           {
-              packages = {
+            packages = {
               default = vm-package;
               vm = vm-package;
 

@@ -9,7 +9,7 @@
 let
   t = themesLib.get themeName;
   p = t.palette;
-  m = monitors.primary or {};
+  m = monitors.primary or { };
 in
 [
   {
