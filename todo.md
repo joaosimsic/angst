@@ -28,7 +28,7 @@
 # toolchains
 
 - [x] yaml
-- [ ] json formatter
+- [x] json formatter
 
 # analyzer
 
