@@ -69,6 +69,7 @@ in
     extraHome = config.home or { };
     env = config.env or { };
     sshAgent = config.sshAgent or { };
+    ssh = config.ssh or { };
     shell = config.shell or "";
 
     scan = {

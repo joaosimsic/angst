@@ -88,6 +88,7 @@ inputs.nixpkgs.lib.nixosSystem {
             repoPath
             db
             sshAgent
+            ssh
             shell
             ;
           hostName = cfg.hostname;

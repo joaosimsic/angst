@@ -87,4 +87,18 @@
       # "~/.ssh/github"
     ];
   };
+
+  # Per-host SSH client entries written to ~/.ssh/config.d/angst.conf
+  # (the module appends an `Include` line to ~/.ssh/config on activation).
+  # Use for hosts whose keys have non-default names — e.g. a dedicated key
+  # for a GitLab instance:
+  # ssh = {
+  #   hosts = [{
+  #     host = "gitlab.ezvoice.com.br";
+  #     hostName = "gitlab.ezvoice.com.br";
+  #     user = "git";
+  #     identityFile = "~/.ssh/work_key";
+  #     identitiesOnly = true;
+  #   }];
+  # };
 }

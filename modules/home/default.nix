@@ -5,6 +5,7 @@
     ./treesitter.nix
     ./domain.nix
     ./ssh-agent.nix
+    ./ssh.nix
     ./login-shell.nix
   ];
 

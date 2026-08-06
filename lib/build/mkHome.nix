@@ -41,6 +41,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
       repoPath
       db
       sshAgent
+      ssh
       ;
     shell = if shellOverride != null then shellOverride else cfg.shell;
     inherit (cfg.scan) themes;
