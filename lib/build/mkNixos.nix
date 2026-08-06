@@ -37,7 +37,7 @@ let
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
-    inherit (cfg) hostname monitors repoPath db;
+    inherit (cfg) hostname monitors repoPath db sshAgent shell;
     hostName = cfg.hostname;
     inherit (cfg.scan) themes;
     themesLib = cfg.scan.themes;
@@ -75,7 +75,7 @@ inputs.nixpkgs.lib.nixosSystem {
         backupFileExtension = "hm-backup";
 
         extraSpecialArgs = {
-          inherit (cfg) hostname monitors repoPath db;
+          inherit (cfg) hostname monitors repoPath db sshAgent shell;
           hostName = cfg.hostname;
           inherit (cfg.scan) themes;
           themesLib = cfg.scan.themes;

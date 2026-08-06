@@ -34,7 +34,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
   pkgs = pkgs;
 
   extraSpecialArgs = {
-    inherit (cfg) hostname monitors repoPath db sshAgent;
+    inherit (cfg) hostname monitors repoPath db sshAgent shell;
     inherit (cfg.scan) themes;
     themesLib = cfg.scan.themes;
     hostName = cfg.hostname;

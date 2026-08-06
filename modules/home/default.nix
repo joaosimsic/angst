@@ -5,6 +5,7 @@
     ./treesitter.nix
     ./domain.nix
     ./ssh-agent.nix
+    ./login-shell.nix
   ];
 
   programs.home-manager.enable = true;

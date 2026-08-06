@@ -26,7 +26,9 @@
 - [x] use nixos-generate-config to set hardware
 
 # toolchains
+
 - [ ] yaml
+- [ ] json formatter
 
 # analyzer
 

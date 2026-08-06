@@ -24,11 +24,14 @@ $env.XDG_CACHE_HOME = $XDG_CACHE_HOME
 
 $env.CLAUDE_CONFIG_DIR = ($XDG_CONFIG_HOME | path join "claude")
 
+# Nushell does not source /etc/profile.d/nix.sh; add the system nix profile explicitly.
 $env.PATH = (
     $env.PATH
     | split row (char esep)
+    | prepend "/nix/var/nix/profiles/default/bin"
     | prepend ($nu.home-dir | path join ".local/bin")
     | prepend ($nu.home-dir | path join ".cargo/bin")
+    | prepend ($nu.home-dir | path join ".nix-profile/bin")
     | uniq
 )
 
