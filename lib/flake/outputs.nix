@@ -114,6 +114,7 @@ rec {
           angstTool
           ;
         themeOverride = overrideTheme;
+        shellOverride = "";
       };
 
     login-shell-valid = mkHome {
