@@ -173,9 +173,9 @@ Themes are resolved at eval time via `themesLib.get "miasma"`. See [openwiki/the
 
 ### `@toolchains/` — Language-Domain Tooling
 
-22 language toolchains defined via `mkToolchain`. Each provides runtime, LSP, formatter, linter, tools, and tree-sitter grammar entries.
+23 language toolchains defined via `mkToolchain`. Each provides runtime, LSP, formatter, linter, tools, and tree-sitter grammar entries.
 
-Supported: `bash`, `blade`, `c`, `clojure`, `conf`, `css`, `docker`, `go`, `html`, `java`, `javascript`, `json`, `just`, `lua`, `markdown`, `nix`, `php`, `python`, `rust`, `terraform`, `toml`, `xml`.
+Supported: `bash`, `blade`, `c`, `clojure`, `conf`, `css`, `docker`, `go`, `html`, `java`, `javascript`, `json`, `just`, `lua`, `markdown`, `nix`, `php`, `python`, `rust`, `terraform`, `toml`, `xml`, `yaml`.
 
 Toolchains are auto-discovered by `lib/read-config.nix` and filtered by `config.toolchains` in `local/config.nix`. Packages flow into home-manager and dev shells; grammars flow into tree-sitter setup via `lib/treesitter.nix`.
 
