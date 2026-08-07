@@ -49,7 +49,7 @@ in
         CFG_SRC=${lib.escapeShellArg angstDst}
       fi
 
-      JSON_DATA=$(cd "$CFG_SRC" && ${lib.getBin pkgs.nix}/bin/nix eval --impure \
+      JSON_DATA=$(cd "$CFG_SRC" && ${lib.getBin pkgs.nix}/bin/nix eval \
         "$CFG_SRC#lib.renderDomainOutputsFor" \
         --apply "f: builtins.toJSON (map (o: { path = o.path; text = o.text; }) (f \"${config.theme}\"))" \
         --raw 2>/dev/null) || true

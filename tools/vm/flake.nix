@@ -38,7 +38,7 @@
               rustc = rustToolchain;
             };
 
-            defaultHost = "personal";
+            defaultHost = "nixos";
 
             vm-package = rustPlatform.buildRustPackage {
               pname = "vm";
@@ -72,11 +72,10 @@
 
             vm-run-script = pkgs.writeShellScriptBin "vm-run" ''
               TARGET_HOST="''${NIX_TARGET_HOST:-}"
-              FLAKE_DIR="''${ANGST_REPO:-$PWD}"
-              if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/local/config.nix" ]; then
-                TARGET_HOST="$(nix eval --impure --expr "(import $FLAKE_DIR/local/config.nix).hostname" --raw 2>/dev/null)"
-              fi
-              TARGET_HOST="''${TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-''${ANGST_HOST:-${defaultHost}}}}"
+              [ -z "$TARGET_HOST" ] && TARGET_HOST="''${NIX_DEFAULT_TARGET_HOST:-}"
+              [ -z "$TARGET_HOST" ] && TARGET_HOST="''${ANGST_HOST:-}"
+              TARGET_HOST="''${TARGET_HOST:-${defaultHost}}"
+
               KEY_DIR="''${XDG_STATE_HOME:-$HOME/.local/state}/vm/keys/$TARGET_HOST"
               KEY_FILE="$KEY_DIR/authorized_keys"
 
@@ -118,7 +117,7 @@
                 RUNNER="result/bin/run-nixos-vm"
               fi
               if [ ! -f "$RUNNER" ]; then
-                echo "Error: VM runner not found at result/bin/run-''${TARGET_HOST}-vm or result/bin/run-nixos-vm. Build the VM first (e.g. 'nix build .#nixosConfigurations.current.config.system.build.vm')."
+                echo "Error: VM runner not found at result/bin/run-''${TARGET_HOST}-vm or result/bin/run-nixos-vm. Build the VM first (e.g. 'nix build .#nixosConfigurations.''${TARGET_HOST}.config.system.build.vm')."
                 exit 1
               fi
 
@@ -132,28 +131,27 @@
 
             res-script = pkgs.writeShellScriptBin "res" ''
               TARGET_HOST="''${NIX_TARGET_HOST:-}"
+              [ -z "$TARGET_HOST" ] && TARGET_HOST="''${NIX_DEFAULT_TARGET_HOST:-}"
+              [ -z "$TARGET_HOST" ] && TARGET_HOST="''${ANGST_HOST:-}"
+              TARGET_HOST="''${TARGET_HOST:-${defaultHost}}"
+
               FLAKE_DIR="''${ANGST_REPO:-$(pwd)}"
-              if [ -z "$TARGET_HOST" ] && [ -f "$FLAKE_DIR/local/config.nix" ]; then
-                TARGET_HOST="$(nix eval --impure --expr "(import $FLAKE_DIR/local/config.nix).hostname" --raw 2>/dev/null)"
-              fi
-              TARGET_HOST="''${TARGET_HOST:-''${NIX_DEFAULT_TARGET_HOST:-''${ANGST_HOST:-${defaultHost}}}}"
               SSH_PORT="''${VM_SSH_PORT:-2222}"
 
               SSH_USER="''${VM_SSH_USER:-}"
-              if [ -z "$SSH_USER" ] && [ -f "$FLAKE_DIR/local/config.nix" ]; then
-                SSH_USER="$(nix eval --impure --expr "(import $FLAKE_DIR/local/config.nix).username" --raw 2>/dev/null)"
+              if [ -z "$SSH_USER" ] && [ -f "$FLAKE_DIR/hosts/$TARGET_HOST/default.nix" ]; then
+                SSH_USER="$(nix eval --file "$FLAKE_DIR/hosts/$TARGET_HOST/default.nix" --raw --apply "x: x.username or null" 2>/dev/null)"
               fi
-              SSH_USER="''${SSH_USER:-''${ANGST_USERNAME:-}}"
+              SSH_USER="''${SSH_USER:-user}"
 
               export ANGST_USERNAME="$SSH_USER"
-              if [ -f "$FLAKE_DIR/local/config.nix" ]; then
-                export ANGST_THEME="$(nix eval --impure --expr "(import $FLAKE_DIR/local/config.nix).theme or \"monochrome\"" --raw 2>/dev/null)"
-                export ANGST_PASSWORD="$(nix eval --impure --expr "(import $FLAKE_DIR/local/config.nix).password" --raw 2>/dev/null)"
+              if [ -f "$FLAKE_DIR/hosts/$TARGET_HOST/default.nix" ]; then
+                export ANGST_THEME="$(nix eval --file "$FLAKE_DIR/hosts/$TARGET_HOST/default.nix" --raw --apply "x: x.theme or \"monochrome\"" 2>/dev/null)"
               fi
 
               echo "Building VM for host '$TARGET_HOST' (user: $SSH_USER)..."
               git -C "$FLAKE_DIR" update-index -q --refresh 2>/dev/null || true
-              nix build ".#nixosConfigurations.current.config.system.build.vm" --impure --refresh --no-write-lock-file 2>&1
+              nix build ".#nixosConfigurations.''${TARGET_HOST}.config.system.build.vm" --refresh --no-write-lock-file 2>&1
 
               RUNNER="result/bin/run-$TARGET_HOST-vm"
               if [ ! -f "$RUNNER" ]; then
@@ -220,7 +218,6 @@
                   --set NIX_DEFAULT_TARGET_HOST "${defaultHost}"
               '';
             };
-
           in
           {
             packages = {

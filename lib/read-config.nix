@@ -1,17 +1,12 @@
 {
   inputs,
   themesLib,
+  config,
 }:
 
 let
   lib = inputs.nixpkgs.lib;
 
-  config =
-    let
-      pwd = builtins.getEnv "PWD";
-      absPath = pwd + "/local/config.nix";
-    in
-    if pwd != "" && builtins.pathExists absPath then import absPath else { };
   system = config.system or "x86_64-linux";
   pkgs = import inputs.nixpkgs {
     inherit system;
@@ -71,6 +66,8 @@ in
     sshAgent = config.sshAgent or { };
     ssh = config.ssh or { };
     shell = config.shell or "";
+    persist = config.persist or { enable = false; };
+    type = config.type or "nixos";
 
     scan = {
       domains = domainsLib;

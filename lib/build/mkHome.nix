@@ -30,6 +30,9 @@ let
     themesLib = cfg.scan.themes;
     hostTheme = effectiveTheme;
   };
+
+  secretsFile = self + "/hosts/${cfg.hostname}/secrets.yaml";
+  hasSecrets = builtins.pathExists secretsFile;
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
@@ -59,6 +62,13 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ++ appHomeModules
   ++ hmModules
   ++ cfg.toolchainModules
+  ++ [ inputs.sops-nix.homeManagerModules.sops ]
+  ++ (
+    if hasSecrets then
+      [ { sops.defaultSopsFile = secretsFile; } ]
+    else
+      [ ]
+  )
   ++ [
     (_: {
       home.packages = [

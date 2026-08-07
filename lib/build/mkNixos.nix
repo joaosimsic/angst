@@ -31,9 +31,12 @@ let
 
   hardwarePath =
     let
-      p = "${toString self}/local/hardware.nix";
+      p = self + "/hosts/${cfg.hostname}/hardware.nix";
     in
     if builtins.pathExists p then p else null;
+
+  secretsFile = self + "/hosts/${cfg.hostname}/secrets.yaml";
+  hasSecrets = builtins.pathExists secretsFile;
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
@@ -62,6 +65,13 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if hardwarePath != null then [ (import hardwarePath) ] else [ ])
   ++ (if cfg.extraNixos != { } then [ cfg.extraNixos ] else [ ])
   ++ (if cfg.env != { } then [ { environment.sessionVariables = cfg.env; } ] else [ ])
+  ++ [ inputs.sops-nix.nixosModules.sops ]
+  ++ (
+    if hasSecrets then
+      [ { sops.defaultSopsFile = secretsFile; } ]
+    else
+      [ ]
+  )
   ++ [
     ../../modules/vm/detect.nix
     ../../modules/vm/runtime.nix
@@ -69,11 +79,50 @@ inputs.nixpkgs.lib.nixosSystem {
     ../../modules/vm/vm-profile.nix
     ../../modules/vm/host-mount.nix
     ../../capabilities/ssh.nix
-    ({ lib, ... }: {
-      users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password;
-      users.users.root.hashedPassword = lib.mkDefault cfg.password;
+    ({ config, ... }: {
+      users.users.${cfg.username} = lib.mkMerge [
+        (lib.mkIf hasSecrets {
+          hashedPasswordFile = config.sops.secrets.password.path;
+        })
+        (lib.mkIf (!hasSecrets) {
+          hashedPassword = lib.mkDefault cfg.password;
+        })
+      ];
+      users.users.root = lib.mkIf (!hasSecrets) {
+        hashedPassword = lib.mkDefault cfg.password;
+      };
+      sops.secrets = lib.mkIf hasSecrets {
+        password = { };
+      };
     })
-
+  ]
+  ++ (if cfg.persist.enable then [ inputs.impermanence.nixosModules.impermanence ] else [ ])
+  ++ (
+    if cfg.persist.enable then
+      [
+        ({ ... }: {
+          environment.persistence."${cfg.persist.root}" = {
+            hideMounts = true;
+            directories = [
+              "/var/log"
+              "/var/lib/bluetooth"
+              "/var/lib/nixos"
+              "/var/lib/systemd/coredump"
+              "/etc/ssh"
+            ];
+            files = [
+              "/etc/machine-id"
+            ];
+            users.${cfg.username} = {
+              directories = map (d: "/home/${cfg.username}/${d}") cfg.persist.homeDirs;
+            };
+          };
+        })
+      ]
+    else
+      [ ]
+  )
+  ++ [
     inputs.home-manager.nixosModules.home-manager
     {
       home-manager = {
@@ -110,7 +159,6 @@ inputs.nixpkgs.lib.nixosSystem {
         };
       };
     }
-
     ({ config, lib, ... }: {
       systemd.services."home-manager-${cfg.username}".before = lib.mkIf (!config.angst.isQemuVm) [
         "getty@.service"

@@ -1,407 +1,279 @@
-# Pure Flake Migration
+# angst — Pure Flake Architecture
 
-This guide describes how to convert angst from an impure flake (`builtins.getEnv "PWD"` pattern) to a pure flake, keeping the single `local/config.nix` file as a per-machine interface — gitignored, not tracked, no extra flags needed.
+angst is a fully pure Nix flake. No `--impure`, no env vars, no gitignored config files. Every command is deterministic: same commit → same system. Machines are disposable — clone the repo and build.
 
-## Concept
+## Philosophy
 
-The `path:` flake input fetcher copies a directory to the Nix store **without filtering by gitignore**. Unlike `self` (which uses `git ls-files` and excludes untracked files), a `path:` input exposes the full directory contents. By declaring `local/` as a `path:` input with `flake = false`, the flake can import `local/config.nix` without `builtins.getEnv` and without `--impure`.
+**Disposability.** A host is a directory in git. Wipe the disk, reinstall NixOS, `nixos-rebuild switch --flake .#nixos`, and you're back where you were. Nothing lives outside the repo except for the SSH host key (identity) and browser profiles (convenience). Even those are deliberate, declared, and re-bindable.
 
-```
-angst/                       # flake repo (pure, tracked by git)
-├── flake.nix                # declares inputs.local-config = path:./local
-├── local/
-│   ├── config.nix           # per-machine identity (gitignored)
-│   ├── config.nix.example   # template (tracked)
-│   ├── hardware.nix         # generated hardware config (gitignored)
-│   └── disk.nix             # disko layout (gitignored)
-├── lib/read-config.nix      # reads from inputs.local-config, not builtins.getEnv
-└── ...
-```
+**Purity.** The flake is a function of `git ls-files` only. `builtins.getEnv`, `builtins.currentTime`, and friends return nothing. `nix flake check` works bare. `nixos-rebuild list-generations` and `--rollback` are reliable. CI Just Works.
 
-No new directories. No `ANGST_CONFIG` env var. No `--override-input`. Build commands are bare:
+**Tracked config, encrypted secrets.** Machine identity (hostname, username, theme, profiles, monitors, toolchains) lives in plain Nix in `hosts/<hostname>/default.nix` — version-controlled, diffable, reviewable. Secrets (password hash, DB credentials, API tokens) live in `hosts/<hostname>/secrets.yaml` — sops-encrypted, decrypted at activation via the host's SSH key.
+
+**Zero ceremony.** Adding a machine is `mkdir hosts/<name>` + write two files. The flake auto-discovers hosts. No flake.nix edits, no `--override-input`, no env vars. Commands are bare:
 
 ```bash
-sudo nixos-rebuild switch --flake .#current
-home-manager switch --flake .#current
+sudo nixos-rebuild switch --flake .#nixos
+home-manager switch --flake .#joao@nixos
 nix flake check
 nix develop
+nix run .#vm -- --host nixos start
 ```
 
-## Step-by-step
+## Directory structure
 
-### 1. Add local-config input to flake.nix
+```
+angst/
+├── flake.nix                   # auto-discovers hosts/ directory
+├── hosts/
+│   ├── nixos/                  # NixOS host
+│   │   ├── default.nix         #   machine identity (tracked, plain text)
+│   │   ├── secrets.yaml        #   sops-encrypted (tracked)
+│   │   ├── hardware.nix        #   nixos-generate-config output (tracked)
+│   │   └── disk.nix            #   disko layout (optional, tracked)
+│   ├── thonkpad/               # another NixOS host
+│   │   ├── default.nix
+│   │   ├── secrets.yaml
+│   │   └── hardware.nix
+│   ├── arch-laptop/            # non-NixOS (home-manager only)
+│   │   ├── default.nix
+│   │   └── secrets.yaml
+│   └── ci/                     # CI test host (minimal)
+│       └── default.nix
+├── lib/
+│   ├── read-config.nix         # pure function: config attrset → cfg
+│   ├── flake/outputs.nix       # iterates hosts → nixosConfigurations + homeConfigurations
+│   └── build/
+│       ├── mkNixos.nix         # NixOS system builder (impermanence, sops, hardware)
+│       └── mkHome.nix          # home-manager builder (sops)
+├── profiles/                   # composable profile sets (base, desktop, server, vm, etc.)
+├── toolchains/                 # auto-discovered toolchain definitions
+├── domains/                    # auto-discovered application domain modules
+├── themes/                     # auto-discovered theme definitions
+└── .sops.yaml                  # age public keys per host
+```
+
+## How it works
+
+### Host auto-discovery
+
+`flake.nix` scans `hosts/` with `builtins.readDir`. Every subdirectory is a host. The host's `default.nix` is imported, enriched by `lib/read-config.nix` (defaults, domain scanning, toolchain resolution, theme indexing), and passed to `lib/flake/outputs.nix`, which builds `nixosConfigurations.<hostname>` for NixOS hosts and `homeConfigurations.<user>@<hostname>` for all hosts.
+
+Adding a machine:
+
+```bash
+mkdir hosts/yoga
+cp hosts/nixos/default.nix hosts/yoga/default.nix
+# edit hosts/yoga/default.nix — change hostname, monitors, profiles, etc.
+# create hosts/yoga/hardware.nix (nixos-generate-config)
+git add hosts/yoga
+```
+
+No flake.nix edits. The new host appears in `nixosConfigurations.yoga`.
+
+### Config → cfg pipeline
+
+```
+hosts/<hostname>/default.nix  (plain Nix attrset, tracked)
+    │
+    ▼
+lib/read-config.nix           (pure function)
+    │  applies defaults
+    │  scans domains/ themes/ toolchains/
+    │  resolves profiles
+    │
+    ▼
+cfg                            (enriched attrset)
+    │
+    ├──► mkNixos.nix  →  nixosConfigurations.<hostname>
+    └──► mkHome.nix   →  homeConfigurations.<user>@<hostname>
+```
+
+`read-config.nix` is completely pure — it takes a config attrset and returns enriched cfg. No `builtins.getEnv`, no `builtins.currentTime`, no filesystem reads outside the flake source.
+
+### Secrets with sops-nix
+
+Secrets live in `hosts/<hostname>/secrets.yaml`, encrypted with the host's age key (derived from its SSH key via `ssh-to-age`). At activation, `sops-nix` decrypts them and makes values available as `config.sops.secrets.<name>.path`.
+
+Decryption key per host type:
+
+| | NixOS | non-NixOS |
+|---|---|---|
+| Source | `/persist/etc/ssh/ssh_host_ed25519` | `~/.ssh/id_ed25519` |
+| Conversion | `ssh-to-age` | `ssh-to-age` |
+| Generated by | First boot | User creates |
+| Survives rebuilds | Yes (on `/persist`) | Yes (host OS manages) |
+
+The SSH host key serves dual purpose: server identity + secrets decryption. No extra key material.
+
+### Opt-in impermanence
+
+NixOS hosts can declare `persist.enable = true` to run on tmpfs `/`. The root filesystem is wiped on every reboot. Only explicitly declared paths survive:
+
+```
+/           (tmpfs, wiped on reboot)
+/nix        (persistent partition — binary cache, no recompilation)
+/boot       (persistent partition)
+/persist    (persistent partition — deliberate state)
+    ├── etc/ssh/                host identity + sops key
+    ├── etc/machine-id          stable machine ID
+    └── home/<user>/
+        ├── .mozilla/           Firefox sessions, cookies, accounts
+        ├── .config/google-chrome/  Chromium
+        └── .local/share/keyrings/   libsecret passwords
+```
+
+Hosts with `persist.enable = false` use conventional filesystems. Non-NixOS hosts (`type = "home-manager"`) don't get impermanence at all — the host OS manages the filesystem.
+
+## Host config reference
+
+### `hosts/<hostname>/default.nix`
 
 ```nix
 {
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  type = "nixos";          # "nixos" | "home-manager"
+  system = "x86_64-linux";
+  hostname = "nixos";
+  username = "joao";
+  theme = "miasma";
+  profiles = ["base" "desktop" "development"];
+  toolchains = "*";          # "*" for all, or ["bash" "nix" "php"] for minimal
+  repoPath = "proj/angst";   # relative path from $HOME to this checkout
 
-    home-manager = {
-      url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    local-config = {
-      url = "path:./local";
-      flake = false;
-    };
-
-    vm = {
-      url = "./tools/vm";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    shell = {
-      url = "./tools/shell";
-      inputs.nixpkgs.follows = "nixpkgs";
+  monitors = {
+    primary = {
+      name = "DP-1";
+      resolution = "1920x1080";
+      refreshRate = 144;
+      position = "0x0";
     };
   };
 
-  outputs =
-    { self, nixpkgs, local-config, ... }@inputs:
-    let
-      themesLib = import ./themes/default.nix { lib = inputs.nixpkgs.lib; };
-      pure = import ./lib/read-config.nix { inherit inputs themesLib; };
-      inherit (pure) cfg;
-      pkgs = import nixpkgs {
-        inherit (cfg) system;
-        config = import ./lib/nixpkgs-config.nix;
-      };
-      profiles = import ./profiles/default.nix {
-        inherit (cfg) profiles;
-        inherit (pkgs) lib;
-        inherit (cfg) scan;
-      };
-    in
-    import ./lib/flake/outputs.nix {
-      inherit
-        self
-        inputs
-        cfg
-        profiles
-        ;
-    };
-}
-```
+  db.connections = { };
+  nixos = { keyboardLayout = "br-abnt2"; };
+  home = { };
+  env = { EDITOR = "nvim"; BROWSER = "firefox"; };
+  shell = "";               # login shell name ("" = skip validation)
 
-`flake = false` means Nix won't try to interpret it as a flake — it exposes the directory path the outputs function can import from. The name `local-config` is arbitrary; `path:./local` makes it resolve to the `local/` directory in the flake repo.
-
-### 2. Rewrite lib/read-config.nix
-
-Replace `builtins.getEnv "PWD"` with `${inputs.local-config}/config.nix`:
-
-**`lib/read-config.nix`:**
-
-```nix
-{
-  inputs,
-  themesLib,
-}:
-
-let
-  lib = inputs.nixpkgs.lib;
-
-  configPath = "${inputs.local-config}/config.nix";
-  config =
-    if builtins.pathExists configPath
-    then import configPath
-    else { };
-
-  system = config.system or "x86_64-linux";
-  pkgs = import inputs.nixpkgs {
-    inherit system;
-    config = import ./nixpkgs-config.nix;
+  sshAgent = {
+    enable = true;
+    keys = ["~/.ssh/id_ed25519"];
   };
+  ssh = { };
 
-  _toolchainDir = ../toolchains;
-  _rawFiles = builtins.attrNames (
-    lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "default.nix") (
-      builtins.readDir _toolchainDir
-    )
-  );
-  _tcIndex = lib.listToAttrs (
-    map (
-      f:
-      let
-        name = lib.removeSuffix ".nix" f;
-      in
-      {
-        inherit name;
-        value = import (_toolchainDir + "/${f}") { inherit lib pkgs; };
-      }
-    ) _rawFiles
-  );
-  _allTCs = builtins.attrValues _tcIndex;
-
-  domainsScan = import ./domains/scan.nix {
-    inherit lib;
-    domainsPath = ../domains;
-  };
-  domainsModule = import ./domains/module.nix {
-    inherit (import ./domains/activation.nix) mkDomainActivation;
-  };
-  domainsLib = domainsScan // domainsModule;
-
-  _toolchains = config.toolchains or "*";
-  _bareNames = builtins.attrNames _tcIndex;
-in
-
-{
-  inherit _tcIndex _allTCs;
-
-  cfg = {
-    inherit system;
-    hostname = config.hostname or "nixos";
-    username = config.username or "user";
-    theme = config.theme or "monochrome";
-    password = config.password or "!";
-    monitors = config.monitors or { };
-    db = config.db or { };
-    profiles = config.profiles or [ "base" ];
-    toolchains = _toolchains;
-    repoPath = config.repoPath or "proj/angst";
-    extraNixos = config.nixos or { };
-    extraHome = config.home or { };
-    env = config.env or { };
-    sshAgent = config.sshAgent or { };
-    ssh = config.ssh or { };
-    shell = config.shell or "";
-
-    scan = {
-      domains = domainsLib;
-      themes = themesLib;
-      allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or [ ]) _allTCs);
-      treesitter = import ./treesitter.nix {
-        inherit lib pkgs;
-        grammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or [ ]) _allTCs);
-      };
-    };
-
-    toolchainModules =
-      if _toolchains == "*" then
-        _allTCs
-      else if builtins.isList _toolchains then
-        let
-          unknown = builtins.filter (n: !builtins.elem n _bareNames) _toolchains;
-        in
-        if unknown != [ ] then
-          throw "Unknown toolchains: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " _bareNames}"
-        else
-          map (n: _tcIndex.${n}) _toolchains
-      else
-        throw "toolchains must be \"*\" or a list";
+  # Only meaningful for type = "nixos"
+  persist = {
+    enable = true;           # false → conventional filesystem
+    root = "/persist";
+    homeDirs = [
+      ".mozilla"
+      ".config/google-chrome"
+      ".local/share/keyrings"
+    ];
   };
 }
 ```
 
-The key change: instead of `builtins.getEnv "PWD" + "/local/config.nix"`, it reads `${inputs.local-config}/config.nix`. When `local/config.nix` doesn't exist (fresh checkout, CI), it falls back to `{ }` — same semantics as before, just pure.
-
-### 3. Fix hardware.nix path
-
-`lib/build/mkNixos.nix` currently uses `${toString self}/local/hardware.nix`. In pure evaluation, `self` points to the `git ls-files` copy, which excludes `local/` (gitignored). Switch to `${inputs.local-config}/hardware.nix`:
-
-```nix
-  hardwarePath =
-    let
-      p = "${inputs.local-config}/hardware.nix";
-    in
-    if builtins.pathExists p then p else null;
-```
-
-The function already receives `inputs` as a parameter — no signature change needed.
-
-### 4. Remove --impure from justfile
-
-Drop `--impure` from every command:
-
-```justfile
-password:
-    #!/usr/bin/env bash
-    read -s -p "Enter password: " pass; echo; \
-    read -s -p "Confirm password: " pass2; echo; \
-    if [ "$pass" != "$pass2" ]; then echo "Passwords don't match"; exit 1; fi; \
-    hash=$(echo "$pass" | openssl passwd -6 -stdin); \
-    grep -q '^  password = ' local/config.nix && sed -i 's|^  password = ".*";$|  password = "'"$hash"'";|' local/config.nix || sed -i '/^  toolchains = /a\  password = "'"$hash"'";' local/config.nix
-
-disko:
-    sudo nix run github:nix-community/disko -- --mode disko local/disk.nix
-
-hardware:
-    nixos-generate-config --show-hardware-config > local/hardware.nix
-
-bootstrap: disko hardware
-    @echo "Now write local/config.nix, run 'just password', then 'just build'"
-
-build:
-    nix build .#nixosConfigurations.current
-
-switch:
-    sudo nixos-rebuild switch --flake .#current
-
-hm:
-    nix build .#homeConfigurations.current.activationPackage
-
-hm-switch:
-    nix build .#homeConfigurations.current.activationPackage && ./result/activate
-
-analyze:
-    python3 -m scripts.analyze_flake --output analysis.md
-
-check:
-    nix flake check
-
-dev:
-    nix develop
-
-vm:
-    @nix shell ./tools/vm#wrapped -c vm start
-
-vm-ssh:
-    @nix shell ./tools/vm#wrapped -c vm ssh --auto-start
-```
-
-### 5. Remove --impure from scripts/angst.sh
-
-**`repo_root_default`** no longer needs to scan for `local/config.nix`:
-
-```bash
-repo_root_default() {
-    git rev-parse --show-toplevel 2>/dev/null || pwd
-}
-```
-
-**`config_val`** can read the config file directly instead of `nix eval --impure`:
-
-```bash
-config_val() {
-    local repo="$1" key="$2"
-    nix eval --file "$repo/local/config.nix" --raw --apply "x: x.$key" 2>/dev/null || true
-}
-```
-
-No `--impure` needed here — `nix eval --file` imports a file directly and doesn't require pure mode.
-
-**All `nix eval --impure` calls** in `render_cmd` drop `--impure`:
-
-```bash
-json_data=$(nix eval "$repo_root#lib.renderDomainOutputsFor" \
-    --apply "f: builtins.toJSON (map (o: { path = o.path; text = o.text; }) (f \"$theme_name\"))" --raw)
-```
-
-The flake evaluates purely since config is a `path:` input.
-
-**`passwd_cmd`** stays at `$repo_root/local/config.nix` — no path change needed.
-
-**`watch_cmd`** watches `$repo_root/local` (unchanged).
-
-### 6. Remove --impure from modules/home/domain.nix
-
-The activation script's `nix eval` call loses `--impure`:
-
-```bash
-JSON_DATA=$(cd "$CFG_SRC" && nix eval \
-  "$CFG_SRC#lib.renderDomainOutputsFor" \
-  --apply "f: builtins.toJSON (map (o: { path = o.path; text = o.text; }) (f \"${config.theme}\"))" \
-  --raw 2>/dev/null) || true
-```
-
-No config path threading needed — the config is baked into the flake via the `path:` input. Whether the activation runs on bare metal or inside a VM (where the flake is mounted from the host at `/host/...`), `nix eval` on the flake resolves `path:./local` relative to the flake source on the host filesystem, which has `local/config.nix`.
-
-### 7. Update tools/vm/
-
-**`tools/vm/flake.nix`** — the bash wrappers (`vm-run-script`, `res-script`) read config values via `nix eval --impure`. Replace with `nix eval --file` (no `--impure` needed for file imports):
-
-Replace patterns like:
-```bash
-TARGET_HOST="$(nix eval --impure --expr "(import $FLAKE_DIR/local/config.nix).hostname" --raw 2>/dev/null)"
-```
-With:
-```bash
-TARGET_HOST="$(nix eval --file "$FLAKE_DIR/local/config.nix" --raw --apply "x: x.hostname" 2>/dev/null)"
-```
-
-Do the same for `username`, `theme`, and `password` reads in `res-script`.
-
-Remove `--impure` from the `res-script` build command:
-```bash
-nix build ".#nixosConfigurations.current.config.system.build.vm" --refresh --no-write-lock-file
-```
-
-**`tools/vm/crates/vm-cli/src/runner/vm.rs`** — `ensure_vm_profile()` reads config via `nix eval --impure --expr`. Replace with `nix eval --file`:
-
-```rust
-let output = std::process::Command::new("nix")
-    .args([
-        "eval",
-        "--file",
-        &format!("{repo}/local/config.nix"),
-        "--raw",
-        "--apply",
-        "x: builtins.elem \"vm\" (x.profiles or [])",
-    ])
-    .output()
-    .map_err(|e| format!("Failed to check VM profile: {e}"))?;
-```
-
-The `start()` function's `nix build --impure` becomes:
-```rust
-cmd.args([
-    "build",
-    "--refresh",
-    "--no-write-lock-file",
-    &format!(".#nixosConfigurations.current.config.system.build.vm"),
-])
-```
-
-Error messages referencing `local/config.nix` stay the same — the file is still at that path.
-
-### 8. Update CI workflows
-
-**`.github/workflows/checks.yml`** — remove `--impure` from all `nix build` steps:
+### `hosts/<hostname>/secrets.yaml`
 
 ```yaml
-- run: nix build '.#checks.x86_64-linux.lint-themes' --no-link --print-build-logs
+password: "$6$..."
+db:
+  connections:
+    dev:
+      password: "db-password"
+env:
+  GITHUB_TOKEN: "ghp_..."
 ```
 
-The `cp local/config.nix.example local/config.nix` step stays: it creates a valid config so CI evaluates with real defaults instead of falling back to `{ }`.
+Decrypted at activation. The `password` field is a SHA-512 hash (generate with `just password` or `angst passwd --host <name>`).
 
-**`.github/workflows/nvim-tests.yml`** — same treatment.
+## Bootstrap (one-time per host)
 
-### 9. Minor cleanups
+```bash
+# NixOS
+sudo nixos-install --flake .#nixos --no-root-passwd
+reboot
 
-**`checks/password.nix`** — the skip message says "no local/config.nix". It's still accurate (the file might not exist), so no change needed.
+# Get age public key from SSH host key
+ssh-to-age < /persist/etc/ssh/ssh_host_ed25519_key.pub
 
-**`scripts/seed-angst-repo.sh`** — backs up and restores `local/config.nix` during repo refreshes. This logic remains valid since the file is still at `local/config.nix`. No change needed.
+# Encrypt secrets
+sops --age <age-pubkey> hosts/nixos/secrets.yaml
 
-## Summary of changes
+# Add the age key to .sops.yaml, commit, rebuild
+git add hosts/nixos/secrets.yaml .sops.yaml
+git commit -m "nixos: add encrypted secrets"
+sudo nixos-rebuild switch --flake .#nixos
+```
 
-| File | Change |
-|---|---|
-| `flake.nix` | Add `inputs.local-config = { url = "path:./local"; flake = false; }` |
-| `lib/read-config.nix` | Replace `builtins.getEnv "PWD" + "/local/config.nix"` with `"${inputs.local-config}/config.nix"` |
-| `lib/build/mkNixos.nix` | Change hardwarePath to `${inputs.local-config}/hardware.nix` |
-| `justfile` | Drop `--impure` from all commands |
-| `scripts/angst.sh` | Drop `--impure` from `nix eval` calls; simplify `repo_root_default` |
-| `modules/home/domain.nix` | Drop `--impure` from activation `nix eval` call |
-| `tools/vm/flake.nix` | Replace `nix eval --impure --expr` with `nix eval --file`; drop `--impure` from build |
-| `tools/vm/crates/vm-cli/src/runner/vm.rs` | Replace `nix eval --impure --expr` with `--file`; drop `--impure` from `start()` build; update error strings |
-| `.github/workflows/checks.yml` | Drop `--impure` from all `nix build` steps |
-| `.github/workflows/nvim-tests.yml` | Drop `--impure` from `nix build` steps |
+```bash
+# non-NixOS
+ssh-to-age < ~/.ssh/id_ed25519.pub
+sops --age <age-pubkey> hosts/arch-laptop/secrets.yaml
+git add . && git commit -m "add encrypted secrets"
+home-manager switch --flake .#joao@arch-laptop
+```
 
-## What you gain
+After bootstrap: no ceremony. Just `nixos-rebuild switch` or `home-manager switch`.
 
-- **Pure evaluation** — no `--impure` anywhere. Every command is a plain `nix build`, `nix flake check`, or `nixos-rebuild switch`.
-- **Same config file, same location** — `local/config.nix` stays where it is, gitignored, with no new directories or env vars.
-- **Better eval caching** — the flake hash is deterministic; `nixos-rebuild list-generations` and `--rollback` work reliably.
-- **Zero ceremony** — no `--override-input`, no `ANGST_CONFIG`, no config path threading. The config is just a file in a directory, picked up automatically.
+## Everyday usage
 
-## Caveats
+```bash
+# Apply changes
+sudo nixos-rebuild switch --flake .#nixos
+home-manager switch --flake .#joao@nixos
 
-- **Lock file churn in multi-contributor repos**: `path:` inputs hash the directory contents into `flake.lock`. If different developers have different `local/config.nix` files, the lock file will differ. This is cosmetic for a single-user repo, but if you ever share the repo, add `flake.lock` to `.gitignore` for the `local-config` input section, or use a separate CI config that doesn't touch the lock.
+# Update flake inputs
+nix flake update
+sudo nixos-rebuild switch --flake .#nixos
 
-- **Config must live inside the flake repo**: `path:./local` resolves relative to the flake root. If you later want per-machine configs outside the repo, a shell wrapper that symlinks `~/angst-config/$(hostname)/default.nix` → `local/config.nix` before building handles it without touching the flake.
+# Run checks
+nix flake check
 
-## Optional future steps
+# VM testing
+nix run .#vm -- start          # uses NIX_DEFAULT_TARGET_HOST
+NIX_DEFAULT_TARGET_HOST=thonkpad nix run .#vm -- start
 
-- **sops-nix / agenix** — encrypt secrets (passwords, API keys) directly in `local/config.nix` so it can be committed without exposure.
-- **Multi-machine with symlink wrapper** — a `build.sh` that detects the hostname and symlinks the right config before invoking nix, if you ever need external config dirs.
+# Dev shell (neovim, all toolchains, vm tools)
+nix develop
+
+# Minimal safe shell (neovim + toolchains, no qemu/ssh agent)
+nix develop .#safe
+
+# Domain config rendering
+angst render --host nixos
+angst watch   --host nixos
+```
+
+## Rekeying secrets
+
+When adding a new host or rotating keys, update `.sops.yaml`:
+
+```yaml
+creation_rules:
+  - path_regex: hosts/.*/secrets\.yaml$
+    age: |
+      age1...   # nixos
+      age1...   # thonkpad
+```
+
+Then re-encrypt:
+
+```bash
+sops updatekeys hosts/*/secrets.yaml
+git commit -am "rekey secrets"
+```
+
+## CI
+
+CI uses the `hosts/ci/` host — a minimal NixOS config with one toolchain, base profile, no secrets. No `cp local/config.nix.example` step needed. The flake evaluates purely and deterministically.
+
+## Design constraints
+
+- **`read-config.nix` is pure.** It takes config, returns cfg. No side effects, no env reads, no filesystem access outside the flake source.
+- **Host config is tracked in git.** Machine identity is version-controlled. Changing your theme or adding a profile is a commit.
+- **Secrets are encrypted, not hidden.** sops-encrypted files are safe to track. Decryption happens at activation, never at eval time.
+- **The flake is a closed function.** Every input comes from git. Nothing depends on CWD, env vars, or which machine you're on. This is what makes `nix flake check` work, rollback reliable, and CI deterministic.
+- **Hosts auto-discoverable.** `builtins.readDir` means new hosts appear without touching `flake.nix`. No registration, no boilerplate.
+- **Non-NixOS hosts are first-class.** `type = "home-manager"` hosts get the same structure, same secrets decryption, same outputs. They just don't get hardware config or impermanence.

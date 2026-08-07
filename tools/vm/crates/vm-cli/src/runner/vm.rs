@@ -7,8 +7,6 @@ use vm_core::process::io::StateManager;
 use vm_core::{SshEngine, VmConfig, VmProcessController};
 
 fn read_env_value(_key: &str) -> Option<String> {
-    // Config is now passed via environment variables from the bash wrapper
-    // (e.g., ANGST_PASSWORD). No file-based fallback needed.
     None
 }
 
@@ -25,7 +23,7 @@ fn target_host() -> String {
 
     env::var("NIX_DEFAULT_TARGET_HOST")
         .or_else(|_| env::var("ANGST_HOST"))
-        .unwrap_or_else(|_| "generic".to_string())
+        .unwrap_or_else(|_| "nixos".to_string())
 }
 
 fn target_username() -> String {
@@ -42,21 +40,30 @@ fn target_username() -> String {
     VmConfig::load().ssh_user
 }
 
-fn ensure_vm_profile() -> Result<(), String> {
+fn ensure_vm_profile(host: &str) -> Result<(), String> {
     let repo = env::var("ANGST_REPO")
         .or_else(|_| env::current_dir().map(|p| p.to_string_lossy().to_string()))
         .map_err(|e| format!("Cannot determine repo root: {e}"))?;
 
-    let config_path = format!("{repo}/local/config.nix");
+    let config_path = format!("{repo}/hosts/{host}/default.nix");
 
     if !Path::new(&config_path).exists() {
-        return Ok(());
+        return Err(format!(
+            "Host '{host}' not found.\n\
+             Expected config at: {config_path}\n\
+             Create it at hosts/{host}/default.nix or set NIX_DEFAULT_TARGET_HOST to a valid host."
+        ));
     }
 
-    let expr = format!(r#"builtins.elem "vm" ((import {repo}/local/config.nix).profiles or [])"#);
-
     let output = std::process::Command::new("nix")
-        .args(["eval", "--impure", "--expr", &expr])
+        .args([
+            "eval",
+            "--file",
+            &config_path,
+            "--raw",
+            "--apply",
+            "x: builtins.elem \"vm\" (x.profiles or [])",
+        ])
         .output()
         .map_err(|e| format!("Failed to check VM profile: {e}"))?;
 
@@ -68,10 +75,9 @@ fn ensure_vm_profile() -> Result<(), String> {
     }
 
     Err(format!(
-        "VM profile not enabled.\n\
-         Detected config: {config_path}\n\
+        "VM profile not enabled for host '{host}'.\n\
          The 'vm' profile is missing from the profiles list.\n\
-         Add \"vm\" to the profiles list in local/config.nix to use VM commands.\n\
+         Add \"vm\" to the profiles list in hosts/{host}/default.nix to use VM commands.\n\
          Example: profiles = [ \"base\" \"desktop\" \"development\" \"vm\" ];"
     ))
 }
@@ -252,12 +258,11 @@ fn detect_display() -> bool {
 }
 
 pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
-    ensure_vm_profile()?;
     let host = target_host();
+    ensure_vm_profile(&host)?;
     let disk = format!("{}.qcow2", host);
     kill_stale_qemu(&disk);
 
-    // Auto-enable headless when no display server is available
     let effective_headless = headless || !detect_display();
 
     let runner_path = format!("result/bin/run-{}-vm", host);
@@ -270,7 +275,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
     let runner_exists = Path::new(&runner_path).exists();
 
     if !runner_exists {
-        println!("VM image not found. Building NixOS VM system image on host...");
+        println!("VM image not found. Building NixOS VM system image for host '{}'...", host);
 
         let username = target_username();
         let password = env::var("ANGST_PASSWORD")
@@ -281,10 +286,9 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
         let mut cmd = Command::new("nix");
         cmd.args([
             "build",
-            "--impure",
             "--refresh",
             "--no-write-lock-file",
-            &format!(".#nixosConfigurations.current.config.system.build.vm"),
+            &format!(".#nixosConfigurations.{host}.config.system.build.vm"),
         ])
         .env("ANGST_USERNAME", &username);
 
@@ -376,7 +380,8 @@ pub async fn ssh(
     tty: bool,
     args: Vec<String>,
 ) -> Result<(), String> {
-    ensure_vm_profile()?;
+    let host = target_host();
+    ensure_vm_profile(&host)?;
     if auto_start && !vm_ssh_reachable(ssh) {
         println!("VM not running. Starting headless...");
         start(ssh, true).await?;
