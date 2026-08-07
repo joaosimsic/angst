@@ -100,7 +100,7 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (
     if cfg.persist.enable then
       [
-        ({ ... }: {
+        (_: {
           environment.persistence."${cfg.persist.root}" = {
             hideMounts = true;
             directories = [

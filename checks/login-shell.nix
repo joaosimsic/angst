@@ -4,13 +4,9 @@
 }:
 
 let
-  validConfig = self.homeConfigurations.login-shell-valid;
   invalidConfig = self.homeConfigurations.login-shell-invalid;
 
   valid =
-    let
-      res = builtins.tryEval validConfig.config.assertions;
-    in
     pkgs.writeText "login-shell-valid-check" "skipped (system paths not resolvable in pure eval)";
 
   invalid =

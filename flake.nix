@@ -28,12 +28,12 @@
   outputs =
     { self, nixpkgs, ... }@inputs:
     let
-      lib = nixpkgs.lib;
+      inherit (nixpkgs) lib;
       themesLib = import ./themes/default.nix { inherit lib; };
       readConfig = import ./lib/read-config.nix;
 
       hostDirs = builtins.attrNames (
-        lib.filterAttrs (n: t: t == "directory") (builtins.readDir ./hosts)
+        lib.filterAttrs (_: t: t == "directory") (builtins.readDir ./hosts)
       );
 
       mkCfg =
