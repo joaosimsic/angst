@@ -19,5 +19,5 @@
   sshAgent = { enable = true; keys = ["~/.ssh/id_ed25519"]; };
   ssh = {};
 
-  persist = { enable = false; };
+  persist = { enable = true; };
 }

@@ -196,12 +196,21 @@
 
               SSH_OPTS="-p $SSH_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=1 -o LogLevel=ERROR -o ForwardAgent=yes"
               echo "Waiting for VM to be ready..."
-              for i in $(seq 1 60); do
+              for i in $(seq 1 120); do
                 if ssh $SSH_OPTS "$SSH_USER@localhost" "echo ready" 2>/dev/null; then
                   echo "VM is ready!"
                   break
                 fi
                 sleep 1
+              done
+
+              echo "Waiting for home-manager to finish..."
+              for i in $(seq 1 45); do
+                if ssh $SSH_OPTS "$SSH_USER@localhost" "test -f ~/.config/nushell/env.nu" 2>/dev/null; then
+                  echo "Home-manager ready."
+                  break
+                fi
+                sleep 2
               done
 
               exec ssh $SSH_OPTS "$SSH_USER@localhost"

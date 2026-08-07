@@ -31,12 +31,7 @@ let
     hostTheme = effectiveTheme;
   };
 
-  secretsFile =
-    if host.domain != null then
-      self + "/hosts/${host.domain}/${host.hostname}/secrets.yaml"
-    else
-      self + "/hosts/${host.hostname}/secrets.yaml";
-  hasSecrets = builtins.pathExists secretsFile;
+  secrets = import ../../modules/secrets.nix { inherit self host lib; };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
@@ -66,13 +61,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ++ appHomeModules
   ++ hmModules
   ++ host.toolchainModules
-  ++ [ inputs.sops-nix.homeManagerModules.sops ]
-  ++ (
-    if hasSecrets then
-      [ { sops.defaultSopsFile = secretsFile; } ]
-    else
-      [ ]
-  )
+  ++ [ inputs.sops-nix.homeManagerModules.sops secrets.core ]
   ++ [
     (_: {
       home.packages = [
@@ -83,11 +72,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
     })
   ]
   ++ [
-    ({ config, pkgs, lib, ... }: lib.mkIf hasSecrets {
-      sops.secrets = {
-        masterPassword = { };
-      };
-
+    ({ config, pkgs, lib, ... }: lib.mkIf secrets.hasSecrets {
       home.activation.angstSshKey = lib.hm.dag.entryAfter [ "writeBoundary" ] (
         ''
           set -euo pipefail

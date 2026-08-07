@@ -39,12 +39,7 @@ let
     in
     if builtins.pathExists p then p else null;
 
-  secretsFile =
-    if host.domain != null then
-      self + "/hosts/${host.domain}/${host.hostname}/secrets.yaml"
-    else
-      self + "/hosts/${host.hostname}/secrets.yaml";
-  hasSecrets = builtins.pathExists secretsFile;
+  secrets = import ../../modules/secrets.nix { inherit self host lib; };
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
@@ -73,13 +68,7 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if hardwarePath != null then [ (import hardwarePath) ] else [ ])
   ++ (if host.extraNixos != { } then [ host.extraNixos ] else [ ])
   ++ (if host.env != { } then [ { environment.sessionVariables = host.env; } ] else [ ])
-  ++ [ inputs.sops-nix.nixosModules.sops ]
-  ++ (
-    if hasSecrets then
-      [ { sops.defaultSopsFile = secretsFile; } ]
-    else
-      [ ]
-  )
+  ++ [ inputs.sops-nix.nixosModules.sops secrets.core ]
   ++ [
     ../../modules/vm/detect.nix
     ../../modules/vm/runtime.nix
@@ -91,11 +80,7 @@ inputs.nixpkgs.lib.nixosSystem {
       users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
       users.users.root.hashedPassword = lib.mkDefault host.password;
 
-      sops.secrets = lib.mkIf hasSecrets {
-        masterPassword = { };
-      };
-
-      systemd.services.angst-bootstrap-secrets = lib.mkIf (hasSecrets && !config.angst.isQemuVm) {
+      systemd.services.angst-bootstrap-secrets = lib.mkIf (secrets.hasSecrets && !config.angst.isQemuVm) {
         description = "angst: set login password hash and enforce SSH key passphrase from secrets";
         wantedBy = [ "multi-user.target" ];
         after = [ "sops-nix.service" ];
@@ -142,7 +127,7 @@ inputs.nixpkgs.lib.nixosSystem {
       [ (import ../../modules/nixos/persist.nix {
           inherit lib;
           inherit (host) persist username;
-          inherit hasSecrets;
+          inherit (secrets) persistDirs;
         })
       ]
     else
@@ -186,9 +171,7 @@ inputs.nixpkgs.lib.nixosSystem {
       };
     }
     ({ config, lib, ... }: {
-      systemd.services."home-manager-${host.username}".before = [
-        "sshd.service"
-      ] ++ lib.optionals (!config.angst.isQemuVm) [
+      systemd.services."home-manager-${host.username}".before = lib.mkIf (!config.angst.isQemuVm) [
         "getty@.service"
         "serial-getty@.service"
       ];

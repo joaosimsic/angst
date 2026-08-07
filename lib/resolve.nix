@@ -68,7 +68,7 @@ in
     sshAgent = decl.sshAgent or { };
     ssh = decl.ssh or { };
     shell = decl.shell or "";
-    persist = decl.persist or { enable = false; };
+    persist = { root = "/persist"; homeDirs = []; enable = false; } // (decl.persist or {});
     type = decl.type or "nixos";
     inherit domain;
 

@@ -1,4 +1,4 @@
-{ persist, username, hasSecrets, lib }:
+{ persist, username, persistDirs, lib }:
 
 {
   config = lib.mkIf persist.enable {
@@ -16,7 +16,7 @@
       ];
       users.${username} = {
         directories = map (d: "/home/${username}/${d}") (
-          persist.homeDirs ++ lib.optional hasSecrets ".config/sops"
+          persist.homeDirs ++ persistDirs
         );
       };
     };
