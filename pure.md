@@ -51,7 +51,7 @@ angst/
 │   └── ci/                     # CI test host (minimal, no secrets)
 │       └── default.nix
 ├── lib/
-│   ├── read-config.nix         # pure function: config attrset → cfg
+│   ├── resolve.nix             # pure function: host declaration → cfg
 │   ├── flake/outputs.nix       # iterates hosts → nixosConfigurations + homeConfigurations
 │   └── build/
 │       ├── mkNixos.nix         # NixOS system builder (impermanence, sops, hardware)
@@ -71,7 +71,7 @@ Hosts are organized by **security domain** — `hosts/personal/` or `hosts/serve
 
 ### Host auto-discovery
 
-`flake.nix` scans `hosts/` recursively using `builtins.readDir`. Security domain directories (`personal/`, `servers/`) and top-level entries (like `ci/`) are scanned; leaf directories with a `default.nix` become hosts. The host's `default.nix` is imported, enriched by `lib/read-config.nix` (defaults, domain scanning, toolchain resolution, theme indexing), and passed to `lib/flake/outputs.nix`, which builds `nixosConfigurations.<hostname>` for NixOS hosts and `homeConfigurations.<user>@<hostname>` for all hosts. The security domain is derived from the parent directory path — no config field needed.
+`flake.nix` scans `hosts/` recursively using `builtins.readDir`. Security domain directories (`personal/`, `servers/`) and top-level entries (like `ci/`) are scanned; leaf directories with a `default.nix` become hosts. The host's `default.nix` is imported, enriched by `lib/resolve.nix` (defaults, domain scanning, toolchain resolution, theme indexing), and passed to `lib/flake/outputs.nix`, which builds `nixosConfigurations.<hostname>` for NixOS hosts and `homeConfigurations.<user>@<hostname>` for all hosts. The security domain is derived from the parent directory path — no config field needed.
 
 Adding a machine:
 
@@ -91,7 +91,7 @@ No flake.nix edits. No key enrollment. The new host appears in `nixosConfigurati
 hosts/<domain>/<hostname>/default.nix  (plain Nix attrset, tracked)
     │
     ▼
-lib/read-config.nix           (pure function)
+lib/resolve.nix           (pure function)
     │  applies defaults
     │  scans domains/ themes/ toolchains/
     │  resolves profiles
@@ -103,7 +103,7 @@ cfg                            (enriched attrset)
     └──► mkHome.nix   →  homeConfigurations.<user>@<hostname>
 ```
 
-`read-config.nix` is completely pure — it takes a config attrset and returns enriched cfg. No `builtins.getEnv`, no `builtins.currentTime`, no filesystem reads outside the flake source.
+`resolve.nix` is completely pure — it takes a host declaration and returns enriched cfg. No `builtins.getEnv`, no `builtins.currentTime`, no filesystem reads outside the flake source.
 
 ### Secrets with sops-nix
 
@@ -504,7 +504,7 @@ CI uses the `hosts/ci/` host — a minimal NixOS config with one toolchain, base
 
 ## Design constraints
 
-- **`read-config.nix` is pure.** It takes config, returns cfg. No side effects, no env reads, no filesystem access outside the flake source.
+- **`resolve.nix` is pure.** It takes a host declaration, returns cfg. No side effects, no env reads, no filesystem access outside the flake source.
 - **Host config is tracked in git.** Machine identity is version-controlled. Changing your theme or adding a profile is a commit.
 - **Secrets are encrypted, not hidden.** sops-encrypted files are safe to track in a public repo. Decryption happens at activation, never at eval time.
 - **No key material in the repo.** Age public keys live in `.sops.yaml` (safe — they only encrypt). Age private keys are managed by the user at the sops-nix key path (`~/.config/sops/age/keys.txt`), outside the repo entirely. The repo is safe to make fully public.
@@ -573,3 +573,75 @@ Domain `config/` subdirectories contain theme-rendered output files. These are g
 - **Generated, not authored.** The source of truth is the domain's `meta.nix` + `render.nix` + the host's selected theme. The rendered output is a build artifact.
 
 Tracked in git: domain `.nix` modules, `meta.nix`, `render.nix`, and `config/` templates. Gitignored: the final rendered files in `domains/<category>/<name>/config/`.
+
+## Refactoring checklist
+
+Current state vs. target: flat `hosts/` (no domain nesting), `local/config.nix` exists with plaintext secrets, sops-nix wired but unseeded, no SSH key enforcement, flat sops rules, `read-config.nix` still needs rename.
+
+### Phase 1: Rename resolve.nix
+
+- [ ] `git mv lib/read-config.nix lib/resolve.nix`
+- [ ] `flake.nix`: rename variable `readConfig` → `resolve`, import path `./lib/read-config.nix` → `./lib/resolve.nix`
+
+### Phase 2: Host auto-discovery
+
+- [ ] Restructure `hosts/` from flat to domain-nested:
+  - `hosts/nixos/` → `hosts/personal/nixos/`
+  - `hosts/ci/` stays at top level (no domain, no secrets)
+  - Create `hosts/servers/` directory (empty or example host)
+- [ ] Make `flake.nix` scan `hosts/` recursively:
+  - Top-level dirs under `hosts/` are security domains or bare hosts
+  - Domain dirs recurse: each subdirectory with `default.nix` is a host
+  - Host's security domain inferred from parent path
+- [ ] Update `lib/flake/outputs.nix` to receive domain info per host
+- [ ] Pass domain to `mkNixos.nix` / `mkHome.nix` for sops file path construction
+
+### Phase 3: Secrets
+
+- [ ] Seed `.sops.yaml` with domain-scoped rules (replace flat `hosts/.*/` rule):
+  - `hosts/personal/.*/secrets\.yaml$` → personal age public key
+  - `hosts/servers/.*/secrets\.yaml$` → server age public key
+- [ ] Create empty `secrets.yaml` for existing hosts (or document creation)
+- [ ] `lib/build/mkNixos.nix`: sops file path → `hosts/<domain>/<hostname>/secrets.yaml`
+- [ ] `lib/build/mkHome.nix`: same path derivation
+- [ ] Remove `masterPassword` sentinel from `checks/password.nix`; update for sops-backed password flow
+
+### Phase 4: SSH key enforcement
+
+- [ ] `lib/build/mkNixos.nix` activation script:
+  - Check `~/.ssh/id_ed25519` exists; generate if missing (using master password from decrypted secrets)
+  - Verify passphrase matches with `ssh-keygen -y -P`
+  - Set/correct passphrase with `ssh-keygen -p`
+  - Skip gracefully when secrets are unavailable
+- [ ] `lib/build/mkHome.nix`: equivalent activation logic
+
+### Phase 5: Bootstrap tooling
+
+- [ ] Add `angst bootstrap-secrets` subcommand (or repurpose `angst passwd`):
+  - Creates `hosts/<domain>/<hostname>/secrets.yaml` encrypted with sops
+  - Writes master password as `masterPassword` secret
+- [ ] Update `justfile`: add `bootstrap` recipe, remove old `password` recipe
+
+### Phase 6: Cleanup
+
+- [ ] Delete `local/config.nix` — contains plaintext secrets; config is tracked per-host
+- [ ] Delete `local/hardware.nix` — hardware config is per-host
+- [ ] Delete `local/` directory if empty after removal
+- [ ] Remove `angst passwd` subcommand from `scripts/angst.sh` — replaced by master password in secrets.yaml
+- [ ] Remove `just password` recipe from `justfile`
+- [ ] Remove any remaining `local/config.nix` references from `flake.nix`, builders, checks, and docs
+- [ ] Delete `tools/shell/` input from `flake.nix` if unused after refactor
+- [ ] Audit `lib/` for dead code: unused imports, unused `builtins.getEnv` calls, impure paths referencing the old flat structure
+- [ ] Audit `checks/` for tests that depend on `local/config.nix` or the old flat `hosts/` layout
+- [ ] Audit `.gitignore` — remove `local/config.nix`-related ignores, ensure `hosts/**/secrets.yaml` is tracked (encrypted, safe to commit)
+- [ ] Audit `openwiki/` for stale references to `read-config.nix`, `local/config.nix`, flat `hosts/`, or age key derivation (regenerate if auto-generated)
+
+### Phase 7: Validation
+
+- [ ] Run `nix flake check` — no impure accesses, no `local/config.nix` dependency
+- [ ] Test `sudo nixos-rebuild switch --flake .#nixos` before secrets bootstrap (Phase 1)
+- [ ] Test with age key present and secrets.yaml populated (Phase 2)
+- [ ] Verify `home-manager switch --flake .#<user>@<hostname>` for non-NixOS hosts
+- [ ] Verify SSH key is provisioned and passphrase-enforced after bootstrap
+- [ ] Verify login password is set from decrypted master password after bootstrap
+- [ ] Verify secrets are unavailable (graceful skip) when age key is missing
