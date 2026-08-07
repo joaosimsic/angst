@@ -179,7 +179,6 @@ The age identity is passphrase-decrypted into the cache, secrets are decrypted, 
   theme = "miasma";
   profiles = ["base" "desktop" "development"];
   toolchains = "*";          # "*" for all, or ["bash" "nix" "php"] for minimal
-  repoPath = "proj/angst";   # relative path from $HOME to this checkout
 
   monitors = {
     primary = {
@@ -226,7 +225,6 @@ The age identity is passphrase-decrypted into the cache, secrets are decrypted, 
   theme = "miasma";
   profiles = ["base" "desktop" "development"];
   toolchains = "*";
-  repoPath = "proj/angst";
 
   monitors = { };             # safe to leave empty — i3 auto-detects
 
@@ -376,3 +374,46 @@ CI uses the `hosts/ci/` host — a minimal NixOS config with one toolchain, base
 - **Hosts auto-discoverable.** `builtins.readDir` means new hosts appear without touching `flake.nix`. No registration, no boilerplate.
 - **Non-NixOS hosts are first-class.** `type = "home-manager"` hosts get the same structure, same secrets decryption, same outputs. They just don't get hardware config or impermanence.
 - **SSH key is provisioned, not enrolled.** The SSH key is decoupled from secrets decryption. It's generated and passphrase-enforced at activation using the decrypted master password. It's for SSH connections, not for sops.
+
+## Known concerns and implementation notes
+
+### Password: plaintext in sops, hash at activation
+
+The master password is stored as plaintext in `hosts/secrets.yaml` (sops-encrypted at rest). This is intentional — the plaintext is needed for SSH passphrase operations (`ssh-keygen -y -P "$password"`). The SHA-512 login hash is derived at activation time via `mkpasswd -m sha-512`. Implementation must NOT pre-hash the password before sops storage, or SSH passphrase enforcement becomes impossible.
+
+### Shared secrets.yaml fallback
+
+The builders (`mkNixos.nix`, `mkHome.nix`) must implement the shared-to-per-host fallback:
+
+```
+hosts/<hostname>/secrets.yaml → if missing, fall back to hosts/secrets.yaml
+```
+
+Currently only the per-host path is checked. The shared file is ignored.
+
+### Evaluation-time filesystem checks must live in activation scripts
+
+`builtins.pathExists` on absolute system paths produces different results in sandboxed vs. unsandboxed evaluation, violating "same commit → same system." These checks must run at activation time, not in Nix module assertions:
+
+| Module | Current check | Fix |
+|---|---|---|
+| `login-shell.nix` | `builtins.pathExists /usr/bin/nushell` in assertion | Validate shell in activation script via `which` or `getent` |
+| `ssh-agent.nix` | `builtins.pathExists ~/.ssh/id_ed25519` to configure agent | Check key existence at activation |
+| `is-qemu-vm.nix` | `builtins.pathExists /host/.../flake.nix` for VM detection | Detect at activation via `/sys/class/dmi/id/product_name` |
+
+### repoPath derived at runtime
+
+`repoPath` is not tracked in host config — it couples the flake to a specific checkout location and weakens disposability. Instead, derive the repo path at runtime:
+
+- **VM tooling:** use the flake source path (`self`) or the `NIX_DISK_IMAGE` directory.
+- **Activation scripts:** expect a well-known symlink or derive from the repo's own source path.
+- **Domain config rendering:** use `$PWD` or the flake source path.
+
+### Domain rendered config is generated, not source
+
+Domain `config/` subdirectories contain theme-rendered output files. These are gitignored because:
+
+- **Theme-dependent.** A host using theme `miasma` renders different config than one using `catppuccin-mocha`. Hosts must not cross-pollute the branch.
+- **Generated, not authored.** The source of truth is the domain's `meta.nix` + `render.nix` + the host's selected theme. The rendered output is a build artifact.
+
+Tracked in git: domain `.nix` modules, `meta.nix`, `render.nix`, and `config/` templates. Gitignored: the final rendered files in `domains/<category>/<name>/config/`.
