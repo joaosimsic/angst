@@ -1,7 +1,7 @@
 {
   inputs,
   self,
-  cfg,
+  host,
   hmModules,
   nixosModules,
   themeOverride ? null,
@@ -9,46 +9,46 @@
 
 let
   pkgs = import inputs.nixpkgs {
-    inherit (cfg) system;
+    inherit (host) system;
     config = import ../nixpkgs-config.nix;
   };
   inherit (pkgs) lib;
 
-  effectiveTheme = if themeOverride != null then themeOverride else cfg.theme;
+  effectiveTheme = if themeOverride != null then themeOverride else host.theme;
   userCfg = {
-    inherit (cfg) username;
-    homeDirectory = "/home/${cfg.username}";
+    inherit (host) username;
+    homeDirectory = "/home/${host.username}";
   };
 
-  appNixosModules = map cfg.scan.domains.mkNixosDomainModule cfg.scan.domains.nixosEntries;
-  appHomeModules = map cfg.scan.domains.mkDomainModule cfg.scan.domains.homeEntries;
+  appNixosModules = map host.scan.domains.mkNixosDomainModule host.scan.domains.nixosEntries;
+  appHomeModules = map host.scan.domains.mkDomainModule host.scan.domains.homeEntries;
 
   themeModule = import ../../modules/home/themeModule.nix {
     inherit lib;
-    themesLib = cfg.scan.themes;
+    themesLib = host.scan.themes;
     hostTheme = effectiveTheme;
   };
 
   hardwarePath =
     let
       p =
-        if cfg.domain != null then
-          self + "/hosts/${cfg.domain}/${cfg.hostname}/hardware.nix"
+        if host.domain != null then
+          self + "/hosts/${host.domain}/${host.hostname}/hardware.nix"
         else
-          self + "/hosts/${cfg.hostname}/hardware.nix";
+          self + "/hosts/${host.hostname}/hardware.nix";
     in
     if builtins.pathExists p then p else null;
 
   secretsFile =
-    if cfg.domain != null then
-      self + "/hosts/${cfg.domain}/${cfg.hostname}/secrets.yaml"
+    if host.domain != null then
+      self + "/hosts/${host.domain}/${host.hostname}/secrets.yaml"
     else
-      self + "/hosts/${cfg.hostname}/secrets.yaml";
+      self + "/hosts/${host.hostname}/secrets.yaml";
   hasSecrets = builtins.pathExists secretsFile;
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
-    inherit (cfg)
+    inherit (host)
       hostname
       monitors
       repoPath
@@ -56,23 +56,23 @@ inputs.nixpkgs.lib.nixosSystem {
       sshAgent
       shell
       ;
-    hostName = cfg.hostname;
-    inherit (cfg.scan) themes;
-    themesLib = cfg.scan.themes;
+    hostName = host.hostname;
+    inherit (host.scan) themes;
+    themesLib = host.scan.themes;
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
   };
 
   modules = [
-    { nixpkgs.hostPlatform = cfg.system; }
+    { nixpkgs.hostPlatform = host.system; }
   ]
   ++ nixosModules
   ++ appNixosModules
   ++ [ ../../modules/nixos ]
   ++ (if hardwarePath != null then [ (import hardwarePath) ] else [ ])
-  ++ (if cfg.extraNixos != { } then [ cfg.extraNixos ] else [ ])
-  ++ (if cfg.env != { } then [ { environment.sessionVariables = cfg.env; } ] else [ ])
+  ++ (if host.extraNixos != { } then [ host.extraNixos ] else [ ])
+  ++ (if host.env != { } then [ { environment.sessionVariables = host.env; } ] else [ ])
   ++ [ inputs.sops-nix.nixosModules.sops ]
   ++ (
     if hasSecrets then
@@ -88,8 +88,8 @@ inputs.nixpkgs.lib.nixosSystem {
     ../../modules/vm/host-mount.nix
     ../../capabilities/ssh.nix
     ({ config, pkgs, ... }: {
-      users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password;
-      users.users.root.hashedPassword = lib.mkDefault cfg.password;
+      users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
+      users.users.root.hashedPassword = lib.mkDefault host.password;
 
       sops.secrets = lib.mkIf hasSecrets {
         masterPassword = { };
@@ -113,16 +113,16 @@ inputs.nixpkgs.lib.nixosSystem {
 
           set +x
           HASH=$(echo "$MASTER_PASSWORD" | ${pkgs.mkpasswd}/bin/mkpasswd -m sha-512 -s)
-          ${pkgs.shadow}/bin/usermod -p "$HASH" ${cfg.username}
+          ${pkgs.shadow}/bin/usermod -p "$HASH" ${host.username}
           ${pkgs.shadow}/bin/usermod -p "$HASH" root
 
-          KEY_FILE="/home/${cfg.username}/.ssh/id_ed25519"
+          KEY_FILE="/home/${host.username}/.ssh/id_ed25519"
           SSH_DIR="$(dirname "$KEY_FILE")"
 
           if [ ! -f "$KEY_FILE" ]; then
             mkdir -p "$SSH_DIR"
-            ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${cfg.username}@${cfg.hostname}"
-            chown -R ${cfg.username}: "$SSH_DIR"
+            ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${host.username}@${host.hostname}"
+            chown -R ${host.username}: "$SSH_DIR"
           else
             if ! ${pkgs.openssh}/bin/ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
               ${pkgs.openssh}/bin/ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
@@ -136,12 +136,12 @@ inputs.nixpkgs.lib.nixosSystem {
       };
     })
   ]
-  ++ (if cfg.persist.enable then [ inputs.impermanence.nixosModules.impermanence ] else [ ])
+  ++ (if host.persist.enable then [ inputs.impermanence.nixosModules.impermanence ] else [ ])
   ++ (
-    if cfg.persist.enable then
+    if host.persist.enable then
       [
         (_: {
-          environment.persistence."${cfg.persist.root}" = {
+          environment.persistence."${host.persist.root}" = {
             hideMounts = true;
             directories = [
               "/var/log"
@@ -153,8 +153,8 @@ inputs.nixpkgs.lib.nixosSystem {
             files = [
               "/etc/machine-id"
             ];
-            users.${cfg.username} = {
-              directories = map (d: "/home/${cfg.username}/${d}") cfg.persist.homeDirs;
+            users.${host.username} = {
+              directories = map (d: "/home/${host.username}/${d}") host.persist.homeDirs;
             };
           };
         })
@@ -171,7 +171,7 @@ inputs.nixpkgs.lib.nixosSystem {
         backupFileExtension = "hm-backup";
 
         extraSpecialArgs = {
-          inherit (cfg)
+          inherit (host)
             hostname
             monitors
             repoPath
@@ -180,27 +180,27 @@ inputs.nixpkgs.lib.nixosSystem {
             ssh
             shell
             ;
-          hostName = cfg.hostname;
-          inherit (cfg.scan) themes;
-          themesLib = cfg.scan.themes;
+          hostName = host.hostname;
+          inherit (host.scan) themes;
+          themesLib = host.scan.themes;
           userConfig = userCfg;
           theme = effectiveTheme;
           flakeSelf = self;
         };
 
-        users.${cfg.username} = {
+        users.${host.username} = {
           imports = [
             ../../modules/home
             themeModule
           ]
           ++ appHomeModules
           ++ hmModules
-          ++ cfg.toolchainModules;
+          ++ host.toolchainModules;
         };
       };
     }
     ({ config, lib, ... }: {
-      systemd.services."home-manager-${cfg.username}".before = lib.mkIf (!config.angst.isQemuVm) [
+      systemd.services."home-manager-${host.username}".before = lib.mkIf (!config.angst.isQemuVm) [
         "getty@.service"
         "serial-getty@.service"
       ];

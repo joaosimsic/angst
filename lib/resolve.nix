@@ -2,13 +2,13 @@
   inputs,
   themesLib,
   domain,
-  config,
+  decl,
 }:
 
 let
   lib = inputs.nixpkgs.lib;
 
-  system = config.system or "x86_64-linux";
+  system = decl.system or "x86_64-linux";
   pkgs = import inputs.nixpkgs {
     inherit system;
     config = import ./nixpkgs-config.nix;
@@ -43,32 +43,32 @@ let
   };
   domainsLib = domainsScan // domainsModule;
 
-  _toolchains = config.toolchains or "*";
+  _toolchains = decl.toolchains or "*";
   _bareNames = builtins.attrNames _tcIndex;
 in
 
 {
   inherit _tcIndex _allTCs;
 
-  cfg = {
+  host = {
     inherit system;
-    hostname = config.hostname or "nixos";
-    username = config.username or "user";
-    theme = config.theme or "monochrome";
-    password = config.password or "!";
-    monitors = config.monitors or { };
-    db = config.db or { };
-    profiles = config.profiles or [ "base" ];
+    hostname = decl.hostname or "nixos";
+    username = decl.username or "user";
+    theme = decl.theme or "monochrome";
+    password = decl.password or "!";
+    monitors = decl.monitors or { };
+    db = decl.db or { };
+    profiles = decl.profiles or [ "base" ];
     toolchains = _toolchains;
-    repoPath = config.repoPath or "proj/angst";
-    extraNixos = config.nixos or { };
-    extraHome = config.home or { };
-    env = config.env or { };
-    sshAgent = config.sshAgent or { };
-    ssh = config.ssh or { };
-    shell = config.shell or "";
-    persist = config.persist or { enable = false; };
-    type = config.type or "nixos";
+    repoPath = decl.repoPath or "proj/angst";
+    extraNixos = decl.nixos or { };
+    extraHome = decl.home or { };
+    env = decl.env or { };
+    sshAgent = decl.sshAgent or { };
+    ssh = decl.ssh or { };
+    shell = decl.shell or "";
+    persist = decl.persist or { enable = false; };
+    type = decl.type or "nixos";
     inherit domain;
 
     scan = {

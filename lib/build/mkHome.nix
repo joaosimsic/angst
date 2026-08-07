@@ -1,7 +1,7 @@
 {
   inputs,
   self,
-  cfg,
+  host,
   hmModules,
   vmTool,
   shellTool,
@@ -12,37 +12,37 @@
 
 let
   pkgs = import inputs.nixpkgs {
-    inherit (cfg) system;
+    inherit (host) system;
     config = import ../nixpkgs-config.nix;
   };
   inherit (pkgs) lib;
 
-  effectiveTheme = if themeOverride != null then themeOverride else cfg.theme;
+  effectiveTheme = if themeOverride != null then themeOverride else host.theme;
   userCfg = {
-    inherit (cfg) username;
-    homeDirectory = "/home/${cfg.username}";
+    inherit (host) username;
+    homeDirectory = "/home/${host.username}";
   };
 
-  appHomeModules = map cfg.scan.domains.mkDomainModule cfg.scan.domains.homeEntries;
+  appHomeModules = map host.scan.domains.mkDomainModule host.scan.domains.homeEntries;
 
   themeModule = import ../../modules/home/themeModule.nix {
     inherit lib;
-    themesLib = cfg.scan.themes;
+    themesLib = host.scan.themes;
     hostTheme = effectiveTheme;
   };
 
   secretsFile =
-    if cfg.domain != null then
-      self + "/hosts/${cfg.domain}/${cfg.hostname}/secrets.yaml"
+    if host.domain != null then
+      self + "/hosts/${host.domain}/${host.hostname}/secrets.yaml"
     else
-      self + "/hosts/${cfg.hostname}/secrets.yaml";
+      self + "/hosts/${host.hostname}/secrets.yaml";
   hasSecrets = builtins.pathExists secretsFile;
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
 
   extraSpecialArgs = {
-    inherit (cfg)
+    inherit (host)
       hostname
       monitors
       repoPath
@@ -50,10 +50,10 @@ inputs.home-manager.lib.homeManagerConfiguration {
       sshAgent
       ssh
       ;
-    shell = if shellOverride != null then shellOverride else cfg.shell;
-    inherit (cfg.scan) themes;
-    themesLib = cfg.scan.themes;
-    hostName = cfg.hostname;
+    shell = if shellOverride != null then shellOverride else host.shell;
+    inherit (host.scan) themes;
+    themesLib = host.scan.themes;
+    hostName = host.hostname;
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
@@ -65,7 +65,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ]
   ++ appHomeModules
   ++ hmModules
-  ++ cfg.toolchainModules
+  ++ host.toolchainModules
   ++ [ inputs.sops-nix.homeManagerModules.sops ]
   ++ (
     if hasSecrets then
@@ -103,7 +103,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
           set +x
           if [ ! -f "$KEY_FILE" ]; then
             mkdir -p "$SSH_DIR"
-            ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${cfg.username}@${cfg.hostname}"
+            ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${host.username}@${host.hostname}"
           else
             if ! ${pkgs.openssh}/bin/ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
               ${pkgs.openssh}/bin/ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
@@ -116,6 +116,6 @@ inputs.home-manager.lib.homeManagerConfiguration {
       );
     })
   ]
-  ++ (if cfg.extraHome != { } then [ cfg.extraHome ] else [ ])
-  ++ (if cfg.env != { } then [ { home.sessionVariables = cfg.env; } ] else [ ]);
+  ++ (if host.extraHome != { } then [ host.extraHome ] else [ ])
+  ++ (if host.env != { } then [ { home.sessionVariables = host.env; } ] else [ ]);
 }

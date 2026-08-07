@@ -1,11 +1,11 @@
 {
   pkgs,
-  cfg,
+  host,
   ...
 }:
 
 let
-  inherit (cfg) password type;
+  inherit (host) password type;
   validSha512 = builtins.match ''\$6\$.+\$.+'' password;
 in
 pkgs.runCommand "check-password" { } (

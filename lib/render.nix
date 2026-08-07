@@ -1,4 +1,4 @@
-{ cfg, lib }:
+{ host, lib }:
 
 let
   defaultFontFamily = "JetBrainsMono Nerd Font";
@@ -7,14 +7,14 @@ rec {
   renderDomainOutputsFor =
     themeName:
     let
-      themesLib = cfg.scan.themes;
+      themesLib = host.scan.themes;
       checkHelpers = import ../checks/theme/assertions.nix {
         inherit lib;
         theme = themesLib.get themeName;
         inherit themeName;
       };
       domainRendererPaths = map (e: "${e.path}/render.nix") (
-        lib.filter (e: e.hasRender or false) cfg.scan.domains.homeEntries
+        lib.filter (e: e.hasRender or false) host.scan.domains.homeEntries
       );
     in
     lib.concatLists (
@@ -28,10 +28,10 @@ rec {
             checkHelpers
             ;
           fontFamily = defaultFontFamily;
-          monitors = cfg.monitors or { };
-          db = cfg.db or { };
-          sshAgent = cfg.sshAgent or { };
-          homeDirectory = "/home/${cfg.username}";
+          monitors = host.monitors or { };
+          db = host.db or { };
+          sshAgent = host.sshAgent or { };
+          homeDirectory = "/home/${host.username}";
         }
       ) domainRendererPaths
     );

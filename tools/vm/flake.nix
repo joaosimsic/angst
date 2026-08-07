@@ -16,6 +16,7 @@
       flake-utils,
     }:
     let
+      defaultHost = "vm";
       eachSystem =
         _rootFlake:
         flake-utils.lib.eachDefaultSystem (
@@ -37,8 +38,6 @@
               cargo = rustToolchain;
               rustc = rustToolchain;
             };
-
-            defaultHost = "nixos";
 
             vm-package = rustPlatform.buildRustPackage {
               pname = "vm";
@@ -270,5 +269,6 @@
     eachSystem self
     // {
       mkOutputs = eachSystem;
+      defaultVmHost = defaultHost;
     };
 }

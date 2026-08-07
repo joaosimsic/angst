@@ -1,17 +1,17 @@
 {
   self,
   inputs,
-  hostCfgs,
+  hostDefs,
   themesLib,
 }:
 
 let
   inherit (inputs.nixpkgs) lib;
 
-  cfgList = builtins.attrValues hostCfgs;
-  nixosHosts = builtins.filter (h: h.type == "nixos") cfgList;
+  hostList = builtins.attrValues hostDefs;
+  nixosHosts = builtins.filter (h: h.type == "nixos") hostList;
   firstNixOS = if nixosHosts != [ ] then builtins.elemAt nixosHosts 0 else null;
-  firstHost = if cfgList != [ ] then builtins.elemAt cfgList 0 else null;
+  firstHost = if hostList != [ ] then builtins.elemAt hostList 0 else null;
   representative = if firstNixOS != null then firstNixOS else firstHost;
 
   defaultSystem =
@@ -25,11 +25,11 @@ let
   };
 
   profilesFor =
-    cfg:
+    host:
     import ../../profiles/default.nix {
-      inherit (cfg) profiles;
+      inherit (host) profiles;
       inherit lib;
-      inherit (cfg) scan;
+      inherit (host) scan;
     };
 
   mkHome = import ../build/mkHome.nix;
@@ -54,7 +54,7 @@ let
   };
 
   render = import ../render.nix {
-    cfg =
+    host =
       if representative != null then
         representative
       else
@@ -77,7 +77,7 @@ let
       inputs
       vmOutputs
       ;
-    cfg = representative;
+    host = representative;
     angstCli = angstTool;
   };
 
@@ -89,20 +89,20 @@ let
       lib
       render
       ;
-    cfg = representative;
+    host = representative;
   };
 in
 rec {
   nixosConfigurations = builtins.listToAttrs (
     map (
-      cfg:
+      host:
       let
-        p = profilesFor cfg;
+        p = profilesFor host;
       in
       {
-        name = cfg.hostname;
+        name = host.hostname;
         value = mkHost {
-          inherit self inputs cfg;
+          inherit self inputs host;
           hmModules = p.hm;
           nixosModules = p.nixos;
         };
@@ -113,18 +113,18 @@ rec {
   homeConfigurations =
     builtins.listToAttrs (
       map (
-        cfg:
+        host:
         let
-          p = profilesFor cfg;
+          p = profilesFor host;
         in
         {
-          name = "${cfg.username}@${cfg.hostname}";
+          name = "${host.username}@${host.hostname}";
           value = mkHome {
-            inherit self inputs cfg vmTool shellTool angstTool;
+            inherit self inputs host vmTool shellTool angstTool;
             hmModules = p.hm;
           };
         }
-      ) cfgList
+      ) hostList
     )
     // (if representative != null then (
       let
@@ -134,7 +134,7 @@ rec {
       {
         "${r.username}" = mkHome {
           inherit self inputs vmTool shellTool angstTool;
-          cfg = r;
+          host = r;
           hmModules = p.hm;
         };
 
@@ -146,7 +146,7 @@ rec {
           in
           mkHome {
             inherit self inputs vmTool shellTool angstTool;
-            cfg = r;
+            host = r;
             hmModules = p.hm;
             themeOverride = overrideTheme;
             shellOverride = "";
@@ -154,14 +154,14 @@ rec {
 
         login-shell-valid = mkHome {
           inherit self inputs vmTool shellTool angstTool;
-          cfg = r;
+          host = r;
           hmModules = p.hm;
           shellOverride = "sh";
         };
 
         login-shell-invalid = mkHome {
           inherit self inputs vmTool shellTool angstTool;
-          cfg = r;
+          host = r;
           hmModules = p.hm;
           shellOverride = "__angst_nonexistent_shell__";
         };

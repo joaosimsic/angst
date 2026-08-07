@@ -1,6 +1,6 @@
 {
   pkgs,
-  cfg,
+  host,
   inputs,
   angstCli,
   vmOutputs,
@@ -8,8 +8,8 @@
 }:
 
 let
-  allToolchainPkgs = cfg.scan.allToolchainPackages;
-  treesitter = cfg.scan.treesitter;
+  allToolchainPkgs = host.scan.allToolchainPackages;
+  treesitter = host.scan.treesitter;
 
   treesitterShellHook = ''
     mkdir -p ~/.local/share/tree-sitter
@@ -21,7 +21,7 @@ let
 
   shellDevHook = pkgs.writeText "shell-dev-hook" ''
     export VM_SSH_PORT=2222
-    export NIX_DEFAULT_TARGET_HOST=${cfg.hostname}
+    export NIX_DEFAULT_TARGET_HOST=${inputs.vm.defaultVmHost}
     export CARGO_BUILD_TARGET_DIR="$PWD/target"
     if [ -z "$SSH_AUTH_SOCK" ]; then
       eval $(ssh-agent -s) > /dev/null
@@ -48,9 +48,9 @@ let
     ]
     ++ allToolchainPkgs
     ++ [
-      vmOutputs.packages.${cfg.system}.wrapped
-      vmOutputs.packages.${cfg.system}.vm-run
-      vmOutputs.packages.${cfg.system}.res
+      vmOutputs.packages.${host.system}.wrapped
+      vmOutputs.packages.${host.system}.vm-run
+      vmOutputs.packages.${host.system}.res
     ];
 in
 {
@@ -74,7 +74,7 @@ in
     };
 
     vm = pkgs.mkShell {
-      inputsFrom = [ inputs.vm.devShells.${cfg.system}.default ];
+      inputsFrom = [ inputs.vm.devShells.${host.system}.default ];
       packages = fullDevPackages;
       shellHook = "${treesitterShellHook}\n. ${shellDevHook}";
     };

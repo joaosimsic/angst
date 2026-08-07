@@ -32,48 +32,31 @@
       themesLib = import ./themes/default.nix { inherit lib; };
       resolve = import ./lib/resolve.nix;
 
-      hostsDir = ./hosts;
+      discoverHosts = import ./lib/discover.nix { inherit lib; };
+      hostEntries = discoverHosts ./hosts;
 
-      hostEntries =
+      mkHost =
+        { domain, dir, ... }:
         let
-          topEntries = builtins.readDir hostsDir;
-
-          processTopEntry = name: type:
-            if type != "directory" then [ ] else
-            let
-              subDir = hostsDir + "/${name}";
-              subEntries = builtins.readDir subDir;
-            in
-            if subEntries ? "default.nix" && subEntries."default.nix" == "regular" then
-              [{ hostname = name; domain = null; dir = name; }]
-            else
-              lib.mapAttrsToList (hostName: hostType:
-                if hostType == "directory" then
-                  let
-                    hostDir = subDir + "/${hostName}";
-                    hostEntries' = builtins.readDir hostDir;
-                  in
-                  if hostEntries' ? "default.nix" && hostEntries'."default.nix" == "regular" then
-                    { hostname = hostName; domain = name; dir = "${name}/${hostName}"; }
-                  else null
-                else null
-              ) subEntries;
+          hostDecl = import (./hosts + "/${dir}");
         in
-        lib.filter (x: x != null) (lib.flatten (lib.mapAttrsToList processTopEntry topEntries));
+        (resolve {
+          inherit inputs themesLib domain;
+          decl = hostDecl;
+        }).host;
 
-      mkCfg = { domain, dir, ... }:
-        let
-          rawConfig = import (hostsDir + "/${dir}");
-        in
-        (resolve { inherit inputs themesLib domain; config = rawConfig; }).cfg;
-
-      hostCfgs = builtins.listToAttrs (map (h: { name = h.hostname; value = mkCfg h; }) hostEntries);
+      hostDefs = builtins.listToAttrs (
+        map (h: {
+          name = h.hostname;
+          value = mkHost h;
+        }) hostEntries
+      );
     in
     import ./lib/flake/outputs.nix {
       inherit
         self
         inputs
-        hostCfgs
+        hostDefs
         themesLib
         ;
     };
