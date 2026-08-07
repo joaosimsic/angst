@@ -171,7 +171,9 @@ inputs.nixpkgs.lib.nixosSystem {
       };
     }
     ({ config, lib, ... }: {
-      systemd.services."home-manager-${host.username}".before = lib.mkIf (!config.angst.isQemuVm) [
+      systemd.services."home-manager-${host.username}".before = [
+        "sshd.service"
+      ] ++ lib.optionals (!config.angst.isQemuVm) [
         "getty@.service"
         "serial-getty@.service"
       ];

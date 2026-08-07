@@ -150,7 +150,10 @@
 
               echo "Building VM for host '$TARGET_HOST' (user: $SSH_USER)..."
               git -C "$FLAKE_DIR" update-index -q --refresh 2>/dev/null || true
-              nix build ".#nixosConfigurations.''${TARGET_HOST}.config.system.build.vm" --refresh --no-write-lock-file 2>&1
+              if ! nix build ".#nixosConfigurations.''${TARGET_HOST}.config.system.build.vm" --refresh --no-write-lock-file 2>&1; then
+                echo "Error: VM build failed"
+                exit 1
+              fi
 
               RUNNER="result/bin/run-$TARGET_HOST-vm"
               if [ ! -f "$RUNNER" ]; then
@@ -202,15 +205,6 @@
                   break
                 fi
                 sleep 1
-              done
-
-              echo "Waiting for home-manager to finish..."
-              for i in $(seq 1 45); do
-                if ssh $SSH_OPTS "$SSH_USER@localhost" "test -f ~/.config/nushell/env.nu" 2>/dev/null; then
-                  echo "Home-manager ready."
-                  break
-                fi
-                sleep 2
               done
 
               exec ssh $SSH_OPTS "$SSH_USER@localhost"
