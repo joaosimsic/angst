@@ -4,13 +4,15 @@ angst is a fully pure Nix flake. No `--impure`, no env vars, no gitignored confi
 
 ## Philosophy
 
-**Disposability.** A host is a directory in git. Wipe the disk, reinstall NixOS, `nixos-rebuild switch --flake .#nixos`, enter your password, and you're back where you were. Nothing lives outside the repo. The only out-of-band artifact is the master password, which lives in your head. Even browser profiles are declared paths — they survive on `/persist` but aren't required to reconstruct the system.
+**Disposability.** A host is a directory in git. Wipe the disk, reinstall NixOS, `nixos-rebuild switch --flake .#nixos`, and you're back where you were. Nothing lives outside the repo. The only out-of-band artifact is the master password, which lives in your head. Even browser profiles are declared paths — they survive on `/persist` but aren't required to reconstruct the system.
 
 **Purity.** The flake is a function of `git ls-files` only. `builtins.getEnv`, `builtins.currentTime`, and friends return nothing. `nix flake check` works bare. `nixos-rebuild list-generations` and `--rollback` are reliable. CI Just Works.
 
-**Tracked config, encrypted secrets.** Machine identity (hostname, username, theme, profiles, monitors, toolchains) lives in plain Nix in `hosts/<hostname>/default.nix` — version-controlled, diffable, reviewable. Secrets (master password, DB credentials, API tokens) live in sops-encrypted YAML files, encrypted to age keys. Age private keys are passphrase-encrypted with the master password and tracked in git. Keys are scoped by trust tier — personal machines and servers use separate age identities so that compromising a server doesn't expose personal secrets. No per-machine enrollment.
+**Tracked config, encrypted secrets.** Machine identity (hostname, username, theme, profiles, monitors, toolchains) lives in plain Nix in `hosts/<domain>/<hostname>/default.nix` — version-controlled, diffable, reviewable. Secrets (DB credentials, API tokens) live in per-host sops-encrypted YAML files. Age keys are **never stored** — they are derived deterministically from the master password at activation time using a KDF keyed by domain. Personal machines and servers derive separate age identities from the same password so that compromising a server doesn't expose personal secrets. The repo is safe to make public — it contains no key material of any kind (not even passphrase-encrypted).
 
-**Zero ceremony.** Adding a machine is `mkdir hosts/<name>` + write `default.nix`. The flake auto-discovers hosts. No flake.nix edits, no `--override-input`, no env vars, no key enrollment. Commands are bare:
+**Secrets are optional.** The system builds and boots fully functional without secrets. Tools, desktop, dotfiles, profiles — everything works. Secrets are added later, after the machine is running, via a one-time bootstrap command.
+
+**Zero ceremony.** Adding a machine is `mkdir -p hosts/<domain>/<name>` + write `default.nix`. The flake auto-discovers hosts recursively. No flake.nix edits, no `--override-input`, no env vars, no key enrollment. Commands are bare:
 
 ```bash
 sudo nixos-rebuild switch --flake .#nixos
@@ -25,18 +27,27 @@ nix run .#vm -- --host nixos start
 
 ```
 angst/
-├── flake.nix                   # auto-discovers hosts/ directory
+├── flake.nix                   # auto-discovers hosts/ directory (recursive)
 ├── hosts/
-│   ├── secrets.yaml            # shared sops secrets for personal machines
-│   ├── secrets-server.yaml     # shared sops secrets for servers
-│   ├── age-personal.key        # age private key (personal tier), passphrase-encrypted
-│   ├── age-server.key          # age private key (server tier), passphrase-encrypted
-│   ├── nixos/                  # NixOS host (personal tier)
-│   │   ├── default.nix         #   machine identity (tracked, plain text)
-│   │   ├── hardware.nix        #   nixos-generate-config output (tracked)
-│   │   └── disk.nix            #   disko layout (optional, tracked)
-│   ├── debian/                 # non-NixOS (home-manager) host, server tier
-│   │   └── default.nix
+│   ├── personal/
+│   │   ├── nixos/
+│   │   │   ├── default.nix     #   machine identity (tracked, plain text)
+│   │   │   ├── hardware.nix    #   nixos-generate-config output (tracked)
+│   │   │   ├── disk.nix        #   disko layout (optional, tracked)
+│   │   │   └── secrets.yaml    #   per-host sops secrets (personal domain)
+│   │   ├── thonkpad/
+│   │   │   ├── default.nix
+│   │   │   └── secrets.yaml
+│   │   └── linux/              # non-NixOS home-manager host, personal domain
+│   │       ├── default.nix
+│   │       └── secrets.yaml
+│   ├── servers/
+│   │   ├── vps/
+│   │   │   ├── default.nix
+│   │   │   └── secrets.yaml    # per-host sops secrets (server domain)
+│   │   └── debian/
+│   │       ├── default.nix
+│   │       └── secrets.yaml
 │   └── ci/                     # CI test host (minimal, no secrets)
 │       └── default.nix
 ├── lib/
@@ -52,24 +63,24 @@ angst/
 └── .sops.yaml                  # age public keys, scoped by path pattern (personal + server)
 ```
 
-Hosts belong to a **secrets tier** — `personal` or `server` — which determines which age key and shared secrets file they use. Each host can override with a per-host `hosts/<hostname>/secrets.yaml`, which takes precedence over the tier's shared file. Per-host secrets files are optional — most hosts share the same secrets within their tier.
+Hosts are organized by **security domain** — `hosts/personal/` or `hosts/servers/` — which determines the age key derivation salt and sops encryption rules. The domain is implicit from the directory path: all hosts under `hosts/personal/` derive the personal age key, all hosts under `hosts/servers/` derive the server age key. No config field is needed. Each host has its own `secrets.yaml` — there are no shared secrets files. Per-host secrets follow the domain directory structure naturally.
 
-Age private keys (`hosts/age-personal.key`, `hosts/age-server.key`) are passphrase-encrypted with the same master password, generated once, and tracked in git. On a fresh machine, activation prompts for the password, decrypts the identity, and caches it on persistent storage. On subsequent boots, the cached identity is used silently.
+**There are no age key files anywhere in the repo.** No `age.key`, no `.age` files, no passphrase-encrypted blobs. The repo contains only age **public** keys (in `.sops.yaml`, safe to track) and sops-encrypted secrets (also safe — encrypted at rest). The private keys live in volatile storage only: derived on demand from the master password, cached on persistent storage after first derivation, never written to the repo.
 
 ## How it works
 
 ### Host auto-discovery
 
-`flake.nix` scans `hosts/` with `builtins.readDir`. Every subdirectory is a host (files like `secrets.yaml`, `secrets-server.yaml`, and `age-*.key` are skipped — only directories count). The host's `default.nix` is imported, enriched by `lib/read-config.nix` (defaults, domain scanning, toolchain resolution, theme indexing), and passed to `lib/flake/outputs.nix`, which builds `nixosConfigurations.<hostname>` for NixOS hosts and `homeConfigurations.<user>@<hostname>` for all hosts.
+`flake.nix` scans `hosts/` recursively using `builtins.readDir`. Security domain directories (`personal/`, `servers/`) and top-level entries (like `ci/`) are scanned; leaf directories with a `default.nix` become hosts. The host's `default.nix` is imported, enriched by `lib/read-config.nix` (defaults, domain scanning, toolchain resolution, theme indexing), and passed to `lib/flake/outputs.nix`, which builds `nixosConfigurations.<hostname>` for NixOS hosts and `homeConfigurations.<user>@<hostname>` for all hosts. The security domain is derived from the parent directory path — no config field needed.
 
 Adding a machine:
 
 ```bash
-mkdir hosts/laptop
-cp hosts/nixos/default.nix hosts/laptop/default.nix
-# edit hosts/laptop/default.nix — change hostname, monitors, profiles, etc.
-# create hosts/laptop/hardware.nix (nixos-generate-config)
-git add hosts/laptop
+mkdir -p hosts/personal/laptop
+cp hosts/personal/nixos/default.nix hosts/personal/laptop/default.nix
+# edit hosts/personal/laptop/default.nix — change hostname, monitors, profiles, etc.
+# create hosts/personal/laptop/hardware.nix (nixos-generate-config)
+git add hosts/personal/laptop
 ```
 
 No flake.nix edits. No key enrollment. The new host appears in `nixosConfigurations.laptop`.
@@ -77,7 +88,7 @@ No flake.nix edits. No key enrollment. The new host appears in `nixosConfigurati
 ### Config → cfg pipeline
 
 ```
-hosts/<hostname>/default.nix  (plain Nix attrset, tracked)
+hosts/<domain>/<hostname>/default.nix  (plain Nix attrset, tracked)
     │
     ▼
 lib/read-config.nix           (pure function)
@@ -96,51 +107,88 @@ cfg                            (enriched attrset)
 
 ### Secrets with sops-nix
 
-Secrets live in shared YAML files, encrypted to tier-scoped age keys. A host-specific `hosts/<hostname>/secrets.yaml` can override the shared file (takes precedence if present). Otherwise, all hosts in a tier read from their shared file.
+Each host has its own `hosts/<domain>/<hostname>/secrets.yaml`, encrypted to the domain's age public key. Secrets files are safe to track in git — they're encrypted at rest. There are no shared secrets files — each host owns its data. Adding a server host under `hosts/servers/` automatically uses the server age key; adding a personal host under `hosts/personal/` uses the personal key.
 
-**Trust tiers.** Two age key pairs exist:
+**Security domains.** Two age key pairs exist conceptually, but their private halves are never stored — only the public keys live in `.sops.yaml`:
 
-- `hosts/age-personal.key` — for personal machines (desktop, laptop). Secrets in `hosts/secrets.yaml`.
-- `hosts/age-server.key` — for servers (Debian VPS, CI runners). Secrets in `hosts/secrets-server.yaml`.
+- Personal domain — `hosts/personal/*/secrets.yaml` are encrypted to the personal age public key. Used for desktop machines, laptops. Contains serious secrets: personal API tokens, DB credentials, authentication material.
+- Server domain — `hosts/servers/*/secrets.yaml` are encrypted to the server age public key. Used for VPS, CI runners. Contains operational secrets: deploy tokens, service credentials. If a server is compromised and its cached derived key is leaked, personal secrets are unaffected.
 
-Both are passphrase-encrypted with the same master password. The public keys are listed in `.sops.yaml`, scoped by path pattern. A server compromise that exposes the cached server age key decrypts only `hosts/secrets-server.yaml` — personal secrets are unaffected.
+Both private keys are derived from the same master password using different domain-specific salts. The public keys are in `.sops.yaml`, scoped by domain path pattern, and are safe to commit to a public repo.
+
+**The master password is the root of trust.** It is never stored anywhere — not in secrets, not in a hash field, not on disk. It exists only in the user's head and temporarily in RAM during activation. All keys flow from it:
 
 ```
-hosts/age-<tier>.key             (age private key, passphrase-encrypted)
-        │ encrypted with: master password (in your head)
-        │ tracked in git
-        │ scoped: personal or server tier
-        │
-        ▼
-hosts/secrets.yaml               (sops-encrypted, personal tier)
-hosts/secrets-server.yaml        (sops-encrypted, server tier)
-        │ encrypted to: the tier's age public key
-        │
-        ▼
-sops-nix at activation           (reads decrypted identity → decrypts secrets)
+master password (from user, in RAM only)
+    │
+    ├──► KDF(password, "angst-personal-v1")  → age identity (personal domain)
+    │         │ derived at activation, cached on persistent storage
+    │         │ sops-nix uses this to decrypt personal secrets
+    │         │ verification: derived public key matches .sops.yaml
+    │
+    ├──► KDF(password, "angst-server-v1")    → age identity (server domain)
+    │         │ only derived on server hosts
+    │         │ same mechanism, different salt
+    │
+    ├──► mkpasswd -m sha-512                 → login password hash (NixOS)
+    │
+    └──► ssh-keygen -P                       → SSH key passphrase
 ```
 
-**Password prompt.** Activation uses interactive `read -s` to prompt for the master password — no environment variables, no `$ANGST_PASSWORD`. This avoids leaking the password through process listings, shell tracing, or systemd journals.
+**How derivation works.** The KDF takes the master password, a domain-specific salt (e.g. `"angst-personal-v1"`), and produces 32 deterministic bytes. Those bytes are clamped to form a valid X25519 scalar, then Bech32-encoded as an age private key (`AGE-SECRET-KEY-1...`). The corresponding public key (`age1...`) is derived and stored in `.sops.yaml`. Same password + same salt always produces the same key. Different salts produce unrelated keys.
 
-**Activation flow.** On every `switch`, a pre-activation step decrypts the age identity:
+**Password verification is implicit.** When the derived private key is used to decrypt secrets, sops-nix either succeeds (password was correct, derived key matches the public key in `.sops.yaml`) or fails (password was wrong, derived key is a different key). No separate hash check is needed.
 
-1. **Cache hit.** A decrypted identity exists on persistent storage (`/persist/angst/age-key` on NixOS, `~/.config/angst/age-key` on non-NixOS). Used directly. No prompt.
+**Password prompt.** Activation uses interactive `read -s` to prompt for the master password — no environment variables, no `$ANGST_PASSWORD`. This avoids leaking the password through process listings, shell tracing, or systemd journals. The prompt only appears when the derived age key is not already cached, or when running the explicit bootstrap command.
 
-2. **Cache miss (fresh machine).** Activation prompts for the master password (interactive `read -s`). The password decrypts `hosts/age-<tier>.key` into the cache location. sops-nix uses it to decrypt secrets. The password from decrypted secrets is verified against the provided password. If they don't match, activation fails.
+**Activation flow.** On every `switch`, sops-nix checks for a cached age identity:
 
-Once secrets are decrypted, the master password is available. It is used to:
+1. **Cache hit.** A derived age identity exists on persistent storage (`/persist/angst/age-key` on NixOS, `~/.config/angst/age-key` on non-NixOS). sops-nix reads it directly. No prompt. Secrets decrypt silently.
+
+2. **No secrets file.** If `secrets.yaml` doesn't exist for this host, sops-nix is configured with no default sops file. No key derivation happens. No prompt. The system runs normally without secrets.
+
+3. **Cache miss, secrets exist.** Activation prompts for the master password (`read -s`), derives the domain's age identity via KDF, writes it to the cache location, and sops-nix proceeds to decrypt secrets. The derived identity is stored at the cache path for subsequent boots.
+
+Once the password is in RAM (from the prompt), it is also used to:
 
 - Derive the SHA-512 login password hash (NixOS only)
-- Set the SSH key passphrase (if the key exists)
+- Verify and update the SSH key passphrase
 - Provision the SSH key if missing
+
+The password is cleared from variables after all operations complete (`unset password`). It is never read from secrets — it comes from the user.
+
+### Two-phase bootstrap: system first, secrets later
+
+The system does not require secrets to build or boot. The bootstrap has two phases:
+
+**Phase 1: Install the system.**
+
+```bash
+git clone <repo-url>
+sudo nixos-rebuild switch --flake .#nixos
+# or for non-NixOS:
+home-manager switch --flake .#joao@linux
+```
+
+The system comes up fully functional — tools, desktop, dotfiles, profiles, domain configs, everything. No secrets yet. No password prompt. Login with the SHA-512 hash from the host config (or your host OS's existing password on non-NixOS).
+
+**Phase 2: Add secrets.**
+
+```bash
+angst bootstrap-secrets --host nixos
+```
+
+This command prompts for the master password, derives the domain's age identity, verifies it against `.sops.yaml`, caches it on persistent storage, creates an empty `hosts/<domain>/<hostname>/secrets.yaml` encrypted with sops, provisions the SSH key with the password as passphrase, and updates the login password hash on NixOS. The user then edits `secrets.yaml` with `sops` to add their secrets and runs `nixos-rebuild switch` again. From that point on, sops-nix decrypts secrets on every activation.
+
+This two-phase design means you never need secrets available at install time. You can set up a new machine, get comfortable with the tooling, and add secrets whenever convenient.
 
 ### SSH key enforcement at activation
 
-The SSH key is decoupled from secrets. It's passphrase-protected with the master password but is not the secrets decryptor. On every `switch`, after sops decrypts the master password, activation scripts verify and enforce:
+The SSH key is decoupled from secrets. It's passphrase-protected with the master password but is not the secrets decryptor. On every `switch`, activation scripts verify and enforce:
 
-1. **Key exists.** `~/.ssh/id_ed25519` must exist. If missing, it's generated with the master password as passphrase.
+1. **Key exists.** `~/.ssh/id_ed25519` must exist. If missing, it's generated with the master password as passphrase (requires a prior password prompt — either from a config with secrets triggering the flow, or from `angst bootstrap-secrets`).
 
-2. **Passphrase matches.** `ssh-keygen -y -P "$password" -f ~/.ssh/id_ed25519` must succeed. If the key has no passphrase or a different one, activation sets it with `ssh-keygen -p`. Changing the master password in secrets and switching applies the new passphrase to every machine's key.
+2. **Passphrase matches.** `ssh-keygen -y -P "$password" -f ~/.ssh/id_ed25519` must succeed. If the key has no passphrase or a different one, activation sets it with `ssh-keygen -p`.
 
 **Host key is independent.** The SSH host key (`/etc/ssh/ssh_host_ed25519`) is never copied from the user key. These serve different purposes — user keys authenticate outgoing connections, host keys authenticate incoming connections to sshd. Coupling them would mean a compromised user key can impersonate the server. On NixOS, the host key is generated by sshd and lives on `/persist/etc/ssh/`. On non-NixOS, it's managed by the host OS. angst only manages the user key.
 
@@ -155,9 +203,9 @@ NixOS hosts can declare `persist.enable = true` to run on tmpfs `/`. The root fi
 /persist    (persistent partition — deliberate state)
     ├── etc/ssh/                host identity
     ├── etc/machine-id          stable machine ID
-    ├── angst/age-key           cached decrypted age identity (no prompt on reboot)
+    ├── angst/age-key           cached derived age identity (no prompt on reboot)
     └── home/<user>/
-        ├── .ssh/               SSH key (no passphrase prompt after first boot)
+        ├── .ssh/               SSH key (passphrase-protected with master password)
         ├── .mozilla/           Firefox sessions, cookies, accounts
         ├── .config/google-chrome/  Chromium
         └── .local/share/keyrings/   libsecret passwords
@@ -169,17 +217,20 @@ Hosts with `persist.enable = false` use conventional filesystems. Non-NixOS host
 
 ```
 1. Reinstall NixOS
-2. Clone the repo
+2. Clone the repo (public or private, no key material inside)
 3. sudo nixos-rebuild switch --flake .#nixos
-4. Enter master password when prompted
-5. Done — everything rebuilt from the repo alone
+4. System boots fully — tools, desktop, everything works
+5. angst bootstrap-secrets --host nixos → enter master password
+6. sops hosts/<domain>/<hostname>/secrets.yaml → add secrets
+7. sudo nixos-rebuild switch --flake .#nixos
+8. Done — secrets are live, SSH key provisioned, login set
 ```
 
-The age identity is passphrase-decrypted into the cache, secrets are decrypted, SSH key is provisioned, login password is set. The only thing you needed was the password in your head.
+The only out-of-band artifact is the password in your head. The repo itself is safe to clone on any machine, public or private.
 
 ## Host config reference
 
-### `hosts/<hostname>/default.nix` (NixOS)
+### `hosts/<domain>/<hostname>/default.nix` (NixOS)
 
 ```nix
 {
@@ -190,7 +241,6 @@ The age identity is passphrase-decrypted into the cache, secrets are decrypted, 
   theme = "miasma";
   profiles = ["base" "desktop" "development"];
   toolchains = "*";          # "*" for all, or ["bash" "nix" "php"] for minimal
-  secretsTier = "personal";  # "personal" (default) | "server" — selects age key + secrets file
 
   monitors = {
     primary = {
@@ -226,7 +276,7 @@ The age identity is passphrase-decrypted into the cache, secrets are decrypted, 
 }
 ```
 
-### `hosts/<hostname>/default.nix` (home-manager)
+### `hosts/<domain>/<hostname>/default.nix` (home-manager)
 
 ```nix
 {
@@ -237,7 +287,6 @@ The age identity is passphrase-decrypted into the cache, secrets are decrypted, 
   theme = "miasma";
   profiles = ["base" "desktop" "development"];
   toolchains = "*";
-  secretsTier = "personal";   # "personal" (default) | "server" — selects age key + secrets file
 
   monitors = { };             # safe to leave empty — i3 auto-detects
 
@@ -256,12 +305,11 @@ The age identity is passphrase-decrypted into the cache, secrets are decrypted, 
 }
 ```
 
-### `hosts/secrets.yaml` (personal tier)
+### `hosts/personal/<hostname>/secrets.yaml`
 
-Shared secrets for personal machines, encrypted to the personal age key via sops.
+Per-host secrets for a personal machine, encrypted to the personal age public key via sops.
 
 ```yaml
-password: "master-password"       # plaintext — SSH passphrase + system login
 db:
   connections:
     dev:
@@ -270,12 +318,11 @@ env:
   GITHUB_TOKEN: "ghp_..."
 ```
 
-### `hosts/secrets-server.yaml` (server tier)
+### `hosts/servers/<hostname>/secrets.yaml`
 
-Shared secrets for servers, encrypted to the server age key via sops. Contains only what servers need — API tokens, DB credentials, but no personal desktop keys.
+Per-host secrets for a server, encrypted to the server age public key via sops. Contains only what servers need — API tokens, DB credentials, but no personal desktop keys.
 
 ```yaml
-password: "server-password"       # may differ from personal if desired
 db:
   connections:
     prod:
@@ -284,31 +331,69 @@ env:
   SOME_API_KEY: "sk-..."
 ```
 
-The `password` field is the master password: used as the SSH key passphrase and as the system login password. For NixOS, a SHA-512 hash is derived at activation time (`mkpasswd -m sha-512 "$password"`) so it never appears as plaintext in a config file.
+The master password is never stored in secrets — it exists only in the user's head and temporarily in RAM during activation. Verification is implicit: if the derived age key successfully decrypts secrets, the password was correct.
 
 ### `.sops.yaml`
 
 ```yaml
 creation_rules:
-  - path_regex: hosts/secrets-server\.yaml$
+  - path_regex: hosts/servers/.*/secrets\.yaml$
     age: age1...<server-age-public-key>
-  - path_regex: hosts/.*/secrets\.yaml$
+  - path_regex: hosts/personal/.*/secrets\.yaml$
     age: age1...<personal-age-public-key>
 ```
 
-The server rule is listed first — it matches the dedicated server secrets file. The wildcard rule matches per-host overrides (all personal by default). If a server host needs per-host secrets, its `secrets.yaml` would need an explicit `sops` metadata override or be encrypted to the server key manually.
+Rules are ordered by priority (servers first). Each domain gets its own age key. Because the path pattern is anchored on the domain directory, there's no ambiguity — a host under `hosts/servers/` always uses the server key.
+
+**Public keys are safe to commit.** These are public keys — they can only encrypt, never decrypt. The corresponding private keys are never stored anywhere; they are derived from the master password at activation time.
 
 ## Bootstrap (one-time per machine)
 
+### Initial repo setup (one-time, by the repo owner)
+
+Before any machine can use secrets, the repo owner must seed `.sops.yaml` with the age public keys and set the login password hash:
+
 ```bash
-# That's it. No key generation. No enrollment. No sops updatekeys.
-# On first switch, activation prompts for the master password:
-sudo nixos-rebuild switch --flake .#nixos
-# Or for non-NixOS:
-home-manager switch --flake .#joao@<hostname>
+# Derive and print the personal age public key
+angst derive-key --domain personal
+# → age1... (paste into .sops.yaml)
+# Derive and print the server age public key
+angst derive-key --domain servers
+# → age1... (paste into .sops.yaml)
+
+# Hash the master password for login (NixOS hosts)
+mkpasswd -m sha-512
+# → $6$... (set as password in host config)
+
+# Commit .sops.yaml and host configs
 ```
 
-The first activation detects no cached age identity, prompts for the master password (interactive `read -s`), decrypts the appropriate `hosts/age-<tier>.key` based on the host's tier, caches it, decrypts secrets, provisions the SSH key, and sets the login password. Every subsequent switch is silent.
+### Fresh machine bootstrap (per machine)
+
+```bash
+# Phase 1: install the system (no secrets needed)
+git clone <repo-url>
+sudo nixos-rebuild switch --flake .#nixos
+# or: home-manager switch --flake .#joao@linux
+
+# Phase 2: bootstrap secrets (whenever ready)
+angst bootstrap-secrets --host nixos
+# → prompts for master password
+# → derives domain age identity, verifies against .sops.yaml
+# → caches derived identity on persistent storage
+# → creates empty secrets.yaml encrypted with sops
+# → provisions SSH key with master password as passphrase
+# → updates login password hash (NixOS)
+
+# Edit secrets
+sops hosts/<domain>/<hostname>/secrets.yaml
+# → add your API tokens, DB passwords, etc.
+
+# Apply
+sudo nixos-rebuild switch --flake .#nixos
+```
+
+Every subsequent `switch` is silent — the cached derived age identity decrypts secrets without prompting.
 
 ## Non-NixOS (home-manager) hosts
 
@@ -325,11 +410,11 @@ All non-NixOS distros are treated identically — Arch, Debian, Mint, Fedora, et
 - Nix (any installation method: official installer, nix-portable, distro package)
 - home-manager (via nix or as a standalone)
 
-No SSH key is required before the first switch — the activation script provisions it using the master password from secrets.
+No SSH key is required before the first switch — the bootstrap command provisions it.
 
 ### Server hosts (Debian, VPS, etc.)
 
-Server hosts use `type = "home-manager"` and the `server` profile. They belong to the server secrets tier — using `hosts/age-server.key` and `hosts/secrets-server.yaml`. The SSH server (sshd) is managed by the host OS; angst only manages the SSH client config and the user key.
+Server hosts use `type = "home-manager"` and the `server` profile. They live under `hosts/servers/` — the security domain is implicit from the path. The SSH server (sshd) is managed by the host OS; angst only manages the SSH client config and the user key.
 
 ```nix
 {
@@ -340,8 +425,6 @@ Server hosts use `type = "home-manager"` and the `server` profile. They belong t
   theme = "monochrome";
   profiles = ["base" "server"];
   toolchains = ["nix"];
-
-  secretsTier = "server";    # uses age-server.key + secrets-server.yaml
 
   monitors = { };
   db.connections = { };
@@ -395,77 +478,116 @@ angst watch   --host nixos
 
 ### Change the master password
 
+Changing the master password changes the derived age keys, so all secrets must be re-encrypted:
+
 ```bash
-# 1. Decrypt current secrets and re-encrypt with the new password
-sops hosts/secrets.yaml
-# Change the password field, save, exit
+# 1. On any machine with the current password, decrypt all secrets
+#    and re-encrypt with the new derived keys
 
-# 2. Re-encrypt both age identities with the new passphrase
-age -p -o hosts/age-personal.key < decrypted-personal-key
-age -p -o hosts/age-server.key < decrypted-server-key
-# Enter new master password when prompted
+# 2. Re-derive the public keys with the new password
+angst derive-key --domain personal   # enter NEW password → update .sops.yaml
+angst derive-key --domain servers    # enter NEW password → update .sops.yaml
 
-# 3. Clear cached identities on all machines so they prompt for the new password
+# 3. Re-encrypt all secrets with sops
+for f in hosts/personal/*/secrets.yaml hosts/servers/*/secrets.yaml; do
+  sops updatekeys "$f"
+done
+
+# 4. Update login password hash
+mkpasswd -m sha-512   # enter NEW password → update host configs
+
+# 5. Clear cached age identities on all machines
+rm /persist/angst/age-key            # NixOS
+rm ~/.config/angst/age-key           # non-NixOS
+
+# 6. Commit
 git commit -am "rotate master password"
 ```
 
-After committing, the next `switch` on each machine prompts for the new password and re-caches the identity. The SSH key passphrase is also updated.
+After committing, the next `switch` on each machine prompts for the new password (cache miss), derives the new age identity, re-caches it, and updates the SSH key passphrase.
 
-### Rotate a tier's age key
+### Rotate a domain's age key (without changing password)
+
+Bump the version in the KDF salt to derive a new key from the same password:
 
 ```bash
-# Generate a new age key pair for the server tier
-age-keygen -o /tmp/new-server-key
-# Extract public key → update .sops.yaml server rule
-# Encrypt private key with master password:
-age -p -o hosts/age-server.key < /tmp/new-server-key
-# Re-encrypt server secrets to the new public key:
-sops updatekeys hosts/secrets-server.yaml
-git commit -am "rotate server age key"
+# 1. Change the derivation version for the server domain
+#    KDF salt: "angst-server-v1" → "angst-server-v2"
+#    (this is a config change in the derivation script)
+
+# 2. Derive and output the new public key
+angst derive-key --domain servers --version v2  # → update .sops.yaml
+
+# 3. Re-encrypt server secrets only
+for d in hosts/servers/*/; do
+  sops updatekeys "${d}secrets.yaml"
+done
+
+# 4. Clear cached identities on servers only
+git commit -am "rotate server age key (v2)"
 ```
 
-Personal machines are unaffected — only the server tier's key changes.
+Personal machines are unaffected — only the server domain's derivation salt changed. No password change needed.
 
 ## CI
 
-CI uses the `hosts/ci/` host — a minimal NixOS config with one toolchain, base profile, no secrets. No `cp local/config.nix.example` step needed. The flake evaluates purely and deterministically.
+CI uses the `hosts/ci/` host — a minimal NixOS config with one toolchain, base profile, no secrets. Because `ci/` is at the top level (not under a domain directory), it has no secrets at all. No `cp local/config.nix.example` step needed. The flake evaluates purely and deterministically.
 
 ## Design constraints
 
 - **`read-config.nix` is pure.** It takes config, returns cfg. No side effects, no env reads, no filesystem access outside the flake source.
 - **Host config is tracked in git.** Machine identity is version-controlled. Changing your theme or adding a profile is a commit.
-- **Secrets are encrypted, not hidden.** sops-encrypted files are safe to track. Decryption happens at activation, never at eval time.
-- **Compartments are tiers, not machines.** Two age keys (personal + server), both passphrase-encrypted with the same master password, tracked in git. A server compromise decrypts only server secrets — personal secrets are isolated. Total HDD loss → clone repo, type password, done.
+- **Secrets are encrypted, not hidden.** sops-encrypted files are safe to track in a public repo. Decryption happens at activation, never at eval time.
+- **No key material in the repo.** Age public keys live in `.sops.yaml` (safe — they only encrypt). Age private keys are never stored — they are derived deterministically from the master password via KDF, cached on persistent storage, and never written to disk in the repo. The repo is safe to make fully public.
+- **Compartments are security domains, not machines.** Two age key pairs (personal + server), both derived from the same master password with different KDF salts. Only public keys are in the repo. A server compromise that exposes the cached server-derived key decrypts only server secrets — personal secrets are isolated (different KDF salt, different key). Total HDD loss → clone repo, type password, done.
+- **The master password is external input.** It is never stored in the secrets file — it exists only in the user's head and temporarily in RAM. Verification is implicit: the derived age key either decrypts secrets (correct password) or doesn't (wrong password). The single password powers four things — age key derivation, login, SSH key passphrase, and derivation identity verification — as a deliberate convenience tradeoff.
+- **Secrets are optional, not required.** The flake builds and boots without any secrets file. `hasSecrets = builtins.pathExists secretsFile` gates everything sops-related. Tools, desktop, profiles, and domains all work without secrets. Secrets are added later via `angst bootstrap-secrets`.
 - **The flake is a closed function.** Every input comes from git. Nothing depends on CWD, env vars, or which machine you're on. This is what makes `nix flake check` work, rollback reliable, and CI deterministic.
-- **Hosts auto-discoverable.** `builtins.readDir` means new hosts appear without touching `flake.nix`. No registration, no boilerplate.
+- **Hosts auto-discoverable.** `builtins.readDir` (recursive) means new hosts appear without touching `flake.nix`. No registration, no boilerplate.
 - **Non-NixOS hosts are first-class.** `type = "home-manager"` hosts get the same structure, same secrets decryption, same outputs. They just don't get hardware config or impermanence.
-- **SSH key is provisioned, not enrolled.** A single Ed25519 user key, passphrase-enforced at activation using the decrypted master password. Used for SSH connections, not for sops. The SSH host key is independent — managed by sshd (NixOS) or the host OS (non-NixOS), never copied from the user key.
+- **SSH key is provisioned, not enrolled.** A single Ed25519 user key, passphrase-enforced with the master password. Used for SSH connections, not for sops. The SSH host key is independent — managed by sshd (NixOS) or the host OS (non-NixOS), never copied from the user key.
 
 ## Known concerns and implementation notes
 
-### Password: plaintext in sops, hash at activation
+### Password: external input, never stored
 
-The master password is stored as plaintext in the sops-encrypted secrets file. This is intentional — the plaintext is needed for SSH passphrase operations (`ssh-keygen -y -P "$password"`). The SHA-512 login hash is derived at activation time via `mkpasswd -m sha-512`. Implementation must NOT pre-hash the password before sops storage, or SSH passphrase enforcement becomes impossible.
+The master password is never stored anywhere — not in the sops-encrypted secrets file, not in a hash field, not on disk. It exists only in the user's head and temporarily in RAM during activation. Verification is implicit: if the derived age key successfully decrypts secrets (public key match in `.sops.yaml`), the password was correct. There is no separate hash to maintain or keep in sync.
 
-### Shared secrets.yaml fallback
+The plaintext password (from user input) is used for SSH passphrase operations (`ssh-keygen -y -P "$password"`) and login hash derivation (`mkpasswd -m sha-512 "$password"`). It is cleared from variables immediately after use (`unset password`).
 
-The builders (`mkNixos.nix`, `mkHome.nix`) must implement the tier-scoped shared-to-per-host fallback:
+### Deterministic key derivation: properties and tradeoffs
 
-```
-hosts/<hostname>/secrets.yaml  →  if missing, fall back to hosts/secrets-<tier>.yaml
-```
+Age keys are derived via KDF from the master password with a domain-specific salt. This means:
 
-The tier is determined by the host's `secretsTier` config field (default: `"personal"`). Currently only the per-host path is checked.
+- **No key files to lose or leak.** There are no age private key files anywhere — not in the repo, not on disk (except the cache). The password is the sole root of trust.
+- **Rotation via version bump.** To rotate a domain's age key, bump the version in the KDF salt (e.g. `"angst-personal-v1"` → `"angst-personal-v2"`). This produces a new, unrelated key from the same password. No key generation step is needed.
+- **Password change → full re-encrypt.** Changing the master password changes all derived keys. All secrets must be decrypted with the old keys and re-encrypted with the new ones. This is a deliberate tradeoff: the password is the root, and changing it is a significant operation.
+- **KDF parameters must be strong.** The derivation must use argon2id with high-cost parameters to resist brute-force. An attacker who obtains `.sops.yaml` and a `secrets.yaml` could attempt to brute-force the password offline.
 
-### Interactive password prompt only
+### Cached derived key is the practical trust anchor
+
+After the first `angst bootstrap-secrets`, the derived age key at `/persist/angst/age-key` (or `~/.config/angst/age-key`) is what actually decrypts secrets. At that point, security depends on disk encryption and OS permissions — not on knowledge of the master password. The password is only needed during the initial derivation handshake and for SSH key unlocks. This is an explicit tradeoff: the cached key eliminates password prompts on every boot, but means an attacker with filesystem access to `/persist` can read secrets without knowing the password.
+
+### Password coupling: one secret, four purposes
+
+The master password powers age key derivation, login, SSH key passphrase, and identity verification. This is an intentional convenience tradeoff: one secret to remember, one prompt to answer. If stronger compartmentalization is desired, each purpose could use a separate password at the cost of more memorization.
+
+### Per-host secrets only — no shared fallback
+
+With the nested domain directory structure, each host has its own `hosts/<domain>/<hostname>/secrets.yaml`. There are no shared secrets files, so no per-host-to-shared fallback is needed. Builders (`mkNixos.nix`, `mkHome.nix`) construct the secrets file path as `hosts/<domain>/<hostname>/secrets.yaml` based on the host's location in the directory tree.
+
+### Interactive password prompt only (TTY required)
 
 Activation uses `read -s` for the master password prompt. No `$ANGST_PASSWORD` environment variable, no `systemd-ask-password` pipe. Environment variables are visible to child processes and can appear in logs; a direct terminal prompt is safer.
 
-### Activation scripting must never log the password
+Interactive prompts require a TTY. Remote deployment tools or non-interactive `nixos-rebuild` invocations may need an alternative. For automated deployments, consider pre-seeding the cached derived age key on persistent storage or using a separate automation-specific flow.
+
+### Activation scripting must never leak the password
 
 - `set +x` around any command that receives the password as argument
 - No `echo "$password"` or equivalent, even in error paths
 - `mkpasswd` output goes directly to the target file, never through the Nix store
+- After all operations complete, explicitly clear the password variable: `unset password`
 
 ### Evaluation-time filesystem checks must live in activation scripts
 
