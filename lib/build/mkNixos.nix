@@ -139,24 +139,10 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if host.persist.enable then [ inputs.impermanence.nixosModules.impermanence ] else [ ])
   ++ (
     if host.persist.enable then
-      [
-        (_: {
-          environment.persistence."${host.persist.root}" = {
-            hideMounts = true;
-            directories = [
-              "/var/log"
-              "/var/lib/bluetooth"
-              "/var/lib/nixos"
-              "/var/lib/systemd/coredump"
-              "/etc/ssh"
-            ];
-            files = [
-              "/etc/machine-id"
-            ];
-            users.${host.username} = {
-              directories = map (d: "/home/${host.username}/${d}") host.persist.homeDirs;
-            };
-          };
+      [ (import ../../modules/nixos/persist.nix {
+          inherit lib;
+          inherit (host) persist username;
+          inherit hasSecrets;
         })
       ]
     else
@@ -200,7 +186,9 @@ inputs.nixpkgs.lib.nixosSystem {
       };
     }
     ({ config, lib, ... }: {
-      systemd.services."home-manager-${host.username}".before = lib.mkIf (!config.angst.isQemuVm) [
+      systemd.services."home-manager-${host.username}".before = [
+        "sshd.service"
+      ] ++ lib.optionals (!config.angst.isQemuVm) [
         "getty@.service"
         "serial-getty@.service"
       ];
