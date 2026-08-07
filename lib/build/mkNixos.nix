@@ -80,7 +80,7 @@ inputs.nixpkgs.lib.nixosSystem {
       users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
       users.users.root.hashedPassword = lib.mkDefault host.password;
 
-      systemd.services.angst-bootstrap-secrets = lib.mkIf (secrets.hasSecrets && !config.angst.isQemuVm) {
+      systemd.services.angst-bootstrap-secrets = lib.mkIf (secrets.canDecrypt && !config.angst.isQemuVm) {
         description = "angst: set login password hash and enforce SSH key passphrase from secrets";
         wantedBy = [ "multi-user.target" ];
         after = [ "sops-nix.service" ];

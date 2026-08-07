@@ -72,7 +72,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
     })
   ]
   ++ [
-    ({ config, pkgs, lib, ... }: lib.mkIf secrets.hasSecrets {
+    ({ config, pkgs, lib, ... }: lib.mkIf secrets.canDecrypt {
       home.activation.angstSshKey = lib.hm.dag.entryAfter [ "writeBoundary" ] (
         ''
           set -euo pipefail

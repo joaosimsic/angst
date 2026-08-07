@@ -7,14 +7,26 @@ let
     else
       self + "/hosts/${host.hostname}/secrets.yaml";
   hasSecrets = builtins.pathExists secretsFile;
+
+  hasAgeKey =
+    let
+      home = builtins.getEnv "HOME";
+      keyFile = "${home}/.config/sops/age/keys.txt";
+      keyFileCheck = builtins.tryEval (builtins.readFile keyFile);
+      sopsKeyEnv = builtins.getEnv "SOPS_AGE_KEY";
+      sopsKeyFileEnv = builtins.getEnv "SOPS_AGE_KEY_FILE";
+    in
+      (sopsKeyEnv != "") || (sopsKeyFileEnv != "") || keyFileCheck.success;
+
+  canDecrypt = hasSecrets && hasAgeKey;
 in
 {
-  inherit secretsFile hasSecrets;
+  inherit secretsFile hasSecrets canDecrypt;
 
-  core = lib.mkIf hasSecrets {
+  core = lib.mkIf canDecrypt {
     sops.defaultSopsFile = secretsFile;
     sops.secrets.masterPassword = { };
   };
 
-  persistDirs = lib.optional hasSecrets ".config/sops";
+  persistDirs = lib.optional canDecrypt ".config/sops";
 }
