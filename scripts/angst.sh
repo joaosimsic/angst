@@ -3,7 +3,7 @@
 usage() {
     cat <<'EOF'
 Usage:
-  angst passwd [--host HOST]
+  angst bootstrap-secrets [--host HOST]
   angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
   angst watch  [--repo PATH] [--host HOST] [--theme THEME]
 EOF
@@ -15,7 +15,21 @@ repo_root_default() {
 
 config_val() {
     local repo="$1" host="$2" key="$3"
-    nix eval --file "$repo/hosts/$host/default.nix" --raw --apply "x: x.$key or null" 2>/dev/null || true
+    local cfg_path=""
+    for d in "$repo/hosts/"*/; do
+        [ -d "$d" ] || continue
+        local dn
+        dn="$(basename "$d")"
+        if [ -f "$repo/hosts/$dn/$host/default.nix" ]; then
+            cfg_path="$repo/hosts/$dn/$host/default.nix"
+            break
+        fi
+    done
+    if [ -z "$cfg_path" ] && [ -f "$repo/hosts/$host/default.nix" ]; then
+        cfg_path="$repo/hosts/$host/default.nix"
+    fi
+    [ -n "$cfg_path" ] || return 1
+    nix eval --file "$cfg_path" --raw --apply "x: x.$key or null" 2>/dev/null || true
 }
 
 reload_hooks() {
@@ -24,7 +38,7 @@ reload_hooks() {
     fi
 }
 
-passwd_cmd() {
+bootstrap_secrets_cmd() {
     local repo_root host_name="nixos"
     repo_root="$(repo_root_default)"
 
@@ -32,49 +46,94 @@ passwd_cmd() {
         case "$1" in
         --host) host_name="$2"; shift 2 ;;
         -h|--help) usage; return 0 ;;
-        *) echo "unknown passwd option: $1" >&2; usage >&2; return 2 ;;
+        *) echo "unknown bootstrap-secrets option: $1" >&2; usage >&2; return 2 ;;
         esac
     done
 
-    local secrets_file="$repo_root/hosts/$host_name/secrets.yaml"
-
-    if [ ! -f "$secrets_file" ]; then
-        echo "Error: $secrets_file not found" >&2
-        echo "Create it first with: sops hosts/$host_name/secrets.yaml" >&2
+    if ! command -v sops >/dev/null 2>&1; then
+        echo "Error: sops is not available. Install it first (e.g., nix shell nixpkgs#sops)" >&2
         return 1
     fi
 
-    printf "Password: "
-    read -rs password
+    if ! command -v mkpasswd >/dev/null 2>&1; then
+        echo "Error: mkpasswd is not available. Install whois or use nix environment." >&2
+        return 1
+    fi
+
+    local domain="" secrets_file config_file
+    for d in "$repo_root/hosts/"*/; do
+        [ -d "$d" ] || continue
+        local dn
+        dn="$(basename "$d")"
+        if [ -f "$repo_root/hosts/$dn/$host_name/default.nix" ]; then
+            domain="$dn"
+            break
+        fi
+    done
+
+    if [ -n "$domain" ]; then
+        secrets_file="$repo_root/hosts/$domain/$host_name/secrets.yaml"
+        config_file="$repo_root/hosts/$domain/$host_name/default.nix"
+    else
+        secrets_file="$repo_root/hosts/$host_name/secrets.yaml"
+        config_file="$repo_root/hosts/$host_name/default.nix"
+    fi
+
+    if [ ! -f "$config_file" ]; then
+        echo "Error: host config not found for '$host_name'" >&2
+        return 1
+    fi
+
+    printf "Master password: "
+    read -rs master_password
     printf "\n"
 
-    if [ -z "$password" ]; then
+    if [ -z "$master_password" ]; then
         echo "Error: password cannot be empty" >&2
         return 1
     fi
 
-    printf "Confirm password: "
-    read -rs password_confirm
+    printf "Confirm master password: "
+    read -rs confirm
     printf "\n"
 
-    if [ "$password" != "$password_confirm" ]; then
+    if [ "$master_password" != "$confirm" ]; then
         echo "Error: passwords do not match" >&2
         return 1
     fi
+    unset confirm
 
     local hash
-    hash="$(mkpasswd -m sha-512 "$password")" || {
-        echo "Error: failed to hash password (is mkpasswd available?)" >&2
-        return 1
-    }
-    unset password password_confirm
-
-    echo "password: \"$hash\"" | sops --input-type yaml "$secrets_file" 2>/dev/null || {
-        echo "Error: failed to write to $secrets_file" >&2
+    hash="$(mkpasswd -m sha-512 "$master_password")" || {
+        echo "Error: failed to hash password" >&2
         return 1
     }
 
-    echo "Password hashed and written to $secrets_file"
+    if [ -f "$secrets_file" ]; then
+        echo "masterPassword: \"$master_password\"" | sops --input-type yaml --output-type yaml "$secrets_file" 2>/dev/null || {
+            echo "Error: failed to update $secrets_file" >&2
+            return 1
+        }
+    else
+        echo "masterPassword: \"$master_password\"" | sops --input-type yaml --output-type yaml "$secrets_file" 2>/dev/null || {
+            echo "Error: failed to create $secrets_file" >&2
+            return 1
+        }
+    fi
+
+    if grep -q '^\s*password\s*=' "$config_file"; then
+        sed -i "s|^\s*password\s*=.*|  password = \"$hash\";|" "$config_file"
+    else
+        sed -i "/^\s*};/i\  password = \"$hash\";" "$config_file"
+    fi
+
+    unset master_password hash
+
+    echo "Secrets bootstrapped for $host_name:"
+    echo "  secrets: $secrets_file"
+    echo "  hash:    $config_file"
+    echo ""
+    echo "Run 'sudo nixos-rebuild switch --flake .#$host_name' to apply."
 }
 
 render_cmd() {
@@ -189,10 +248,21 @@ watch_cmd() {
     local args=(render --repo "$repo_root" --host "$host_name" --reload)
     if [ -n "$theme_name" ]; then args+=(--theme "$theme_name"); fi
 
+    local watch_path="$repo_root/hosts/$host_name"
+    for d in "$repo_root/hosts/"*/; do
+        [ -d "$d" ] || continue
+        local dn
+        dn="$(basename "$d")"
+        if [ -f "$repo_root/hosts/$dn/$host_name/default.nix" ]; then
+            watch_path="$repo_root/hosts/$dn/$host_name"
+            break
+        fi
+    done
+
     watchexec \
         --watch "$repo_root/themes" \
         --watch "$repo_root/domains" \
-        --watch "$repo_root/hosts/$host_name" \
+        --watch "$watch_path" \
         -- "$0" "${args[@]}"
 }
 
@@ -200,7 +270,7 @@ command="${1:-}"
 if [ "$#" -gt 0 ]; then shift; fi
 
 case "$command" in
-passwd) passwd_cmd "$@" ;;
+bootstrap-secrets) bootstrap_secrets_cmd "$@" ;;
 render) render_cmd "$@" ;;
 watch)  watch_cmd "$@" ;;
 -h|--help|"") usage ;;

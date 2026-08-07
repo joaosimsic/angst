@@ -31,7 +31,11 @@ let
     hostTheme = effectiveTheme;
   };
 
-  secretsFile = self + "/hosts/${cfg.hostname}/secrets.yaml";
+  secretsFile =
+    if cfg.domain != null then
+      self + "/hosts/${cfg.domain}/${cfg.hostname}/secrets.yaml"
+    else
+      self + "/hosts/${cfg.hostname}/secrets.yaml";
   hasSecrets = builtins.pathExists secretsFile;
 in
 inputs.home-manager.lib.homeManagerConfiguration {
@@ -76,6 +80,40 @@ inputs.home-manager.lib.homeManagerConfiguration {
         shellTool
         angstTool
       ];
+    })
+  ]
+  ++ [
+    ({ config, pkgs, lib, ... }: lib.mkIf hasSecrets {
+      sops.secrets = {
+        masterPassword = { };
+      };
+
+      home.activation.angstSshKey = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+        ''
+          set -euo pipefail
+
+          MASTER_PASSWORD=$(cat ''
+        + lib.escapeShellArg config.sops.secrets.masterPassword.path
+        + ''
+          )
+
+          KEY_FILE="$HOME/.ssh/id_ed25519"
+          SSH_DIR="$HOME/.ssh"
+
+          set +x
+          if [ ! -f "$KEY_FILE" ]; then
+            mkdir -p "$SSH_DIR"
+            ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${cfg.username}@${cfg.hostname}"
+          else
+            if ! ${pkgs.openssh}/bin/ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
+              ${pkgs.openssh}/bin/ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
+                ${pkgs.openssh}/bin/ssh-keygen -p -P "" -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null
+            fi
+          fi
+          unset MASTER_PASSWORD
+          set -x
+        ''
+      );
     })
   ]
   ++ (if cfg.extraHome != { } then [ cfg.extraHome ] else [ ])

@@ -31,11 +31,19 @@ let
 
   hardwarePath =
     let
-      p = self + "/hosts/${cfg.hostname}/hardware.nix";
+      p =
+        if cfg.domain != null then
+          self + "/hosts/${cfg.domain}/${cfg.hostname}/hardware.nix"
+        else
+          self + "/hosts/${cfg.hostname}/hardware.nix";
     in
     if builtins.pathExists p then p else null;
 
-  secretsFile = self + "/hosts/${cfg.hostname}/secrets.yaml";
+  secretsFile =
+    if cfg.domain != null then
+      self + "/hosts/${cfg.domain}/${cfg.hostname}/secrets.yaml"
+    else
+      self + "/hosts/${cfg.hostname}/secrets.yaml";
   hasSecrets = builtins.pathExists secretsFile;
 in
 inputs.nixpkgs.lib.nixosSystem {
@@ -79,20 +87,52 @@ inputs.nixpkgs.lib.nixosSystem {
     ../../modules/vm/vm-profile.nix
     ../../modules/vm/host-mount.nix
     ../../capabilities/ssh.nix
-    ({ config, ... }: {
-      users.users.${cfg.username} = lib.mkMerge [
-        (lib.mkIf hasSecrets {
-          hashedPasswordFile = config.sops.secrets.password.path;
-        })
-        (lib.mkIf (!hasSecrets) {
-          hashedPassword = lib.mkDefault cfg.password;
-        })
-      ];
-      users.users.root = lib.mkIf (!hasSecrets) {
-        hashedPassword = lib.mkDefault cfg.password;
-      };
+    ({ config, pkgs, ... }: {
+      users.users.${cfg.username}.hashedPassword = lib.mkDefault cfg.password;
+      users.users.root.hashedPassword = lib.mkDefault cfg.password;
+
       sops.secrets = lib.mkIf hasSecrets {
-        password = { };
+        masterPassword = { };
+      };
+
+      systemd.services.angst-bootstrap-secrets = lib.mkIf (hasSecrets && !config.angst.isQemuVm) {
+        description = "angst: set login password hash and enforce SSH key passphrase from secrets";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "sops-nix.service" ];
+        before = [ "getty@.service" "serial-getty@.service" "display-manager.service" ];
+
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+
+        script = ''
+          set -euo pipefail
+
+          MASTER_PASSWORD=$(cat ''${config.sops.secrets.masterPassword.path})
+
+          set +x
+          HASH=$(echo "$MASTER_PASSWORD" | ${pkgs.mkpasswd}/bin/mkpasswd -m sha-512 -s)
+          ${pkgs.shadow}/bin/usermod -p "$HASH" ${cfg.username}
+          ${pkgs.shadow}/bin/usermod -p "$HASH" root
+
+          KEY_FILE="/home/${cfg.username}/.ssh/id_ed25519"
+          SSH_DIR="$(dirname "$KEY_FILE")"
+
+          if [ ! -f "$KEY_FILE" ]; then
+            mkdir -p "$SSH_DIR"
+            ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${cfg.username}@${cfg.hostname}"
+            chown -R ${cfg.username}: "$SSH_DIR"
+          else
+            if ! ${pkgs.openssh}/bin/ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
+              ${pkgs.openssh}/bin/ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
+                ${pkgs.openssh}/bin/ssh-keygen -p -P "" -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null
+            fi
+          fi
+
+          unset MASTER_PASSWORD
+          set -x
+        '';
       };
     })
   ]

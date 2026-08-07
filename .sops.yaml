@@ -1,12 +1,9 @@
 creation_rules:
-  - path_regex: hosts/.*/secrets\.yaml$
+  - path_regex: hosts/servers/.*/secrets\.yaml$
     age: |
-      # Add your host age public keys below.
-      #
-      # NixOS hosts:
-      #   ssh-to-age < /persist/etc/ssh/ssh_host_ed25519_key.pub
-      #
-      # non-NixOS hosts:
-      #   ssh-to-age < ~/.ssh/id_ed25519.pub
-      #
+      # Add your server age public keys below.
+      # age1...
+  - path_regex: hosts/personal/.*/secrets\.yaml$
+    age: |
+      # Add your personal age public keys below.
       # age1...

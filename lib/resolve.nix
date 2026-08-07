@@ -1,6 +1,7 @@
 {
   inputs,
   themesLib,
+  domain,
   config,
 }:
 
@@ -68,6 +69,7 @@ in
     shell = config.shell or "";
     persist = config.persist or { enable = false; };
     type = config.type or "nixos";
+    inherit domain;
 
     scan = {
       domains = domainsLib;

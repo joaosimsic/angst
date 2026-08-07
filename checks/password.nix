@@ -5,14 +5,20 @@
 }:
 
 let
-  inherit (cfg) password;
+  inherit (cfg) password type;
   validSha512 = builtins.match ''\$6\$.+\$.+'' password;
 in
 pkgs.runCommand "check-password" { } (
-  if password == "!" then
+  if type == "home-manager" then
     ''
       echo "--- Password check ---"
-      echo "SKIP: password managed via sops-nix (not in default.nix)"
+      echo "SKIP: home-manager host — password managed by host OS"
+      touch $out
+    ''
+  else if password == "!" then
+    ''
+      echo "--- Password check ---"
+      echo "SKIP: password not configured (CI or minimal host)"
       touch $out
     ''
   else if validSha512 == null then

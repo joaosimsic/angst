@@ -30,20 +30,44 @@
     let
       inherit (nixpkgs) lib;
       themesLib = import ./themes/default.nix { inherit lib; };
-      readConfig = import ./lib/read-config.nix;
+      resolve = import ./lib/resolve.nix;
 
-      hostDirs = builtins.attrNames (
-        lib.filterAttrs (_: t: t == "directory") (builtins.readDir ./hosts)
-      );
+      hostsDir = ./hosts;
 
-      mkCfg =
-        hostname:
+      hostEntries =
         let
-          rawConfig = import (./hosts + "/${hostname}");
-        in
-        (readConfig { inherit inputs themesLib; config = rawConfig; }).cfg;
+          topEntries = builtins.readDir hostsDir;
 
-      hostCfgs = lib.listToAttrs (map (h: { name = h; value = mkCfg h; }) hostDirs);
+          processTopEntry = name: type:
+            if type != "directory" then [ ] else
+            let
+              subDir = hostsDir + "/${name}";
+              subEntries = builtins.readDir subDir;
+            in
+            if subEntries ? "default.nix" && subEntries."default.nix" == "regular" then
+              [{ hostname = name; domain = null; dir = name; }]
+            else
+              lib.mapAttrsToList (hostName: hostType:
+                if hostType == "directory" then
+                  let
+                    hostDir = subDir + "/${hostName}";
+                    hostEntries' = builtins.readDir hostDir;
+                  in
+                  if hostEntries' ? "default.nix" && hostEntries'."default.nix" == "regular" then
+                    { hostname = hostName; domain = name; dir = "${name}/${hostName}"; }
+                  else null
+                else null
+              ) subEntries;
+        in
+        lib.filter (x: x != null) (lib.flatten (lib.mapAttrsToList processTopEntry topEntries));
+
+      mkCfg = { domain, dir, ... }:
+        let
+          rawConfig = import (hostsDir + "/${dir}");
+        in
+        (resolve { inherit inputs themesLib domain; config = rawConfig; }).cfg;
+
+      hostCfgs = builtins.listToAttrs (map (h: { name = h.hostname; value = mkCfg h; }) hostEntries);
     in
     import ./lib/flake/outputs.nix {
       inherit
