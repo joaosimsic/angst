@@ -19,5 +19,13 @@
   sshAgent = { enable = true; keys = ["~/.ssh/id_ed25519"]; };
   ssh = {};
 
-  persist = { enable = true; };
+  persist = {
+    enable = true;
+    root = "/persist";
+    homeDirs = [
+      ".ssh"
+      ".local/share"
+      ".config"
+    ];
+  };
 }

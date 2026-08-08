@@ -9,6 +9,19 @@
   virtualisation.vmVariant = {
     angst.isQemuVm = lib.mkForce true;
 
+    virtualisation.fileSystems = {
+      "/" = lib.mkForce {
+        device = "tmpfs";
+        fsType = "tmpfs";
+        options = [ "defaults" "size=2G" "mode=755" ];
+      };
+      "/persist" = {
+        device = "/dev/disk/by-label/nixos";
+        fsType = "ext4";
+        neededForBoot = true;
+      };
+    };
+
     virtualisation = {
       memorySize = 4096;
       cores = 4;

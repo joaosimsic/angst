@@ -8,8 +8,6 @@
 }:
 
 let
-  cfg = config.angst.isQemuVm;
-
   hostAngstPath = "/host${userConfig.homeDirectory}/${repoPath}";
 
   angstCli = pkgs.writeShellApplication {
@@ -24,17 +22,9 @@ let
     ];
     text = builtins.readFile ../../scripts/angst.sh;
   };
-
-  p9Options = [
-    "nofail"
-    "trans=virtio"
-    "version=9p2000.L"
-    "msize=16384"
-    "x-systemd.requires=modprobe@9pnet_virtio.service"
-  ];
 in
 {
-  config = lib.mkIf cfg {
+  config = {
     assertions = [
       {
         assertion = config.services.openssh.enable or false;
@@ -53,6 +43,14 @@ in
     ];
 
     documentation.nixos.enable = lib.mkForce false;
+
+    # Don't persist SSH host keys on the VM — vm-ephemeral-ssh handles it.
+    environment.persistence."/persist".directories = lib.mkForce [
+      "/var/log"
+      "/var/lib/bluetooth"
+      "/var/lib/nixos"
+      "/var/lib/systemd/coredump"
+    ];
 
     boot = {
       initrd.kernelModules = lib.mkForce [ ];
@@ -113,60 +111,79 @@ in
         };
       };
 
-      services.home-manager-upgrade = {
-        description = "Activate latest Home Manager generation not baked into the system closure";
-        after = [ "home-manager-${userConfig.username}.service" ];
-        wantedBy = [ "multi-user.target" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          User = userConfig.username;
-        };
-        script = ''
-          active=""
-          if [ -L "/etc/profiles/per-user/${userConfig.username}" ]; then
-            active="$(readlink -f "/etc/profiles/per-user/${userConfig.username}")"
-          fi
+      services = {
+        home-manager-upgrade = {
+          description = "Activate latest Home Manager generation not baked into the system closure";
+          after = [ "home-manager-${userConfig.username}.service" ];
+          wantedBy = [ "multi-user.target" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            User = userConfig.username;
+          };
+          script = ''
+            active=""
+            if [ -L "/etc/profiles/per-user/${userConfig.username}" ]; then
+              active="$(readlink -f "/etc/profiles/per-user/${userConfig.username}")"
+            fi
 
-          latest=""
-          for gen in /nix/store/*-home-manager-generation/activate; do
-            [ -f "$gen" ] || continue
-            dir="$(dirname "$gen")"
-            hp="$(readlink "$dir/home-path" 2>/dev/null || true)"
-            [ -n "$hp" ] || continue
-            [ "$hp" = "$active" ] && continue
-            latest="$dir"
-          done
+            latest=""
+            for gen in /nix/store/*-home-manager-generation/activate; do
+              [ -f "$gen" ] || continue
+              dir="$(dirname "$gen")"
+              hp="$(readlink "$dir/home-path" 2>/dev/null || true)"
+              [ -n "$hp" ] || continue
+              [ "$hp" = "$active" ] && continue
+              latest="$dir"
+            done
 
-          if [ -n "$latest" ]; then
-            exec "$latest/activate" --driver-version 1
-          fi
-        '';
-      };
-
-      services.vm-authorized-keys = {
-        description = "Install runtime SSH authorized_keys for VM access";
-        wantedBy = [ "multi-user.target" ];
-        before = [ "sshd.service" ];
-        requires = [ "tmp-shared.mount" ];
-        after = [ "tmp-shared.mount" ];
-
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
+            if [ -n "$latest" ]; then
+              exec "$latest/activate" --driver-version 1
+            fi
+          '';
         };
 
-        script = ''
-          key_file=/tmp/shared/authorized_keys
+        vm-ephemeral-ssh = {
+          description = "VM: mount tmpfs on /etc/ssh for ephemeral host keys";
+          wantedBy = [ "sshd-keygen.service" ];
+          before = [ "sshd-keygen.service" "sshd.service" ];
+          after = [ "local-fs.target" ];
+          serviceConfig.Type = "oneshot";
+          script = ''
+            mount -t tmpfs tmpfs /etc/ssh -o mode=0755
+            for f in /run/current-system/etc/ssh/sshd_config /etc/static/ssh/sshd_config; do
+              if [ -f "$f" ]; then
+                cp "$f" /etc/ssh/sshd_config
+                break
+              fi
+            done
+          '';
+        };
 
-          if [ ! -s "$key_file" ]; then
-            echo "No runtime VM SSH keys found at $key_file; keeping declarative authorized_keys fallback."
-            exit 0
-          fi
+        vm-authorized-keys = {
+          description = "Install runtime SSH authorized_keys for VM access";
+          wantedBy = [ "multi-user.target" ];
+          before = [ "sshd.service" ];
+          requires = [ "tmp-shared.mount" ];
+          after = [ "tmp-shared.mount" ];
 
-          install -d -m 700 -o ${userConfig.username} -g users ${userConfig.homeDirectory}/.ssh
-          install -m 600 -o ${userConfig.username} -g users "$key_file" ${userConfig.homeDirectory}/.ssh/authorized_keys
-        '';
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+
+          script = ''
+            key_file=/tmp/shared/authorized_keys
+
+            if [ ! -s "$key_file" ]; then
+              echo "No runtime VM SSH keys found at $key_file; keeping declarative authorized_keys fallback."
+              exit 0
+            fi
+
+            install -d -m 700 -o ${userConfig.username} -g users ${userConfig.homeDirectory}/.ssh
+            install -m 600 -o ${userConfig.username} -g users "$key_file" ${userConfig.homeDirectory}/.ssh/authorized_keys
+          '';
+        };
       };
     };
 
@@ -176,46 +193,6 @@ in
         resolution = "1920x1080";
         refreshRate = 60;
         position = "0x0";
-      };
-    };
-
-    fileSystems = {
-      "/" = lib.mkForce {
-        device = "/dev/disk/by-label/nixos";
-        fsType = "ext4";
-      };
-      ${hostAngstPath} = {
-        device = "angst";
-        fsType = "9p";
-        options = p9Options ++ [ "noatime" ];
-      };
-      "/nix/.ro-store" = {
-        device = "nix-store";
-        fsType = "9p";
-        options = p9Options ++ [ "cache=loose" ];
-      };
-      "/nix/.rw-store" = {
-        device = "tmpfs";
-        fsType = "tmpfs";
-        neededForBoot = true;
-        options = [ "mode=0755" ];
-      };
-      "/nix/store" = {
-        overlay = {
-          lowerdir = [ "/nix/.ro-store" ];
-          upperdir = "/nix/.rw-store/upper";
-          workdir = "/nix/.rw-store/work";
-        };
-      };
-      "/tmp/shared" = {
-        device = "shared";
-        fsType = "9p";
-        options = p9Options;
-      };
-      "/tmp/xchg" = {
-        device = "xchg";
-        fsType = "9p";
-        options = p9Options;
       };
     };
   };

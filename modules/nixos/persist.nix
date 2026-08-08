@@ -9,7 +9,7 @@
         "/var/lib/bluetooth"
         "/var/lib/nixos"
         "/var/lib/systemd/coredump"
-        # "/etc/ssh"  -- REMOVED for testing
+        "/etc/ssh"
       ];
       files = [
         "/etc/machine-id"
