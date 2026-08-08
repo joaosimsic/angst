@@ -62,7 +62,7 @@ fn ensure_vm_profile(host: &str) -> Result<(), String> {
             &config_path,
             "--raw",
             "--apply",
-            "x: builtins.elem \"vm\" (x.profiles or [])",
+            "x: if builtins.elem \"vm\" (x.profiles or []) then \"true\" else \"false\"",
         ])
         .output()
         .map_err(|e| format!("Failed to check VM profile: {e}"))?;
