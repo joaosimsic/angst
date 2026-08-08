@@ -26,6 +26,7 @@
       ".ssh"
       ".local/share"
       ".config"
+      ".cache"
     ];
   };
 }
