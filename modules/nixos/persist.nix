@@ -15,9 +15,7 @@
         "/etc/machine-id"
       ];
       users.${username} = {
-        directories = map (d: "/home/${username}/${d}") (
-          persist.homeDirs ++ persistDirs
-        );
+        directories = persist.homeDirs ++ persistDirs;
       };
     };
   };
