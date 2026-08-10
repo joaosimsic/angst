@@ -118,7 +118,7 @@ rec {
           p = profilesFor host;
         in
         {
-          name = "${host.username}@${host.hostname}";
+          name = host.hostname;
           value = mkHome {
             inherit self inputs host vmTool shellTool angstTool;
             hmModules = p.hm;
@@ -168,16 +168,20 @@ rec {
       }
     ) else { } );
 
-  packages.${defaultSystem} = if representative != null then {
-    default = homeConfigurations.${representative.username}.activationPackage;
-    angst = angstTool;
-    vm-cli = vmOutputs.packages.${defaultSystem}.wrapped;
-    vm = vmOutputs.packages.${defaultSystem}.wrapped;
-    vm-run = vmOutputs.packages.${defaultSystem}.vm-run;
-    res = vmOutputs.packages.${defaultSystem}.res;
-    shell = shellTool;
-  }
-  else { };
+  packages.${defaultSystem} =
+    let
+      hmPkgs = builtins.mapAttrs (_: cfg: cfg.activationPackage) homeConfigurations;
+      extra = if representative != null then {
+        default = homeConfigurations.${representative.username}.activationPackage;
+        angst = angstTool;
+        vm-cli = vmOutputs.packages.${defaultSystem}.wrapped;
+        vm = vmOutputs.packages.${defaultSystem}.wrapped;
+        vm-run = vmOutputs.packages.${defaultSystem}.vm-run;
+        res = vmOutputs.packages.${defaultSystem}.res;
+        shell = shellTool;
+      } else { };
+    in
+    extra // hmPkgs;
 
   devShells.${defaultSystem} = devshell.shells;
 

@@ -190,7 +190,14 @@ let
 
       renderOverrideModule = {
         config = lib.mkIf enableOption {
-          home.file = lib.mkIf (hasRender && hasConfigDir && hasXdg && !isCustomXdg) renderedFiles;
+          home.file =
+            let
+              files =
+                if hasRender && hasConfigDir && hasXdg && !isCustomXdg then renderedFiles
+                else { };
+              filteredFiles = lib.filterAttrs (key: _: !(builtins.elem (baseNameOf key) mutableBaseNames)) files;
+            in
+            filteredFiles;
         };
       };
     in
