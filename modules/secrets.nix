@@ -26,6 +26,7 @@ in
   core = lib.mkIf canDecrypt {
     sops.defaultSopsFile = secretsFile;
     sops.secrets.masterPassword = { };
+    sops.secrets.opencodeGoKey = { };
   };
 
   persistDirs = lib.optional canDecrypt ".config/sops";

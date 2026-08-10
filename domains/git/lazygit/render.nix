@@ -223,7 +223,7 @@ let
         prevTab: '['
         nextScreenMode: +
         prevScreenMode: _
-        cyclePagers: '|'
+        cycleDiffRenderers: '|'
         undo: z
         redo: Z
         filteringMenu: <ctrl+s>
@@ -234,6 +234,7 @@ let
         submitEditorText: <enter>
         extrasMenu: '@'
         toggleWhitespaceInDiffView: <ctrl+w>
+        newWorktree: w
         increaseContextInDiffView: '}'
         decreaseContextInDiffView: '{'
         increaseRenameSimilarityThreshold: )
@@ -283,8 +284,6 @@ let
         fetchRemote: f
         addForkRemote: F
         sortOrder: s
-      worktrees:
-        viewWorktreeOptions: w
       commits:
         squashDown: s
         renameCommit: r
