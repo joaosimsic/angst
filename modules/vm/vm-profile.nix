@@ -146,7 +146,10 @@ in
         vm-ephemeral-ssh = {
           description = "VM: mount tmpfs on /etc/ssh for ephemeral host keys";
           wantedBy = [ "sshd-keygen.service" ];
-          before = [ "sshd-keygen.service" "sshd.service" ];
+          before = [
+            "sshd-keygen.service"
+            "sshd.service"
+          ];
           after = [ "local-fs.target" ];
           serviceConfig.Type = "oneshot";
           script = ''

@@ -113,9 +113,9 @@ let
                 relPath = lib.removePrefix prefix output.path;
               in
               lib.optional (hasXdg || (hasXdgFile && relPath == meta.xdgFile)) (
-                lib.nameValuePair (
-                  if hasXdg then ".config/${meta.xdg}/${relPath}" else ".config/${meta.xdgFile}"
-                ) { inherit (output) text; }
+                lib.nameValuePair (if hasXdg then ".config/${meta.xdg}/${relPath}" else ".config/${meta.xdgFile}") {
+                  inherit (output) text;
+                }
               );
           in
           lib.listToAttrs (lib.concatMap entryForOutput outputs);
@@ -144,7 +144,8 @@ let
             prefix = "domains/${category}/${name}/config/";
           in
           lib.unique (
-            lib.concatMap (o:
+            lib.concatMap (
+              o:
               let
                 rel = lib.removePrefix prefix o.path;
               in
@@ -182,9 +183,7 @@ let
                 !(builtins.elem relTarget renderedRelPaths)
               ) allEntries;
             in
-            builtins.listToAttrs (
-              map (e: lib.nameValuePair e.target { inherit (e) source; }) filteredEntries
-            );
+            builtins.listToAttrs (map (e: lib.nameValuePair e.target { inherit (e) source; }) filteredEntries);
         };
       };
 
@@ -192,9 +191,7 @@ let
         config = lib.mkIf enableOption {
           home.file =
             let
-              files =
-                if hasRender && hasConfigDir && hasXdg && !isCustomXdg then renderedFiles
-                else { };
+              files = if hasRender && hasConfigDir && hasXdg && !isCustomXdg then renderedFiles else { };
               filteredFiles = lib.filterAttrs (key: _: !(builtins.elem (baseNameOf key) mutableBaseNames)) files;
             in
             filteredFiles;

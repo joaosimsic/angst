@@ -4,7 +4,11 @@
   hostname = "mint";
   username = "joao";
   theme = "miasma";
-  profiles = ["base" "desktop" "development"];
+  profiles = [
+    "base"
+    "desktop"
+    "development"
+  ];
   toolchains = "*";
   env = {
     EDITOR = "nvim";
@@ -13,7 +17,7 @@
   shell = "";
   sshAgent = {
     enable = true;
-    keys = ["~/.ssh/id_ed25519"];
+    keys = [ "~/.ssh/id_ed25519" ];
   };
   ssh = { };
 }

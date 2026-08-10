@@ -54,7 +54,9 @@ in
     username = decl.username or "user";
     theme = decl.theme or "monochrome";
     # Default password for unseeded (no age key) systems: "changeme"
-    password = decl.password or "$6$7BqkEtUqOq/ylZb5$0dij1Cb/ykQJ8Vqt7SEJ7MMD77gn/ZW0LuLGo6tjU4e3rQcIyoH7q878EU2xXB9Suwh2bV/d/kpWeVl/nbsoe.";
+    password =
+      decl.password
+        or "$6$7BqkEtUqOq/ylZb5$0dij1Cb/ykQJ8Vqt7SEJ7MMD77gn/ZW0LuLGo6tjU4e3rQcIyoH7q878EU2xXB9Suwh2bV/d/kpWeVl/nbsoe.";
     monitors = decl.monitors or { };
     db = decl.db or { };
     profiles = decl.profiles or [ "base" ];
@@ -66,7 +68,12 @@ in
     sshAgent = decl.sshAgent or { };
     ssh = decl.ssh or { };
     shell = decl.shell or "";
-    persist = { root = "/persist"; homeDirs = []; enable = false; } // (decl.persist or {});
+    persist = {
+      root = "/persist";
+      homeDirs = [ ];
+      enable = false;
+    }
+    // (decl.persist or { });
     type = decl.type or "nixos";
     inherit domain;
 

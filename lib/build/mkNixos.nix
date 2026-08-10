@@ -68,7 +68,10 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if hardwarePath != null then [ (import hardwarePath) ] else [ ])
   ++ (if host.extraNixos != { } then [ host.extraNixos ] else [ ])
   ++ (if host.env != { } then [ { environment.sessionVariables = host.env; } ] else [ ])
-  ++ [ inputs.sops-nix.nixosModules.sops secrets.core ]
+  ++ [
+    inputs.sops-nix.nixosModules.sops
+    secrets.core
+  ]
   ++ [
     ../../modules/vm/detect.nix
     ../../modules/vm/runtime.nix
@@ -83,7 +86,11 @@ inputs.nixpkgs.lib.nixosSystem {
         description = "angst: set login password hash and enforce SSH key passphrase from secrets";
         wantedBy = [ "multi-user.target" ];
         after = [ "sops-nix.service" ];
-        before = [ "getty@.service" "serial-getty@.service" "display-manager.service" ];
+        before = [
+          "getty@.service"
+          "serial-getty@.service"
+          "display-manager.service"
+        ];
 
         serviceConfig = {
           Type = "oneshot";
@@ -123,7 +130,8 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if host.persist.enable then [ inputs.impermanence.nixosModules.impermanence ] else [ ])
   ++ (
     if host.persist.enable then
-      [ (import ../../modules/nixos/persist.nix {
+      [
+        (import ../../modules/nixos/persist.nix {
           inherit lib;
           inherit (host) persist username;
           inherit (secrets) persistDirs;
@@ -172,7 +180,8 @@ inputs.nixpkgs.lib.nixosSystem {
     ({ config, lib, ... }: {
       systemd.services."home-manager-${host.username}".before = [
         "sshd.service"
-      ] ++ lib.optionals (!config.angst.isQemuVm) [
+      ]
+      ++ lib.optionals (!config.angst.isQemuVm) [
         "getty@.service"
         "serial-getty@.service"
       ];

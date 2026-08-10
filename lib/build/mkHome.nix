@@ -60,7 +60,11 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ++ appHomeModules
   ++ hmModules
   ++ host.toolchainModules
-  ++ [ inputs.sops-nix.homeManagerModules.sops secrets.syncActivation secrets.core ]
+  ++ [
+    inputs.sops-nix.homeManagerModules.sops
+    secrets.syncActivation
+    secrets.core
+  ]
   ++ [
     (_: {
       home.packages = [
@@ -71,34 +75,42 @@ inputs.home-manager.lib.homeManagerConfiguration {
     })
   ]
   ++ [
-    ({ config, pkgs, lib, ... }: lib.mkIf (secrets.canDecrypt && host.type == "nixos") {
-      home.activation.angstSshKey = lib.hm.dag.entryAfter [ "secrets-ready" ] (
-        ''
-          set -euo pipefail
+    (
+      {
+        config,
+        pkgs,
+        lib,
+        ...
+      }:
+      lib.mkIf (secrets.canDecrypt && host.type == "nixos") {
+        home.activation.angstSshKey = lib.hm.dag.entryAfter [ "secrets-ready" ] (
+          ''
+            set -euo pipefail
 
-          MASTER_PASSWORD=$(cat ''
-        + lib.escapeShellArg config.sops.secrets.masterPassword.path
-        + ''
-          )
+            MASTER_PASSWORD=$(cat ''
+          + lib.escapeShellArg config.sops.secrets.masterPassword.path
+          + ''
+            )
 
-          KEY_FILE="$HOME/.ssh/id_ed25519"
-          SSH_DIR="$HOME/.ssh"
+            KEY_FILE="$HOME/.ssh/id_ed25519"
+            SSH_DIR="$HOME/.ssh"
 
-          set +x
-          if [ ! -f "$KEY_FILE" ]; then
-            mkdir -p "$SSH_DIR"
-            ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${host.username}@${host.hostname}"
-          else
-            if ! ${pkgs.openssh}/bin/ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
-              ${pkgs.openssh}/bin/ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
-                ${pkgs.openssh}/bin/ssh-keygen -p -P "" -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null
+            set +x
+            if [ ! -f "$KEY_FILE" ]; then
+              mkdir -p "$SSH_DIR"
+              ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${host.username}@${host.hostname}"
+            else
+              if ! ${pkgs.openssh}/bin/ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
+                ${pkgs.openssh}/bin/ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
+                  ${pkgs.openssh}/bin/ssh-keygen -p -P "" -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null
+              fi
             fi
-          fi
-          unset MASTER_PASSWORD
-          set -x
-        ''
-      );
-    })
+            unset MASTER_PASSWORD
+            set -x
+          ''
+        );
+      }
+    )
   ]
   ++ (if host.extraHome != { } then [ host.extraHome ] else [ ])
   ++ (if host.env != { } then [ { home.sessionVariables = host.env; } ] else [ ]);

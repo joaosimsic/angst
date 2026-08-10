@@ -4,7 +4,7 @@
   hostname = "ci";
   username = "runner";
   theme = "monochrome";
-  profiles = ["base"];
-  toolchains = ["nix"];
+  profiles = [ "base" ];
+  toolchains = [ "nix" ];
   repoPath = "proj/angst";
 }
