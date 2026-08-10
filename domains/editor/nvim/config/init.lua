@@ -37,8 +37,17 @@ if not ok or type(lazy) ~= "table" then
 	end
 end
 
+local lock_lua = lazypath .. "/lua/lazy/manage/lock.lua"
+local lines = vim.fn.readfile(lock_lua)
+for i, line in ipairs(lines) do
+	if line:find("info%.branch or assert%(Git%.get_branch") then
+		lines[i] = [[        branch = info.branch or Git.get_branch(plugin) or info.commit,]]
+	end
+end
+vim.fn.writefile(lines, lock_lua)
+
 lazy.setup({
-	lockfile = vim.fn.stdpath("data") .. "/lazy-lock.json",
+	lockfile = vim.fn.stdpath("config") .. "/lazy-lock.json",
 	defaults = {
 		lazy = true,
 	},
