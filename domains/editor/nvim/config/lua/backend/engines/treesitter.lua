@@ -67,9 +67,10 @@ return {
 				if ft == "" then
 					return
 				end
-				if AdapterScanner:supports_filetype("treesitter", ft, treesitter_opts) then
-					vim.bo[event.buf].syntax = "OFF"
-				end
+			if AdapterScanner:supports_filetype("treesitter", ft, treesitter_opts) then
+				vim.bo[event.buf].syntax = "OFF"
+				vim.b[event.buf].ts_highlight_started = nil
+			end
 			end,
 		})
 
