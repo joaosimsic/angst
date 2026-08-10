@@ -40,6 +40,8 @@ let
       angstCli
       openssh
       qemu
+      sops
+      age
       cargo
       rustc
       rust-analyzer
