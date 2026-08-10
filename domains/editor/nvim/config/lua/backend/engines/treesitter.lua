@@ -42,6 +42,7 @@ return {
 			bash = "bash",
 			typescriptreact = "typescript",
 			conf = "ini",
+			jsonc = "json",
 		}
 
 		for filetype, grammar in pairs(grammar_mappings) do
