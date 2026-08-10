@@ -111,6 +111,12 @@
                 exit 1
               fi
 
+              AGE_KEY="$HOME/.config/sops/age/keys.txt"
+              if [ -f "$AGE_KEY" ]; then
+                cp "$AGE_KEY" "$KEY_DIR/age-keys.txt"
+                chmod 600 "$KEY_DIR/age-keys.txt"
+              fi
+
               RUNNER="result/bin/run-''${TARGET_HOST}-vm"
               if [ ! -f "$RUNNER" ]; then
                 RUNNER="result/bin/run-nixos-vm"
@@ -150,7 +156,7 @@
 
               echo "Building VM for host '$TARGET_HOST' (user: $SSH_USER)..."
               git -C "$FLAKE_DIR" update-index -q --refresh 2>/dev/null || true
-              if ! nix build ".#nixosConfigurations.''${TARGET_HOST}.config.system.build.vm" --refresh --no-write-lock-file 2>&1; then
+              if ! nix build ".#nixosConfigurations.''${TARGET_HOST}.config.system.build.vm" --impure --refresh --no-write-lock-file 2>&1; then
                 echo "Error: VM build failed"
                 exit 1
               fi
@@ -189,6 +195,12 @@
               if [ ! -s "$KEY_FILE" ]; then
                 echo "Error: no SSH public keys found in ssh-agent or ~/.ssh/*.pub for VM access."
                 exit 1
+              fi
+
+              AGE_KEY="$HOME/.config/sops/age/keys.txt"
+              if [ -f "$AGE_KEY" ]; then
+                cp "$AGE_KEY" "$KEY_DIR/age-keys.txt"
+                chmod 600 "$KEY_DIR/age-keys.txt"
               fi
 
               export ANGST_REPO="$PWD"

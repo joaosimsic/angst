@@ -64,6 +64,9 @@ inputs.home-manager.lib.homeManagerConfiguration {
     inputs.sops-nix.homeManagerModules.sops
     secrets.syncActivation
     secrets.core
+    (import ../../modules/home/secrets-activation.nix {
+      secretDefs = secrets.homeSecretDefs;
+    })
   ]
   ++ [
     (_: {

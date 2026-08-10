@@ -187,6 +187,32 @@ in
             install -m 600 -o ${userConfig.username} -g users "$key_file" ${userConfig.homeDirectory}/.ssh/authorized_keys
           '';
         };
+
+        vm-age-key = {
+          description = "Install host age key for sops decryption";
+          wantedBy = [ "multi-user.target" ];
+          before = [ "home-manager-${userConfig.username}.service" ];
+          requires = [ "tmp-shared.mount" ];
+          after = [ "tmp-shared.mount" ];
+
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+
+          script = ''
+            key_file=/tmp/shared/age-keys.txt
+
+            if [ ! -s "$key_file" ]; then
+              echo "No host age key found at $key_file; secrets will be unavailable."
+              exit 0
+            fi
+
+            sops_dir="${userConfig.homeDirectory}/.config/sops/age"
+            install -d -m 700 -o ${userConfig.username} -g users "$sops_dir"
+            install -m 600 -o ${userConfig.username} -g users "$key_file" "$sops_dir/keys.txt"
+          '';
+        };
       };
     };
 

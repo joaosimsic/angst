@@ -78,11 +78,11 @@ inputs.nixpkgs.lib.nixosSystem {
     ../../modules/vm/vm-variant.nix
     ../../modules/vm/host-mount.nix
     ../../capabilities/ssh.nix
-    ({ config, pkgs, ... }: {
+    ({ pkgs, ... }: {
       users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
       users.users.root.hashedPassword = lib.mkDefault host.password;
 
-      systemd.services.angst-bootstrap-secrets = lib.mkIf (secrets.canDecrypt && !config.angst.isQemuVm) {
+      systemd.services.angst-bootstrap-secrets = lib.mkIf secrets.canDecrypt {
         description = "angst: set login password hash and enforce SSH key passphrase from secrets";
         wantedBy = [ "multi-user.target" ];
         after = [ "sops-nix.service" ];
@@ -173,7 +173,15 @@ inputs.nixpkgs.lib.nixosSystem {
           ]
           ++ appHomeModules
           ++ hmModules
-          ++ host.toolchainModules;
+          ++ host.toolchainModules
+          ++ [
+            inputs.sops-nix.homeManagerModules.sops
+            secrets.syncActivation
+            secrets.core
+            (import ../../modules/home/secrets-activation.nix {
+              secretDefs = secrets.homeSecretDefs;
+            })
+          ];
         };
       };
     }

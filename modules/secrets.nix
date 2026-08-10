@@ -29,20 +29,22 @@ let
     (sopsKeyEnv != "") || (sopsKeyFileEnv != "") || keyOk;
 
   canDecrypt = hasSecrets && hasAgeKey;
+
+  homeSecretDefs = {
+    opencodeGoKey = { target = ".secrets/opencode-go-key"; mode = "0600"; };
+  };
 in
 {
-  inherit secretsFile hasSecrets canDecrypt;
+  inherit secretsFile hasSecrets canDecrypt homeSecretDefs;
 
   core = lib.mkIf canDecrypt {
     sops = {
       age.keyFile = "/home/${host.username}/.config/sops/age/keys.txt";
       defaultSopsFile = secretsFile;
-      secrets = {
-        opencodeGoKey = { };
-      }
-      // lib.optionalAttrs (host.type == "nixos") {
-        masterPassword = { };
-      };
+      secrets = builtins.mapAttrs (_: _: { }) homeSecretDefs
+        // lib.optionalAttrs (host.type == "nixos") {
+          masterPassword = { };
+        };
     };
   };
 
@@ -54,5 +56,5 @@ in
       '';
     };
 
-  persistDirs = lib.optional canDecrypt ".config/sops";
+  persistDirs = lib.optional canDecrypt ".config/sops" ++ lib.optional canDecrypt ".secrets";
 }
