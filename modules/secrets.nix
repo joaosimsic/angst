@@ -52,7 +52,10 @@ in
     { config, lib, ... }:
     lib.mkIf canDecrypt {
       home.activation.secrets-ready = lib.hm.dag.entryAfter [ "sops-nix" ] ''
-        ${config.systemd.user.systemctlPath} --user start --wait sops-nix.service
+        systemdStatus=$(${config.systemd.user.systemctlPath} --user is-system-running 2>&1 || true)
+        if [[ $systemdStatus == "running" || $systemdStatus == "degraded" ]]; then
+          ${config.systemd.user.systemctlPath} --user start --wait sops-nix.service
+        fi
       '';
     };
 

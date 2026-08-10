@@ -85,7 +85,6 @@ inputs.nixpkgs.lib.nixosSystem {
       systemd.services.angst-bootstrap-secrets = lib.mkIf secrets.canDecrypt {
         description = "angst: set login password hash and enforce SSH key passphrase from secrets";
         wantedBy = [ "multi-user.target" ];
-        after = [ "sops-nix.service" ];
         before = [
           "getty@.service"
           "serial-getty@.service"

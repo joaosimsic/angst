@@ -18,9 +18,12 @@ lib.mkIf (present != { }) {
         def = present.${name};
       in
       ''
-        mkdir -p "$(dirname "$HOME/${def.target}")"
-        cat ${lib.escapeShellArg config.sops.secrets.${name}.path} > "$HOME/${def.target}"
-        chmod ${def.mode or "0400"} "$HOME/${def.target}"
+        SRC=${lib.escapeShellArg config.sops.secrets.${name}.path}
+        if [ -f "$SRC" ]; then
+          mkdir -p "$(dirname "$HOME/${def.target}")"
+          cat "$SRC" > "$HOME/${def.target}"
+          chmod ${def.mode or "0400"} "$HOME/${def.target}"
+        fi
       ''
     ) (builtins.attrNames present)
   );
