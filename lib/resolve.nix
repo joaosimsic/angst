@@ -38,9 +38,7 @@ let
     inherit lib;
     domainsPath = ../domains;
   };
-  domainsModule = import ./domains/module.nix {
-    inherit (import ./domains/activation.nix) mkDomainActivation;
-  };
+  domainsModule = import ./domains/module.nix { };
   domainsLib = domainsScan // domainsModule;
 
   _toolchains = decl.toolchains or "*";

@@ -40,7 +40,6 @@ inputs.home-manager.lib.homeManagerConfiguration {
     inherit (host)
       hostname
       monitors
-      repoPath
       db
       sshAgent
       ssh
