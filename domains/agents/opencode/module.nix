@@ -11,7 +11,7 @@
       home.packages = [ pkgs.opencode ];
     }
     (lib.mkIf (config.sops.secrets ? opencodeGoKey) {
-      home.activation.opencodeGoKey = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+       home.activation.opencodeGoKey = lib.hm.dag.entryAfter [ "secrets-ready" ] ''
         set -euo pipefail
         KEY=$(cat ${lib.escapeShellArg config.sops.secrets.opencodeGoKey.path})
         SECRETS_DIR="$HOME/.secrets"

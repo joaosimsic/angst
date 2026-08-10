@@ -24,9 +24,21 @@ in
   inherit secretsFile hasSecrets canDecrypt;
 
   core = lib.mkIf canDecrypt {
+    sops.age.keyFile = "/home/${host.username}/.config/sops/age/keys.txt";
     sops.defaultSopsFile = secretsFile;
-    sops.secrets.masterPassword = { };
-    sops.secrets.opencodeGoKey = { };
+    sops.secrets =
+      {
+        opencodeGoKey = { };
+      }
+      // lib.optionalAttrs (host.type == "nixos") {
+        masterPassword = { };
+      };
+  };
+
+  syncActivation = { config, lib, ... }: lib.mkIf canDecrypt {
+    home.activation.secrets-ready = lib.hm.dag.entryAfter [ "sops-nix" ] ''
+      ${config.systemd.user.systemctlPath} --user start --wait sops-nix.service
+    '';
   };
 
   persistDirs = lib.optional canDecrypt ".config/sops";

@@ -60,7 +60,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ++ appHomeModules
   ++ hmModules
   ++ host.toolchainModules
-  ++ [ inputs.sops-nix.homeManagerModules.sops secrets.core ]
+  ++ [ inputs.sops-nix.homeManagerModules.sops secrets.syncActivation secrets.core ]
   ++ [
     (_: {
       home.packages = [
@@ -71,8 +71,8 @@ inputs.home-manager.lib.homeManagerConfiguration {
     })
   ]
   ++ [
-    ({ config, pkgs, lib, ... }: lib.mkIf secrets.canDecrypt {
-      home.activation.angstSshKey = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+    ({ config, pkgs, lib, ... }: lib.mkIf (secrets.canDecrypt && host.type == "nixos") {
+      home.activation.angstSshKey = lib.hm.dag.entryAfter [ "secrets-ready" ] (
         ''
           set -euo pipefail
 
