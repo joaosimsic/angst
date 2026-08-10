@@ -1,6 +1,6 @@
 {
   self,
-  cfg,
+  host,
   pkgs,
   lib,
   render,
@@ -10,8 +10,8 @@
 let
   inherit (lib) attrNames filter head;
 
-  themesLib = cfg.scan.themes;
-  alternate = head (filter (n: n != cfg.theme) (attrNames themesLib.themes));
+  themesLib = host.scan.themes;
+  alternate = head (filter (n: n != host.theme) (attrNames themesLib.themes));
 
   themeLint = import ./theme {
     inherit lib themesLib;
@@ -31,24 +31,24 @@ let
   themeRendered = import ./theme/rendered.nix {
     inherit lib pkgs themesLib;
     inherit (render) renderDomainOutputsFor;
-    themeName = cfg.theme;
+    themeName = host.theme;
   };
 
   themeSemanticDistinct = import ./theme/semanticDistinct.nix {
     inherit lib pkgs;
-    themesLib = cfg.scan.themes;
-    themeName = cfg.theme;
+    themesLib = host.scan.themes;
+    themeName = host.theme;
   };
 
   themeOverrideCheck = import ./theme/override.nix {
     inherit lib pkgs themesLib;
     overrideTheme = alternate;
     inherit (render) renderDomainOutputFor;
-    homeConfiguration = self.homeConfigurations."${cfg.username}-theme-override-test";
+    homeConfiguration = self.homeConfigurations."${host.username}-theme-override-test";
   };
 
   checkPassword = import ./password.nix {
-    inherit lib pkgs cfg;
+    inherit lib pkgs host;
   };
 
   loginShell = import ./login-shell.nix {
@@ -67,7 +67,7 @@ in
   theme-override = themeOverrideCheck;
   theme-semantic-distinct = themeSemanticDistinct;
   home-theme-override-test =
-    self.homeConfigurations."${cfg.username}-theme-override-test".activationPackage;
+    self.homeConfigurations."${host.username}-theme-override-test".activationPackage;
   login-shell-valid = loginShell.valid;
   login-shell-invalid = loginShell.invalid;
 }

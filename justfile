@@ -1,44 +1,38 @@
-password:
-    #!/usr/bin/env bash
-    read -s -p "Enter password: " pass; echo; \
-    read -s -p "Confirm password: " pass2; echo; \
-    if [ "$pass" != "$pass2" ]; then echo "Passwords don't match"; exit 1; fi; \
-    hash=$(echo "$pass" | openssl passwd -6 -stdin); \
-    grep -q '^  password = ' local/config.nix && sed -i 's|^  password = ".*";$|  password = "'"$hash"'";|' local/config.nix || sed -i '/^  toolchains = /a\  password = "'"$hash"'";' local/config.nix
+bootstrap-secrets host="nixos":
+    angst bootstrap-secrets --host {{host}}
 
+disko host="nixos":
+    sudo nix run github:nix-community/disko -- --mode disko hosts/{{host}}/disk.nix
 
-disko:
-    sudo nix run github:nix-community/disko -- --mode disko local/disk.nix
+hardware host="nixos":
+    nixos-generate-config --show-hardware-config > hosts/{{host}}/hardware.nix
 
-hardware:
-    nixos-generate-config --show-hardware-config > local/hardware.nix
+bootstrap-disk host="nixos": disko hardware
+    @echo "Disk and hardware bootstrapped for {{host}}."
 
-bootstrap: disko hardware
-    @echo "Now write local/config.nix, run 'just password', then 'just build'"
+build host="nixos":
+    nix build .#nixosConfigurations.{{host}}
 
-build:
-    nix build .#nixosConfigurations.current --impure
+switch host="nixos":
+    sudo nixos-rebuild switch --flake .#{{host}}
 
-switch:
-    sudo nixos-rebuild switch --flake .#current --impure
+hm host="nixos" user="joao":
+    nix build .#homeConfigurations."{{user}}@{{host}}".activationPackage
 
-hm:
-    nix build .#homeConfigurations.current.activationPackage --impure
-
-hm-switch:
-    nix build .#homeConfigurations.current.activationPackage --impure && ./result/activate
+hm-switch host="nixos" user="joao":
+    nix build .#homeConfigurations."{{user}}@{{host}}".activationPackage && ./result/activate
 
 analyze:
     python3 -m scripts.analyze_flake --output analysis.md
 
 check:
-    nix flake check --impure
+    nix flake check
 
 dev:
-    nix develop --impure
+    nix develop
 
-vm:
-    @nix shell ./tools/vm#wrapped -c vm start
+vm host="nixos":
+    @NIX_DEFAULT_TARGET_HOST={{host}} nix shell ./tools/vm#wrapped -c vm start
 
-vm-ssh:
-    @nix shell ./tools/vm#wrapped -c vm ssh --auto-start
+vm-ssh host="nixos":
+    @NIX_DEFAULT_TARGET_HOST={{host}} nix shell ./tools/vm#wrapped -c vm ssh --auto-start

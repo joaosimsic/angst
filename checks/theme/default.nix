@@ -16,7 +16,7 @@ let
     ) themeNames
   );
 
-  summary = lib.concatStringsSep "\n" (
+  summary = builtins.concatStringsSep "\n" (
     [
       "Themes (${toString (lib.length themeNames)}):"
     ]

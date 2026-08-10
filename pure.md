@@ -1,454 +1,647 @@
-# Pure Flake Migration
+# angst — Pure Flake Architecture
 
-This guide describes how to convert angst from an impure flake (`builtins.getEnv "PWD"` pattern) to a pure flake, while keeping per-machine config files separate from the flake source (not tracked by git).
+angst is a fully pure Nix flake. No `--impure`, no env vars, no gitignored config files. Every command is deterministic: same commit → same system. Machines are disposable — clone the repo and build.
 
-## Concept
+## Philosophy
+
+**Disposability.** A host is a directory in git. Wipe the disk, reinstall NixOS, `nixos-rebuild switch --flake .#nixos`, and you're back where you were. Nothing lives outside the repo. The only out-of-band artifacts are the age keys, which the user provides at the standard sops-nix key path. Even browser profiles are declared paths — they survive on `/persist` but aren't required to reconstruct the system.
+
+**Purity.** The flake is a function of `git ls-files` only. `builtins.getEnv`, `builtins.currentTime`, and friends return nothing. `nix flake check` works bare. `nixos-rebuild list-generations` and `--rollback` are reliable. CI Just Works.
+
+**Tracked config, encrypted secrets.** Machine identity (hostname, username, theme, profiles, monitors, toolchains) lives in plain Nix in `hosts/<domain>/<hostname>/default.nix` — version-controlled, diffable, reviewable. Secrets (DB credentials, API tokens) live in per-host sops-encrypted YAML files. Age keys are standard sops-nix managed keys stored outside the repo at `~/.config/sops/age/keys.txt`. Personal machines and servers use separate age keys so that compromising a server doesn't expose personal secrets. The repo is safe to make public — it contains no key material of any kind.
+
+**Secrets are optional.** The system builds and boots fully functional without secrets. Tools, desktop, dotfiles, profiles — everything works. Secrets are added later, after the machine is running, by placing the age key and creating `secrets.yaml`.
+
+**Zero ceremony.** Adding a machine is `mkdir -p hosts/<domain>/<name>` + write `default.nix`. The flake auto-discovers hosts recursively. No flake.nix edits, no `--override-input`, no env vars, no key enrollment. Commands are bare:
+
+```bash
+sudo nixos-rebuild switch --flake .#nixos
+home-manager switch --flake .#joao@nixos
+home-manager switch --flake .#joao@linux
+nix flake check
+nix develop
+nix run .#vm -- --host nixos start
+```
+
+## Directory structure
 
 ```
-angst/                       # flake repo (pure, tracked by git)
-├── flake.nix                # declares inputs.config with a fallback
+angst/
+├── flake.nix                   # auto-discovers hosts/ directory (recursive)
 ├── hosts/
-│   └── default.nix          # fallback empty config { }
-├── lib/read-config.nix      # renamed to lib/load-config.nix
-│                            # reads from inputs.config, not builtins.getEnv
-└── ...
-
-~/angst-config/              # per-machine config (NOT tracked by git)
-├── pc/
-│   └── default.nix          # { system="x86_64-linux"; hostname="pc"; ... }
-├── laptop/
-│   └── default.nix          # { system="x86_64-linux"; hostname="laptop"; ... }
-└── vps/
-    └── default.nix          # { system="aarch64-linux"; hostname="vps"; ... }
+│   ├── personal/
+│   │   ├── nixos/
+│   │   │   ├── default.nix     #   machine identity (tracked, plain text)
+│   │   │   ├── hardware.nix    #   nixos-generate-config output (tracked)
+│   │   │   ├── disk.nix        #   disko layout (optional, tracked)
+│   │   │   └── secrets.yaml    #   per-host sops secrets (personal domain)
+│   │   ├── thonkpad/
+│   │   │   ├── default.nix
+│   │   │   └── secrets.yaml
+│   │   └── linux/              # non-NixOS home-manager host, personal domain
+│   │       ├── default.nix
+│   │       └── secrets.yaml
+│   ├── servers/
+│   │   ├── vps/
+│   │   │   ├── default.nix
+│   │   │   └── secrets.yaml    # per-host sops secrets (server domain)
+│   │   └── debian/
+│   │       ├── default.nix
+│   │       └── secrets.yaml
+│   └── ci/                     # CI test host (minimal, no secrets)
+│       └── default.nix
+├── lib/
+│   ├── resolve.nix             # pure function: host declaration → cfg
+│   ├── flake/outputs.nix       # iterates hosts → nixosConfigurations + homeConfigurations
+│   └── build/
+│       ├── mkNixos.nix         # NixOS system builder (impermanence, sops, hardware)
+│       └── mkHome.nix          # home-manager builder (sops)
+├── profiles/                   # composable profile sets (base, desktop, server, vm, etc.)
+├── toolchains/                 # auto-discovered toolchain definitions
+├── domains/                    # auto-discovered application domain modules
+├── themes/                     # auto-discovered theme definitions
+└── .sops.yaml                  # age public keys, scoped by path pattern (personal + server)
 ```
 
-Build commands pass the config directory at invocation time:
+Hosts are organized by **security domain** — `hosts/personal/` or `hosts/servers/` — which determines the sops encryption rules and which age public key is used. The domain is implicit from the directory path: all hosts under `hosts/personal/` use the personal age public key, all hosts under `hosts/servers/` use the server age public key. No config field is needed. Each host has its own `secrets.yaml` — there are no shared secrets files. Per-host secrets follow the domain directory structure naturally.
+
+**There are no age key files anywhere in the repo.** No `age.key`, no `.age` files, no passphrase-encrypted blobs. The repo contains only age **public** keys (in `.sops.yaml`, safe to track) and sops-encrypted secrets (also safe — encrypted at rest). Age private keys are managed by the user via sops-nix's native key path (`~/.config/sops/age/keys.txt`), outside the repo entirely.
+
+## How it works
+
+### Host auto-discovery
+
+`flake.nix` scans `hosts/` recursively using `builtins.readDir`. Security domain directories (`personal/`, `servers/`) and top-level entries (like `ci/`) are scanned; leaf directories with a `default.nix` become hosts. The host's `default.nix` is imported, enriched by `lib/resolve.nix` (defaults, domain scanning, toolchain resolution, theme indexing), and passed to `lib/flake/outputs.nix`, which builds `nixosConfigurations.<hostname>` for NixOS hosts and `homeConfigurations.<user>@<hostname>` for all hosts. The security domain is derived from the parent directory path — no config field needed.
+
+Adding a machine:
 
 ```bash
-# NixOS machines
-sudo nixos-rebuild switch --flake .#current --override-input config ~/angst-config/pc
-
-# Non-NixOS (home-manager only)  
-home-manager switch --flake .#current --override-input config ~/angst-config/laptop
+mkdir -p hosts/personal/laptop
+cp hosts/personal/nixos/default.nix hosts/personal/laptop/default.nix
+# edit hosts/personal/laptop/default.nix — change hostname, monitors, profiles, etc.
+# create hosts/personal/laptop/hardware.nix (nixos-generate-config)
+git add hosts/personal/laptop
 ```
 
-The override tells the flake "use this directory as the `config` input instead of the fallback." The flake itself never calls `builtins.getEnv` — config arrives as a declared flake input, keeping evaluation pure.
+No flake.nix edits. No key enrollment. The new host appears in `nixosConfigurations.laptop`.
 
-## Step-by-step
+### Config → cfg pipeline
 
-### 1. Create the fallback config
+```
+hosts/<domain>/<hostname>/default.nix  (plain Nix attrset, tracked)
+    │
+    ▼
+lib/resolve.nix           (pure function)
+    │  applies defaults
+    │  scans domains/ themes/ toolchains/
+    │  resolves profiles
+    │
+    ▼
+cfg                            (enriched attrset)
+    │
+    ├──► mkNixos.nix  →  nixosConfigurations.<hostname>
+    └──► mkHome.nix   →  homeConfigurations.<user>@<hostname>
+```
+
+`resolve.nix` is completely pure — it takes a host declaration and returns enriched cfg. No `builtins.getEnv`, no `builtins.currentTime`, no filesystem reads outside the flake source.
+
+### Secrets with sops-nix
+
+Each host has its own `hosts/<domain>/<hostname>/secrets.yaml`, encrypted to the domain's age public key. Secrets files are safe to track in git — they're encrypted at rest. There are no shared secrets files — each host owns its data. Adding a server host under `hosts/servers/` automatically uses the server age key; adding a personal host under `hosts/personal/` uses the personal key.
+
+**Security domains.** Two age key pairs exist, managed by the user via sops-nix:
+
+- Personal domain — `hosts/personal/*/secrets.yaml` are encrypted to the personal age public key. Used for desktop machines, laptops. Contains serious secrets: personal API tokens, DB credentials, authentication material.
+- Server domain — `hosts/servers/*/secrets.yaml` are encrypted to the server age public key. Used for VPS, CI runners. Contains operational secrets: deploy tokens, service credentials. If a server is compromised and its age key is leaked, personal secrets are unaffected.
+
+Both keys are provided by the user at the sops-nix key path. The public keys are in `.sops.yaml`, scoped by domain path pattern, and are safe to commit to a public repo.
+
+**The age keys are the root of trust for secrets.** The user provides age private keys at the sops-nix native key path (`~/.config/sops/age/keys.txt`). sops-nix discovers these keys automatically — no derivation, no prompt, no angst-specific key management. Two keys are needed:
+
+- **Personal key** — placed on personal machines. Decrypts `hosts/personal/*/secrets.yaml`.
+- **Server key** — placed on server machines. Decrypts `hosts/servers/*/secrets.yaml`.
+
+**The master password** (for login and SSH passphrase) lives inside `secrets.yaml`, encrypted by the age key. It is only accessible once the age key is present and secrets are decrypted. Without the age key, the system still builds and boots fully functional — only secrets (including the master password) are unavailable.
+
+**Secrets discovery is passive.** On every `switch`, sops-nix checks its native key path for age identities:
+
+1. **Key present, secrets file exists.** sops-nix reads the age key, decrypts `secrets.yaml`. Secrets are available. The master password (from decrypted secrets) is used to set the login password hash and SSH key passphrase.
+
+2. **No secrets file.** If `secrets.yaml` doesn't exist for this host, sops-nix is configured with no default sops file. Nothing happens. The system runs normally without secrets.
+
+3. **Key missing, secrets exist.** sops-nix cannot decrypt secrets. The activation script handles this gracefully — no error, the system boots without secrets. Secrets are added later by providing the age key.
+
+**Login and SSH passphrase from secrets.** When secrets are available, activation reads the master password from decrypted `secrets.yaml` and uses it to:
+
+- Derive the SHA-512 login password hash (NixOS only)
+- Verify and update the SSH key passphrase
+- Provision the SSH key if missing
+
+When secrets are unavailable, login uses the hash from the host config, and the SSH key has no passphrase. The user adds the master password to secrets later as part of bootstrap.
+
+### Two-phase bootstrap: system first, secrets later
+
+The system does not require secrets to build or boot. The bootstrap has two phases:
+
+**Phase 1: Install the system.**
 
 ```bash
-mkdir -p hosts
+git clone <repo-url>
+sudo nixos-rebuild switch --flake .#nixos
+# or for non-NixOS:
+home-manager switch --flake .#joao@linux
 ```
 
-**`hosts/default.nix`** — an empty config, so the flake can evaluate without an override:
+The system comes up fully functional — tools, desktop, dotfiles, profiles, domain configs, everything. No secrets yet. No password prompt. Login with the SHA-512 hash from the host config (or your host OS's existing password on non-NixOS).
 
-```nix
-{ }
+**Phase 2: Add the age key and secrets.**
+
+```bash
+# Generate age keys (one-time, anywhere)
+age-keygen -o ~/.config/sops/age/keys.txt
+# Add the public keys to .sops.yaml (personal + server)
+
+# Create and edit secrets for this host
+sops hosts/<domain>/<hostname>/secrets.yaml
 ```
 
-This directory lives inside the flake repo and is tracked by git. It's the "no machine" default used only for dev shells and CI.
+The user places their age key at the sops-nix key path, adds the public keys to `.sops.yaml`, and creates an empty `secrets.yaml` encrypted with sops. They add their master password as a secret (e.g., `masterPassword: "..."`), along with API tokens and DB credentials. A follow-up `nixos-rebuild switch` decrypts secrets via sops-nix, sets the login password hash and SSH passphrase from the decrypted master password. From that point on, sops-nix decrypts secrets on every activation whenever the age key is present.
 
-### 2. Add config input to flake.nix
+This two-phase design means you never need secrets available at install time. You can set up a new machine, get comfortable with the tooling, and add secrets whenever convenient.
 
-Add a `config` input pointing at the fallback:
+### SSH key enforcement at activation
+
+The SSH key is decoupled from secrets. When secrets are available, the master password from `secrets.yaml` is used as the SSH key passphrase. On every `switch`, activation scripts verify and enforce:
+
+1. **Key exists.** `~/.ssh/id_ed25519` must exist. If missing, it's generated with the master password from secrets as passphrase (requires secrets to be available).
+
+2. **Passphrase matches.** `ssh-keygen -y -P "$password" -f ~/.ssh/id_ed25519` must succeed, where `$password` is read from decrypted secrets. If the key has no passphrase or a different one, activation sets it with `ssh-keygen -p`.
+
+**Host key is independent.** The SSH host key (`/etc/ssh/ssh_host_ed25519`) is never copied from the user key. These serve different purposes — user keys authenticate outgoing connections, host keys authenticate incoming connections to sshd. Coupling them would mean a compromised user key can impersonate the server. On NixOS, the host key is generated by sshd and lives on `/persist/etc/ssh/`. On non-NixOS, it's managed by the host OS. angst only manages the user key.
+
+### Opt-in impermanence
+
+NixOS hosts can declare `persist.enable = true` to run on tmpfs `/`. The root filesystem is wiped on every reboot. Only explicitly declared paths survive:
+
+```
+/           (tmpfs, wiped on reboot)
+/nix        (persistent partition — binary cache, no recompilation)
+/boot       (persistent partition)
+/persist    (persistent partition — deliberate state)
+    ├── etc/ssh/                host identity
+    ├── etc/machine-id          stable machine ID
+    └── home/<user>/
+        ├── .ssh/               SSH key (passphrase-protected with master password)
+        ├── .mozilla/           Firefox sessions, cookies, accounts
+        ├── .config/google-chrome/  Chromium
+        └── .local/share/keyrings/   libsecret passwords
+```
+
+Hosts with `persist.enable = false` use conventional filesystems. Non-NixOS hosts (`type = "home-manager"`) don't get impermanence at all — the host OS manages the filesystem.
+
+### Total HDD loss scenario
+
+```
+1. Reinstall NixOS
+2. Clone the repo (public or private, no key material inside)
+3. sudo nixos-rebuild switch --flake .#nixos
+4. System boots fully — tools, desktop, everything works
+5. Place age key at ~/.config/sops/age/keys.txt
+6. sops hosts/<domain>/<hostname>/secrets.yaml → add secrets (including master password)
+7. sudo nixos-rebuild switch --flake .#nixos
+8. Done — secrets are live, SSH key provisioned, login set
+```
+
+The only out-of-band artifacts are the age keys, managed by the user. The repo itself is safe to clone on any machine, public or private.
+
+## Host config reference
+
+### `hosts/<domain>/<hostname>/default.nix` (NixOS)
 
 ```nix
 {
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  type = "nixos";          # "nixos" | "home-manager"
+  system = "x86_64-linux";
+  hostname = "nixos";
+  username = "joao";
+  theme = "miasma";
+  profiles = ["base" "desktop" "development"];
+  toolchains = "*";          # "*" for all, or ["bash" "nix" "php"] for minimal
 
-    home-manager = {
-      url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    config = {
-      url = "path:./hosts/default";
-      flake = false;
-    };
-
-    vm = {
-      url = "./tools/vm";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    shell = {
-      url = "./tools/shell";
-      inputs.nixpkgs.follows = "nixpkgs";
+  monitors = {
+    primary = {
+      name = "DP-1";
+      resolution = "1920x1080";
+      refreshRate = 144;
+      position = "0x0";
     };
   };
-  # ...
+
+  db.connections = { };
+  nixos = { keyboardLayout = "br-abnt2"; };
+  home = { };
+  env = { EDITOR = "nvim"; BROWSER = "firefox"; };
+  shell = "";               # login shell name ("" = skip validation)
+
+  sshAgent = {
+    enable = true;
+    keys = ["~/.ssh/id_ed25519"];
+  };
+  ssh = { };
+
+  # Only meaningful for type = "nixos"
+  persist = {
+    enable = true;           # false → conventional filesystem
+    root = "/persist";
+    homeDirs = [
+      ".mozilla"
+      ".config/google-chrome"
+      ".local/share/keyrings"
+    ];
+  };
 }
 ```
 
-`flake = false` means Nix won't try to interpret it as a flake — it just exposes the directory as a path the outputs function can import.
-
-### 3. Rewrite lib/read-config.nix → lib/load-config.nix
-
-Replace the impure `builtins.getEnv "PWD"` with reading from `inputs.config`:
-
-**`lib/load-config.nix`:**
+### `hosts/<domain>/<hostname>/default.nix` (home-manager)
 
 ```nix
 {
-  inputs,
-  themesLib,
-}:
+  type = "home-manager";      # produces only homeConfigurations
+  system = "x86_64-linux";
+  hostname = "linux";
+  username = "joao";
+  theme = "miasma";
+  profiles = ["base" "desktop" "development"];
+  toolchains = "*";
 
-let
-  lib = inputs.nixpkgs.lib;
+  monitors = { };             # safe to leave empty — i3 auto-detects
 
-  configPath = "${inputs.config}/default.nix";
-  config =
-    if builtins.pathExists configPath
-    then import configPath
-    else { };
+  db.connections = { };
+  home = { };
+  env = { EDITOR = "nvim"; BROWSER = "firefox"; };
+  shell = "";
 
-  system = config.system or "x86_64-linux";
-  pkgs = import inputs.nixpkgs {
-    inherit system;
-    config = import ./nixpkgs-config.nix;
+  sshAgent = {
+    enable = true;
+    keys = ["~/.ssh/id_ed25519"];
   };
+  ssh = { };
 
-  _toolchainDir = ../toolchains;
-  _rawFiles = builtins.attrNames (
-    lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "default.nix") (
-      builtins.readDir _toolchainDir
-    )
-  );
-  _tcIndex = lib.listToAttrs (
-    map (
-      f:
-      let
-        name = lib.removeSuffix ".nix" f;
-      in
-      {
-        inherit name;
-        value = import (_toolchainDir + "/${f}") { inherit lib pkgs; };
-      }
-    ) _rawFiles
-  );
-  _allTCs = builtins.attrValues _tcIndex;
+  # No persist, nixos, hardware.nix, disk.nix — those are NixOS-only.
+}
+```
 
-  domainsScan = import ./domains/scan.nix {
-    inherit lib;
-    domainsPath = ../domains;
-  };
-  domainsModule = import ./domains/module.nix {
-    inherit (import ./domains/activation.nix) mkDomainActivation;
-  };
-  domainsLib = domainsScan // domainsModule;
+### `hosts/personal/<hostname>/secrets.yaml`
 
-  _toolchains = config.toolchains or "*";
-  _bareNames = builtins.attrNames _tcIndex;
-in
+Per-host secrets for a personal machine, encrypted to the personal age public key via sops.
 
+```yaml
+masterPassword: "..."   # used for login hash and SSH passphrase
+db:
+  connections:
+    dev:
+      password: "db-password"
+env:
+  GITHUB_TOKEN: "ghp_..."
+```
+
+### `hosts/servers/<hostname>/secrets.yaml`
+
+Per-host secrets for a server, encrypted to the server age public key via sops. Contains only what servers need — API tokens, DB credentials, but no personal desktop keys.
+
+```yaml
+masterPassword: "..."   # used for login hash and SSH passphrase
+db:
+  connections:
+    prod:
+      password: "prod-db-password"
+env:
+  SOME_API_KEY: "sk-..."
+```
+
+The master password is stored in secrets — encrypted by the age key. It is used for login hash and SSH passphrase at activation time. Without the age key, secrets (including the master password) are unavailable.
+
+### `.sops.yaml`
+
+```yaml
+creation_rules:
+  - path_regex: hosts/servers/.*/secrets\.yaml$
+    age: age1...<server-age-public-key>
+  - path_regex: hosts/personal/.*/secrets\.yaml$
+    age: age1...<personal-age-public-key>
+```
+
+Rules are ordered by priority (servers first). Each domain gets its own age key. Because the path pattern is anchored on the domain directory, there's no ambiguity — a host under `hosts/servers/` always uses the server key.
+
+**Public keys are safe to commit.** These are public keys — they can only encrypt, never decrypt. The corresponding private keys are managed by the user at the sops-nix key path, outside the repo.
+
+## Bootstrap (one-time per machine)
+
+### Initial repo setup (one-time, by the repo owner)
+
+Before any machine can use secrets, the repo owner must seed `.sops.yaml` with the age public keys and set the login password hash:
+
+```bash
+# Generate age keys (anywhere, one-time)
+age-keygen -o ~/.config/sops/age/keys.txt
+# Copy the public key (starts with age1...) into .sops.yaml for each domain
+
+# Hash the master password for login (NixOS hosts)
+mkpasswd -m sha-512
+# → $6$... (set as password in host config)
+# The same master password will be stored in secrets.yaml later
+
+# Commit .sops.yaml and host configs
+```
+
+### Fresh machine bootstrap (per machine)
+
+```bash
+# Phase 1: install the system (no age key needed)
+git clone <repo-url>
+sudo nixos-rebuild switch --flake .#nixos
+# or: home-manager switch --flake .#joao@linux
+
+# Phase 2: add age key and secrets (whenever ready)
+# Place the age key at the sops-nix native path
+mkdir -p ~/.config/sops/age
+cp /path/to/your/age-key.txt ~/.config/sops/age/keys.txt
+
+# Create and edit secrets
+sops hosts/<domain>/<hostname>/secrets.yaml
+# → add your master password, API tokens, DB passwords, etc.
+
+# Apply
+sudo nixos-rebuild switch --flake .#nixos
+```
+
+Every subsequent `switch` is silent — sops-nix discovers the age key at the native path and decrypts secrets automatically.
+
+## Non-NixOS (home-manager) hosts
+
+Home-manager hosts have `type = "home-manager"` and produce only `homeConfigurations."<user>@<hostname>"`. They share the same profiles, toolchains, theme, domains, and secrets as NixOS hosts.
+
+Fields and files ignored for home-manager hosts:
+
+- `persist` — the host OS manages the filesystem
+- `nixos` — NixOS-specific system config (keyboard layout, etc.)
+- `hardware.nix`, `disk.nix` — NixOS hardware declaration
+
+All non-NixOS distros are treated identically — Arch, Debian, Mint, Fedora, etc. The host OS manages the kernel, drivers, and system packages. home-manager manages user configuration, dotfiles, toolchains, and secrets. Prerequisites on the host:
+
+- Nix (any installation method: official installer, nix-portable, distro package)
+- home-manager (via nix or as a standalone)
+
+No SSH key is required before the first switch — activation provisions it once secrets are available.
+
+### Server hosts (Debian, VPS, etc.)
+
+Server hosts use `type = "home-manager"` and the `server` profile. They live under `hosts/servers/` — the security domain is implicit from the path. The SSH server (sshd) is managed by the host OS; angst only manages the SSH client config and the user key.
+
+```nix
 {
-  inherit _tcIndex _allTCs;
+  type = "home-manager";
+  system = "x86_64-linux";
+  hostname = "debian";
+  username = "joao";
+  theme = "monochrome";
+  profiles = ["base" "server"];
+  toolchains = ["nix"];
 
-  cfg = {
-    inherit system;
-    hostname = config.hostname or "nixos";
-    username = config.username or "user";
-    theme = config.theme or "monochrome";
-    password = config.password or "!";
-    monitors = config.monitors or { };
-    db = config.db or { };
-    profiles = config.profiles or [ "base" ];
-    toolchains = _toolchains;
-    repoPath = config.repoPath or "proj/angst";
-    extraNixos = config.nixos or { };
-    extraHome = config.home or { };
-    env = config.env or { };
-    sshAgent = config.sshAgent or { };
-    ssh = config.ssh or { };
-    shell = config.shell or "";
+  monitors = { };
+  db.connections = { };
+  home = { };
+  env = { EDITOR = "nvim"; };
+  shell = "";
 
-    scan = {
-      domains = domainsLib;
-      themes = themesLib;
-      allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or [ ]) _allTCs);
-      treesitter = import ./treesitter.nix {
-        inherit lib pkgs;
-        grammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or [ ]) _allTCs);
-      };
-    };
-
-    toolchainModules =
-      if _toolchains == "*" then
-        _allTCs
-      else if builtins.isList _toolchains then
-        let
-          unknown = builtins.filter (n: !builtins.elem n _bareNames) _toolchains;
-        in
-        if unknown != [ ] then
-          throw "Unknown toolchains: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " _bareNames}"
-        else
-          map (n: _tcIndex.${n}) _toolchains
-      else
-        throw "toolchains must be \"*\" or a list";
+  sshAgent = {
+    enable = true;
+    keys = ["~/.ssh/id_ed25519"];
+  };
+  ssh = {
+    hosts = [
+      { host = "github.com"; user = "git"; identityFile = "~/.ssh/id_ed25519"; }
+    ];
   };
 }
 ```
 
-The key change: instead of `builtins.getEnv "PWD" + "/local/config.nix"`, it reads `${inputs.config}/default.nix`. That's it — one line changes.
-
-### 4. Update flake.nix output
-
-Change the import path and rename the variable:
-
-```nix
-outputs =
-  { self, nixpkgs, ... }@inputs:
-  let
-    themesLib = import ./themes/default.nix { lib = inputs.nixpkgs.lib; };
-    pure = import ./lib/load-config.nix { inherit inputs themesLib; };
-    inherit (pure) cfg;
-    # ...
-  in
-  import ./lib/flake/outputs.nix {
-    inherit self inputs cfg profiles;
-  };
-```
-
-### 5. Fix hardware.nix path in mkNixos.nix
-
-Currently hardware.nix is found via `${toString self}/local/hardware.nix` which relies on `local/` being in the flake source. Since `local/` is gitignored, this path won't exist in pure evaluations (the flake source is determined by `git ls-files`).
-
-Option: the per-machine config dir can hold `hardware.nix` alongside `default.nix`. Pass it through the config:
-
-Replace in `lib/build/mkNixos.nix`:
-
-```nix
-  hardwarePath =
-    let
-      p = "${toString self}/local/hardware.nix";
-    in
-    if builtins.pathExists p then p else null;
-```
-
-With:
-
-```nix
-  hardwarePath =
-    let
-      p = "${inputs.config}/hardware.nix";
-    in
-    if builtins.pathExists p then p else null;
-```
-
-Add `inputs` to the mkNixos function parameters.
-
-### 6. Move local/config.nix out of the flake repo
-
-For each machine, create a config directory outside the angst repo:
+## Everyday usage
 
 ```bash
-mkdir -p ~/angst-config/pc
+# Apply changes
+sudo nixos-rebuild switch --flake .#nixos
+home-manager switch --flake .#joao@nixos
+home-manager switch --flake .#joao@debian
+
+# Update flake inputs
+nix flake update
+sudo nixos-rebuild switch --flake .#nixos
+
+# Run checks
+nix flake check
+
+# VM testing
+nix run .#vm -- start          # uses NIX_DEFAULT_TARGET_HOST
+NIX_DEFAULT_TARGET_HOST=thonkpad nix run .#vm -- start
+
+# Dev shell (neovim, all toolchains, vm tools)
+nix develop
+
+# Minimal safe shell (neovim + toolchains, no qemu/ssh agent)
+nix develop .#safe
+
+# Domain config rendering
+angst render --host nixos
+angst watch   --host nixos
 ```
 
-Copy your existing `local/config.nix` into `~/angst-config/pc/default.nix` and strip any secrets you'd rather handle differently later.
+## Rotating secrets
 
-The `local/` directory (and especially `local/config.nix`) can be deleted from the flake repo, or kept as `.gitignore`'d convenience — the pure flake won't read from it anymore.
-
-### 7. Remove --impure from all invocations
-
-Update `justfile`:
-
-```justfile
-config_arg := env_var_or_default("ANGST_CONFIG", "hosts/default")
-
-password:
-    #!/usr/bin/env bash
-    config_dir="${ANGST_CONFIG:-$HOME/angst-config/pc}"
-    config_file="$config_dir/default.nix"
-    if [ ! -f "$config_file" ]; then
-        echo "Error: $config_file not found. Set ANGST_CONFIG or create it." >&2
-        exit 1
-    fi
-    read -s -p "Enter password: " pass; echo; \
-    read -s -p "Confirm password: " pass2; echo; \
-    if [ "$pass" != "$pass2" ]; then echo "Passwords don't match"; exit 1; fi; \
-    hash=$(echo "$pass" | openssl passwd -6 -stdin); \
-    grep -q '^  password = ' "$config_file" && sed -i 's|^  password = ".*";$|  password = "'"$hash"'";|' "$config_file" || sed -i '/^  toolchains = /a\  password = "'"$hash"'";' "$config_file"
-
-disko:
-    sudo nix run github:nix-community/disko -- --mode disko ~/angst-config/pc/disk.nix
-
-hardware:
-    nixos-generate-config --show-hardware-config > ~/angst-config/pc/hardware.nix
-
-bootstrap: disko hardware
-    @echo "Now write ~/angst-config/pc/default.nix, run 'just password', then 'just build'"
-
-build:
-    nix build .#nixosConfigurations.current --override-input config {{config_arg}}
-
-switch:
-    sudo nixos-rebuild switch --flake .#current --override-input config {{config_arg}}
-
-hm:
-    nix build .#homeConfigurations.current.activationPackage --override-input config {{config_arg}}
-
-hm-switch:
-    nix build .#homeConfigurations.current.activationPackage --override-input config {{config_arg}} && ./result/activate
-
-analyze:
-    python3 -m scripts.analyze_flake --output analysis.md
-
-check:
-    nix flake check --override-input config {{config_arg}}
-
-dev:
-    nix develop --override-input config {{config_arg}}
-
-vm:
-    @nix shell ./tools/vm#wrapped -c vm start
-
-vm-ssh:
-    @nix shell ./tools/vm#wrapped -c vm ssh --auto-start
-```
-
-Set `ANGST_CONFIG` in your shell profile per machine:
+### Change the master password
 
 ```bash
-# ~/.bashrc or ~/.config/nushell/env.nu
-export ANGST_CONFIG="$HOME/angst-config/pc"
+# 1. Edit secrets.yaml to update the master password
+sops hosts/<domain>/<hostname>/secrets.yaml
+
+# 2. Update login password hash
+mkpasswd -m sha-512   # enter NEW password → update host configs
+
+# 3. On next switch, activation reads the new master password from secrets
+#    and updates the SSH key passphrase
+
+# 4. Commit
+git commit -am "rotate master password"
 ```
 
-### 8. Update scripts/angst.sh
+### Rotate an age key
 
-Replace `repo_root_default()` — instead of searching for `local/config.nix`, have it look for a config path:
+Generate a new age key and update `.sops.yaml` with the new public key:
 
 ```bash
-repo_root_default() {
-    git rev-parse --show-toplevel 2>/dev/null || pwd
-}
+# 1. Generate new key
+age-keygen -o ~/.config/sops/age/keys-new.txt
 
-config_dir() {
-    local dir="${ANGST_CONFIG:-$HOME/angst-config/default}"
-    if [ ! -d "$dir" ]; then
-        echo "Error: config directory '$dir' not found. Set ANGST_CONFIG." >&2
-        exit 1
-    fi
-    printf '%s\n' "$dir"
-}
+# 2. Update .sops.yaml with the new public key
 
-config_file() {
-    printf '%s/default.nix' "$(config_dir)"
-}
+# 3. Re-encrypt affected secrets
+for d in hosts/servers/*/; do
+  sops updatekeys "${d}secrets.yaml"
+done
+
+# 4. Replace the old key
+mv ~/.config/sops/age/keys-new.txt ~/.config/sops/age/keys.txt
+
+# 5. Commit
+git commit -am "rotate server age key"
 ```
 
-Replace all `nix eval --impure "$repo_root#..."` with:
+To rotate only the server key, only re-encrypt `hosts/servers/*/secrets.yaml`. Personal hosts are unaffected.
 
-```bash
-local repo_root
-repo_root="$(repo_root_default)"
-local cfg_dir
-cfg_dir="$(config_dir)"
-nix eval "$repo_root#lib.renderDomainOutputsFor" \
-    --override-input config "$cfg_dir" \
-    --apply "..."
-```
+## CI
 
-Remove the `--impure` flag. Update the `passwd_cmd` function to write to `$(config_file)` instead of `$repo_root/local/config.nix`. Update `watch_cmd` to watch `$cfg_dir` instead of `$repo_root/local`.
+CI uses the `hosts/ci/` host — a minimal NixOS config with one toolchain, base profile, no secrets. Because `ci/` is at the top level (not under a domain directory), it has no secrets at all. No `cp local/config.nix.example` step needed. The flake evaluates purely and deterministically.
 
-### 9. Update modules/home/domain.nix
+## Design constraints
 
-Find the `nix eval --impure` calls and replace with `--override-input config`:
+- **`resolve.nix` is pure.** It takes a host declaration, returns cfg. No side effects, no env reads, no filesystem access outside the flake source.
+- **Host config is tracked in git.** Machine identity is version-controlled. Changing your theme or adding a profile is a commit.
+- **Secrets are encrypted, not hidden.** sops-encrypted files are safe to track in a public repo. Decryption happens at activation, never at eval time.
+- **No key material in the repo.** Age public keys live in `.sops.yaml` (safe — they only encrypt). Age private keys are managed by the user at the sops-nix key path (`~/.config/sops/age/keys.txt`), outside the repo entirely. The repo is safe to make fully public.
+- **Compartments are security domains, not machines.** Two age key pairs (personal + server), both managed by the user at the sops-nix key path. Only public keys are in the repo. A server compromise that exposes the server age key decrypts only server secrets — personal secrets are isolated (separate age key). Total HDD loss → clone repo, place age keys, done.
+- **The master password is stored in secrets.** It lives in `secrets.yaml`, encrypted by the age key. Used for login hash and SSH passphrase. Without the age key, secrets are unavailable and the master password is not accessible — the system boots using the login hash from the host config.
+- **Secrets are optional, not required.** The flake builds and boots without any secrets file. `hasSecrets = builtins.pathExists secretsFile` gates everything sops-related. Tools, desktop, profiles, and domains all work without secrets. Secrets are added later by providing the age key and creating `secrets.yaml` with `sops`.
+- **The flake is a closed function.** Every input comes from git. Nothing depends on CWD, env vars, or which machine you're on. This is what makes `nix flake check` work, rollback reliable, and CI deterministic.
+- **Hosts auto-discoverable.** `builtins.readDir` (recursive) means new hosts appear without touching `flake.nix`. No registration, no boilerplate.
+- **Non-NixOS hosts are first-class.** `type = "home-manager"` hosts get the same structure, same secrets decryption, same outputs. They just don't get hardware config or impermanence.
+- **SSH key is provisioned, not enrolled.** A single Ed25519 user key, passphrase-enforced with the master password. Used for SSH connections, not for sops. The SSH host key is independent — managed by sshd (NixOS) or the host OS (non-NixOS), never copied from the user key.
 
-Replace:
-```bash
-nix eval --impure "${self}#..."  # or similar
-```
+## Known concerns and implementation notes
 
-With:
-```bash
-nix eval "${self}#lib.renderDomainOutputsFor" \
-    --override-input config "${configSource}" \
-    --apply "..."
-```
+### Password: stored in secrets
 
-The config source path needs to be threaded through as a module parameter or derived from `flakeSelf` (since the activation script runs on the host and the config dir may not be accessible at the same path). This is the trickiest part. Two approaches:
+The master password is stored in encrypted secrets (inside `secrets.yaml`). It is used for login hash and SSH passphrase. Without the age key, secrets are unavailable and the master password is not accessible — the system still boots fully functional using the login hash from the host config.
 
-**A) Store config path in a file:** During NixOS/home-manager build, write the config dir path to a known location in the user's home. The activation script reads it.
+When secrets are available, the master password is read from decrypted `secrets.yaml`. It is used for SSH passphrase operations (`ssh-keygen -y -P "$password"`) and login hash derivation (`mkpasswd -m sha-512 "$password"`). It is cleared from variables immediately after use (`unset password`).
 
-**B) Pre-render at build time:** Instead of rendering in the activation script, render at build time and symlink the results. The activation script just seeds the repo and symlinks. This is arguably cleaner but requires restructuring the render pipeline.
+### Age keys are user-managed
 
-**C) Thread `configSource` via extraSpecialArgs:** Pass the config input path through `extraSpecialArgs` down to the home module.
+Age keys are standard sops-nix keys managed by the user, placed at `~/.config/sops/age/keys.txt`. There is no KDF derivation, no version bumps, no password-to-key mapping. The user generates keys with `age-keygen` or imports existing keys. Key rotation means generating a new key and re-encrypting affected secrets.
 
-Option C is simplest — add to both `mkHome.nix` and `mkNixos.nix`:
+- **No derivation, no brute-force surface.** Because keys are not derived from a password, there is no KDF to attack. The security of secrets depends on the security of the age key file (disk encryption, OS permissions) — not on password entropy.
 
-```nix
-extraSpecialArgs = {
-  # ... existing ...
-  configSource = "${inputs.config}";
-};
-```
+### Age key is the practical trust anchor
 
-Then in the home activation script (`modules/home/domain.nix`), use `config.configSource` instead of the impure `self`-based path.
+The age key at `~/.config/sops/age/keys.txt` is what decrypts secrets. Security depends on disk encryption and OS permissions. An attacker with filesystem access to the age key file can read secrets.
 
-### 10. Update tools/ sub-flakes
+### Per-host secrets only — no shared fallback
 
-The `tools/vm/flake.nix` and `tools/shell/flake.nix` also have `nix eval --impure` calls. These need the config override passed through. Since they're called by the root flake's apps, thread the config override as a parameter or have them read `ANGST_CONFIG` from the environment at runtime (which is fine — it's not flake evaluation, it's a runtime script).
+With the nested domain directory structure, each host has its own `hosts/<domain>/<hostname>/secrets.yaml`. There are no shared secrets files, so no per-host-to-shared fallback is needed. Builders (`mkNixos.nix`, `mkHome.nix`) construct the secrets file path as `hosts/<domain>/<hostname>/secrets.yaml` based on the host's location in the directory tree.
 
-## Summary of changes
+### Activation scripting must never leak the password
 
-| File | Change |
-|---|---|
-| `hosts/default.nix` | **New** — empty fallback config |
-| `flake.nix` | Add `inputs.config`, rename `import ./lib/read-config.nix` → `./lib/load-config.nix` |
-| `lib/read-config.nix` | **Rename to `lib/load-config.nix`**, replace `builtins.getEnv "PWD"` with `${inputs.config}/default.nix` |
-| `lib/build/mkNixos.nix` | Change hardwarePath to `${inputs.config}/hardware.nix`, accept `inputs` param |
-| `lib/flake/outputs.nix` | Add `--override-input config` to check app, ssh app |
-| `justfile` | Add `config_arg`, replace all `--impure` with `--override-input config {{config_arg}}` |
-| `scripts/angst.sh` | Replace `local/config.nix` scanning with `$ANGST_CONFIG`/`--override-input`, remove `--impure` |
-| `modules/home/domain.nix` | Thread `configSource` via `extraSpecialArgs`, replace `--impure` eval calls |
-| `tools/vm/` and `tools/shell/` | Replace `--impure` calls or pass config override |
+When secrets are available, the master password is read from decrypted `secrets.yaml` in memory:
 
-Files you move/delete:
+- `set +x` around any command that receives the password as argument
+- No `echo "$password"` or equivalent, even in error paths
+- `mkpasswd` output goes directly to the target file, never through the Nix store
+- After all operations complete, explicitly clear the password variable: `unset password`
 
-| Action | File |
-|---|---|
-| Move | `local/config.nix` → `~/angst-config/<host>/default.nix` per machine |
-| Move | `local/hardware.nix` → `~/angst-config/<host>/hardware.nix` per machine |
-| Keep | `local/` directory (gitignored, harmless) or delete |
-| Keep | `local/config.nix.example` if you want to keep a template |
+### Evaluation-time filesystem checks must live in activation scripts
 
-## Per-machine setup
+`builtins.pathExists` on absolute system paths produces different results in sandboxed vs. unsandboxed evaluation, violating "same commit → same system." These checks must run at activation time, not in Nix module assertions:
 
-After migration, each machine needs:
+| Module | Current check | Fix |
+|---|---|---|
+| `login-shell.nix` | `builtins.pathExists /usr/bin/nushell` in assertion | Validate shell in activation script via `which` or `getent` |
+| `ssh-agent.nix` | `builtins.pathExists ~/.ssh/id_ed25519` to configure agent | Check key existence at activation |
+| `is-qemu-vm.nix` | `builtins.pathExists /host/.../flake.nix` for VM detection | Detect at activation via `/sys/class/dmi/id/product_name` |
 
-```bash
-# 1. Clone the flake
-git clone <angst-repo> ~/proj/angst
+### repoPath derived at runtime
 
-# 2. Create your machine config
-mkdir -p ~/angst-config/$(hostname)
-cp ~/proj/angst/local/config.nix ~/angst-config/$(hostname)/default.nix
-# Edit as needed
+`repoPath` is not tracked in host config — it couples the flake to a specific checkout location and weakens disposability. Instead, derive the repo path at runtime:
 
-# 3. Set ANGST_CONFIG
-echo 'export ANGST_CONFIG="$HOME/angst-config/'"$(hostname)"'"' >> ~/.bashrc
+- **VM tooling:** use the flake source path (`self`) or the `NIX_DISK_IMAGE` directory.
+- **Activation scripts:** expect a well-known symlink or derive from the repo's own source path.
+- **Domain config rendering:** use `$PWD` or the flake source path.
 
-# 4. Build
-cd ~/proj/angst
-just switch   # NixOS
-just hm-switch   # home-manager only
-```
+### Domain rendered config is generated, not source
 
-## What you gain
+Domain `config/` subdirectories contain theme-rendered output files. These are gitignored because:
 
-- **Pure evaluation** — no `--impure` anywhere. The flake's output depends only on its declared inputs.
-- **Better eval guardrails** — if a machine config is missing, you get a clear error instead of silent defaults.
-- **Generation management** — `nixos-rebuild list-generations` and `--rollback` work reliably since the flake hash is deterministic.
-- **Config and flake evolve independently** — change the flake pipeline without touching machine config, change machine config without touching the flake.
-- **No git-committed per-machine config** — each machine's config lives in `~/angst-config/<host>/`, synced however you want (rsync, Syncthing, USB stick, or not at all).
+- **Theme-dependent.** A host using theme `miasma` renders different config than one using `catppuccin-mocha`. Hosts must not cross-pollute the branch.
+- **Generated, not authored.** The source of truth is the domain's `meta.nix` + `render.nix` + the host's selected theme. The rendered output is a build artifact.
 
-## Optional future steps
+Tracked in git: domain `.nix` modules, `meta.nix`, `render.nix`, and `config/` templates. Gitignored: the final rendered files in `domains/<category>/<name>/config/`.
 
-- **sops-nix / agenix** — encrypt secrets (passwords, API keys) in the config files so they can be committed without exposure.
-- **Multiple configs per machine** — one config file for the "identity" (hostname, username, theme, profiles) and another for secrets, passed as two separate inputs.
-- **deploy-rs / colmena** — if you want remote deployment to multiple machines from a central place.
+## Refactoring checklist
+
+Current state vs. target: flat `hosts/` (no domain nesting), `local/config.nix` exists with plaintext secrets, sops-nix wired but unseeded, no SSH key enforcement, flat sops rules, `read-config.nix` still needs rename.
+
+### Phase 1: Rename resolve.nix
+
+- [ ] `git mv lib/read-config.nix lib/resolve.nix`
+- [ ] `flake.nix`: rename variable `readConfig` → `resolve`, import path `./lib/read-config.nix` → `./lib/resolve.nix`
+
+### Phase 2: Host auto-discovery
+
+- [ ] Restructure `hosts/` from flat to domain-nested:
+  - `hosts/nixos/` → `hosts/personal/nixos/`
+  - `hosts/ci/` stays at top level (no domain, no secrets)
+  - Create `hosts/servers/` directory (empty or example host)
+- [ ] Make `flake.nix` scan `hosts/` recursively:
+  - Top-level dirs under `hosts/` are security domains or bare hosts
+  - Domain dirs recurse: each subdirectory with `default.nix` is a host
+  - Host's security domain inferred from parent path
+- [ ] Update `lib/flake/outputs.nix` to receive domain info per host
+- [ ] Pass domain to `mkNixos.nix` / `mkHome.nix` for sops file path construction
+
+### Phase 3: Secrets
+
+- [ ] Seed `.sops.yaml` with domain-scoped rules (replace flat `hosts/.*/` rule):
+  - `hosts/personal/.*/secrets\.yaml$` → personal age public key
+  - `hosts/servers/.*/secrets\.yaml$` → server age public key
+- [ ] Create empty `secrets.yaml` for existing hosts (or document creation)
+- [ ] `lib/build/mkNixos.nix`: sops file path → `hosts/<domain>/<hostname>/secrets.yaml`
+- [ ] `lib/build/mkHome.nix`: same path derivation
+- [ ] Remove `masterPassword` sentinel from `checks/password.nix`; update for sops-backed password flow
+
+### Phase 4: SSH key enforcement
+
+- [ ] `lib/build/mkNixos.nix` activation script:
+  - Check `~/.ssh/id_ed25519` exists; generate if missing (using master password from decrypted secrets)
+  - Verify passphrase matches with `ssh-keygen -y -P`
+  - Set/correct passphrase with `ssh-keygen -p`
+  - Skip gracefully when secrets are unavailable
+- [ ] `lib/build/mkHome.nix`: equivalent activation logic
+
+### Phase 5: Bootstrap tooling
+
+- [ ] Add `angst bootstrap-secrets` subcommand (or repurpose `angst passwd`):
+  - Creates `hosts/<domain>/<hostname>/secrets.yaml` encrypted with sops
+  - Writes master password as `masterPassword` secret
+- [ ] Update `justfile`: add `bootstrap` recipe, remove old `password` recipe
+
+### Phase 6: Cleanup
+
+- [ ] Delete `local/config.nix` — contains plaintext secrets; config is tracked per-host
+- [ ] Delete `local/hardware.nix` — hardware config is per-host
+- [ ] Delete `local/` directory if empty after removal
+- [ ] Remove `angst passwd` subcommand from `scripts/angst.sh` — replaced by master password in secrets.yaml
+- [ ] Remove `just password` recipe from `justfile`
+- [ ] Remove any remaining `local/config.nix` references from `flake.nix`, builders, checks, and docs
+- [ ] Delete `tools/shell/` input from `flake.nix` if unused after refactor
+- [ ] Audit `lib/` for dead code: unused imports, unused `builtins.getEnv` calls, impure paths referencing the old flat structure
+- [ ] Audit `checks/` for tests that depend on `local/config.nix` or the old flat `hosts/` layout
+- [ ] Audit `.gitignore` — remove `local/config.nix`-related ignores, ensure `hosts/**/secrets.yaml` is tracked (encrypted, safe to commit)
+- [ ] Audit `openwiki/` for stale references to `read-config.nix`, `local/config.nix`, flat `hosts/`, or age key derivation (regenerate if auto-generated)
+
+### Phase 7: Validation
+
+- [ ] Run `nix flake check` — no impure accesses, no `local/config.nix` dependency
+- [ ] Test `sudo nixos-rebuild switch --flake .#nixos` before secrets bootstrap (Phase 1)
+- [ ] Test with age key present and secrets.yaml populated (Phase 2)
+- [ ] Verify `home-manager switch --flake .#<user>@<hostname>` for non-NixOS hosts
+- [ ] Verify SSH key is provisioned and passphrase-enforced after bootstrap
+- [ ] Verify login password is set from decrypted master password after bootstrap
+- [ ] Verify secrets are unavailable (graceful skip) when age key is missing

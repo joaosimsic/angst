@@ -1,0 +1,9 @@
+creation_rules:
+  - path_regex: hosts/servers/.*/secrets\.yaml$
+    age: |
+      # Add your server age public keys below.
+      # age1...
+  - path_regex: hosts/personal/.*/secrets\.yaml$
+    age: |
+      # Add your personal age public keys below.
+      # age1...

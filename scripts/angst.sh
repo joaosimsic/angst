@@ -3,27 +3,33 @@
 usage() {
     cat <<'EOF'
 Usage:
-  angst passwd
+  angst bootstrap-secrets [--host HOST]
   angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
   angst watch  [--repo PATH] [--host HOST] [--theme THEME]
 EOF
 }
 
 repo_root_default() {
-    local dir="$PWD"
-    while [ "$dir" != "/" ]; do
-        if [ -f "$dir/local/config.nix" ]; then
-            printf '%s\n' "$dir"
-            return
-        fi
-        dir="$(dirname "$dir")"
-    done
     git rev-parse --show-toplevel 2>/dev/null || pwd
 }
 
 config_val() {
-    local repo="$1" key="$2"
-    nix eval --impure --expr "(import $repo/local/config.nix).$key" --raw 2>/dev/null || true
+    local repo="$1" host="$2" key="$3"
+    local cfg_path=""
+    for d in "$repo/hosts/"*/; do
+        [ -d "$d" ] || continue
+        local dn
+        dn="$(basename "$d")"
+        if [ -f "$repo/hosts/$dn/$host/default.nix" ]; then
+            cfg_path="$repo/hosts/$dn/$host/default.nix"
+            break
+        fi
+    done
+    if [ -z "$cfg_path" ] && [ -f "$repo/hosts/$host/default.nix" ]; then
+        cfg_path="$repo/hosts/$host/default.nix"
+    fi
+    [ -n "$cfg_path" ] || return 1
+    nix eval --file "$cfg_path" --raw --apply "x: x.$key or null" 2>/dev/null || true
 }
 
 reload_hooks() {
@@ -32,97 +38,124 @@ reload_hooks() {
     fi
 }
 
-passwd_cmd() {
-    local repo_root
+bootstrap_secrets_cmd() {
+    local repo_root host_name="nixos"
     repo_root="$(repo_root_default)"
-    local config_file="$repo_root/local/config.nix"
 
-    if [ ! -f "$config_file" ]; then
-        echo "Error: $config_file not found" >&2
-        echo "Copy local/config.nix.example to local/config.nix and fill in your values first." >&2
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+        --host) host_name="$2"; shift 2 ;;
+        -h|--help) usage; return 0 ;;
+        *) echo "unknown bootstrap-secrets option: $1" >&2; usage >&2; return 2 ;;
+        esac
+    done
+
+    if ! command -v sops >/dev/null 2>&1; then
+        echo "Error: sops is not available. Install it first (e.g., nix shell nixpkgs#sops)" >&2
         return 1
     fi
 
-    printf "Password: "
-    read -rs password
+    if ! command -v mkpasswd >/dev/null 2>&1; then
+        echo "Error: mkpasswd is not available. Install whois or use nix environment." >&2
+        return 1
+    fi
+
+    local domain="" secrets_file config_file
+    for d in "$repo_root/hosts/"*/; do
+        [ -d "$d" ] || continue
+        local dn
+        dn="$(basename "$d")"
+        if [ -f "$repo_root/hosts/$dn/$host_name/default.nix" ]; then
+            domain="$dn"
+            break
+        fi
+    done
+
+    if [ -n "$domain" ]; then
+        secrets_file="$repo_root/hosts/$domain/$host_name/secrets.yaml"
+        config_file="$repo_root/hosts/$domain/$host_name/default.nix"
+    else
+        secrets_file="$repo_root/hosts/$host_name/secrets.yaml"
+        config_file="$repo_root/hosts/$host_name/default.nix"
+    fi
+
+    if [ ! -f "$config_file" ]; then
+        echo "Error: host config not found for '$host_name'" >&2
+        return 1
+    fi
+
+    printf "Master password: "
+    read -rs master_password
     printf "\n"
 
-    if [ -z "$password" ]; then
+    if [ -z "$master_password" ]; then
         echo "Error: password cannot be empty" >&2
         return 1
     fi
 
-    printf "Confirm password: "
-    read -rs password_confirm
+    printf "Confirm master password: "
+    read -rs confirm
     printf "\n"
 
-    if [ "$password" != "$password_confirm" ]; then
+    if [ "$master_password" != "$confirm" ]; then
         echo "Error: passwords do not match" >&2
         return 1
     fi
+    unset confirm
 
     local hash
-    hash="$(mkpasswd -m sha-512 "$password")" || {
-        echo "Error: failed to hash password (is mkpasswd available?)" >&2
+    hash="$(mkpasswd -m sha-512 "$master_password")" || {
+        echo "Error: failed to hash password" >&2
         return 1
     }
-    unset password password_confirm
 
-    if grep -q "^[[:space:]]*password[[:space:]]*=" "$config_file"; then
-        sed -i "s|^[[:space:]]*password[[:space:]]*=.*$|  password = \"$hash\";|" "$config_file"
+    if [ -f "$secrets_file" ]; then
+        echo "masterPassword: \"$master_password\"" | sops --input-type yaml --output-type yaml "$secrets_file" 2>/dev/null || {
+            echo "Error: failed to update $secrets_file" >&2
+            return 1
+        }
     else
-        echo "Error: could not find 'password' field in $config_file" >&2
-        return 1
+        echo "masterPassword: \"$master_password\"" | sops --input-type yaml --output-type yaml "$secrets_file" 2>/dev/null || {
+            echo "Error: failed to create $secrets_file" >&2
+            return 1
+        }
     fi
 
-    echo "Password hashed and written to $config_file"
+    if grep -q '^\s*password\s*=' "$config_file"; then
+        sed -i "s|^\s*password\s*=.*|  password = \"$hash\";|" "$config_file"
+    else
+        sed -i "/^\s*};/i\  password = \"$hash\";" "$config_file"
+    fi
+
+    unset master_password hash
+
+    echo "Secrets bootstrapped for $host_name:"
+    echo "  secrets: $secrets_file"
+    echo "  hash:    $config_file"
+    echo ""
+    echo "Run 'sudo nixos-rebuild switch --flake .#$host_name' to apply."
 }
 
 render_cmd() {
-    local repo_root
+    local repo_root host_name theme_name=""
     repo_root="$(repo_root_default)"
-    local host_name
-    host_name="$(config_val "$repo_root" "hostname")"
-    host_name="${host_name:-${ANGST_HOST:-personal}}"
-    local theme_name=""
+    host_name="${NIX_DEFAULT_TARGET_HOST:-${ANGST_HOST:-nixos}}"
     local should_reload=1
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
-        --repo)
-            repo_root="$2"
-            shift 2
-            ;;
-        --host)
-            host_name="$2"
-            shift 2
-            ;;
-        --theme)
-            theme_name="$2"
-            shift 2
-            ;;
-        --reload)
-            should_reload=1
-            shift
-            ;;
-        --no-reload)
-            should_reload=0
-            shift
-            ;;
-        -h | --help)
-            usage
-            return 0
-            ;;
-        *)
-            echo "unknown render option: $1" >&2
-            usage >&2
-            return 2
-            ;;
+        --repo) repo_root="$2"; shift 2 ;;
+        --host) host_name="$2"; shift 2 ;;
+        --theme) theme_name="$2"; shift 2 ;;
+        --reload) should_reload=1; shift ;;
+        --no-reload) should_reload=0; shift ;;
+        -h|--help) usage; return 0 ;;
+        *) echo "unknown render option: $1" >&2; usage >&2; return 2 ;;
         esac
     done
 
     if [ -z "$theme_name" ]; then
-        theme_name="$(config_val "$repo_root" "theme")"
+        theme_name="$(config_val "$repo_root" "$host_name" "theme")"
         theme_name="${theme_name:-monochrome}"
     fi
 
@@ -137,10 +170,7 @@ render_cmd() {
         local base
         base="$(basename "$f" .nix)"
         [ "$base" = "default" ] || [ "$base" = "schema" ] && continue
-        if [ "$base" = "$theme_name" ]; then
-            theme_found=1
-            break
-        fi
+        if [ "$base" = "$theme_name" ]; then theme_found=1; break; fi
     done
 
     if [ -z "$theme_found" ]; then
@@ -157,16 +187,14 @@ render_cmd() {
 
     echo "Evaluating templates in a single optimized batch..."
     local json_data
-    json_data=$(nix eval --impure "$repo_root#lib.renderDomainOutputsFor" \
+    json_data=$(nix eval "$repo_root#lib.renderDomainOutputsFor" \
         --apply "f: builtins.toJSON (map (o: { path = o.path; text = o.text; }) (f \"$theme_name\"))" --raw)
 
     while IFS= read -r path; do
         [ -n "$path" ] || continue
         local output="$repo_root/$path"
         mkdir -p "$(dirname "$output")"
-
         echo "$json_data" | jq -r ".[] | select(.path == \"$path\") | .text" >"$output"
-
         chmod u+w "$output"
         echo "rendered $path"
     done < <(echo "$json_data" | jq -r '.[] | .path')
@@ -186,7 +214,6 @@ render_cmd() {
             done | sort -u)
 
             local gitignore_path="$repo_root/$config_dir/.gitignore"
-
             if [ -f "$gitignore_path" ]; then
                 local combined
                 combined=$(printf '%s\n%s' "$rel_paths" "$(cat "$gitignore_path")" | sort -u)
@@ -194,7 +221,6 @@ render_cmd() {
             else
                 printf '%s\n' "$rel_paths" >"$gitignore_path"
             fi
-
             echo "synced $config_dir/.gitignore"
         done
     fi
@@ -205,72 +231,48 @@ render_cmd() {
 }
 
 watch_cmd() {
-    local repo_root
+    local repo_root host_name theme_name="${ANGST_THEME:-}"
     repo_root="$(repo_root_default)"
-    local host_name
-    host_name="$(config_val "$repo_root" "hostname")"
-    host_name="${host_name:-${ANGST_HOST:-personal}}"
-    local theme_name="${ANGST_THEME:-}"
+    host_name="${NIX_DEFAULT_TARGET_HOST:-${ANGST_HOST:-nixos}}"
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
-        --repo)
-            repo_root="$2"
-            shift 2
-            ;;
-        --host)
-            host_name="$2"
-            shift 2
-            ;;
-        --theme)
-            theme_name="$2"
-            shift 2
-            ;;
-        -h | --help)
-            usage
-            return 0
-            ;;
-        *)
-            echo "unknown watch option: $1" >&2
-            usage >&2
-            return 2
-            ;;
+        --repo) repo_root="$2"; shift 2 ;;
+        --host) host_name="$2"; shift 2 ;;
+        --theme) theme_name="$2"; shift 2 ;;
+        -h|--help) usage; return 0 ;;
+        *) echo "unknown watch option: $1" >&2; usage >&2; return 2 ;;
         esac
     done
 
     local args=(render --repo "$repo_root" --host "$host_name" --reload)
-    if [ -n "$theme_name" ]; then
-        args+=(--theme "$theme_name")
-    fi
+    if [ -n "$theme_name" ]; then args+=(--theme "$theme_name"); fi
+
+    local watch_path="$repo_root/hosts/$host_name"
+    for d in "$repo_root/hosts/"*/; do
+        [ -d "$d" ] || continue
+        local dn
+        dn="$(basename "$d")"
+        if [ -f "$repo_root/hosts/$dn/$host_name/default.nix" ]; then
+            watch_path="$repo_root/hosts/$dn/$host_name"
+            break
+        fi
+    done
 
     watchexec \
         --watch "$repo_root/themes" \
         --watch "$repo_root/domains" \
-        --watch "$repo_root/local" \
+        --watch "$watch_path" \
         -- "$0" "${args[@]}"
 }
 
 command="${1:-}"
-if [ "$#" -gt 0 ]; then
-    shift
-fi
+if [ "$#" -gt 0 ]; then shift; fi
 
 case "$command" in
-passwd)
-    passwd_cmd "$@"
-    ;;
-render)
-    render_cmd "$@"
-    ;;
-watch)
-    watch_cmd "$@"
-    ;;
--h | --help | "")
-    usage
-    ;;
-*)
-    echo "unknown command: $command" >&2
-    usage >&2
-    exit 2
-    ;;
+bootstrap-secrets) bootstrap_secrets_cmd "$@" ;;
+render) render_cmd "$@" ;;
+watch)  watch_cmd "$@" ;;
+-h|--help|"") usage ;;
+*) echo "unknown command: $command" >&2; usage >&2; exit 2 ;;
 esac

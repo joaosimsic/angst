@@ -7,6 +7,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    impermanence.url = "github:nix-community/impermanence";
+
     vm = {
       url = "./tools/vm";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -21,25 +28,36 @@
   outputs =
     { self, nixpkgs, ... }@inputs:
     let
-      themesLib = import ./themes/default.nix { lib = inputs.nixpkgs.lib; };
-      pure = import ./lib/read-config.nix { inherit inputs themesLib; };
-      inherit (pure) cfg;
-      pkgs = import nixpkgs {
-        inherit (cfg) system;
-        config = import ./lib/nixpkgs-config.nix;
-      };
-      profiles = import ./profiles/default.nix {
-        inherit (cfg) profiles;
-        inherit (pkgs) lib;
-        inherit (cfg) scan;
-      };
+      inherit (nixpkgs) lib;
+      themesLib = import ./themes/default.nix { inherit lib; };
+      resolve = import ./lib/resolve.nix;
+
+      discoverHosts = import ./lib/discover.nix { inherit lib; };
+      hostEntries = discoverHosts ./hosts;
+
+      mkHost =
+        { domain, dir, ... }:
+        let
+          hostDecl = import (./hosts + "/${dir}");
+        in
+        (resolve {
+          inherit inputs themesLib domain;
+          decl = hostDecl;
+        }).host;
+
+      hostDefs = builtins.listToAttrs (
+        map (h: {
+          name = h.hostname;
+          value = mkHost h;
+        }) hostEntries
+      );
     in
     import ./lib/flake/outputs.nix {
       inherit
         self
         inputs
-        cfg
-        profiles
+        hostDefs
+        themesLib
         ;
     };
 }

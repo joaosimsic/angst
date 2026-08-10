@@ -4,8 +4,6 @@ on:
     branches: 
       - '**'
   pull_request:
-env:
-  ANGST_REPO: ${{ github.workspace }}
 jobs:
   lint-themes:
     runs-on: ubuntu-latest
@@ -13,79 +11,70 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: cp local/config.nix.example local/config.nix
-      - run: nix build '.#checks.x86_64-linux.lint-themes' --no-link --print-build-logs --impure
+      - run: nix build '.#checks.x86_64-linux.lint-themes' --no-link --print-build-logs
   lint-desktop:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: cp local/config.nix.example local/config.nix
-      - run: nix build '.#checks.x86_64-linux.lint-desktop' --no-link --print-build-logs --impure
+      - run: nix build '.#checks.x86_64-linux.lint-desktop' --no-link --print-build-logs
   lint-shell:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: cp local/config.nix.example local/config.nix
-      - run: nix build '.#checks.x86_64-linux.lint-shell' --no-link --print-build-logs --impure
+      - run: nix build '.#checks.x86_64-linux.lint-shell' --no-link --print-build-logs
   theme-rendered:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: cp local/config.nix.example local/config.nix
-      - run: nix build '.#checks.x86_64-linux.theme-rendered' --no-link --print-build-logs --impure
+      - run: nix build '.#checks.x86_64-linux.theme-rendered' --no-link --print-build-logs
   theme-override:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: cp local/config.nix.example local/config.nix
-      - run: nix build '.#checks.x86_64-linux.theme-override' --no-link --print-build-logs --impure
+      - run: nix build '.#checks.x86_64-linux.theme-override' --no-link --print-build-logs
   theme-semantic-distinct:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: cp local/config.nix.example local/config.nix
-      - run: nix build '.#checks.x86_64-linux.theme-semantic-distinct' --no-link --print-build-logs --impure
+      - run: nix build '.#checks.x86_64-linux.theme-semantic-distinct' --no-link --print-build-logs
   check-password:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: cp local/config.nix.example local/config.nix
-      - run: nix build '.#checks.x86_64-linux.check-password' --no-link --print-build-logs --impure
+      - run: nix build '.#checks.x86_64-linux.check-password' --no-link --print-build-logs
   login-shell-valid:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: cp local/config.nix.example local/config.nix
-      - run: nix build '.#checks.x86_64-linux.login-shell-valid' --no-link --print-build-logs --impure
+      - run: nix build '.#checks.x86_64-linux.login-shell-valid' --no-link --print-build-logs
   login-shell-invalid:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: cp local/config.nix.example local/config.nix
-      - run: nix build '.#checks.x86_64-linux.login-shell-invalid' --no-link --print-build-logs --impure
+      - run: nix build '.#checks.x86_64-linux.login-shell-invalid' --no-link --print-build-logs
   lint-nix:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build '.#checks.x86_64-linux.lint-nix' --no-link --print-build-logs --impure
+      - run: nix build '.#checks.x86_64-linux.lint-nix' --no-link --print-build-logs
   nixfmt:
     runs-on: ubuntu-latest
     steps:
@@ -108,7 +97,7 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Check tools/shell formatting
         run: |
-          nix develop --impure ./tools/shell#default --command bash -lc \
+          nix develop ./tools/shell#default --command bash -lc \
             'cd tools/shell && cargo fmt --check'
   vm-tests:
     runs-on: ubuntu-latest
@@ -116,8 +105,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: cp local/config.nix.example local/config.nix
       - name: Run VM Rust tests
         run: |
-          nix develop --impure .#vm --command bash -lc \
+          nix develop .#vm --command bash -lc \
             'cd tools/vm && cargo fmt --check && cargo test --workspace --locked'
