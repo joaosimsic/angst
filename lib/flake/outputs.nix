@@ -41,6 +41,7 @@ let
   vmOutputs = inputs.vm.mkOutputs self;
   shellOutputs = inputs.shell.mkOutputs self;
   vmTool = vmOutputs.packages.${defaultSystem}.default or vmOutputs.packages.${defaultSystem}.vm;
+  vmResTool = vmOutputs.packages.${defaultSystem}.res or vmOutputs.packages.${defaultSystem}.vm-run;
   shellTool = shellOutputs.packages.${defaultSystem}.default;
 
   angstTool = pkgs.writeShellApplication {
@@ -131,6 +132,7 @@ rec {
               shellTool
               angstTool
               ;
+            resTool = vmResTool;
             hmModules = p.hm;
           };
         }
@@ -152,6 +154,7 @@ rec {
                 shellTool
                 angstTool
                 ;
+              resTool = vmResTool;
               host = r;
               hmModules = p.hm;
             };
@@ -170,6 +173,7 @@ rec {
                   shellTool
                   angstTool
                   ;
+                resTool = vmResTool;
                 host = r;
                 hmModules = p.hm;
                 themeOverride = overrideTheme;
@@ -184,6 +188,7 @@ rec {
                 shellTool
                 angstTool
                 ;
+              resTool = vmResTool;
               host = r;
               hmModules = p.hm;
               shellOverride = "sh";
@@ -197,6 +202,7 @@ rec {
                 shellTool
                 angstTool
                 ;
+              resTool = vmResTool;
               host = r;
               hmModules = p.hm;
               shellOverride = "__angst_nonexistent_shell__";

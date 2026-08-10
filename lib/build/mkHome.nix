@@ -6,6 +6,7 @@
   vmTool,
   shellTool,
   angstTool,
+  resTool,
   themeOverride ? null,
   shellOverride ? null,
 }:
@@ -74,6 +75,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
         vmTool
         shellTool
         angstTool
+        resTool
       ];
     })
   ]
