@@ -31,17 +31,26 @@ let
   canDecrypt = hasSecrets && hasAgeKey;
 
   homeSecretDefs = {
-    opencodeGoKey = { target = ".secrets/opencode-go-key"; mode = "0600"; };
+    opencodeGoKey = {
+      target = ".secrets/opencode-go-key";
+      mode = "0600";
+    };
   };
 in
 {
-  inherit secretsFile hasSecrets canDecrypt homeSecretDefs;
+  inherit
+    secretsFile
+    hasSecrets
+    canDecrypt
+    homeSecretDefs
+    ;
 
   core = lib.mkIf canDecrypt {
     sops = {
       age.keyFile = "/home/${host.username}/.config/sops/age/keys.txt";
       defaultSopsFile = secretsFile;
-      secrets = builtins.mapAttrs (_: _: { }) homeSecretDefs
+      secrets =
+        builtins.mapAttrs (_: _: { }) homeSecretDefs
         // lib.optionalAttrs (host.type == "nixos") {
           masterPassword = { };
         };

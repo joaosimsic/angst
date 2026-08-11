@@ -275,7 +275,10 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
     let runner_exists = Path::new(&runner_path).exists();
 
     if !runner_exists {
-        println!("VM image not found. Building NixOS VM system image for host '{}'...", host);
+        println!(
+            "VM image not found. Building NixOS VM system image for host '{}'...",
+            host
+        );
 
         let username = target_username();
         let password = env::var("ANGST_PASSWORD")

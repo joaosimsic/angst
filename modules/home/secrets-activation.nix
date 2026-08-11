@@ -2,12 +2,18 @@
   secretDefs,
 }:
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   present = lib.filterAttrs (name: _: config.sops.secrets ? ${name}) secretDefs;
 
-  copySnippet = name:
+  copySnippet =
+    name:
     let
       def = present.${name};
     in
@@ -20,11 +26,10 @@ let
       fi
     '';
 
-  copyScript =
-    ''
-      set -euo pipefail
-    ''
-    + lib.concatMapStrings copySnippet (builtins.attrNames present);
+  copyScript = ''
+    set -euo pipefail
+  ''
+  + lib.concatMapStrings copySnippet (builtins.attrNames present);
 
   copyScriptBin = pkgs.writeShellScript "secrets-to-home" copyScript;
 in
