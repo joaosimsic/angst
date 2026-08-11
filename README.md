@@ -34,7 +34,7 @@ nix run .#lint-themes                # fast, eval-only theme check
 ```
 @hosts/          machine declarations (hosts/<domain>/<hostname>/default.nix) — auto-discovered
 @checks/         build-time validation (theme lint, config rendering, secrets, password, login shell, Nix lint)
-@domains/        features (27 domains / 17 categories) — each with optional home.nix and/or system.nix sides
+@domains/        features (30 domains / 17 categories) — each with a default.nix interface + optional home.nix/system.nix sides
 @lib/            build system, domain framework, host resolution, flake outputs
 @modules/        core NixOS/home/VM modules + sops secrets integration
 @profiles/       reusable composition units — selected via the host decl's `profiles` list
@@ -77,22 +77,23 @@ Optional siblings: `secrets.yaml` (sops-encrypted, see [Secrets](openwiki/secret
 
 ### `@domains/` — Feature Declarations
 
-Domains are the single unit of configuration — **27 features across 17 categories** (user apps *and* system features). Each `domains/<category>/<name>/` describes one feature, with optional user (`home.nix`) and system (`system.nix`) sides:
+Domains are the single unit of configuration — **30 features across 17 categories** (user apps *and* system features). Each `domains/<category>/<name>/` describes one feature, with optional user (`home.nix`) and system (`system.nix`) sides:
 
 | File | Purpose |
 |---|---|
-| `meta.nix` | Nix package name, XDG target (`xdg` full dir, `xdgFile` single file, or `customXdg`), description (system-only features may omit the XDG target) |
+| `default.nix` | **The domain interface**: pure data — `package`, `xdg`/`xdgFile`/`customXdg`, `description`, `mutable`. Validated strictly by `mkDomain` |
 | `home.nix` | Optional: custom home-manager module (only when auto-generation isn't enough) |
 | `system.nix` | Optional: NixOS module (sshd, i3 WM, `system/*` features) |
-| `render.nix` | Theme-aware config generator: `{ themesLib, themeName, ... } → [{ path, text, checks? }]` |
+| `render.nix` | Optional: theme-aware config generator: `{ themesLib, themeName, ... } → [{ path, text, checks? }]` |
 | `config/` | Optional: static config files (symlinked via `xdg.configFile`) |
 
 The domain framework (`lib/domains/`):
 
-- **`scan.nix`** — recursively discovers domain dirs, imports + validates `meta.nix` (`validateMeta` throws unless exactly one XDG target is set, or the feature is system-only), produces `entries`/`systemEntries`.
-- **`module.nix`** — `mkDomainModule` auto-generates a home-manager module per feature (`enable` option, `home.packages`, `home.file` for rendered outputs, `xdg.configFile` for `config/`, `renderOverrideModule` for `mutable` files); imports `home.nix` when present. `mkNixosSystemModule` imports `system.nix` when present. Each side self-gates on `domains.<cat>.<name>.enable`; `host.type` decides which sides are built (`nixos` → both, `home` → home only).
+- **`mkDomain.nix`** — the interface. Validates each `default.nix` spec: unknown keys, field types, `package` existence in `pkgs`, `xdg`/`xdgFile`/`customXdg` coherence, required `description`, `mutable` basenames, and the conventional side files (`home.nix`/`system.nix`/`render.nix` must be module functions, `config/` a directory). Violations throw `domains/<cat>/<name>/default.nix: <msg>` at eval.
+- **`scan.nix`** — recursively discovers domain dirs and runs `mkDomain` over each `default.nix`, producing `entries`/`systemEntries`.
+- **`module.nix`** — `mkDomainModule` auto-generates a home-manager module per feature (`enable` option, `home.packages`, `home.file` for rendered outputs, `xdg.configFile` for `config/`, `renderOverrideModule` for `mutable` files); validates the render output contract (`[{ path, text, checks? }]`). `mkNixosSystemModule` imports `system.nix` when present. Each side self-gates on `domains.<cat>.<name>.enable`; `host.type` decides which sides are built (`nixos` → both, `home` → home only).
 
-Full 27-domain inventory: see [openwiki/domains.md](openwiki/domains.md).
+Full 30-domain inventory: see [openwiki/domains.md](openwiki/domains.md).
 
 Domain categories: `agents/` (opencode, cursor-cli), `bar/` (i3status), `editor/` (nvim), `files/` (yazi), `git/` (lazygit), `http-client/` (posting), `launcher/` (rofi), `nix/` (nh), `remote/` (ssh), `security/` (age, sops), `session/` (x11), `shell/` (nushell, starship, carapace), `sql-client/` (sqlit, rainfrog), `system/` (audio, clipboard, container, git, graphical, monitoring, network, search), `terminal/` (ghostty, zellij, tmux), `wm/` (i3).
 
@@ -128,7 +129,7 @@ Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run
 | `lib/resolve.nix` | Normalizes a host decl into a `host` object (defaults, domain/toolchain scanning) |
 | `lib/build/mkNixos.nix` | NixOS system constructor (wires profiles, domains, modules, secrets bootstrap, VM detection, hardware) |
 | `lib/build/mkHome.nix` | Home-manager profile constructor (domains, toolchains, secrets activation, special args) |
-| `lib/domains/` | Domain discovery (`scan.nix`) + auto module generation (`module.nix`) |
+| `lib/domains/` | Domain interface (`mkDomain.nix`) + discovery (`scan.nix`) + module generation (`module.nix`) |
 | `lib/flake/outputs.nix` | All flake outputs: home configs, NixOS configs, packages, apps, dev shells, checks, formatter |
 | `lib/flake/devshell.nix` | Dev shell definitions (safe, dev, vm) with SSH agent init |
 | `lib/render.nix` | Theme rendering engine (`renderDomainOutputsFor`, `renderDomainOutputFor`) |

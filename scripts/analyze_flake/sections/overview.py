@@ -197,9 +197,9 @@ def section_render_coverage() -> str:
             total += 1
             if (d / "render.nix").exists():
                 counts["render"] += 1
-            if (d / "nixos.nix").exists():
-                counts["nixos"] += 1
-            if (d / "meta.nix").exists():
+            if (d / "system.nix").exists():
+                counts["system"] += 1
+            if (d / "default.nix").exists():
                 checks_dir = d / "checks"
                 if checks_dir.exists():
                     counts["checks"] += len(list(checks_dir.rglob("*.nix")))

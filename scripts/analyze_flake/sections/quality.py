@@ -164,16 +164,16 @@ def section_tech_debt() -> str:
     )
 
     domains_dir = REPO / "domains"
-    all_domains_have_meta = True
+    all_domains_have_default = True
     if domains_dir.is_dir():
         for cat in domains_dir.iterdir():
             if not cat.is_dir():
                 continue
             for d in cat.iterdir():
-                if d.is_dir() and not (d / "meta.nix").exists():
-                    all_domains_have_meta = False
+                if d.is_dir() and not (d / "default.nix").exists():
+                    all_domains_have_default = False
                     break
-    checks.append(("Configuration", "All domains have meta.nix", all_domains_have_meta))
+    checks.append(("Configuration", "All domains have default.nix", all_domains_have_default))
 
     statix_ok = True
     if has_cmd("statix"):

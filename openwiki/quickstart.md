@@ -13,7 +13,7 @@ Machines are declared as plain, diffable Nix files under `hosts/` and auto-disco
 | `/hosts/` | Machine declarations: `hosts/<domain>/<hostname>/default.nix` (+ optional `secrets.yaml`, `hardware.nix`) |
 | `/profiles/` | Reusable composition units (base, desktop, development, server, vm) selected per host |
 | `/modules/` | Core modules: `home/`, `nixos/`, `vm/`, plus `secrets.nix` (sops integration) |
-| `/domains/` | Features — the unit of configuration (27 features / 17 categories), each with optional `home.nix`/`system.nix` sides |
+| `/domains/` | Features — the unit of configuration (30 features / 17 categories), each with a `default.nix` interface + optional `home.nix`/`system.nix` sides |
 | `/themes/` | Color token definitions (9 themes, strict 13-token schema) |
 | `/toolchains/` | Declarative dev-language toolchains (23 languages via `mkToolchain`) |
 | `/tools/` | Standalone Rust workspaces: `shell` (env switcher), `vm` (QEMU lifecycle + MCP) |
@@ -26,7 +26,7 @@ Machines are declared as plain, diffable Nix files under `hosts/` and auto-disco
 
 - **Hosts** — Each machine is `hosts/<domain>/<hostname>/default.nix`, a pure data decl (`type`, hostname, username, theme, profiles, toolchains, monitors, sshAgent, persist, …). `lib/discover.nix` finds them recursively; `lib/resolve.nix` normalizes each decl into a `host` object. Optional `secrets.yaml` (sops-encrypted) and `hardware.nix` sit next to the decl. Current hosts: `ci` (CI runner), `personal/nixos` (desktop), `personal/mint` (home-only, `type = "home"`), `vm`.
 - **Profiles** — Composition units (`profiles/*.nix`), each a pure feature list `{ enable = [...]; }` (+ optional NixOS-only `modules`). Hosts select via `profiles = ["base" "desktop" ...]`. `profiles/default.nix` validates feature names at build time and the builder splits them into home/system sides by feature sides + host type.
-- **Domains** — The unit of configuration: `domains/<category>/<name>/` with `meta.nix` (package + XDG target), optional `home.nix` (home-manager), `system.nix` (NixOS), `render.nix` (theme-aware config generator), and `config/`. A feature may be user-space, system-space, or both. Auto-discovered and turned into modules by `lib/domains/`.
+- **Domains** — The unit of configuration: `domains/<category>/<name>/` with a `default.nix` interface (package + XDG target + description, validated by `mkDomain`), optional `home.nix` (home-manager), `system.nix` (NixOS), `render.nix` (theme-aware config generator), and `config/`. A feature may be user-space, system-space, or both. Auto-discovered and turned into modules by `lib/domains/`.
 - **Themes** — 13 color tokens (9 palette + 4 ansi). 9 themes, all validated at build time; rendered into every domain config. See [Themes](themes.md).
 - **Toolchains** — Declarative language environments (runtime, LSP, formatter, linter, treesitter grammar) for 23 languages; selected by `toolchains = "*"` or a list in the host decl.
 - **Secrets** — sops-nix + age. `secrets.yaml` per host holds `masterPassword` (+ app keys such as `opencodeGoKey`); decrypted at runtime into `~/.secrets/` and used to bootstrap login hashes and the SSH key passphrase. See [Secrets](secrets.md).
@@ -107,11 +107,11 @@ nix run .#lint-shell               # starship + nushell per theme
 
 - **Configuring a machine**: edit `hosts/<domain>/<hostname>/default.nix` (or create a new host dir — it is auto-discovered). Set theme, profiles, toolchains, monitors, persist, sshAgent. For secrets, run `angst bootstrap-secrets --host <host>`.
 - **Adding a profile**: create `profiles/<name>.nix` as a feature list `{ enable = [...]; }` and register it in the `profileMap` in `profiles/default.nix`.
-- **Adding a domain**: create `domains/<category>/<name>/meta.nix`, optionally `home.nix`, `system.nix`, `render.nix`, `config/`. Enable via a profile or host extra modules.
+- **Adding a domain**: create `domains/<category>/<name>/default.nix` (the interface), optionally `home.nix`, `system.nix`, `render.nix`, `config/`. Enable via a profile or host extra modules.
 - **Adding a theme**: create `/themes/<name>.nix` following `/themes/schema.nix`; validate with `nix run .#lint-themes`.
 - **Adding a toolchain**: create `/toolchains/<name>.nix` using `mkToolchain`; auto-discovered by `lib/resolve.nix`.
 - **Changing renders**: edit the domain's `render.nix`, then `angst render`; validate with `nix run .#lint-shell` / `.#lint-desktop` / `.#lint-themes`.
-- **Modifying the domain framework**: `/lib/domains/scan.nix` (discovery + meta validation), `/lib/domains/module.nix` (auto-module generation).
+- **Modifying the domain framework**: `/lib/domains/mkDomain.nix` (interface validation), `/lib/domains/scan.nix` (discovery), `/lib/domains/module.nix` (auto-module generation).
 - **Before committing**: hooks (gitleaks) are installed via `just install-hooks`; CI runs `nix flake check`, gitleaks + trufflehog scanning, nvim tests, and `cargo fmt`/`cargo test` for `tools/vm`. Locally: `nix flake check` at minimum `nix run .#lint-themes`.
 
 ### Key Source Files by Concern
@@ -126,7 +126,7 @@ nix run .#lint-shell               # starship + nushell per theme
 | NixOS build | `/lib/build/mkNixos.nix` |
 | Secrets (sops-nix) | `/modules/secrets.nix`, `/modules/home/secrets-activation.nix`, `/scripts/angst.sh` |
 | Profile composition | `/profiles/default.nix`, `/profiles/{base,desktop,development,server,vm}.nix` |
-| Domain framework | `/lib/domains/scan.nix`, `/lib/domains/module.nix` |
+| Domain framework | `/lib/domains/mkDomain.nix`, `/lib/domains/scan.nix`, `/lib/domains/module.nix` |
 | Theme system | `/themes/default.nix`, `/themes/schema.nix` |
 | VM support | `/modules/vm/*.nix` (7 files) |
 | Rust shell CLI | `/tools/shell/src/` |

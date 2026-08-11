@@ -86,7 +86,7 @@ When `host.persist.enable` is true (currently `personal/nixos` and `vm`), `modul
 Documented here so future agents don't chase ghosts:
 
 - **`modules/vm/specialisation.nix`** — never imported.
-- **`domains/llm/opencode/`** — contains only `config/node_modules/`, no `meta.nix`; dead and would fail `scan.nix` if evaluated.
+- **`domains/llm/opencode/`** — contains only `config/node_modules/`, no `default.nix`; dead and would fail `scan.nix` if evaluated.
 - **`analysis.md`** — generated artifact from `scripts/analyze_flake/`, stale since before the hosts refactor; regenerate with `just analyze`.
 - **`lib/toolchain.nix`** is *not* dead — every `/toolchains/*.nix` file imports it as the `mkToolchain` builder.
 

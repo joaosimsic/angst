@@ -1,37 +1,41 @@
 # Domains
 
-Domains (features) are the **unit of configuration** in angst. Each domain describes one feature — a user application, a system feature, or both. There are currently **27 domains across 17 categories**.
+Domains (features) are the **unit of configuration** in angst. Each domain describes one feature — a user application, a system feature, or both. There are currently **30 domains across 17 categories**.
 
 ## Domain Anatomy
 
 ```
 domains/<category>/<name>/
-├── meta.nix       # Required: package name, XDG target, description
+├── default.nix    # Required: the domain interface (pure data) — validated by mkDomain
 ├── home.nix       # Optional: custom home-manager module (only when auto-gen isn't enough)
 ├── system.nix     # Optional: NixOS module (system features, sshd, i3 WM)
 ├── render.nix     # Optional: theme-aware config generator
 └── config/        # Optional: static config files (symlinked via xdg.configFile)
 ```
 
-### meta.nix
+### default.nix (the interface)
 
-Defines package + XDG target. `validateMeta` in `lib/domains/scan.nix` **throws unless exactly one** of `xdg` (full directory → `~/.config/<name>`), `xdgFile` (single file), or `customXdg` (handled by `home.nix`) is set — **or** the feature ships a `system.nix` (system-only features, e.g. `system/*`, omit the XDG target).
+Pure data declaring the domain's characteristics. `mkDomain` (`lib/domains/mkDomain.nix`) validates it strictly and **throws** on violation:
+
+- **unknown attributes** (typos) → throw listing valid fields;
+- `package` must be a non-empty string **that exists in `pkgs`**;
+- `xdg`/`xdgFile` relative paths, mutually exclusive; `customXdg` bool;
+- `description` required (non-empty);
+- `mutable` list of basenames (requires `render.nix`);
+- **conventional side files** are validated too: `home.nix`/`system.nix`/`render.nix` must be module functions, `config/` a directory; `customXdg = true` requires `home.nix`; render/config require a placement target; an empty domain throws.
 
 ```nix
-{
-  package = "zellij";        # Nix package name (installed when domain enabled)
-  xdg = "zellij";            # -> ~/.config/zellij (full dir) — or xdgFile/customXdg
-  description = "Terminal multiplexer";
-}
+{ package = "zellij"; xdg = "zellij"; description = "Terminal multiplexer"; }
 ```
 
 ### render.nix
 
-The heart of the theme system: a function taking `{ themesLib, themeName, homeDirectory, ... }` (see `lib/render.nix`, `renderDomainOutputsFor`) and returning `[{ path, text, checks? }]`. `path` is repo-relative; the framework maps it to the correct XDG location. Rendered outputs can carry `checks` (e.g. "this ghostty color must equal `palette 5`") that the theme checks assert.
+The heart of the theme system: a function taking `{ themesLib, themeName, homeDirectory, ... }` (see `lib/render.nix`, `renderDomainOutputsFor`) and returning `[{ path, text, checks? }]`. `path` is repo-relative (`domains/<cat>/<name>/config/…`); the framework maps it to the correct XDG location and validates the output shape (`path`/`text` strings, `checks` a list, unique paths). Rendered outputs can carry `checks` (e.g. "this ghostty color must equal `palette 5`") that the theme checks assert.
 
 ## Framework (`lib/domains/`)
 
-- **`scan.nix`** — `readDir` over `/domains/` → category → name, imports each `meta.nix`, validates it, and produces `entries` + `systemEntries` (features with a `system.nix`). Exposed to every builder via `host.scan.domains`.
+- **`mkDomain.nix`** — the interface: validates a `default.nix` spec (characteristics + conventional side files) and returns the normalized entry.
+- **`scan.nix`** — `readDir` over `/domains/` → category → name, imports each `default.nix`, runs it through `mkDomain`, and produces `entries` + `systemEntries` (features with a `system.nix`). Exposed to every builder via `host.scan.domains`.
 - **`module.nix`** — `mkDomainModule` auto-generates a home-manager module per feature:
   - `baseModule`: `domains.<cat>.<name>.enable` option, `home.packages` from `meta.package`, `home.file` for rendered outputs;
   - `configSourceModule`: recursive walk of `config/` → `xdg.configFile` symlinks (skipping `.gitignore`, `node_modules`, and `meta.mutable` files);
@@ -41,11 +45,11 @@ The heart of the theme system: a function taking `{ themesLib, themeName, homeDi
 
 There is **no** `lib/domains/activation.nix` (README is stale); activation happens through home-manager `xdg.configFile` and, in VMs, `modules/vm/host-mount.nix` gives live access to the host repo.
 
-## Domain Inventory (27)
+## Domain Inventory (30)
 
 | Category | Name | Package | XDG | Render | home | system | Purpose |
 |---|---|---|---|---|---|---|---|
-| agents | cursor-cli | cursor-cli | custom | — | — | — | Cursor AI CLI (meta-only) |
+| agents | cursor-cli | cursor-cli | — | — | — | — | Cursor AI CLI (package-only) |
 | agents | opencode | opencode | opencode | ✅ | ✅ | — | AI coding agent: 22 LSPs, themed TUI, API key from sops |
 | bar | i3status | *(none)* | i3status | ✅ | ✅ | — | i3 status bar (themed blocks) |
 | editor | nvim | *(pkgs.neovim in home)* | nvim | ✅ | ✅ | — | Neovim: backend adapters/engines, treesitter, Lua tests |
@@ -53,10 +57,10 @@ There is **no** `lib/domains/activation.nix` (README is stale); activation happe
 | git | lazygit | lazygit | lazygit | ✅ | ✅ | — | Git TUI |
 | http-client | posting | posting | posting | ✅ | ✅ | — | Terminal HTTP client |
 | launcher | rofi | rofi | rofi | ✅ | ✅ | — | App launcher |
-| nix | nh | nh | custom | — | — | — | Nix CLI helper (meta-only) |
+| nix | nh | nh | — | — | — | — | Nix CLI helper (package-only) |
 | remote | ssh | openssh | custom | — | ✅ | ✅ | SSH client+agent (home) and sshd (system, per-host opt-in) |
-| security | age | age | custom | — | — | — | age encryption (meta-only) |
-| security | sops | sops | custom | — | — | — | sops+age secrets (meta-only) |
+| security | age | age | — | — | — | — | age encryption (package-only) |
+| security | sops | sops | — | — | — | — | sops+age secrets (package-only) |
 | session | x11 | *(none)* | custom | ✅ | ✅ | — | X11 autostart/session |
 | shell | carapace | carapace | custom | — | ✅ | — | Shell completion engine |
 | shell | nushell | nushell | nushell | ✅ | ✅ | — | Nushell config (themed) |
@@ -106,10 +110,10 @@ Each file calls `mkToolchain` (`lib/toolchain.nix`) with `{ runtime, lsp, format
 
 ## Change Guidance
 
-- **Add a domain**: create the dir + `meta.nix`, optionally `home.nix` (user side) / `system.nix` (system side), `render.nix`, `config/`. Enable via a profile (`"category.name"` in `profiles/<name>.nix`'s `enable` list). Rendered outputs follow from `render.nix`; static files from `config/`.
-- **System-only features**: omit the XDG target from `meta.nix` and ship a `system.nix` (e.g. `system/*`). They only apply on `nixos` hosts.
+- **Add a domain**: create the dir + `default.nix` (the interface), optionally `home.nix` (user side) / `system.nix` (system side), `render.nix`, `config/`. Enable via a profile (`"category.name"` in `profiles/<name>.nix`'s `enable` list). Rendered outputs follow from `render.nix`; static files from `config/`.
+- **System-only features**: ship a `system.nix` and omit the XDG target from `default.nix` (e.g. `system/*`). They only apply on `nixos` hosts.
 - **Cross-cutting features** (e.g. `remote/ssh`): put the user side in `home.nix` and the system side in `system.nix`; enable the feature once and the builder routes it by host type.
 - **The `mutable` meta flag** excludes files from render-override, useful for user-local state inside a config dir.
-- **Keep `meta.nix` valid** — `scan.nix` throws on malformed meta, and any host build fails.
+- **Keep `default.nix` valid** — `mkDomain` throws on interface violations (unknown keys, bad types, incoherent XDG/package/home combos, malformed side files), and any host build fails.
 - **nvim changes** should keep `config/tests/` green (`bash tests/run.sh` or CI nvim-tests); treesitter grammar mapping lives in `engines/treesitter.lua`.
 - **Toolchain changes** flow into dev shells and home packages automatically once the file exists; verify with `nix eval .#nixosConfigurations.ci.config.home-manager.users.runner.packages` (ci host uses `toolchains = ["nix"]`) or a full build.
