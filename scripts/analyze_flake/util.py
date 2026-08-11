@@ -49,6 +49,23 @@ def run_quiet(cmd: list[str], **kwargs) -> str:
     return out.strip() if rc == 0 else ""
 
 
+RG_EXCLUDES = [
+    "-g",
+    "!.git",
+    "-g",
+    "!result",
+    "-g",
+    "!tools/vm/**",
+    "-g",
+    "!tools/shell/**",
+]
+
+
+def rg(args: list[str], timeout: int = 15) -> tuple[int, str, str]:
+    """Run ripgrep over .nix files with the standard exclusion set."""
+    return run(["rg", *args, "--type", "nix", *RG_EXCLUDES], timeout=timeout)
+
+
 def find_nix_files(root: Path | None = None) -> list[Path]:
     """Find all .nix files in the repo, excluding .git, result, and tool subflakes."""
     root = root or REPO
