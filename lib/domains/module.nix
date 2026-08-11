@@ -83,8 +83,7 @@ let
           ) (builtins.readDir dirPath)
         );
 
-      configSourceEntries =
-        if hasConfigDir && hasXdg && !isCustomXdg then go configSubdir "" else [ ];
+      configSourceEntries = if hasConfigDir && hasXdg && !isCustomXdg then go configSubdir "" else [ ];
 
       xdgFileSourceEntries =
         if hasConfigDir && hasXdgFile && !isCustomXdg && !hasRender then
@@ -99,27 +98,25 @@ let
 
       prefix = "domains/${category}/${name}/config/";
 
-      renderedFiles =
-        lib.listToAttrs (
-          lib.concatMap (
-            output:
-            let
-              relPath = lib.removePrefix prefix output.path;
-            in
-            lib.optional (hasXdg || (hasXdgFile && relPath == meta.xdgFile)) (
-              lib.nameValuePair (if hasXdg then ".config/${meta.xdg}/${relPath}" else ".config/${meta.xdgFile}") {
-                inherit (output) text;
-              }
-            )
-          ) outputs
-        );
+      renderedFiles = lib.listToAttrs (
+        lib.concatMap (
+          output:
+          let
+            relPath = lib.removePrefix prefix output.path;
+          in
+          lib.optional (hasXdg || (hasXdgFile && relPath == meta.xdgFile)) (
+            lib.nameValuePair (if hasXdg then ".config/${meta.xdg}/${relPath}" else ".config/${meta.xdgFile}") {
+              inherit (output) text;
+            }
+          )
+        ) outputs
+      );
 
       renderedRelPaths =
         if hasRender && hasConfigDir && hasXdg && !isCustomXdg then
           lib.unique (
             lib.concatMap (
-              o:
-              lib.optional (lib.hasPrefix "domains/" o.path) (lib.removePrefix prefix o.path)
+              o: lib.optional (lib.hasPrefix "domains/" o.path) (lib.removePrefix prefix o.path)
             ) outputs
           )
         else

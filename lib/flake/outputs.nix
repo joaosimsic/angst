@@ -11,9 +11,12 @@ let
   hostList = builtins.attrValues hostDefs;
   nixosHosts = builtins.filter (h: h.type == "nixos") hostList;
   representative =
-    if nixosHosts != [ ] then builtins.head nixosHosts
-    else if hostList != [ ] then builtins.head hostList
-    else null;
+    if nixosHosts != [ ] then
+      builtins.head nixosHosts
+    else if hostList != [ ] then
+      builtins.head hostList
+    else
+      null;
   defaultSystem = if representative != null then representative.system else "x86_64-linux";
 
   pkgs = import inputs.nixpkgs {
@@ -67,7 +70,12 @@ let
   };
 
   mkHomeCfg =
-    { host, hmModules, themeOverride ? null, shellOverride ? null }:
+    {
+      host,
+      hmModules,
+      themeOverride ? null,
+      shellOverride ? null,
+    }:
     mkHome {
       inherit
         self
@@ -101,7 +109,13 @@ let
   };
 
   mkChecks = import ../../checks/default.nix {
-    inherit self inputs pkgs lib render;
+    inherit
+      self
+      inputs
+      pkgs
+      lib
+      render
+      ;
     host = representative;
   };
 
@@ -115,7 +129,10 @@ let
         );
       in
       {
-        "${r.username}" = mkHomeCfg { host = r; hmModules = p.hm; };
+        "${r.username}" = mkHomeCfg {
+          host = r;
+          hmModules = p.hm;
+        };
 
         "${r.username}-theme-override-test" = mkHomeCfg {
           host = r;
@@ -124,7 +141,11 @@ let
           shellOverride = "";
         };
 
-        login-shell-valid = mkHomeCfg { host = r; hmModules = p.hm; shellOverride = "sh"; };
+        login-shell-valid = mkHomeCfg {
+          host = r;
+          hmModules = p.hm;
+          shellOverride = "sh";
+        };
 
         login-shell-invalid = mkHomeCfg {
           host = r;
@@ -148,7 +169,7 @@ rec {
       map (host: {
         name = host.hostname;
         value = mkHomeCfg {
-          host = host;
+          inherit host;
           hmModules = (profilesFor host).hm;
         };
       }) hostList
@@ -162,9 +183,9 @@ rec {
         "login-shell-invalid"
         "${representative.username}-theme-override-test"
       ];
-      hmPkgs = builtins.removeAttrs (
-        builtins.mapAttrs (_: cfg: cfg.activationPackage) homeConfigurations
-      ) excludedNames;
+      hmPkgs = builtins.removeAttrs (builtins.mapAttrs (
+        _: cfg: cfg.activationPackage
+      ) homeConfigurations) excludedNames;
       extra =
         if representative != null then
           {
@@ -183,42 +204,74 @@ rec {
 
   devShells.${defaultSystem} = devshell.shells;
 
-  apps.${defaultSystem} =
-    {
-      vm = { type = "app"; program = "${vmOutputs.packages.${defaultSystem}.wrapped}/bin/vm"; };
-      shell = { type = "app"; program = "${shellTool}/bin/shell"; };
-      angst = { type = "app"; program = "${angstTool}/bin/angst"; };
-      render = { type = "app"; program = "${pkgs.writeShellScript "angst-render" ''exec ${angstTool}/bin/angst render "$@"''}"; };
-      watch = { type = "app"; program = "${pkgs.writeShellScript "angst-watch" ''exec ${angstTool}/bin/angst watch "$@"''}"; };
-      check = { type = "app"; program = "${pkgs.writeShellScript "check" "set -euo pipefail; ${pkgs.nix}/bin/nix flake check --print-build-logs"}"; };
-      lint-themes = { type = "app"; program = "${pkgs.writeShellScript "lint-themes" "set -euo pipefail; ${pkgs.nix}/bin/nix eval ${self}#lib.themeLint --raw"}"; };
-      lint-desktop = { type = "app"; program = "${pkgs.writeShellScript "lint-desktop" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${defaultSystem}.lint-desktop --no-link --print-build-logs; echo "All desktop config checks passed."''}"; };
-      lint-shell = { type = "app"; program = "${pkgs.writeShellScript "lint-shell" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${defaultSystem}.lint-shell --no-link --print-build-logs; echo "All shell config checks passed."''}"; };
-      analyze = { type = "app"; program = "${pkgs.writeShellScript "analyze" ''exec python3 -m scripts.analyze_flake "$@"''}"; };
-      analyze-to-file = { type = "app"; program = "${pkgs.writeShellScript "analyze-to-file" ''cd "$(git rev-parse --show-toplevel)" && exec python3 -m scripts.analyze_flake --output analysis.md "$@"''}"; };
-    }
-    // (
-      if representative != null then
-        {
-          ssh = {
-            type = "app";
-            program =
-              let
-                target = representative.username;
-              in
-              "${pkgs.writeShellScript "angst-ssh-deploy" ''
-                set -euo pipefail
-                target="''${NIX_DEFAULT_TARGET_HOST:-${target}}"
-                echo "==> Deploying home-manager to $target..."
-                nix build ${self}#homeConfigurations.${target}.activationPackage --print-build-logs
-                echo "==> Activating..."; ./result/activate
-                echo "==> Cleaning old Nix store..."; nix-collect-garbage -d; nix store gc; echo "==> Done."
-              ''}";
-          };
-        }
-      else
-        { }
-    );
+  apps.${defaultSystem} = {
+    vm = {
+      type = "app";
+      program = "${vmOutputs.packages.${defaultSystem}.wrapped}/bin/vm";
+    };
+    shell = {
+      type = "app";
+      program = "${shellTool}/bin/shell";
+    };
+    angst = {
+      type = "app";
+      program = "${angstTool}/bin/angst";
+    };
+    render = {
+      type = "app";
+      program = "${pkgs.writeShellScript "angst-render" ''exec ${angstTool}/bin/angst render "$@"''}";
+    };
+    watch = {
+      type = "app";
+      program = "${pkgs.writeShellScript "angst-watch" ''exec ${angstTool}/bin/angst watch "$@"''}";
+    };
+    check = {
+      type = "app";
+      program = "${pkgs.writeShellScript "check" "set -euo pipefail; ${pkgs.nix}/bin/nix flake check --print-build-logs"}";
+    };
+    lint-themes = {
+      type = "app";
+      program = "${pkgs.writeShellScript "lint-themes" "set -euo pipefail; ${pkgs.nix}/bin/nix eval ${self}#lib.themeLint --raw"}";
+    };
+    lint-desktop = {
+      type = "app";
+      program = "${pkgs.writeShellScript "lint-desktop" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${defaultSystem}.lint-desktop --no-link --print-build-logs; echo "All desktop config checks passed."''}";
+    };
+    lint-shell = {
+      type = "app";
+      program = "${pkgs.writeShellScript "lint-shell" ''set -euo pipefail; ${pkgs.nix}/bin/nix build ${self}#checks.${defaultSystem}.lint-shell --no-link --print-build-logs; echo "All shell config checks passed."''}";
+    };
+    analyze = {
+      type = "app";
+      program = "${pkgs.writeShellScript "analyze" ''exec python3 -m scripts.analyze_flake "$@"''}";
+    };
+    analyze-to-file = {
+      type = "app";
+      program = "${pkgs.writeShellScript "analyze-to-file" ''cd "$(git rev-parse --show-toplevel)" && exec python3 -m scripts.analyze_flake --output analysis.md "$@"''}";
+    };
+  }
+  // (
+    if representative != null then
+      {
+        ssh = {
+          type = "app";
+          program =
+            let
+              target = representative.username;
+            in
+            "${pkgs.writeShellScript "angst-ssh-deploy" ''
+              set -euo pipefail
+              target="''${NIX_DEFAULT_TARGET_HOST:-${target}}"
+              echo "==> Deploying home-manager to $target..."
+              nix build ${self}#homeConfigurations.${target}.activationPackage --print-build-logs
+              echo "==> Activating..."; ./result/activate
+              echo "==> Cleaning old Nix store..."; nix-collect-garbage -d; nix store gc; echo "==> Done."
+            ''}";
+        };
+      }
+    else
+      { }
+  );
 
   checks.${defaultSystem} = mkChecks;
 

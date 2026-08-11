@@ -32,7 +32,14 @@ let
     hostTheme = effectiveTheme;
   };
 
-  secrets = import ../../modules/secrets.nix { inherit inputs self host lib; };
+  secrets = import ../../modules/secrets.nix {
+    inherit
+      inputs
+      self
+      host
+      lib
+      ;
+  };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;

@@ -39,7 +39,14 @@ let
     in
     if builtins.pathExists p then p else null;
 
-  secrets = import ../../modules/secrets.nix { inherit inputs self host lib; };
+  secrets = import ../../modules/secrets.nix {
+    inherit
+      inputs
+      self
+      host
+      lib
+      ;
+  };
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
@@ -173,8 +180,7 @@ inputs.nixpkgs.lib.nixosSystem {
           ++ appHomeModules
           ++ hmModules
           ++ host.toolchainModules
-          ++ secrets.homeModules
-          ;
+          ++ secrets.homeModules;
         };
       };
     }
