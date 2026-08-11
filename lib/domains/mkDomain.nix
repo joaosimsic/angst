@@ -54,37 +54,69 @@ let
   hasHomeContent = hasHomeFile || hasRenderFile || hasConfigDir;
 
   configType = if hasConfigDir then (builtins.readDir path).config or null else null;
-in
-if unknownKeys != [ ] then
-  err "unknown attribute(s): ${builtins.concatStringsSep ", " unknownKeys}. Valid attributes: ${builtins.concatStringsSep ", " allowedKeys}"
-else if package != null && !(isNonEmptyStr package) then
-  err "'package' must be a non-empty string"
-else if package != null && !(builtins.hasAttr package pkgs) then
-  err "'package' '${package}' does not exist in pkgs"
-else if xdg != null && !(isRelPath xdg) then
-  err "'xdg' must be a relative path (no leading '/', '~', or '..')"
-else if xdgFile != null && !(isRelPath xdgFile) then
-  err "'xdgFile' must be a relative path (no leading '/', '~', or '..')"
-else if xdg != null && xdgFile != null then
-  err "'xdg' and 'xdgFile' are mutually exclusive"
-else if spec ? customXdg && !(builtins.isBool customXdg) then
-  err "'customXdg' must be a bool"
-else if !(isNonEmptyStr description) then
-  err "'description' is required (non-empty string)"
-else if !(builtins.isList mutable) || !(builtins.all isBasename mutable) then
-  err "'mutable' must be a list of basenames (no '/')"
-else if mutable != [ ] && !hasRenderFile then
-  err "'mutable' requires a render.nix"
-else if customXdg && !hasHomeFile then
-  err "'customXdg = true' requires a home.nix module"
-else if hasHomeContent && !hasTarget then
-  err "must set one of 'xdg', 'xdgFile', or 'customXdg' for the home content (home.nix, render.nix, config/)"
-else if package == null && !hasSystemFile && !hasTarget then
-  err "domain is empty: declare a 'package', a 'system.nix', or a home placement target"
-else if configType != "directory" && configType != null then
-  err "'config' must be a directory"
-else
-  {
+
+  checks = [
+    {
+      cond = unknownKeys != [ ];
+      msg = "unknown attribute(s): ${builtins.concatStringsSep ", " unknownKeys}. Valid attributes: ${builtins.concatStringsSep ", " allowedKeys}";
+    }
+    {
+      cond = package != null && !(isNonEmptyStr package);
+      msg = "'package' must be a non-empty string";
+    }
+    {
+      cond = package != null && !(builtins.hasAttr package pkgs);
+      msg = "'package' '${package}' does not exist in pkgs";
+    }
+    {
+      cond = xdg != null && !(isRelPath xdg);
+      msg = "'xdg' must be a relative path (no leading '/', '~', or '..')";
+    }
+    {
+      cond = xdgFile != null && !(isRelPath xdgFile);
+      msg = "'xdgFile' must be a relative path (no leading '/', '~', or '..')";
+    }
+    {
+      cond = xdg != null && xdgFile != null;
+      msg = "'xdg' and 'xdgFile' are mutually exclusive";
+    }
+    {
+      cond = spec ? customXdg && !(builtins.isBool customXdg);
+      msg = "'customXdg' must be a bool";
+    }
+    {
+      cond = !(isNonEmptyStr description);
+      msg = "'description' is required (non-empty string)";
+    }
+    {
+      cond = !(builtins.isList mutable) || !(builtins.all isBasename mutable);
+      msg = "'mutable' must be a list of basenames (no '/')";
+    }
+    {
+      cond = mutable != [ ] && !hasRenderFile;
+      msg = "'mutable' requires a render.nix";
+    }
+    {
+      cond = customXdg == true && !hasHomeFile;
+      msg = "'customXdg = true' requires a home.nix module";
+    }
+    {
+      cond = hasHomeContent && !hasTarget;
+      msg = "must set one of 'xdg', 'xdgFile', or 'customXdg' for the home content (home.nix, render.nix, config/)";
+    }
+    {
+      cond = package == null && !hasSystemFile && !hasTarget;
+      msg = "domain is empty: declare a 'package', a 'system.nix', or a home placement target";
+    }
+    {
+      cond = configType != "directory" && configType != null;
+      msg = "'config' must be a directory";
+    }
+  ];
+
+  firstError = lib.foldl' (acc: c: if acc != null then acc else if c.cond then c.msg else null) null checks;
+
+  body = {
     inherit
       category
       name
@@ -108,4 +140,6 @@ else
     render = if hasRenderFile then checkModule "render" "${path}/render.nix" else null;
     inherit hasConfigDir;
     config = if hasConfigDir then "${path}/config" else null;
-  }
+  };
+in
+if firstError != null then err firstError else body
