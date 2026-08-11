@@ -1,258 +1,113 @@
 # Operations
 
-## Dev Shells
+Runbook and operational notes: dev shells, checks/CI, git hooks, justfile recipes, VM workflow, and machine lifecycle.
 
-Two dev shells are available for working on the repository:
+## Development Shells
 
-### Safe Shell (`nix develop .#safe`)
+| Shell | Use | Includes |
+|---|---|---|
+| `nix develop .#safe` | Editing configs | neovim, git, deadnix, statix + toolchain packages |
+| `nix develop .#dev` | Full development | `safe` + angst CLI, openssh, qemu, sops, age, gitleaks, Rust toolchain, VM tools; exports `VM_SSH_PORT=2222`, `NIX_DEFAULT_TARGET_HOST`; ssh-agent init |
+| `nix develop .#vm` | Rust VM workspace | `inputsFrom` vm dev shell + dev packages |
 
-A controlled editing environment providing neovim with Tree-sitter parsers, LSPs, formatters, and runtimes — all from Nix. The key benefit: Tree-sitter parsers link against Nix's glibc, so they work on hosts with older system glibc (e.g., Debian 12).
+Standalone: `nix run .#shell -- dev` / `nix profile install .#shell && shell dev` (see [Tools](tools.md)).
 
-```bash
-nix develop .#safe
-```
+## Checks
 
-### Full Dev Shell (`nix develop .#dev`)
+`nix flake check` (or `nix run .#check`) runs everything below; targeted lints are faster for iteration. Defined in `checks/default.nix`:
 
-Full development environment with everything from safe plus Rust, QEMU, angst CLI, and VM CLI. The dev shell hook (`shellDevHook` in `/lib/flake/devshell.nix`) automatically:
+| Check | Validates |
+|---|---|
+| `lint-themes` | All 9 themes load and validate (eval-only, fast) |
+| `lint-desktop` | i3 + i3status configs parse per theme |
+| `lint-shell` | starship.toml (`taplo check`) + nushell colors per theme |
+| `theme-rendered` | Rendered domain configs contain expected theme tokens (`checks/theme/rendered.nix`) |
+| `theme-override` | Theme override propagates into a real home config (`home-theme-override-test`) |
+| `theme-semantic-distinct` | `ansi.error/warn/info/success` mutually distinct |
+| `check-password` | Host `password` field is a valid `$6$` sha-512 hash (skips home-only/`!` hosts) |
+| `check-secrets-encrypted` | Every tracked `secrets.yaml` is sops-encrypted (`sops:` + `ENC[AES256_GCM`) |
+| `login-shell-valid` / `login-shell-invalid` | `shellOverride` handling: valid shell builds, invalid shell asserts |
+| `home-theme-override-test` | Builds a representative home config with an alternate theme |
+| `lint-nix` | `deadnix --fail` + `statix check .` |
 
-- Sets `NIX_DEFAULT_TARGET_HOST=generic` (VM builds default to the generic host)
-- Sets `VM_SSH_PORT=2222` for consistent port forwarding
-- Sets `CARGO_BUILD_TARGET_DIR=$PWD/target`
-- Initialises the SSH agent if not already running
-- Loads `~/.ssh/id_ed25519` or `~/.ssh/id_rsa` into the agent
-- Defines a `res()` shell function wrapping `nix run --impure --refresh` for fast rebuilds with user env variables
+Formatting is enforced by the `formatter` output (`nix fmt` → nixfmt) and CI also runs `shfmt --diff` and `cargo fmt --check` for `tools/shell` and `tools/vm`.
 
-```bash
-nix develop .#dev
-```
+## CI (`.github/workflows/`)
 
-### Shell CLI (standalone)
+| Workflow | Triggers | What it runs |
+|---|---|---|
+| `checks.yml` | push (all branches) + PR | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the 10 checks + nixfmt + shellfmt + `shell-rust-fmt` + `vm-tests` (`cargo fmt --check && cargo test --workspace --locked` via `nix develop .#vm`) |
+| `nvim-tests.yml` | push + PR | Links `domains/editor/nvim/config` → `~/.config/nvim`, `nvim --headless '+Lazy! sync'`, then plenary adapter tests (`tests/adapters/init.lua`); lazy plugin cache keyed on `lazy-lock.json` |
+| `secret-scan.yml` | push + PR | gitleaks-action (fetch-depth 0) + trufflehog (`--results=verified,unknown`) |
+| `openwiki-update.yml` | daily cron + manual | Runs `openwiki code --update --print` (OpenRouter + LangSmith env) and opens a PR with `openwiki/`, `AGENTS.md`, `CLAUDE.md`, workflow changes |
 
-After installing via `nix profile install .#shell`, you can enter shell modes without `nix`:
+Nix CI uses DeterminateSystems `nix-installer-action` + `magic-nix-cache-action`.
 
-```bash
-shell safe
-shell dev
-```
+> CI gap: `checks.yml` only runs 10 of the 12 flake checks. `check-secrets-encrypted` and `home-theme-override-test` exist as flake checks (run by local `nix flake check`) but have no dedicated CI job — plaintext-secret regressions are caught in CI by gitleaks/trufflehog instead.
 
-The shell CLI wraps the same environments but execs your preferred shell with correct PATH and tree-sitter symlinks — no `nix develop` invocation needed at runtime.
+## Git Hooks and Secret Hygiene
 
-### Tree-sitter Compatibility
+- Install: `just install-hooks` (sets `core.hooksPath githooks`).
+- `githooks/pre-commit` — `gitleaks git --pre-commit --staged --redact` (host binary or `nix run nixpkgs#gitleaks`).
+- `githooks/pre-push` — scans each pushed ref range with gitleaks (`<remote_oid>..<local_oid>`, or `--not --remotes` for brand-new refs).
+- `.gitleaks.toml` allowlists SOPS ciphertext and age public keys, and excludes `README.md`/`pure.md`/`analysis.md`/`openwiki/`; a custom rule flags plaintext secrets inside `secrets.yaml`.
+- `*.dec`, `*.agekey`, `node_modules`, `result*`, `*.qcow2` are gitignored.
+- See [Secrets](secrets.md) for the full scanning story.
 
-The controlled dev shell solves a specific problem: Nix-built tree-sitter parsers require Nix's glibc (≥2.38). On hosts with older glibc (Debian 12: 2.36, Ubuntu 22.04: 2.35), loading parsers via `uv_dlopen` fails because the system `libc.so.6` wins over the parser's RPATH. Inside the dev shell, neovim itself runs from Nix and links against Nix's glibc, so all `dlopen`'d parsers resolve correctly.
+## justfile Recipes
 
-## Checks / CI
-
-### Full Check Suite
-
-```bash
-nix run .#check
-```
-
-Equivalent to `nix flake check --print-build-logs`. Runs the full suite:
-
-| Check | What it catches |
-|-------|-----------------|
-| `lint-themes` | Broken themes or invalid domain theme renders |
-| `lint-desktop` | Invalid i3 and i3status configs (all themes) |
-| `lint-shell` | Invalid starship and nushell configs (all themes) |
-| `theme-rendered` | Theme tokens not appearing in rendered output |
-| `theme-override` | Theme option override not propagating into configs |
-| `theme-semantic-distinct` | Duplicate semantic color roles within a theme |
-| `home-theme-override-test` | Home-manager activation for theme override |
-| `nixos-personal` | Full NixOS system evaluation for personal host |
-| `home-joao` | Standalone home-manager activation for personal profile |
-
-### Targeted Checks
-
-```bash
-nix run .#lint-themes    # Fastest — eval-only
-nix run .#lint-desktop   # i3 + i3status per theme
-nix run .#lint-shell     # starship + nushell per theme
-```
-
-### CI
-
-GitHub Actions runs two workflows on every push and pull request:
-
-1. **checks** (`.github/workflows/checks.yml`): Runs the full `nix flake check` suite as separate parallel jobs — `lint-themes`, `lint-desktop`, `lint-shell`, `theme-rendered`, `theme-override`, `theme-semantic-distinct`, plus a `vm-tests` job that runs `cargo fmt --check && cargo test --workspace --locked` for the VM Rust workspace.
-2. **OpenWiki** (`.github/workflows/openwiki-update.yml`): Scheduled daily job that regenerates the `/openwiki/` documentation.
-
-Note: The first CI run builds the full NixOS closure and takes a while; subsequent runs reuse the Nix store cache.
+| Recipe | Action |
+|---|---|
+| `just bootstrap-secrets host=…` | `angst bootstrap-secrets --host <host>` |
+| `just disko host=…` | Run disko with `hosts/<host>/disk.nix` |
+| `just hardware host=…` | `nixos-generate-config --show-hardware-config > hosts/<host>/hardware.nix` |
+| `just bootstrap-disk host=…` | `disko` + `hardware` |
+| `just build host=…` | `nix build .#nixosConfigurations.<host>` |
+| `just switch host=…` | `sudo nixos-rebuild switch --flake .#<host>` |
+| `just hm host=… user=joao` | Build home activation package |
+| `just hm-switch host=… user=joao` | Build + `./result/activate` |
+| `just analyze` | Regenerate `analysis.md` |
+| `just check` | `nix flake check` |
+| `just dev` | `nix develop` (default shell) |
+| `just install-hooks` | Enable githooks |
+| `just vm host=…` / `just vm-ssh host=…` | VM start / ssh via `tools/vm#wrapped` |
 
 ## VM Workflow
 
-### Building and Running
+The VM is the fastest way to test changes without touching a real machine; the host repo is live-mounted so edits inside the guest hit the host tree (and vice versa).
 
 ```bash
-# Build VM outputs (uses user.env HOST or NIX_DEFAULT_TARGET_HOST=generic)
-nix run .#vm
-
-# Run with GUI (auto-collects SSH keys and forwards port 2222)
-nix run .#vm-run
-
-# Run headless (auto-detected when no display server is available)
-nix run .#vm-run -- --headless
+nix run .#vm -- --headless          # or: just vm; add DISPLAY for gtk UI
+nix run .#vm -- ssh                 # connect (port 2222, ssh-agent auth)
+nix run .#vm -- status / health     # verify QEMU + port + SSH
+nix run .#vm -- mcp start           # expose MCP server for AI agents (port 8765)
 ```
 
-### SSH Key Provisioning
+Inside the VM: `~/.config/angst` is symlinked to the host repo (`modules/vm/host-mount.nix`), secrets are injected via `/tmp/shared` (age key + authorized keys), and `/persist` keeps `.config/sops`, `.secrets`, `.ssh`, and configured home dirs. Use `angst watch` on the host to hot-reload configs into both machines.
 
-The `vm-run` shim (`/lib/flake/outputs.nix`, `vm-run` package) automatically handles SSH access:
+VM gotchas:
+- `vm start` refuses to run if the target host's decl doesn't include the `vm` profile (`ensure_vm_profile`).
+- First boot builds the VM from the flake (can take a while); subsequent boots are fast.
+- If SSH hangs, check `vm health`; stale QEMU processes are killed automatically on `start`.
 
-1. **Target resolution**: Reads `NIX_TARGET_HOST` env > `user.env HOST` > `NIX_DEFAULT_TARGET_HOST` > `ANGST_HOST` > `generic`
-2. **Key collection**: Gathers public keys from `ssh-add -L` (SSH agent) and `~/.ssh/*.pub` files
-3. **Validation**: Filters keys matching `ssh-rsa`, `ssh-ed25519`, `ecdsa-sha2-*`, `ssh-dss` formats
-4. **Deduplication**: Writes unique keys to `$XDG_STATE_HOME/vm/keys/$TARGET_HOST/authorized_keys`
-5. **Port forwarding**: Forwards host port 2222 → VM port 22
-6. **Error handling**: Exits with a clear message if no SSH keys are found
+## Machine Lifecycle (runbook)
 
-### VM Runner (Rust)
-
-The VM CLI (`/tools/vm/crates/vm-cli/src/runner/vm.rs`) manages the full VM lifecycle:
-
-- **`target_host()` priority**: `NIX_TARGET_HOST` env > `user.env HOST` > `NIX_DEFAULT_TARGET_HOST` > `ANGST_HOST` > `"generic"`
-- **`target_username()` priority**: `ANGST_USERNAME` env > `user.env USERNAME` > `VmConfig.ssh_user`
-- **Stale QEMU cleanup**: `kill_stale_qemu()` terminates old QEMU processes for the same disk image before starting a new one
-- **Health check system**: `HealthReport` probes QEMU process existence, PID file, port forwarding (hostfwd), port 2222 reachability, and SSH echo response; surfaced via `vm health`
-- **Headless auto-detection**: When `DISPLAY` and `WAYLAND_DISPLAY` are both unset, enables `--headless` mode automatically
-- **Build step**: Runs `nix build --impure --refresh` with `ANGST_USERNAME` env override
-- **SSH wait loop**: Polls up to 300 seconds for SSH readiness after QEMU starts
-
-### VM Features
-
-- **9p filesystem mounts** — The angst repo is mounted into the VM at `/host/.../proj/angst`, enabling live editing from inside the VM with changes reflected on the host
-- **SPICE vdagent** — Clipboard copy-paste between host and VM
-- **SSH key injection** — Host SSH public keys are automatically provisioned into the VM via the `vm-run` shim
-- **Host config mount** — `/home/$USER/.config/angst` is symlinked to the host mount, so config changes inside the VM are saved to the host
-- **Display** — `Virtual-1 1920x1080` with VirtIO GPU (virtio-vga) and modesetting driver; GTK display with zoom-to-fit
-- **Specs** — 4 vCPUs, 4 GiB RAM, 16 GB disk
-- **Conditional boot** — The `/boot` partition mount is skipped inside QEMU VMs (`angst.isQemuVm`), since the VM image has its own boot partition
-
-### MCP Server
-
-The VM tool can run as an MCP server for AI agent integration:
+**New machine (NixOS):**
 
 ```bash
-# Start the MCP server on port 8765
-vm mcp
+mkdir -p hosts/<domain>/<hostname>
+cat > hosts/<domain>/<hostname>/default.nix <<'EOF'
+{ type = "nixos"; system = "x86_64-linux"; hostname = "<hostname>"; username = "joao";
+  theme = "miasma"; profiles = ["base" "desktop" "development"]; toolchains = "*";
+  repoPath = "proj/angst"; }
+EOF
+just hardware host=<hostname>        # generate hardware.nix next to the decl
+just bootstrap-secrets host=<hostname>   # create encrypted secrets.yaml + password hash
+just switch host=<hostname>          # deploy
 ```
 
-OpenCode is configured to connect to it via `/opencode.json`. This allows AI coding agents to manage the VM lifecycle during development.
+**Home-only machine (e.g. `personal/mint`, `type = "home"`):** create the decl, then `just hm-switch host=<hostname>` — no NixOS rebuild needed; secrets optional.
 
-## Hot-Reload Workflow
+**Recovery / unseeded boot:** without an age key the host builds and boots with the fallback password hash (default "changeme" from `lib/resolve.nix`); run `angst bootstrap-secrets --host <host>` and re-switch once the key is present at `~/.config/sops/age/keys.txt`.
 
-The `angst render` and `angst watch` commands enable fast iteration on themes and domain configs without a full Nix rebuild:
-
-```bash
-# One-time render
-angst render
-
-# Continuous watch
-angst watch
-```
-
-**Workflow:**
-1. Edit a domain's `render.nix` or a theme's color values
-2. `angst render` writes the new configs to `~/.config/<app>/`
-3. If i3 is running, `i3-msg reload` applies the changes immediately
-4. The watch mode (`angst watch`) uses `watchexec` to automate this on every save
-
-## Lint and Format Commands
-
-Reference from `/.opencode/AGENTS.md`:
-
-### Nix
-```bash
-statix check .              # Lint (statix)
-deadnix .                   # Dead code detection
-nixfmt .                    # Format
-nixfmt --check .            # Format check
-```
-
-### Lua
-```bash
-stylua .                    # Format
-stylua --check .            # Format check
-```
-
-### Rust (tools/vm/)
-```bash
-cargo clippy --all-targets --all-features -- -D warnings   # Lint
-cargo fmt --all                                             # Format
-cargo test --workspace                                      # Test
-```
-
-## Common Tasks
-
-### Configuring a machine
-1. Copy `local/config.nix.example` to `local/config.nix`
-2. Set `hostname`, `username`, `theme`, and `profiles` to match your machine
-3. Optionally add hardware-specific config via `local/hardware.nix` (auto-imported by `mkNixos.nix`)
-4. Optionally add one-off NixOS or home-manager config via `nixos = {}` / `home = {}` in `local/config.nix`
-5. Run `nixos-rebuild switch --flake .#current` to apply
-
-### Adding a new domain
-1. Create `domains/<category>/<name>/meta.nix` with package metadata
-2. Optionally add `render.nix` for theme-aware config generation
-3. Optionally add `config/` directory for static files
-4. Optionally add `module.nix` for custom home-manager logic
-5. Optionally add `nixos.nix` for system integration
-6. Enable it in the appropriate profile (`profiles/base.nix`, `profiles/desktop.nix`, etc.) or via `local/config.nix` extras
-
-### Adding a new theme
-1. Create `/themes/<name>.nix` following the schema
-2. Run `nix run .#lint-themes` to validate
-3. Set `theme = "<name>";` in `local/config.nix`
-
-### Adding a new toolchain
-1. Create `/toolchains/<name>.nix` using `mkToolchain`
-2. It is auto-discovered and included in dev shells and home-manager
-
-## Source Map
-
-| File | Role |
-|------|------|
-| `/shell.md` | Controlled dev shell documentation |
-| `/docs/checks.md` | Check suite documentation |
-| `/docs/vm/README.md` | VM CLI documentation |
-| `/lib/flake/devshell.nix` | Dev shell definitions |
-| `/lib/flake/outputs.nix` | angst CLI, vm-run, res() wrapper |
-| `/.github/workflows/checks.yml` | CI workflow |
-| `/tools/vm/flake.nix` | VM build and run scripts |
-| `/lib/treesitter.nix` | Tree-sitter grammar builder |
-| `/opencode.json` | OpenCode MCP configuration |
-| `/.opencode/AGENTS.md` | Lint/format reference |
-
-## Change Guidance
-
-### Dev Shells
-- **Safe shell** (editing environment): defined in `/lib/flake/devshell.nix`. Contains `neovim`, `git`, and `allToolchainPackages`.
-- **Dev shell** (full development): defined in `/lib/flake/devshell.nix`. Adds `angstCli`, Rust toolchain, QEMU, VM tools.
-- **Shell CLI** (standalone): `shellTool` in `/lib/flake/outputs.nix`. Environment variables are baked in via `makeWrapper`.
-- **Tree-sitter hook** (`treesitterShellHook`): creates symlinks for parsers/queries. If you change the tree-sitter output structure in `/lib/treesitter.nix`, update this hook.
-- **SSH host shell paths** (`SHELL_ENABLED_SHELLS`): constructed in `flake.nix` from interactive domains. Adding `interactive = true` to a shell domain's `meta.nix` includes it here.
-
-### Checks / CI
-- **CI workflow** (`.github/workflows/checks.yml`): runs individual checks as separate jobs on every push/PR. Each job builds a single check derivation.
-- **Check definitions** (`/checks/default.nix`): assembles all checks from theme lint modules (`/checks/theme/`) and NixOS/home-manager evaluations.
-- **Adding a new check**: Create a check file in `/checks/`, then wire it into `/checks/default.nix`.
-- **CI secrets**: None required — Nix evaluation and builds use the public Nix cache. The VM tests use the `magic-nix-cache` action.
-
-### VM Workflow
-- **VM run shim** (in `/lib/flake/outputs.nix`, `vm-run` package): handles SSH key provisioning, headless mode, disk image management, and QEMU port forwarding.
-- **VM build** (`tools/vm/flake.nix`): constructs `allHostVms` by iterating over NixOS configurations.
-- **SSH key injection**: reads from `ssh-agent` and `~/.ssh/*.pub`, writes to `~/.local/state/vm/keys/<host>/authorized_keys`.
-- **Port forwarding**: hardcoded as `hostfwd=tcp::2222-:22` in `vmRunShim`. Change in `QEMU_NET_OPTS`.
-
-### Hot-Reload
-- `angst render` calls `nix eval --impure "$repo_root#lib.renderDomainOutputsFor"` — requires an `angstCli` flake app that's kept up to date.
-- The `--reload` flag runs `i3-msg reload` — only works when `I3SOCK` is set (i3 running).
-- `angst watch` monitors `themes/`, `domains/`, and `local/` directories. Adding a new watched directory requires editing the `watch_cmd` function.
-
-### Lint and Format
-- **Statix** (Nix lint) checks for anti-patterns in `*.nix` files. Run `statix check .` after structural changes.
-- **Deadnix** detects unused Nix bindings. Run after refactoring.
-- **Nixfmt** is the flake formatter (`formatter.${system} = pkgs.nixfmt` in `flake.nix`). Run `nix fmt` before committing.
-- **Stylua** formats Lua files (Neovim config). Run `stylua .` after editing `/domains/editor/nvim/`.
-- **Rust lints** (clippy + fmt) are checked in CI for `/tools/vm/`. Run `cargo fmt --all && cargo clippy --all-targets --all-features` before committing VM changes.
+**Maintenance:** `nix flake lock`/`nix flake update` for inputs; `nix-collect-garbage -d` after switches; `just analyze` to refresh `analysis.md`.
