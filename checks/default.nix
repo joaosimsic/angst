@@ -58,10 +58,16 @@ let
   lintNix = import ./lint-nix.nix { inherit pkgs; };
 
   checkSecretsEncrypted = import ./secrets.nix { inherit pkgs; };
+
+  secretScan = import ./secret-scan.nix { inherit pkgs; };
+
+  secretScanHooks = import ./secret-scan-hooks.nix { inherit pkgs; };
 in
 {
   check-password = checkPassword;
   check-secrets-encrypted = checkSecretsEncrypted;
+  secret-scan = secretScan;
+  secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop = lintDesktop;
