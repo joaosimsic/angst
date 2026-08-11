@@ -1,1 +1,5 @@
-{ xdg = "nvim"; description = "Neovim configuration"; mutable = [ "lazy-lock.json" ]; }
+{
+  xdg = "nvim";
+  description = "Neovim configuration";
+  mutable = [ "lazy-lock.json" ];
+}

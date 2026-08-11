@@ -1,1 +1,5 @@
-{ package = "sqlit-tui"; xdg = "sqlit"; description = "Terminal SQL database browser"; }
+{
+  package = "sqlit-tui";
+  xdg = "sqlit";
+  description = "Terminal SQL database browser";
+}

@@ -69,14 +69,16 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ++ hmModules
   ++ host.toolchainModules
   ++ secrets.homeModules
-  ++ [ (_: {
-    home.packages = [
-      vmTool
-      shellTool
-      angstTool
-      resTool
-    ];
-  }) ]
+  ++ [
+    (_: {
+      home.packages = [
+        vmTool
+        shellTool
+        angstTool
+        resTool
+      ];
+    })
+  ]
   ++ (if host.extraHome != { } then [ host.extraHome ] else [ ])
   ++ (if host.env != { } then [ { home.sessionVariables = host.env; } ] else [ ]);
 }

@@ -1,1 +1,4 @@
-{ xdg = "i3status"; description = "i3 status bar"; }
+{
+  xdg = "i3status";
+  description = "i3 status bar";
+}

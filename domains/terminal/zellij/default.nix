@@ -1,1 +1,5 @@
-{ package = "zellij"; xdg = "zellij"; description = "Zellij terminal multiplexer"; }
+{
+  package = "zellij";
+  xdg = "zellij";
+  description = "Zellij terminal multiplexer";
+}

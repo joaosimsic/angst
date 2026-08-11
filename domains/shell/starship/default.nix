@@ -1,1 +1,5 @@
-{ package = "starship"; xdgFile = "starship.toml"; description = "Starship prompt"; }
+{
+  package = "starship";
+  xdgFile = "starship.toml";
+  description = "Starship prompt";
+}

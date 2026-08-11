@@ -32,7 +32,9 @@ let
   mutable = spec.mutable or [ ];
 
   isNonEmptyStr = v: builtins.isString v && v != "";
-  isRelPath = v: builtins.isString v && !(lib.hasPrefix "/" v) && !(lib.hasPrefix "~" v) && !(lib.hasPrefix ".." v);
+  isRelPath =
+    v:
+    builtins.isString v && !(lib.hasPrefix "/" v) && !(lib.hasPrefix "~" v) && !(lib.hasPrefix ".." v);
   isBasename = v: builtins.isString v && v != "" && !(lib.hasInfix "/" v);
 
   hasHomeFile = builtins.pathExists "${path}/home.nix";
@@ -114,7 +116,15 @@ let
     }
   ];
 
-  firstError = lib.foldl' (acc: c: if acc != null then acc else if c.cond then c.msg else null) null checks;
+  firstError = lib.foldl' (
+    acc: c:
+    if acc != null then
+      acc
+    else if c.cond then
+      c.msg
+    else
+      null
+  ) null checks;
 
   body = {
     inherit

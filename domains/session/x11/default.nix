@@ -1,1 +1,4 @@
-{ customXdg = true; description = "X11 session autostart"; }
+{
+  customXdg = true;
+  description = "X11 session autostart";
+}

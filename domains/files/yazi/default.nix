@@ -1,1 +1,4 @@
-{ xdg = "yazi"; description = "Yazi configuration"; }
+{
+  xdg = "yazi";
+  description = "Yazi configuration";
+}

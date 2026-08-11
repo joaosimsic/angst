@@ -1,1 +1,4 @@
-{ package = "nh"; description = "Nix/NixOS/Home Manager CLI helper"; }
+{
+  package = "nh";
+  description = "Nix/NixOS/Home Manager CLI helper";
+}

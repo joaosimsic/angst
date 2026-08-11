@@ -1,1 +1,5 @@
-{ package = "lazygit"; xdg = "lazygit"; description = "Lazygit TUI"; }
+{
+  package = "lazygit";
+  xdg = "lazygit";
+  description = "Lazygit TUI";
+}

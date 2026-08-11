@@ -1,1 +1,4 @@
-{ package = "cursor-cli"; description = "Cursor AI coding agent CLI"; }
+{
+  package = "cursor-cli";
+  description = "Cursor AI coding agent CLI";
+}

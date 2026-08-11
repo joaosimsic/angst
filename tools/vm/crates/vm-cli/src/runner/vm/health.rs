@@ -2,8 +2,8 @@ use std::fmt;
 use std::process::Stdio;
 use std::time::Duration;
 
-use vm_core::process::io::StateManager;
 use vm_core::SshEngine;
+use vm_core::process::io::StateManager;
 
 pub fn kill_stale_qemu(disk: &str) {
     let output = std::process::Command::new("sh")

@@ -1,1 +1,5 @@
-{ package = "ghostty"; xdg = "ghostty"; description = "Ghostty terminal"; }
+{
+  package = "ghostty";
+  xdg = "ghostty";
+  description = "Ghostty terminal";
+}

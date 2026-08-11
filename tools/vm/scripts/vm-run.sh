@@ -8,22 +8,22 @@ KEY_FILE="$KEY_DIR/authorized_keys"
 
 NEW_ARGS=()
 for arg in "$@"; do
-  if [ "$arg" = "--headless" ]; then
-    export QEMU_OPTS="${QEMU_OPTS:-} -display none"
-  else
-    NEW_ARGS+=("$arg")
-  fi
+    if [ "$arg" = "--headless" ]; then
+        export QEMU_OPTS="${QEMU_OPTS:-} -display none"
+    else
+        NEW_ARGS+=("$arg")
+    fi
 done
 
 collect_ssh_keys
 
 RUNNER="result/bin/run-${TARGET_HOST}-vm"
 if [ ! -f "$RUNNER" ]; then
-  RUNNER="result/bin/run-nixos-vm"
+    RUNNER="result/bin/run-nixos-vm"
 fi
 if [ ! -f "$RUNNER" ]; then
-  echo "Error: VM runner not found at result/bin/run-${TARGET_HOST}-vm or result/bin/run-nixos-vm. Build the VM first (e.g. 'nix build .#nixosConfigurations.${TARGET_HOST}.config.system.build.vm')."
-  exit 1
+    echo "Error: VM runner not found at result/bin/run-${TARGET_HOST}-vm or result/bin/run-nixos-vm. Build the VM first (e.g. 'nix build .#nixosConfigurations.${TARGET_HOST}.config.system.build.vm')."
+    exit 1
 fi
 
 export ANGST_REPO="$PWD"

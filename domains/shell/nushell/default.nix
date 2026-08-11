@@ -1,1 +1,5 @@
-{ package = "nushell"; xdg = "nushell"; description = "Nushell configuration"; }
+{
+  package = "nushell";
+  xdg = "nushell";
+  description = "Nushell configuration";
+}

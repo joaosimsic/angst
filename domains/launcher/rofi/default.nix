@@ -1,1 +1,5 @@
-{ package = "rofi"; xdg = "rofi"; description = "Application launcher"; }
+{
+  package = "rofi";
+  xdg = "rofi";
+  description = "Application launcher";
+}

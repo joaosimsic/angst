@@ -1,1 +1,5 @@
-{ package = "openssh"; customXdg = true; description = "SSH client, agent, and server"; }
+{
+  package = "openssh";
+  customXdg = true;
+  description = "SSH client, agent, and server";
+}

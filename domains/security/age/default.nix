@@ -1,1 +1,4 @@
-{ package = "age"; description = "age file encryption tool"; }
+{
+  package = "age";
+  description = "age file encryption tool";
+}

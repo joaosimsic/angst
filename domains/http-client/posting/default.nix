@@ -1,1 +1,5 @@
-{ package = "posting"; xdg = "posting"; description = "Terminal HTTP client"; }
+{
+  package = "posting";
+  xdg = "posting";
+  description = "Terminal HTTP client";
+}

@@ -1,1 +1,4 @@
-{ package = "sops"; description = "Secrets operations with age encryption"; }
+{
+  package = "sops";
+  description = "Secrets operations with age encryption";
+}

@@ -1,1 +1,5 @@
-{ package = "rainfrog"; xdg = "rainfrog"; description = "Terminal database management tool"; }
+{
+  package = "rainfrog";
+  xdg = "rainfrog";
+  description = "Terminal database management tool";
+}

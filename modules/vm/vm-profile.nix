@@ -20,13 +20,15 @@ let
       watchexec
       jq
     ];
-    text = builtins.concatStringsSep "\n" (map builtins.readFile [
-      ../../scripts/angst-lib.sh
-      ../../scripts/angst-bootstrap-secrets.sh
-      ../../scripts/angst-render.sh
-      ../../scripts/angst-watch.sh
-      ../../scripts/angst.sh
-    ]);
+    text = builtins.concatStringsSep "\n" (
+      map builtins.readFile [
+        ../../scripts/angst-lib.sh
+        ../../scripts/angst-bootstrap-secrets.sh
+        ../../scripts/angst-render.sh
+        ../../scripts/angst-watch.sh
+        ../../scripts/angst.sh
+      ]
+    );
   };
 in
 {

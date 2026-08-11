@@ -3,13 +3,13 @@ pub mod ssh;
 pub mod start;
 pub mod target;
 
-pub use health::{check_health, health, HealthReport};
+pub use health::{HealthReport, check_health, health};
 pub use ssh::{exec, ssh, status, status_message};
 pub use start::start;
 
 #[cfg(test)]
 mod tests {
-    use super::{status_message, HealthReport, check_health, health};
+    use super::{HealthReport, check_health, health, status_message};
     use std::{
         fs,
         sync::{Mutex, OnceLock},

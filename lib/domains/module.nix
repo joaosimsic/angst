@@ -32,12 +32,16 @@ let
 
       prefix = "domains/${category}/${name}/config/";
 
-      validateOutputs = outs:
+      validateOutputs =
+        outs:
         let
-          check = o:
-            if !(builtins.isAttrs o)
-            || !(builtins.isString (o.path or null))
-            || !(builtins.isString (o.text or null)) then
+          check =
+            o:
+            if
+              !(builtins.isAttrs o)
+              || !(builtins.isString (o.path or null))
+              || !(builtins.isString (o.text or null))
+            then
               throw "domains/${category}/${name}/render.nix: outputs must be { path, text, checks? }"
             else if !(lib.hasPrefix prefix o.path) then
               throw "domains/${category}/${name}/render.nix: output path '${o.path}' must be under '${prefix}'"
@@ -58,25 +62,23 @@ let
         if !hasRender then
           [ ]
         else
-          validateOutputs (
-            render {
-              inherit
-                lib
-                themesLib
-                monitors
-                db
-                sshAgent
-                ;
-              checkHelpers = import ../../checks/theme/assertions.nix {
-                inherit lib;
-                themeName = config.theme;
-                theme = themesLib.get config.theme;
-              };
-              fontFamily = "JetBrainsMono Nerd Font";
+          validateOutputs (render {
+            inherit
+              lib
+              themesLib
+              monitors
+              db
+              sshAgent
+              ;
+            checkHelpers = import ../../checks/theme/assertions.nix {
+              inherit lib;
               themeName = config.theme;
-              homeDirectory = config.home.homeDirectory;
-            }
-          );
+              theme = themesLib.get config.theme;
+            };
+            fontFamily = "JetBrainsMono Nerd Font";
+            themeName = config.theme;
+            homeDirectory = config.home.homeDirectory;
+          });
 
       isSkippable =
         subName: pathStr:
@@ -108,8 +110,7 @@ let
           ) (builtins.readDir dirPath)
         );
 
-      configSourceEntries =
-        if hasConfigDir && hasXdg && !isCustomXdg then go configDir "" else [ ];
+      configSourceEntries = if hasConfigDir && hasXdg && !isCustomXdg then go configDir "" else [ ];
 
       xdgFileSourceEntries =
         if hasConfigDir && hasXdgFile && !isCustomXdg && !hasRender then
