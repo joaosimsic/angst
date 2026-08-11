@@ -9,6 +9,8 @@
     (mkDomainEnable "files.yazi")
     (mkDomainEnable "git.lazygit")
     (mkDomainEnable "nix.nh")
+    (mkDomainEnable "security.age")
+    (mkDomainEnable "security.sops")
   ];
   nixos = [
     (mkCap "network")

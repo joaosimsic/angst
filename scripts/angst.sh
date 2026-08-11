@@ -44,9 +44,19 @@ bootstrap_secrets_cmd() {
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
-        --host) host_name="$2"; shift 2 ;;
-        -h|--help) usage; return 0 ;;
-        *) echo "unknown bootstrap-secrets option: $1" >&2; usage >&2; return 2 ;;
+        --host)
+            host_name="$2"
+            shift 2
+            ;;
+        -h | --help)
+            usage
+            return 0
+            ;;
+        *)
+            echo "unknown bootstrap-secrets option: $1" >&2
+            usage >&2
+            return 2
+            ;;
         esac
     done
 
@@ -144,13 +154,35 @@ render_cmd() {
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
-        --repo) repo_root="$2"; shift 2 ;;
-        --host) host_name="$2"; shift 2 ;;
-        --theme) theme_name="$2"; shift 2 ;;
-        --reload) should_reload=1; shift ;;
-        --no-reload) should_reload=0; shift ;;
-        -h|--help) usage; return 0 ;;
-        *) echo "unknown render option: $1" >&2; usage >&2; return 2 ;;
+        --repo)
+            repo_root="$2"
+            shift 2
+            ;;
+        --host)
+            host_name="$2"
+            shift 2
+            ;;
+        --theme)
+            theme_name="$2"
+            shift 2
+            ;;
+        --reload)
+            should_reload=1
+            shift
+            ;;
+        --no-reload)
+            should_reload=0
+            shift
+            ;;
+        -h | --help)
+            usage
+            return 0
+            ;;
+        *)
+            echo "unknown render option: $1" >&2
+            usage >&2
+            return 2
+            ;;
         esac
     done
 
@@ -170,7 +202,10 @@ render_cmd() {
         local base
         base="$(basename "$f" .nix)"
         [ "$base" = "default" ] || [ "$base" = "schema" ] && continue
-        if [ "$base" = "$theme_name" ]; then theme_found=1; break; fi
+        if [ "$base" = "$theme_name" ]; then
+            theme_found=1
+            break
+        fi
     done
 
     if [ -z "$theme_found" ]; then
@@ -237,11 +272,27 @@ watch_cmd() {
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
-        --repo) repo_root="$2"; shift 2 ;;
-        --host) host_name="$2"; shift 2 ;;
-        --theme) theme_name="$2"; shift 2 ;;
-        -h|--help) usage; return 0 ;;
-        *) echo "unknown watch option: $1" >&2; usage >&2; return 2 ;;
+        --repo)
+            repo_root="$2"
+            shift 2
+            ;;
+        --host)
+            host_name="$2"
+            shift 2
+            ;;
+        --theme)
+            theme_name="$2"
+            shift 2
+            ;;
+        -h | --help)
+            usage
+            return 0
+            ;;
+        *)
+            echo "unknown watch option: $1" >&2
+            usage >&2
+            return 2
+            ;;
         esac
     done
 
@@ -272,7 +323,11 @@ if [ "$#" -gt 0 ]; then shift; fi
 case "$command" in
 bootstrap-secrets) bootstrap_secrets_cmd "$@" ;;
 render) render_cmd "$@" ;;
-watch)  watch_cmd "$@" ;;
--h|--help|"") usage ;;
-*) echo "unknown command: $command" >&2; usage >&2; exit 2 ;;
+watch) watch_cmd "$@" ;;
+-h | --help | "") usage ;;
+*)
+    echo "unknown command: $command" >&2
+    usage >&2
+    exit 2
+    ;;
 esac

@@ -5,7 +5,11 @@
   hostname = "nixos";
   username = "joao";
   theme = "miasma";
-  profiles = ["base" "desktop" "development"];
+  profiles = [
+    "base"
+    "desktop"
+    "development"
+  ];
   toolchains = "*";
 
   monitors = {
@@ -18,7 +22,9 @@
   };
 
   db.connections = { };
-  nixos = { keyboardLayout = "br-abnt2"; };
+  nixos = {
+    keyboardLayout = "br-abnt2";
+  };
   home = { };
   env = {
     EDITOR = "nvim";
@@ -28,7 +34,7 @@
 
   sshAgent = {
     enable = true;
-    keys = ["~/.ssh/id_ed25519"];
+    keys = [ "~/.ssh/id_ed25519" ];
   };
   ssh = { };
 

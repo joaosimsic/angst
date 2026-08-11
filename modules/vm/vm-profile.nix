@@ -122,23 +122,31 @@ in
             User = userConfig.username;
           };
           script = ''
-            active=""
-            if [ -L "/etc/profiles/per-user/${userConfig.username}" ]; then
-              active="$(readlink -f "/etc/profiles/per-user/${userConfig.username}")"
+            active_hp=""
+            service_exec="$(systemctl show home-manager-${userConfig.username} -p ExecStart 2>/dev/null || true)"
+            active_gen="$(echo "$service_exec" | sed -n 's/.* \([^ ]*\)-home-manager-generation.*/\1-home-manager-generation/p')"
+            if [ -n "$active_gen" ] && [ -L "$active_gen/home-path" ]; then
+              active_hp="$(readlink -f "$active_gen/home-path" 2>/dev/null || true)"
+            fi
+
+            if [ -z "$active_hp" ]; then
+              echo "Could not determine active home-manager-path; nothing to upgrade."
+              exit 0
             fi
 
             latest=""
+            shopt -s nullglob 2>/dev/null || true
             for gen in /nix/store/*-home-manager-generation/activate; do
               [ -f "$gen" ] || continue
-              dir="$(dirname "$gen")"
-              hp="$(readlink "$dir/home-path" 2>/dev/null || true)"
+              dir="''${gen%/activate}" || continue
+              hp="$(readlink -f "$dir/home-path" 2>/dev/null || true)"
               [ -n "$hp" ] || continue
-              [ "$hp" = "$active" ] && continue
+              [ "$hp" = "$active_hp" ] && continue
               latest="$dir"
             done
 
-            if [ -n "$latest" ]; then
-              exec "$latest/activate" --driver-version 1
+            if [ -n "$latest" ] && [ -x "$latest/activate" ]; then
+              "$latest/activate" --driver-version 1 || true
             fi
           '';
         };
@@ -146,7 +154,10 @@ in
         vm-ephemeral-ssh = {
           description = "VM: mount tmpfs on /etc/ssh for ephemeral host keys";
           wantedBy = [ "sshd-keygen.service" ];
-          before = [ "sshd-keygen.service" "sshd.service" ];
+          before = [
+            "sshd-keygen.service"
+            "sshd.service"
+          ];
           after = [ "local-fs.target" ];
           serviceConfig.Type = "oneshot";
           script = ''
@@ -182,6 +193,32 @@ in
 
             install -d -m 700 -o ${userConfig.username} -g users ${userConfig.homeDirectory}/.ssh
             install -m 600 -o ${userConfig.username} -g users "$key_file" ${userConfig.homeDirectory}/.ssh/authorized_keys
+          '';
+        };
+
+        vm-age-key = {
+          description = "Install host age key for sops decryption";
+          wantedBy = [ "multi-user.target" ];
+          before = [ "home-manager-${userConfig.username}.service" ];
+          requires = [ "tmp-shared.mount" ];
+          after = [ "tmp-shared.mount" ];
+
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+
+          script = ''
+            key_file=/tmp/shared/age-keys.txt
+
+            if [ ! -s "$key_file" ]; then
+              echo "No host age key found at $key_file; secrets will be unavailable."
+              exit 0
+            fi
+
+            sops_dir="${userConfig.homeDirectory}/.config/sops/age"
+            install -d -m 700 -o ${userConfig.username} -g users "$sops_dir"
+            install -m 600 -o ${userConfig.username} -g users "$key_file" "$sops_dir/keys.txt"
           '';
         };
       };

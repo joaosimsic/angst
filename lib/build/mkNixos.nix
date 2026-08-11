@@ -39,7 +39,14 @@ let
     in
     if builtins.pathExists p then p else null;
 
-  secrets = import ../../modules/secrets.nix { inherit self host lib; };
+  secrets = import ../../modules/secrets.nix {
+    inherit
+      inputs
+      self
+      host
+      lib
+      ;
+  };
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
@@ -68,22 +75,28 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if hardwarePath != null then [ (import hardwarePath) ] else [ ])
   ++ (if host.extraNixos != { } then [ host.extraNixos ] else [ ])
   ++ (if host.env != { } then [ { environment.sessionVariables = host.env; } ] else [ ])
-  ++ [ inputs.sops-nix.nixosModules.sops secrets.core ]
+  ++ [
+    inputs.sops-nix.nixosModules.sops
+    secrets.systemCore
+  ]
   ++ [
     ../../modules/vm/detect.nix
     ../../modules/vm/runtime.nix
     ../../modules/vm/vm-variant.nix
     ../../modules/vm/host-mount.nix
     ../../capabilities/ssh.nix
-    ({ config, pkgs, ... }: {
+    ({ pkgs, ... }: {
       users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
       users.users.root.hashedPassword = lib.mkDefault host.password;
 
-      systemd.services.angst-bootstrap-secrets = lib.mkIf (secrets.canDecrypt && !config.angst.isQemuVm) {
+      systemd.services.angst-bootstrap-secrets = lib.mkIf secrets.canDecrypt {
         description = "angst: set login password hash and enforce SSH key passphrase from secrets";
         wantedBy = [ "multi-user.target" ];
-        after = [ "sops-nix.service" ];
-        before = [ "getty@.service" "serial-getty@.service" "display-manager.service" ];
+        before = [
+          "getty@.service"
+          "serial-getty@.service"
+          "display-manager.service"
+        ];
 
         serviceConfig = {
           Type = "oneshot";
@@ -123,7 +136,8 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if host.persist.enable then [ inputs.impermanence.nixosModules.impermanence ] else [ ])
   ++ (
     if host.persist.enable then
-      [ (import ../../modules/nixos/persist.nix {
+      [
+        (import ../../modules/nixos/persist.nix {
           inherit lib;
           inherit (host) persist username;
           inherit (secrets) persistDirs;
@@ -165,14 +179,16 @@ inputs.nixpkgs.lib.nixosSystem {
           ]
           ++ appHomeModules
           ++ hmModules
-          ++ host.toolchainModules;
+          ++ host.toolchainModules
+          ++ secrets.homeModules;
         };
       };
     }
     ({ config, lib, ... }: {
       systemd.services."home-manager-${host.username}".before = [
         "sshd.service"
-      ] ++ lib.optionals (!config.angst.isQemuVm) [
+      ]
+      ++ lib.optionals (!config.angst.isQemuVm) [
         "getty@.service"
         "serial-getty@.service"
       ];

@@ -6,6 +6,7 @@
   vmTool,
   shellTool,
   angstTool,
+  resTool,
   themeOverride ? null,
   shellOverride ? null,
 }:
@@ -31,7 +32,14 @@ let
     hostTheme = effectiveTheme;
   };
 
-  secrets = import ../../modules/secrets.nix { inherit self host lib; };
+  secrets = import ../../modules/secrets.nix {
+    inherit
+      inputs
+      self
+      host
+      lib
+      ;
+  };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
@@ -40,7 +48,6 @@ inputs.home-manager.lib.homeManagerConfiguration {
     inherit (host)
       hostname
       monitors
-      repoPath
       db
       sshAgent
       ssh
@@ -61,45 +68,54 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ++ appHomeModules
   ++ hmModules
   ++ host.toolchainModules
-  ++ [ inputs.sops-nix.homeManagerModules.sops secrets.core ]
+  ++ secrets.homeModules
   ++ [
     (_: {
       home.packages = [
         vmTool
         shellTool
         angstTool
+        resTool
       ];
     })
   ]
   ++ [
-    ({ config, pkgs, lib, ... }: lib.mkIf secrets.canDecrypt {
-      home.activation.angstSshKey = lib.hm.dag.entryAfter [ "writeBoundary" ] (
-        ''
-          set -euo pipefail
+    (
+      {
+        config,
+        pkgs,
+        lib,
+        ...
+      }:
+      lib.mkIf (secrets.canDecrypt && host.type == "nixos") {
+        home.activation.angstSshKey = lib.hm.dag.entryAfter [ "secrets-ready" ] (
+          ''
+            set -euo pipefail
 
-          MASTER_PASSWORD=$(cat ''
-        + lib.escapeShellArg config.sops.secrets.masterPassword.path
-        + ''
-          )
+            MASTER_PASSWORD=$(cat ''
+          + lib.escapeShellArg config.sops.secrets.masterPassword.path
+          + ''
+            )
 
-          KEY_FILE="$HOME/.ssh/id_ed25519"
-          SSH_DIR="$HOME/.ssh"
+            KEY_FILE="$HOME/.ssh/id_ed25519"
+            SSH_DIR="$HOME/.ssh"
 
-          set +x
-          if [ ! -f "$KEY_FILE" ]; then
-            mkdir -p "$SSH_DIR"
-            ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${host.username}@${host.hostname}"
-          else
-            if ! ${pkgs.openssh}/bin/ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
-              ${pkgs.openssh}/bin/ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
-                ${pkgs.openssh}/bin/ssh-keygen -p -P "" -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null
+            set +x
+            if [ ! -f "$KEY_FILE" ]; then
+              mkdir -p "$SSH_DIR"
+              ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${host.username}@${host.hostname}"
+            else
+              if ! ${pkgs.openssh}/bin/ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
+                ${pkgs.openssh}/bin/ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
+                  ${pkgs.openssh}/bin/ssh-keygen -p -P "" -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null
+              fi
             fi
-          fi
-          unset MASTER_PASSWORD
-          set -x
-        ''
-      );
-    })
+            unset MASTER_PASSWORD
+            set -x
+          ''
+        );
+      }
+    )
   ]
   ++ (if host.extraHome != { } then [ host.extraHome ] else [ ])
   ++ (if host.env != { } then [ { home.sessionVariables = host.env; } ] else [ ]);

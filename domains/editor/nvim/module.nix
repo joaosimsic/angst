@@ -1,20 +1,27 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.domains.editor.nvim;
 in
 {
   config = lib.mkIf cfg.enable {
-    programs.neovim = {
-      enable = true;
-      defaultEditor = true;
-      viAlias = true;
-      vimAlias = true;
-      withRuby = false;
-      withPython3 = false;
-      extraPackages = [ ];
-    };
+    home = {
+      packages = [ pkgs.neovim ];
 
-    xdg.configFile."nvim/init.lua".enable = lib.mkForce false;
+      sessionVariables = {
+        EDITOR = "nvim";
+        VISUAL = "nvim";
+      };
+
+      shellAliases = {
+        vi = "nvim";
+        vim = "nvim";
+      };
+    };
   };
 }

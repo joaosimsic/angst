@@ -1,4 +1,9 @@
-{ persist, username, persistDirs, lib }:
+{
+  persist,
+  username,
+  persistDirs,
+  lib,
+}:
 
 {
   config = lib.mkIf persist.enable {

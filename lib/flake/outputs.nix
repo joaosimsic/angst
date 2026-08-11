@@ -10,14 +10,14 @@ let
 
   hostList = builtins.attrValues hostDefs;
   nixosHosts = builtins.filter (h: h.type == "nixos") hostList;
-  firstNixOS = if nixosHosts != [ ] then builtins.elemAt nixosHosts 0 else null;
-  firstHost = if hostList != [ ] then builtins.elemAt hostList 0 else null;
-  representative = if firstNixOS != null then firstNixOS else firstHost;
-
-  defaultSystem =
-    if firstNixOS != null then firstNixOS.system
-    else if firstHost != null then firstHost.system
-    else "x86_64-linux";
+  representative =
+    if nixosHosts != [ ] then
+      builtins.head nixosHosts
+    else if hostList != [ ] then
+      builtins.head hostList
+    else
+      null;
+  defaultSystem = if representative != null then representative.system else "x86_64-linux";
 
   pkgs = import inputs.nixpkgs {
     system = defaultSystem;
@@ -27,9 +27,8 @@ let
   profilesFor =
     host:
     import ../../profiles/default.nix {
-      inherit (host) profiles;
+      inherit (host) profiles scan;
       inherit lib;
-      inherit (host) scan;
     };
 
   mkHome = import ../build/mkHome.nix;
@@ -38,6 +37,7 @@ let
   vmOutputs = inputs.vm.mkOutputs self;
   shellOutputs = inputs.shell.mkOutputs self;
   vmTool = vmOutputs.packages.${defaultSystem}.default or vmOutputs.packages.${defaultSystem}.vm;
+  vmResTool = vmOutputs.packages.${defaultSystem}.res or vmOutputs.packages.${defaultSystem}.vm-run;
   shellTool = shellOutputs.packages.${defaultSystem}.default;
 
   angstTool = pkgs.writeShellApplication {
@@ -53,30 +53,57 @@ let
     text = builtins.readFile ../../scripts/angst.sh;
   };
 
+  fallbackHost = {
+    scan = {
+      domains.homeEntries = [ ];
+      themes = themesLib;
+    };
+    monitors = { };
+    db = { };
+    sshAgent = { };
+    username = "user";
+  };
+
   render = import ../render.nix {
-    host =
-      if representative != null then
-        representative
-      else
-        {
-          scan = {
-            domains.homeEntries = [ ];
-            themes = themesLib;
-          };
-          monitors = { };
-          db = { };
-          sshAgent = { };
-          username = "user";
-        };
+    host = if representative != null then representative else fallbackHost;
     inherit lib;
   };
 
+  mkHomeCfg =
+    {
+      host,
+      hmModules,
+      themeOverride ? null,
+      shellOverride ? null,
+    }:
+    mkHome {
+      inherit
+        self
+        inputs
+        host
+        vmTool
+        shellTool
+        angstTool
+        hmModules
+        themeOverride
+        shellOverride
+        ;
+      resTool = vmResTool;
+    };
+
+  mkHostFor =
+    host:
+    let
+      p = profilesFor host;
+    in
+    mkHost {
+      inherit self inputs host;
+      hmModules = p.hm;
+      nixosModules = p.nixos;
+    };
+
   devshell = import ./devshell.nix {
-    inherit
-      pkgs
-      inputs
-      vmOutputs
-      ;
+    inherit pkgs inputs vmOutputs;
     host = representative;
     angstCli = angstTool;
   };
@@ -91,93 +118,89 @@ let
       ;
     host = representative;
   };
-in
-rec {
-  nixosConfigurations = builtins.listToAttrs (
-    map (
-      host:
-      let
-        p = profilesFor host;
-      in
-      {
-        name = host.hostname;
-        value = mkHost {
-          inherit self inputs host;
-          hmModules = p.hm;
-          nixosModules = p.nixos;
-        };
-      }
-    ) nixosHosts
-  );
 
-  homeConfigurations =
-    builtins.listToAttrs (
-      map (
-        host:
-        let
-          p = profilesFor host;
-        in
-        {
-          name = "${host.username}@${host.hostname}";
-          value = mkHome {
-            inherit self inputs host vmTool shellTool angstTool;
-            hmModules = p.hm;
-          };
-        }
-      ) hostList
-    )
-    // (if representative != null then (
+  representativeHomes =
+    if representative != null then
       let
         r = representative;
         p = profilesFor r;
+        overrideTheme = builtins.head (
+          builtins.filter (n: n != r.theme) (builtins.attrNames r.scan.themes.themes)
+        );
       in
       {
-        "${r.username}" = mkHome {
-          inherit self inputs vmTool shellTool angstTool;
+        "${r.username}" = mkHomeCfg {
           host = r;
           hmModules = p.hm;
         };
 
-        "${r.username}-theme-override-test" =
-          let
-            overrideTheme = builtins.head (
-              builtins.filter (n: n != r.theme) (builtins.attrNames r.scan.themes.themes)
-            );
-          in
-          mkHome {
-            inherit self inputs vmTool shellTool angstTool;
-            host = r;
-            hmModules = p.hm;
-            themeOverride = overrideTheme;
-            shellOverride = "";
-          };
+        "${r.username}-theme-override-test" = mkHomeCfg {
+          host = r;
+          hmModules = p.hm;
+          themeOverride = overrideTheme;
+          shellOverride = "";
+        };
 
-        login-shell-valid = mkHome {
-          inherit self inputs vmTool shellTool angstTool;
+        login-shell-valid = mkHomeCfg {
           host = r;
           hmModules = p.hm;
           shellOverride = "sh";
         };
 
-        login-shell-invalid = mkHome {
-          inherit self inputs vmTool shellTool angstTool;
+        login-shell-invalid = mkHomeCfg {
           host = r;
           hmModules = p.hm;
           shellOverride = "__angst_nonexistent_shell__";
         };
       }
-    ) else { } );
+    else
+      { };
+in
+rec {
+  nixosConfigurations = builtins.listToAttrs (
+    map (host: {
+      name = host.hostname;
+      value = mkHostFor host;
+    }) nixosHosts
+  );
 
-  packages.${defaultSystem} = if representative != null then {
-    default = homeConfigurations.${representative.username}.activationPackage;
-    angst = angstTool;
-    vm-cli = vmOutputs.packages.${defaultSystem}.wrapped;
-    vm = vmOutputs.packages.${defaultSystem}.wrapped;
-    vm-run = vmOutputs.packages.${defaultSystem}.vm-run;
-    res = vmOutputs.packages.${defaultSystem}.res;
-    shell = shellTool;
-  }
-  else { };
+  homeConfigurations =
+    builtins.listToAttrs (
+      map (host: {
+        name = host.hostname;
+        value = mkHomeCfg {
+          inherit host;
+          hmModules = (profilesFor host).hm;
+        };
+      }) hostList
+    )
+    // representativeHomes;
+
+  packages.${defaultSystem} =
+    let
+      excludedNames = [
+        "login-shell-valid"
+        "login-shell-invalid"
+        "${representative.username}-theme-override-test"
+      ];
+      hmPkgs = builtins.removeAttrs (builtins.mapAttrs (
+        _: cfg: cfg.activationPackage
+      ) homeConfigurations) excludedNames;
+      extra =
+        if representative != null then
+          {
+            default = homeConfigurations.${representative.username}.activationPackage;
+            angst = angstTool;
+            vm-cli = vmOutputs.packages.${defaultSystem}.wrapped;
+            vm = vmOutputs.packages.${defaultSystem}.wrapped;
+            vm-run = vmOutputs.packages.${defaultSystem}.vm-run;
+            res = vmOutputs.packages.${defaultSystem}.res;
+            shell = shellTool;
+          }
+        else
+          { };
+    in
+    extra // hmPkgs;
 
   devShells.${defaultSystem} = devshell.shells;
 
@@ -227,23 +250,28 @@ rec {
       program = "${pkgs.writeShellScript "analyze-to-file" ''cd "$(git rev-parse --show-toplevel)" && exec python3 -m scripts.analyze_flake --output analysis.md "$@"''}";
     };
   }
-  // (if representative != null then {
-    ssh = {
-      type = "app";
-      program =
-        let
-          target = representative.username;
-        in
-        "${pkgs.writeShellScript "angst-ssh-deploy" ''
-          set -euo pipefail
-          target="''${NIX_DEFAULT_TARGET_HOST:-${target}}"
-          echo "==> Deploying home-manager to $target..."
-          nix build ${self}#homeConfigurations.${target}.activationPackage --print-build-logs
-          echo "==> Activating..."; ./result/activate
-          echo "==> Cleaning old Nix store..."; nix-collect-garbage -d; nix store gc; echo "==> Done."
-        ''}";
-    };
-  } else { } );
+  // (
+    if representative != null then
+      {
+        ssh = {
+          type = "app";
+          program =
+            let
+              target = representative.username;
+            in
+            "${pkgs.writeShellScript "angst-ssh-deploy" ''
+              set -euo pipefail
+              target="''${NIX_DEFAULT_TARGET_HOST:-${target}}"
+              echo "==> Deploying home-manager to $target..."
+              nix build ${self}#homeConfigurations.${target}.activationPackage --print-build-logs
+              echo "==> Activating..."; ./result/activate
+              echo "==> Cleaning old Nix store..."; nix-collect-garbage -d; nix store gc; echo "==> Done."
+            ''}";
+        };
+      }
+    else
+      { }
+  );
 
   checks.${defaultSystem} = mkChecks;
 
@@ -253,8 +281,7 @@ rec {
     inherit (render) renderDomainOutputsFor renderDomainOutputFor;
     themeLint =
       mkChecks.themeLint or (import ../../checks/theme {
-        inherit lib;
-        inherit themesLib;
+        inherit lib themesLib;
         inherit (render) renderDomainOutputsFor;
       });
   };

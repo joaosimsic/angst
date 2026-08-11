@@ -6,8 +6,7 @@
 let
   invalidConfig = self.homeConfigurations.login-shell-invalid;
 
-  valid =
-    pkgs.writeText "login-shell-valid-check" "skipped (system paths not resolvable in pure eval)";
+  valid = pkgs.writeText "login-shell-valid-check" "skipped (system paths not resolvable in pure eval)";
 
   invalid =
     let

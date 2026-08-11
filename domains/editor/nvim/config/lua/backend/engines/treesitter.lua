@@ -42,6 +42,7 @@ return {
 			bash = "bash",
 			typescriptreact = "typescript",
 			conf = "ini",
+			jsonc = "json",
 		}
 
 		for filetype, grammar in pairs(grammar_mappings) do
@@ -66,9 +67,10 @@ return {
 				if ft == "" then
 					return
 				end
-				if AdapterScanner:supports_filetype("treesitter", ft, treesitter_opts) then
-					vim.bo[event.buf].syntax = "OFF"
-				end
+			if AdapterScanner:supports_filetype("treesitter", ft, treesitter_opts) then
+				vim.bo[event.buf].syntax = "OFF"
+				vim.b[event.buf].ts_highlight_started = nil
+			end
 			end,
 		})
 
