@@ -18,24 +18,51 @@ let
         category
         name
         meta
-        path
+        home
+        hasRender
+        render
+        hasConfigDir
         ;
-      modulePath = "${path}/module.nix";
-      hasCustomModule = builtins.pathExists modulePath;
-      configSubdir = "${path}/config";
-      hasConfigDir = builtins.pathExists configSubdir;
-      hasRender = builtins.pathExists "${path}/render.nix";
+      configDir = entry.config;
       mutableBaseNames = meta.mutable or [ ];
       isCustomXdg = meta.customXdg or false;
-      hasXdg = meta ? xdg;
-      hasXdgFile = meta ? xdgFile;
+      hasXdg = meta.xdg != null;
+      hasXdgFile = meta.xdgFile != null;
       enableOption = config.domains.${category}.${name}.enable;
+
+      prefix = "domains/${category}/${name}/config/";
+
+      validateOutputs =
+        outs:
+        let
+          check =
+            o:
+            if
+              !(builtins.isAttrs o)
+              || !(builtins.isString (o.path or null))
+              || !(builtins.isString (o.text or null))
+            then
+              throw "domains/${category}/${name}/render.nix: outputs must be { path, text, checks? }"
+            else if !(lib.hasPrefix prefix o.path) then
+              throw "domains/${category}/${name}/render.nix: output path '${o.path}' must be under '${prefix}'"
+            else if o ? checks && !(builtins.isList o.checks) then
+              throw "domains/${category}/${name}/render.nix: 'checks' must be a list"
+            else
+              o;
+          checked = map check outs;
+          pathCount = path: builtins.length (builtins.filter (o: o.path == path) checked);
+          duplicate = lib.findFirst (path: pathCount path > 1) null (map (o: o.path) checked);
+        in
+        if duplicate != null then
+          throw "domains/${category}/${name}/render.nix: duplicate output path '${duplicate}'"
+        else
+          checked;
 
       outputs =
         if !hasRender then
           [ ]
         else
-          (import "${path}/render.nix") {
+          validateOutputs (render {
             inherit
               lib
               themesLib
@@ -51,7 +78,7 @@ let
             fontFamily = "JetBrainsMono Nerd Font";
             themeName = config.theme;
             homeDirectory = config.home.homeDirectory;
-          };
+          });
 
       isSkippable =
         subName: pathStr:
@@ -61,13 +88,13 @@ let
         || builtins.elem subName mutableBaseNames;
 
       go =
-        dirPath: prefix:
+        dirPath: p:
         lib.concatLists (
           lib.mapAttrsToList (
             subName: subType:
             let
               fullPath = "${toString dirPath}/${subName}";
-              relPath = prefix + subName;
+              relPath = p + subName;
             in
             if subType == "directory" then
               go fullPath (relPath + "/")
@@ -83,20 +110,18 @@ let
           ) (builtins.readDir dirPath)
         );
 
-      configSourceEntries = if hasConfigDir && hasXdg && !isCustomXdg then go configSubdir "" else [ ];
+      configSourceEntries = if hasConfigDir && hasXdg && !isCustomXdg then go configDir "" else [ ];
 
       xdgFileSourceEntries =
         if hasConfigDir && hasXdgFile && !isCustomXdg && !hasRender then
           [
             {
               target = meta.xdgFile;
-              source = "${configSubdir}/${meta.xdgFile}";
+              source = "${configDir}/${meta.xdgFile}";
             }
           ]
         else
           [ ];
-
-      prefix = "domains/${category}/${name}/config/";
 
       renderedFiles = lib.listToAttrs (
         lib.concatMap (
@@ -128,14 +153,14 @@ let
         };
 
         config = lib.mkIf enableOption {
-          home.packages = lib.optionals (meta ? package) [
+          home.packages = lib.optionals (meta.package != null) [
             pkgs.${meta.package}
           ];
           home.file = lib.mkIf (hasRender && (!hasConfigDir || hasXdgFile || isCustomXdg)) renderedFiles;
         };
       };
 
-      customModule = if hasCustomModule then import modulePath else { };
+      customModule = if home != null then home else { };
 
       configSourceModule = {
         config = lib.mkIf enableOption {
@@ -169,13 +194,8 @@ let
       ];
     };
 
-  mkNixosDomainModule =
-    entry:
-    let
-      nixosPath = "${entry.path}/nixos.nix";
-    in
-    if builtins.pathExists nixosPath then import nixosPath else { };
+  mkNixosSystemModule = entry: entry.system or { };
 in
 {
-  inherit mkDomainModule mkNixosDomainModule;
+  inherit mkDomainModule mkNixosSystemModule;
 }

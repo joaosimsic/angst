@@ -28,16 +28,15 @@ The `representative` host (first NixOS host) drives shared outputs: `default` pa
 ### `lib/build/mkNixos.nix`
 
 Assembles a `nixosSystem` from:
-- the host decl's profile modules (`nixosModules`), domain NixOS modules (`mkNixosDomainModule`), `modules/nixos` base, per-host `hardware.nix` (auto-detected next to the decl), `host.extraNixos`, session env vars;
-- **always**: `sops-nix` NixOS module + `secrets.systemCore`, the VM stack (`modules/vm/detect.nix`, `runtime.nix`, `vm-variant.nix`, `host-mount.nix`) and `capabilities/ssh.nix`;
+- the host decl's profile modules (`nixosModules`), domain system modules (`mkNixosSystemModule` over `systemEntries`), `modules/nixos` base, per-host `hardware.nix` (auto-detected next to the decl), `host.extraNixos`, session env vars;
+- **always**: `sops-nix` NixOS module + `secrets.systemCore`, and the VM stack (`modules/vm/detect.nix`, `runtime.nix`, `vm-variant.nix`, `host-mount.nix`);
 - **`angst-bootstrap-secrets`** systemd service (when secrets are decryptable): derives the login hash from the decrypted `masterPassword` via `mkpasswd -m sha-512`, applies it to user + root, and generates/repairs `~/.ssh/id_ed25519` with the master password as passphrase (runs before getty/display-manager);
 - impermanence (when `host.persist.enable`), home-manager NixOS module wiring `secrets.homeModules` into the user, and service ordering (`home-manager-<user>` before sshd/getty; getty ordering skipped on QEMU VMs).
 
 ### `lib/build/mkHome.nix`
 
 Assembles `homeManagerConfiguration` from:
-- `modules/home` base, `themeModule`, one generated module per domain (`mkDomainModule`), profile `hmModules`, `host.toolchainModules`, `secrets.homeModules`, plus `angst`/`shell`/`vm`/`res` tools in `home.packages`;
-- the **`angstSshKey`** home activation (when `canDecrypt && type == "nixos"`): reads `masterPassword` and generates/repairs the SSH key with that passphrase (runs after `secrets-ready`);
+- `modules/home` base, `themeModule`, one generated module per domain (`mkDomainModule`), profile enable modules (`hmModules`), `host.toolchainModules`, `secrets.homeModules`, plus `angst`/`shell`/`vm`/`res` tools in `home.packages`;
 - `host.env` → `home.sessionVariables`, `host.extraHome` passthrough, and per-host special args (`hostname`, `monitors`, `db`, `sshAgent`, `ssh`, `shell`, `themes`, `flakeSelf`, …).
 
 Both builders receive `themeOverride`/`shellOverride` to power the representative test configs (`<user>-theme-override-test`, `login-shell-valid`, `login-shell-invalid`) used by checks.
@@ -48,14 +47,14 @@ There is **no** `local/config.nix` anymore: machine identity is a tracked, diffa
 
 > The old single-file model (`local/config.nix` + `lib/read-config.nix`) was removed in the `refac/pure` → `refac/nix-managed-home` progression (mid-2026). Rationale recorded in `pure.md`: disposability and purity — machine identity as plain, diffable Nix, auto-discovered, zero ceremony (no flake.nix edits), no `--impure`/env hacks.
 
-## Profiles and Capabilities
+## Profiles and Features
 
-`profiles/default.nix` defines two helpers and a `profileMap`:
+`profiles/default.nix` defines a `profileMap` and resolves each host's selected profiles:
 
-- `mkDomainEnable "category.name"` — sets `domains.<category>.<name>.enable = true`, **throws** on unknown domains (build-time safety);
-- `mkCap "name"` — imports `capabilities/<name>.nix` and enables `capabilities.<name>.enable`.
+- Each profile is a **pure feature list**: `{ enable = ["category.name" ...]; }` plus an optional `modules` list for NixOS-only infrastructure (the VM stack). There is no `{ hm, nixos }` split — features declare their own sides via `home.nix`/`system.nix`, and `host.type` (`nixos` vs `home`) decides which sides are built.
+- `resolve profiles` validates every feature name against the domain scan (**throws** on unknown names, build-time safety) and concatenates the selected profiles' `enable` lists + `modules`.
 
-Each profile returns `{ hm = [...]; nixos = [...]; }`; `resolve profiles` concatenates the selected profiles' module lists. Profile contents are in the [quickstart profiles table](quickstart.md#profiles). Capabilities are **not** auto-discovered (there is no `capabilities/default.nix` — README is stale); they are imported explicitly by `mkCap`.
+`lib/flake/outputs.nix` turns the resolved list into per-scope enable modules: home scope for every enabled feature (a home `enable` option always exists), system scope only for features with a `system.nix`, plus the profile's raw `modules`. Profile contents are in the [quickstart profiles table](quickstart.md#profiles).
 
 ## VM Support
 
@@ -87,7 +86,7 @@ When `host.persist.enable` is true (currently `personal/nixos` and `vm`), `modul
 Documented here so future agents don't chase ghosts:
 
 - **`modules/vm/specialisation.nix`** — never imported.
-- **`domains/llm/opencode/`** — contains only `config/node_modules/`, no `meta.nix`; dead and would fail `scan.nix` if evaluated.
+- **`domains/llm/opencode/`** — contains only `config/node_modules/`, no `default.nix`; dead and would fail `scan.nix` if evaluated.
 - **`analysis.md`** — generated artifact from `scripts/analyze_flake/`, stale since before the hosts refactor; regenerate with `just analyze`.
 - **`lib/toolchain.nix`** is *not* dead — every `/toolchains/*.nix` file imports it as the `mkToolchain` builder.
 

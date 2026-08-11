@@ -164,7 +164,6 @@ LAYER_ORDER = [
     "flake.nix",
     "lib",
     "common",
-    "capabilities",
     "domains",
     "themes",
     "toolchains",

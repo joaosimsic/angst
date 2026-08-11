@@ -35,7 +35,7 @@ let
   _allTCs = builtins.attrValues _tcIndex;
 
   domainsScan = import ./domains/scan.nix {
-    inherit lib;
+    inherit lib pkgs;
     domainsPath = ../domains;
   };
   domainsModule = import ./domains/module.nix { };

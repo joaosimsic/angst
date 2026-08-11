@@ -7,17 +7,17 @@ collect_ssh_keys() {
     tmp_keys="$(mktemp)"
     trap "rm -f '$tmp_keys'" EXIT
 
-    if ssh-add -L > /dev/null 2>&1; then
-        ssh-add -L >> "$tmp_keys"
+    if ssh-add -L >/dev/null 2>&1; then
+        ssh-add -L >>"$tmp_keys"
     fi
 
     for pubkey in "$HOME"/.ssh/*.pub; do
         if [ -r "$pubkey" ]; then
-            cat "$pubkey" >> "$tmp_keys"
+            cat "$pubkey" >>"$tmp_keys"
         fi
     done
 
-    awk '/^(ssh-rsa|ssh-ed25519|ecdsa-sha2-|sk-ssh-|sk-ecdsa-)/ { print }' "$tmp_keys" | sort -u > "$KEY_FILE"
+    awk '/^(ssh-rsa|ssh-ed25519|ecdsa-sha2-|sk-ssh-|sk-ecdsa-)/ { print }' "$tmp_keys" | sort -u >"$KEY_FILE"
     chmod 600 "$KEY_FILE"
 
     if [ ! -s "$KEY_FILE" ]; then

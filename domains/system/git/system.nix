@@ -6,10 +6,10 @@
 }:
 
 let
-  cfg = config.capabilities.git;
+  cfg = config.domains.system.git;
 in
 {
-  options.capabilities.git = {
+  options.domains.system.git = {
     enable = lib.mkEnableOption "Git version control";
   };
 

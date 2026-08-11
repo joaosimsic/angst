@@ -20,7 +20,7 @@ let
     homeDirectory = "/home/${host.username}";
   };
 
-  appNixosModules = map host.scan.domains.mkNixosDomainModule host.scan.domains.nixosEntries;
+  appNixosModules = map host.scan.domains.mkNixosSystemModule host.scan.domains.systemEntries;
   appHomeModules = map host.scan.domains.mkDomainModule host.scan.domains.homeEntries;
 
   themeModule = import ../../modules/home/themeModule.nix {
@@ -56,6 +56,7 @@ inputs.nixpkgs.lib.nixosSystem {
       repoPath
       db
       sshAgent
+      ssh
       shell
       ;
     hostName = host.hostname;
@@ -84,7 +85,6 @@ inputs.nixpkgs.lib.nixosSystem {
     ../../modules/vm/runtime.nix
     ../../modules/vm/vm-variant.nix
     ../../modules/vm/host-mount.nix
-    ../../capabilities/ssh.nix
     ({ pkgs, ... }: {
       users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
       users.users.root.hashedPassword = lib.mkDefault host.password;

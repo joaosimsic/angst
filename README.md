@@ -33,9 +33,8 @@ nix run .#lint-themes                # fast, eval-only theme check
 
 ```
 @hosts/          machine declarations (hosts/<domain>/<hostname>/default.nix) — auto-discovered
-@capabilities/   opt-in NixOS system feature modules (9) — imported explicitly via mkCap
 @checks/         build-time validation (theme lint, config rendering, secrets, password, login shell, Nix lint)
-@domains/        user-space home feature declarations (21 domains / 14 categories)
+@domains/        features (30 domains / 17 categories) — each with a default.nix interface + optional home.nix/system.nix sides
 @lib/            build system, domain framework, host resolution, flake outputs
 @modules/        core NixOS/home/VM modules + sops secrets integration
 @profiles/       reusable composition units — selected via the host decl's `profiles` list
@@ -76,23 +75,29 @@ Optional siblings: `secrets.yaml` (sops-encrypted, see [Secrets](openwiki/secret
 
 ---
 
-### `@capabilities/` — System Feature Modules
+### `@domains/` — Feature Declarations
 
-Opt-in NixOS modules that wire up system-level features. Each profile uses `mkCap` to activate the capabilities it needs; there is **no** `capabilities/default.nix` — capabilities are imported explicitly by name.
+Domains are the single unit of configuration — **30 features across 17 categories** (user apps *and* system features). Each `domains/<category>/<name>/` describes one feature, with optional user (`home.nix`) and system (`system.nix`) sides:
 
-| File | Provides |
+| File | Purpose |
 |---|---|
-| `audio.nix` | PipeWire with ALSA/PulseAudio compat |
-| `graphical.nix` | X11, LightDM (themed background), libinput, dbus, XDG portals |
-| `network.nix` | NetworkManager, wget, curl, unzip |
-| `container.nix` | Docker, Podman, kubectl, lazydocker |
-| `ssh.nix` | OpenSSH server, key-only auth, agent forwarding |
-| `git.nix` | System-level Git config |
-| `search.nix` | FSearch (GNOME) indexer |
-| `clipboard.nix` | `wl-clipboard` + `xclip` |
-| `monitoring.nix` | System monitoring tools |
+| `default.nix` | **The domain interface**: pure data — `package`, `xdg`/`xdgFile`/`customXdg`, `description`, `mutable`. Validated strictly by `mkDomain` |
+| `home.nix` | Optional: custom home-manager module (only when auto-generation isn't enough) |
+| `system.nix` | Optional: NixOS module (sshd, i3 WM, `system/*` features) |
+| `render.nix` | Optional: theme-aware config generator: `{ themesLib, themeName, ... } → [{ path, text, checks? }]` |
+| `config/` | Optional: static config files (symlinked via `xdg.configFile`) |
 
----
+The domain framework (`lib/domains/`):
+
+- **`mkDomain.nix`** — the interface. Validates each `default.nix` spec: unknown keys, field types, `package` existence in `pkgs`, `xdg`/`xdgFile`/`customXdg` coherence, required `description`, `mutable` basenames, and the conventional side files (`home.nix`/`system.nix`/`render.nix` must be module functions, `config/` a directory). Violations throw `domains/<cat>/<name>/default.nix: <msg>` at eval.
+- **`scan.nix`** — recursively discovers domain dirs and runs `mkDomain` over each `default.nix`, producing `entries`/`systemEntries`.
+- **`module.nix`** — `mkDomainModule` auto-generates a home-manager module per feature (`enable` option, `home.packages`, `home.file` for rendered outputs, `xdg.configFile` for `config/`, `renderOverrideModule` for `mutable` files); validates the render output contract (`[{ path, text, checks? }]`). `mkNixosSystemModule` imports `system.nix` when present. Each side self-gates on `domains.<cat>.<name>.enable`; `host.type` decides which sides are built (`nixos` → both, `home` → home only).
+
+Full 30-domain inventory: see [openwiki/domains.md](openwiki/domains.md).
+
+Domain categories: `agents/` (opencode, cursor-cli), `bar/` (i3status), `editor/` (nvim), `files/` (yazi), `git/` (lazygit), `http-client/` (posting), `launcher/` (rofi), `nix/` (nh), `remote/` (ssh), `security/` (age, sops), `session/` (x11), `shell/` (nushell, starship, carapace), `sql-client/` (sqlit, rainfrog), `system/` (audio, clipboard, container, git, graphical, monitoring, network, search), `terminal/` (ghostty, zellij, tmux), `wm/` (i3).
+
+Domains are enabled via **profile composition**, not per-host module files.
 
 ### `@checks/` — Build-Time Validation
 
@@ -114,31 +119,6 @@ Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run
 
 ---
 
-### `@domains/` — Home Feature Declarations
-
-Domains are the unit of user-space configuration — **21 domains across 14 categories**. Each `domains/<category>/<name>/` describes one application:
-
-| File | Purpose |
-|---|---|
-| `meta.nix` | Required: Nix package name, XDG target (`xdg` full dir, `xdgFile` single file, or `customXdg`), description, `building` (`"home"`/`"nixos"`/`"both"`) |
-| `module.nix` | Optional: custom home-manager module (only when auto-generation isn't enough) |
-| `render.nix` | Theme-aware config generator: `{ themesLib, themeName, ... } → [{ path, text, checks? }]` |
-| `config/` | Optional: static config files (symlinked via `xdg.configFile`) |
-| `nixos.nix` | Optional: NixOS module (only `wm/i3` has one) |
-
-The domain framework (`lib/domains/`):
-
-- **`scan.nix`** — recursively discovers domain dirs, imports + validates `meta.nix` (`validateMeta` throws unless exactly one XDG target is set), produces `homeEntries`/`nixosEntries`.
-- **`module.nix`** — `mkDomainModule` auto-generates a home-manager module per home entry (`enable` option, `home.packages`, `home.file` for rendered outputs, `xdg.configFile` for `config/`, `renderOverrideModule` for `mutable` files). `mkNixosDomainModule` imports `nixos.nix` when present.
-
-Full 21-domain inventory: see [openwiki/domains.md](openwiki/domains.md).
-
-Domain categories: `agents/` (opencode, cursor-cli), `bar/` (i3status), `editor/` (nvim), `files/` (yazi), `git/` (lazygit), `http-client/` (posting), `launcher/` (rofi), `nix/` (nh), `security/` (age, sops), `session/` (x11), `shell/` (nushell, starship, carapace), `sql-client/` (sqlit, rainfrog), `terminal/` (ghostty, zellij, tmux), `wm/` (i3).
-
-Domains are enabled via **profile composition**, not per-host module files.
-
----
-
 ### `@lib/` — Build System, Domain Framework, and Flake Outputs
 
 `lib/` is pure framework — the machinery that makes the flake composable and verifiable:
@@ -149,7 +129,7 @@ Domains are enabled via **profile composition**, not per-host module files.
 | `lib/resolve.nix` | Normalizes a host decl into a `host` object (defaults, domain/toolchain scanning) |
 | `lib/build/mkNixos.nix` | NixOS system constructor (wires profiles, domains, modules, secrets bootstrap, VM detection, hardware) |
 | `lib/build/mkHome.nix` | Home-manager profile constructor (domains, toolchains, secrets activation, special args) |
-| `lib/domains/` | Domain discovery (`scan.nix`) + auto module generation (`module.nix`) |
+| `lib/domains/` | Domain interface (`mkDomain.nix`) + discovery (`scan.nix`) + module generation (`module.nix`) |
 | `lib/flake/outputs.nix` | All flake outputs: home configs, NixOS configs, packages, apps, dev shells, checks, formatter |
 | `lib/flake/devshell.nix` | Dev shell definitions (safe, dev, vm) with SSH agent init |
 | `lib/render.nix` | Theme rendering engine (`renderDomainOutputsFor`, `renderDomainOutputFor`) |
@@ -163,7 +143,7 @@ Domains are enabled via **profile composition**, not per-host module files.
 
 **`modules/nixos/`** — Base NixOS config imported by every configuration: `system.stateVersion = "25.11"`, keyboard layout (from `angst.keyboardLayout`, e.g. `br-abnt2`), `America/Sao_Paulo` timezone, `en_US.UTF-8` locale, NetworkManager, flakes + `allowUnfree`, user creation (nushell shell, wheel/networkmanager/video/audio groups), `nix-ld`, fonts, and impermanence (`persist.nix`).
 
-**`modules/home/`** — Base home-manager config: username, stateVersion, fontconfig, tree-sitter (`treesitter.nix`), ssh-agent + ssh config generation (`ssh-agent.nix`, `ssh.nix`), login shell handling (`login-shell.nix`), secrets activation (`secrets-activation.nix`), theme option (`themeModule.nix`).
+**`modules/home/`** — Base home-manager config: username, stateVersion, fontconfig, tree-sitter (`treesitter.nix`), login shell handling (`login-shell.nix`), secrets activation (`secrets-activation.nix`), theme option (`themeModule.nix`). (SSH client config + agent live in `domains/remote/ssh/`.)
 
 **`modules/vm/`** — Multi-layered VM support: detection (`detect.nix`, `is-qemu-vm.nix` — true when evaluated from a 9p mount), conditional bootloader (`runtime.nix`), vmVariant resources (`vm-variant.nix` — tmpfs `/`, `/persist` ext4, SPICE, 9p host mount), secret/SSH-key injection (`vm-profile.nix`), and host-repo symlink for live editing (`host-mount.nix`). `specialisation.nix` exists but is never imported (dead code).
 
@@ -173,15 +153,15 @@ Domains are enabled via **profile composition**, not per-host module files.
 
 ### `@profiles/` — Reusable Composition Units
 
-Profiles replace host-specific `home.nix` / `configuration.nix` files. Each returns `{ hm = [...]; nixos = [...]; }`; `mkDomainEnable "category.name"` and `mkCap "name"` throw at build time on unknown domain/capability names. Select via `profiles = [...]` in the host decl.
+Profiles replace host-specific `home.nix` / `configuration.nix` files. Each is a **pure feature list** — `{ enable = [...]; }` (plus an optional `modules` list for NixOS-only infrastructure). `profiles/default.nix` validates every name at build time (unknown features throw). The builder splits the enabled list into home and system sides based on each feature's `home.nix`/`system.nix` presence and the host `type`. Select via `profiles = [...]` in the host decl.
 
-| Profile | Domains | Capabilities |
-|---|---|---|
-| `base` | nushell, carapace, starship, zellij, nvim, yazi, lazygit, nh, age, sops | network, git, search, monitoring, container |
-| `desktop` | rofi, ghostty, x11 | graphical, audio, clipboard |
-| `development` | opencode, cursor-cli, sqlit, rainfrog, posting | — |
-| `server` | — | ssh |
-| `vm` | — | VM detection + runtime + variant + profile + host-mount + ssh |
+| Profile | Features (`enable`) |
+|---|---|
+| `base` | nushell, carapace, starship, zellij, nvim, yazi, lazygit, nh, age, sops, network, git, search, monitoring, container, **ssh** |
+| `desktop` | rofi, ghostty, x11, graphical, audio, clipboard |
+| `development` | opencode, cursor-cli, sqlit, rainfrog, posting |
+| `server` | ssh (sshd is driven per-host via `host.ssh.server.enable`) |
+| `vm` | ssh + VM modules (detect, runtime, variant, profile, host-mount) |
 
 > Note: `wm/i3` and `bar/i3status` exist as domains but are currently **commented out** in `profiles/desktop.nix`.
 

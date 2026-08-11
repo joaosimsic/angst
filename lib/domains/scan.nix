@@ -1,73 +1,57 @@
-{ lib, domainsPath }:
+{
+  lib,
+  pkgs,
+  domainsPath,
+}:
 
 let
-  inherit (lib) concatLists mapAttrsToList optional;
+  inherit (lib) concatLists mapAttrsToList;
+  mkDomain = import ./mkDomain.nix { inherit lib pkgs; };
 
-  validateMeta =
-    {
-      category,
-      name,
-      meta,
-    }:
-    let
-      hasXdg = meta ? xdg;
-      hasXdgFile = meta ? xdgFile;
-      customOnly = meta.customXdg or false;
-    in
-    if hasXdg && hasXdgFile then
-      builtins.throw "domains/${category}/${name}/meta.nix: 'xdg' and 'xdgFile' are mutually exclusive"
-    else if !hasXdg && !hasXdgFile && !customOnly then
-      builtins.throw "domains/${category}/${name}/meta.nix: must set 'xdg', 'xdgFile', or 'customXdg = true'"
-    else
-      meta;
-
-  scanEntries =
-    buildingFilter:
-    concatLists (
-      mapAttrsToList (
-        category: catType:
-        if catType != "directory" then
-          [ ]
-        else
-          let
-            categoryPath = "${domainsPath}/${category}";
-          in
-          concatLists (
-            mapAttrsToList (
-              name: nameType:
-              if nameType != "directory" then
-                [ ]
+  scanEntries = concatLists (
+    mapAttrsToList (
+      category: catType:
+      if catType != "directory" then
+        [ ]
+      else
+        let
+          categoryPath = "${domainsPath}/${category}";
+        in
+        concatLists (
+          mapAttrsToList (
+            name: nameType:
+            if nameType != "directory" then
+              [ ]
+            else
+              let
+                domainPath = "${categoryPath}/${name}";
+                defaultPath = "${domainPath}/default.nix";
+              in
+              if !(builtins.pathExists defaultPath) then
+                builtins.throw "domains/${category}/${name}: missing default.nix"
               else
-                let
-                  domainPath = "${categoryPath}/${name}";
-                  rawMeta = import (domainPath + "/meta.nix");
-                  meta = validateMeta {
+                [
+                  (mkDomain {
                     inherit category name;
-                    meta = rawMeta;
-                  };
-                  building = meta.building or "home";
-                  hasRender = builtins.pathExists "${domainPath}/render.nix";
-                in
-                optional (buildingFilter building) {
-                  inherit category name hasRender;
-                  path = domainPath;
-                  meta = meta // {
-                    inherit building;
-                  };
-                }
-            ) (builtins.readDir categoryPath)
-          )
-      ) (builtins.readDir domainsPath)
-    );
+                    path = domainPath;
+                    spec = import defaultPath;
+                  })
+                ]
+          ) (builtins.readDir categoryPath)
+        )
+    ) (builtins.readDir domainsPath)
+  );
 
-  homeEntries = scanEntries (building: building == "home" || building == "both");
-  nixosEntries = scanEntries (building: building == "nixos" || building == "both");
+  entries = scanEntries;
+  homeEntries = entries;
+  systemEntries = builtins.filter (e: e.hasSystem) entries;
 in
 {
   inherit
-    validateMeta
+    mkDomain
     scanEntries
+    entries
     homeEntries
-    nixosEntries
+    systemEntries
     ;
 }

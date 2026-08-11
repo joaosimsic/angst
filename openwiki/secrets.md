@@ -35,8 +35,7 @@ The opencode API key therefore ends up at `~/.secrets/opencode-go-key` at login,
 
 The master password drives two bootstrap paths, both reading `config.sops.secrets.masterPassword.path`:
 
-- **System** (`lib/build/mkNixos.nix`): `angst-bootstrap-secrets` oneshot service (before getty/display-manager) runs `mkpasswd -m sha-512` on the decrypted password and applies the hash to user + root via `usermod -p`, then generates `~/.ssh/id_ed25519` with the master password as passphrase (repairing the passphrase if the key exists with a different one).
-- **Home** (`lib/build/mkHome.nix`): the `angstSshKey` activation (after `secrets-ready`) performs the same SSH-key bootstrap on the home-manager side.
+- **System** (`lib/build/mkNixos.nix`): `angst-bootstrap-secrets` oneshot service (before getty/display-manager) runs `mkpasswd -m sha-512` on the decrypted password and applies the hash to user + root via `usermod -p`, then generates `~/.ssh/id_ed25519` with the master password as passphrase (repairing the passphrase if the key exists with a different one). This is the single owner of the SSH-key bootstrap; the home-manager side (moved into `domains/remote/ssh/`) configures the client + agent only.
 
 This replaces the old approach of baking a password hash into the host decl; the hash in the decl is only the unseeded fallback (`changeme` default in `lib/resolve.nix`).
 

@@ -3,8 +3,6 @@
 {
   imports = [
     ./treesitter.nix
-    ./ssh-agent.nix
-    ./ssh.nix
     ./login-shell.nix
   ];
 

@@ -1,15 +1,12 @@
-{ mkDomainEnable, mkCap }:
 {
-  hm = [
-    # (mkDomainEnable "wm.i3")
-    # (mkDomainEnable "bar.i3status")
-    (mkDomainEnable "launcher.rofi")
-    (mkDomainEnable "terminal.ghostty")
-    (mkDomainEnable "session.x11")
-  ];
-  nixos = [
-    (mkCap "graphical")
-    (mkCap "audio")
-    (mkCap "clipboard")
+  enable = [
+    # "wm.i3"
+    # "bar.i3status"
+    "launcher.rofi"
+    "terminal.ghostty"
+    "session.x11"
+    "system.graphical"
+    "system.audio"
+    "system.clipboard"
   ];
 }

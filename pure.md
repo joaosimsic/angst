@@ -570,9 +570,9 @@ When secrets are available, the master password is read from decrypted `secrets.
 Domain `config/` subdirectories contain theme-rendered output files. These are gitignored because:
 
 - **Theme-dependent.** A host using theme `miasma` renders different config than one using `catppuccin-mocha`. Hosts must not cross-pollute the branch.
-- **Generated, not authored.** The source of truth is the domain's `meta.nix` + `render.nix` + the host's selected theme. The rendered output is a build artifact.
+- **Generated, not authored.** The source of truth is the domain's `default.nix` + `render.nix` + the host's selected theme. The rendered output is a build artifact.
 
-Tracked in git: domain `.nix` modules, `meta.nix`, `render.nix`, and `config/` templates. Gitignored: the final rendered files in `domains/<category>/<name>/config/`.
+Tracked in git: domain `.nix` modules, `default.nix`, `render.nix`, and `config/` templates. Gitignored: the final rendered files in `domains/<category>/<name>/config/`.
 
 ## Refactoring checklist
 

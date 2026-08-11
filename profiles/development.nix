@@ -1,11 +1,9 @@
-{ mkDomainEnable, ... }:
 {
-  hm = [
-    (mkDomainEnable "agents.opencode")
-    (mkDomainEnable "agents.cursor-cli")
-    (mkDomainEnable "sql-client.sqlit")
-    (mkDomainEnable "sql-client.rainfrog")
-    (mkDomainEnable "http-client.posting")
+  enable = [
+    "agents.opencode"
+    "agents.cursor-cli"
+    "sql-client.sqlit"
+    "sql-client.rainfrog"
+    "http-client.posting"
   ];
-  nixos = [ ];
 }

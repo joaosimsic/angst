@@ -39,11 +39,13 @@
               rustc = rustToolchain;
             };
 
-            vmRunnerScript = name: script: pkgs.writeShellScriptBin name (
-              pkgs.lib.replaceStrings [ "@defaultHost@" ] [ defaultHost ] (
-                builtins.readFile ./scripts/lib/keys.sh + builtins.readFile script
-              )
-            );
+            vmRunnerScript =
+              name: script:
+              pkgs.writeShellScriptBin name (
+                pkgs.lib.replaceStrings [ "@defaultHost@" ] [ defaultHost ] (
+                  builtins.readFile ./scripts/lib/keys.sh + builtins.readFile script
+                )
+              );
 
             vm-package = rustPlatform.buildRustPackage {
               pname = "vm";

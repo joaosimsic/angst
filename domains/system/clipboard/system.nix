@@ -6,10 +6,10 @@
 }:
 
 let
-  cfg = config.capabilities.clipboard;
+  cfg = config.domains.system.clipboard;
 in
 {
-  options.capabilities.clipboard = {
+  options.domains.system.clipboard = {
     enable = lib.mkEnableOption "Clipboard tools";
   };
 

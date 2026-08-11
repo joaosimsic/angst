@@ -6,10 +6,10 @@
 }:
 
 let
-  cfg = config.capabilities.network;
+  cfg = config.domains.system.network;
 in
 {
-  options.capabilities.network = {
+  options.domains.system.network = {
     enable = lib.mkEnableOption "Basic networking tools";
   };
 
