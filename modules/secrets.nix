@@ -1,4 +1,5 @@
 {
+  inputs,
   self,
   host,
   lib,
@@ -36,26 +37,23 @@ let
       mode = "0600";
     };
   };
-in
-{
-  inherit
-    secretsFile
-    hasSecrets
-    canDecrypt
-    homeSecretDefs
-    ;
 
-  core = lib.mkIf canDecrypt {
-    sops = {
-      age.keyFile = "/home/${host.username}/.config/sops/age/keys.txt";
-      defaultSopsFile = secretsFile;
-      secrets =
-        builtins.mapAttrs (_: _: { }) homeSecretDefs
-        // lib.optionalAttrs (host.type == "nixos") {
-          masterPassword = { };
-        };
-    };
+  masterPasswordDefs = lib.optionalAttrs (host.type == "nixos") {
+    masterPassword = { };
   };
+
+  mkCore =
+    secretDefs:
+    lib.mkIf canDecrypt {
+      sops = {
+        age.keyFile = "/home/${host.username}/.config/sops/age/keys.txt";
+        defaultSopsFile = secretsFile;
+        secrets = builtins.mapAttrs (_: _: { }) secretDefs;
+      };
+    };
+
+  homeCore = mkCore (homeSecretDefs // masterPasswordDefs);
+  systemCore = mkCore masterPasswordDefs;
 
   syncActivation =
     { config, lib, ... }:
@@ -67,6 +65,26 @@ in
         fi
       '';
     };
+
+  homeModules = [
+    inputs.sops-nix.homeManagerModules.sops
+    syncActivation
+    homeCore
+    (import ./home/secrets-activation.nix {
+      secretDefs = homeSecretDefs;
+    })
+  ];
+in
+{
+  inherit
+    secretsFile
+    hasSecrets
+    canDecrypt
+    homeSecretDefs
+    homeCore
+    systemCore
+    homeModules
+    ;
 
   persistDirs = lib.optional canDecrypt ".config/sops" ++ lib.optional canDecrypt ".secrets";
 }

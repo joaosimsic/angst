@@ -39,7 +39,7 @@ let
     in
     if builtins.pathExists p then p else null;
 
-  secrets = import ../../modules/secrets.nix { inherit self host lib; };
+  secrets = import ../../modules/secrets.nix { inherit inputs self host lib; };
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
@@ -70,7 +70,7 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if host.env != { } then [ { environment.sessionVariables = host.env; } ] else [ ])
   ++ [
     inputs.sops-nix.nixosModules.sops
-    secrets.core
+    secrets.systemCore
   ]
   ++ [
     ../../modules/vm/detect.nix
@@ -173,14 +173,8 @@ inputs.nixpkgs.lib.nixosSystem {
           ++ appHomeModules
           ++ hmModules
           ++ host.toolchainModules
-          ++ [
-            inputs.sops-nix.homeManagerModules.sops
-            secrets.syncActivation
-            secrets.core
-            (import ../../modules/home/secrets-activation.nix {
-              secretDefs = secrets.homeSecretDefs;
-            })
-          ];
+          ++ secrets.homeModules
+          ;
         };
       };
     }

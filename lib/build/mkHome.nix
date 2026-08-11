@@ -32,7 +32,7 @@ let
     hostTheme = effectiveTheme;
   };
 
-  secrets = import ../../modules/secrets.nix { inherit self host lib; };
+  secrets = import ../../modules/secrets.nix { inherit inputs self host lib; };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
@@ -61,14 +61,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ++ appHomeModules
   ++ hmModules
   ++ host.toolchainModules
-  ++ [
-    inputs.sops-nix.homeManagerModules.sops
-    secrets.syncActivation
-    secrets.core
-    (import ../../modules/home/secrets-activation.nix {
-      secretDefs = secrets.homeSecretDefs;
-    })
-  ]
+  ++ secrets.homeModules
   ++ [
     (_: {
       home.packages = [
