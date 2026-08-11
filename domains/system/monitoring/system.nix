@@ -6,10 +6,10 @@
 }:
 
 let
-  cfg = config.capabilities.monitoring;
+  cfg = config.domains.system.monitoring;
 in
 {
-  options.capabilities.monitoring = {
+  options.domains.system.monitoring = {
     enable = lib.mkEnableOption "Monitoring tools";
   };
 

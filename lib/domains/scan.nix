@@ -1,13 +1,17 @@
-{ lib, domainsPath }:
+{
+  lib,
+  domainsPath,
+}:
 
 let
-  inherit (lib) concatLists mapAttrsToList optional;
+  inherit (lib) concatLists mapAttrsToList;
 
   validateMeta =
     {
       category,
       name,
       meta,
+      hasSystem,
     }:
     let
       hasXdg = meta ? xdg;
@@ -16,13 +20,12 @@ let
     in
     if hasXdg && hasXdgFile then
       builtins.throw "domains/${category}/${name}/meta.nix: 'xdg' and 'xdgFile' are mutually exclusive"
-    else if !hasXdg && !hasXdgFile && !customOnly then
-      builtins.throw "domains/${category}/${name}/meta.nix: must set 'xdg', 'xdgFile', or 'customXdg = true'"
+    else if !hasXdg && !hasXdgFile && !customOnly && !hasSystem then
+      builtins.throw "domains/${category}/${name}/meta.nix: must set 'xdg', 'xdgFile', or 'customXdg = true' (system-only features must ship a system.nix)"
     else
       meta;
 
   scanEntries =
-    buildingFilter:
     concatLists (
       mapAttrsToList (
         category: catType:
@@ -41,33 +44,44 @@ let
                 let
                   domainPath = "${categoryPath}/${name}";
                   rawMeta = import (domainPath + "/meta.nix");
+                  hasSystem = builtins.pathExists "${domainPath}/system.nix";
+                  hasHome = builtins.pathExists "${domainPath}/home.nix";
+                  hasRender = builtins.pathExists "${domainPath}/render.nix";
+                  hasConfigDir = builtins.pathExists "${domainPath}/config";
                   meta = validateMeta {
-                    inherit category name;
+                    inherit category name hasSystem;
                     meta = rawMeta;
                   };
-                  building = meta.building or "home";
-                  hasRender = builtins.pathExists "${domainPath}/render.nix";
                 in
-                optional (buildingFilter building) {
-                  inherit category name hasRender;
-                  path = domainPath;
-                  meta = meta // {
-                    inherit building;
-                  };
-                }
+                [
+                  {
+                    inherit
+                      category
+                      name
+                      hasSystem
+                      hasHome
+                      hasRender
+                      hasConfigDir
+                      ;
+                    path = domainPath;
+                    inherit meta;
+                  }
+                ]
             ) (builtins.readDir categoryPath)
           )
       ) (builtins.readDir domainsPath)
     );
 
-  homeEntries = scanEntries (building: building == "home" || building == "both");
-  nixosEntries = scanEntries (building: building == "nixos" || building == "both");
+  entries = scanEntries;
+  homeEntries = scanEntries;
+  systemEntries = builtins.filter (e: e.hasSystem) scanEntries;
 in
 {
   inherit
     validateMeta
     scanEntries
+    entries
     homeEntries
-    nixosEntries
+    systemEntries
     ;
 }

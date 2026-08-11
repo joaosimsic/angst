@@ -8,10 +8,10 @@
 }:
 
 let
-  cfg = config.capabilities.graphical;
+  cfg = config.domains.system.graphical;
 in
 {
-  options.capabilities.graphical = {
+  options.domains.system.graphical = {
     enable = lib.mkEnableOption "Graphical desktop with X11";
   };
 

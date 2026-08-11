@@ -91,7 +91,7 @@ def main() -> None:
         ("11. Hardcoded Strings Inventory", section_hardcoded_strings()),
         ("12. Domain Inventory", section_domain_inventory_condensed()),
         ("13. Theme Inventory", section_theme_inventory_condensed()),
-        ("14. Capabilities Inventory", section_capabilities_inventory_condensed()),
+        ("14. System Feature Inventory", section_capabilities_inventory_condensed()),
         ("15. Toolchain Inventory", section_toolchain_inventory_condensed()),
         ("16. Host Inventory", section_host_inventory()),
         ("17. Option Inventory", section_option_inventory()),

@@ -1,19 +1,23 @@
 {
   config,
   lib,
-  pkgs,
+  ssh,
   ...
 }:
 
 let
-  cfg = config.capabilities.ssh;
+  cfg = config.domains.remote.ssh;
 in
 {
-  options.capabilities.ssh = {
-    enable = lib.mkEnableOption "SSH client and server";
+  options.domains.remote.ssh = {
+    enable = lib.mkEnableOption "SSH client, agent, and server";
 
     server = {
-      enable = lib.mkEnableOption "SSH server (sshd)";
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = ssh.server.enable or false;
+        description = "Run the SSH server (sshd) on this host";
+      };
       passwordAuthentication = lib.mkOption {
         type = lib.types.bool;
         default = false;
@@ -22,12 +26,8 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    environment.systemPackages = with pkgs; [
-      openssh
-    ];
-
-    services.openssh = lib.mkIf cfg.server.enable {
+  config = lib.mkIf (cfg.enable && cfg.server.enable) {
+    services.openssh = {
       enable = true;
       settings = {
         PasswordAuthentication = cfg.server.passwordAuthentication;

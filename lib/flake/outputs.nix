@@ -31,6 +31,10 @@ let
       inherit lib;
     };
 
+  enableModule = e: {
+    domains.${e.category}.${e.name}.enable = true;
+  };
+
   mkHome = import ../build/mkHome.nix;
   mkHost = import ../build/mkNixos.nix;
 
@@ -104,8 +108,10 @@ let
     in
     mkHost {
       inherit self inputs host;
-      hmModules = p.hm;
-      nixosModules = p.nixos;
+      hmModules = map enableModule p.enabled;
+      nixosModules =
+        map enableModule (builtins.filter (e: e.hasSystem) p.enabled)
+        ++ p.modules;
     };
 
   devshell = import ./devshell.nix {
@@ -137,25 +143,25 @@ let
       {
         "${r.username}" = mkHomeCfg {
           host = r;
-          hmModules = p.hm;
+          hmModules = map enableModule p.enabled;
         };
 
         "${r.username}-theme-override-test" = mkHomeCfg {
           host = r;
-          hmModules = p.hm;
+          hmModules = map enableModule p.enabled;
           themeOverride = overrideTheme;
           shellOverride = "";
         };
 
         login-shell-valid = mkHomeCfg {
           host = r;
-          hmModules = p.hm;
+          hmModules = map enableModule p.enabled;
           shellOverride = "sh";
         };
 
         login-shell-invalid = mkHomeCfg {
           host = r;
-          hmModules = p.hm;
+          hmModules = map enableModule p.enabled;
           shellOverride = "__angst_nonexistent_shell__";
         };
       }
@@ -176,7 +182,7 @@ rec {
         name = host.hostname;
         value = mkHomeCfg {
           inherit host;
-          hmModules = (profilesFor host).hm;
+          hmModules = map enableModule (profilesFor host).enabled;
         };
       }) hostList
     )

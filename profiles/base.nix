@@ -1,22 +1,20 @@
-{ mkDomainEnable, mkCap }:
 {
-  hm = [
-    (mkDomainEnable "shell.nushell")
-    (mkDomainEnable "shell.carapace")
-    (mkDomainEnable "shell.starship")
-    (mkDomainEnable "terminal.zellij")
-    (mkDomainEnable "editor.nvim")
-    (mkDomainEnable "files.yazi")
-    (mkDomainEnable "git.lazygit")
-    (mkDomainEnable "nix.nh")
-    (mkDomainEnable "security.age")
-    (mkDomainEnable "security.sops")
-  ];
-  nixos = [
-    (mkCap "network")
-    (mkCap "git")
-    (mkCap "search")
-    (mkCap "monitoring")
-    (mkCap "container")
+  enable = [
+    "shell.nushell"
+    "shell.carapace"
+    "shell.starship"
+    "terminal.zellij"
+    "editor.nvim"
+    "files.yazi"
+    "git.lazygit"
+    "nix.nh"
+    "security.age"
+    "security.sops"
+    "system.network"
+    "system.git"
+    "system.search"
+    "system.monitoring"
+    "system.container"
+    "remote.ssh"
   ];
 }

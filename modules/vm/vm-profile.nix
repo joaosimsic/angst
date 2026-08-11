@@ -38,12 +38,12 @@ in
           angst: VM is running without SSH. Headless VM access requires an SSH server.
 
           Ensure the VM profile modules are loaded. Add to your NixOS modules:
-            ../capabilities/ssh.nix
+            domains/remote/ssh/system.nix
             ../lib/virtualization/vm-profile.nix
 
           And enable SSH:
-            capabilities.ssh.enable = true;
-            capabilities.ssh.server.enable = true;
+            domains.remote.ssh.enable = true;
+            domains.remote.ssh.server.enable = true;
         '';
       }
     ];
@@ -82,8 +82,8 @@ in
       };
     };
 
-    capabilities.ssh.enable = lib.mkForce true;
-    capabilities.ssh.server.enable = lib.mkForce true;
+    domains.remote.ssh.enable = lib.mkForce true;
+    domains.remote.ssh.server.enable = lib.mkForce true;
 
     environment = {
       systemPackages = with pkgs; [

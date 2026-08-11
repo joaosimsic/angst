@@ -5,32 +5,26 @@
 }:
 
 let
-  mkDomainEnable =
+  entries = scan.domains.entries;
+
+  entryFor =
     name:
     let
-      entries = scan.domains.homeEntries ++ scan.domains.nixosEntries;
-      domain = lib.findFirst (e: "${e.category}.${e.name}" == name) null entries;
+      entry = lib.findFirst (e: "${e.category}.${e.name}" == name) null entries;
     in
-    if domain == null then
+    if entry == null then
       throw "Unknown domain '${name}'. Available: ${
         builtins.concatStringsSep ", " (map (e: "${e.category}.${e.name}") entries)
       }"
     else
-      {
-        domains.${domain.category}.${domain.name}.enable = true;
-      };
-
-  mkCap = name: { ... }: {
-    imports = [ ../capabilities/${name}.nix ];
-    capabilities.${name}.enable = true;
-  };
+      entry;
 
   profileMap = {
-    base = import ./base.nix { inherit mkDomainEnable mkCap; };
-    desktop = import ./desktop.nix { inherit mkDomainEnable mkCap; };
-    development = import ./development.nix { inherit mkDomainEnable mkCap; };
-    server = import ./server.nix { inherit mkDomainEnable mkCap; };
-    vm = import ./vm.nix { inherit mkDomainEnable mkCap; };
+    base = import ./base.nix;
+    desktop = import ./desktop.nix;
+    development = import ./development.nix;
+    server = import ./server.nix;
+    vm = import ./vm.nix;
   };
 
   resolve =
@@ -43,8 +37,8 @@ let
       throw "Unknown profiles: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " validNames}"
     else
       {
-        hm = lib.concatMap (n: profileMap.${n}.hm) names;
-        nixos = lib.concatMap (n: profileMap.${n}.nixos) names;
+        enabled = map entryFor (lib.concatMap (n: profileMap.${n}.enable or [ ]) names);
+        modules = lib.concatMap (n: profileMap.${n}.modules or [ ]) names;
       };
 in
 resolve profiles

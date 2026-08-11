@@ -7,6 +7,7 @@
 
 let
   cfg = config.angst.ssh;
+  sshEnabled = config.domains.remote.ssh.enable;
 
   includeLine = "Include ${config.home.homeDirectory}/.ssh/config.d/*";
 
@@ -76,7 +77,7 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.hosts != [ ]) {
+  config = lib.mkIf (sshEnabled && cfg.hosts != [ ]) {
     home.file.".ssh/config.d/angst.conf" = {
       force = true;
       text = lib.concatMapStrings renderHost cfg.hosts;

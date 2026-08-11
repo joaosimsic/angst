@@ -8,6 +8,7 @@
 
 let
   cfg = config.angst.sshAgent;
+  sshEnabled = config.domains.remote.ssh.enable;
 
   resolve = k: lib.replaceStrings [ "~" ] [ config.home.homeDirectory ] k;
 
@@ -52,7 +53,7 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.enable && hasKeys) {
+  config = lib.mkIf (sshEnabled && cfg.enable && hasKeys) {
     systemd.user = {
       sessionVariables.SSH_AUTH_SOCK = "\${XDG_RUNTIME_DIR}/ssh-agent.socket";
 

@@ -20,7 +20,7 @@ let
         meta
         path
         ;
-      modulePath = "${path}/module.nix";
+      modulePath = "${path}/home.nix";
       hasCustomModule = builtins.pathExists modulePath;
       configSubdir = "${path}/config";
       hasConfigDir = builtins.pathExists configSubdir;
@@ -169,13 +169,13 @@ let
       ];
     };
 
-  mkNixosDomainModule =
+  mkNixosSystemModule =
     entry:
     let
-      nixosPath = "${entry.path}/nixos.nix";
+      systemPath = "${entry.path}/system.nix";
     in
-    if builtins.pathExists nixosPath then import nixosPath else { };
+    if builtins.pathExists systemPath then import systemPath else { };
 in
 {
-  inherit mkDomainModule mkNixosDomainModule;
+  inherit mkDomainModule mkNixosSystemModule;
 }

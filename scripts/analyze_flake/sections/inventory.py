@@ -122,21 +122,20 @@ def section_theme_inventory_condensed() -> str:
 
 
 def section_capabilities_inventory_condensed() -> str:
-    """Section 14: Capabilities Inventory."""
-    lines = [md_section(14, "Capabilities Inventory")]
+    """Section 14: System Feature Inventory (domains/system)."""
+    lines = [md_section(14, "System Feature Inventory")]
     lines.append("> **See `nix flake show` for the full list.**\n")
-    cap_dir = REPO / "capabilities"
-    if not cap_dir.is_dir():
-        return lines[0] + "\n(no capabilities/)"
-    caps = sorted(f.stem for f in cap_dir.glob("*.nix") if f.stem != "default")
+    sys_dir = REPO / "domains" / "system"
+    if not sys_dir.is_dir():
+        return lines[0] + "\n(no domains/system/)"
+    caps = sorted(p.name for p in sys_dir.iterdir() if p.is_dir())
     total_loc = sum(
-        len(read_nix(f).splitlines())
-        for f in cap_dir.glob("*.nix")
-        if f.stem != "default"
+        len(read_nix(p / "system.nix").splitlines())
+        for p in (sys_dir / c for c in caps)
     )
-    lines.append(f"- **{len(caps)} capabilities**, {total_loc} total LOC\n")
+    lines.append(f"- **{len(caps)} system features**, {total_loc} total LOC\n")
     for c in caps:
-        loc = len(read_nix(cap_dir / f"{c}.nix").splitlines())
+        loc = len(read_nix(sys_dir / c / "system.nix").splitlines())
         lines.append(f"  - `{c}` — {loc} LOC")
     return "\n".join(lines)
 

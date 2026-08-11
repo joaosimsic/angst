@@ -83,9 +83,7 @@ def section_directory_breakdown() -> str:
         "domains",
         "toolchains",
         "themes",
-        "capabilities",
         "hosts",
-        "common",
         "scripts",
     ):
         path = REPO / d
