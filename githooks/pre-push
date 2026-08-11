@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if command -v gitleaks >/dev/null 2>&1; then
+    gl=gitleaks
+else
+    gl="nix run --quiet nixpkgs#gitleaks --"
+fi
+
+# git pre-push stdin: "<local-ref> <local-oid> <remote-ref> <remote-oid>" per pushed ref.
+while read -r local_ref local_oid remote_ref remote_oid; do
+    [ -z "$local_ref" ] && continue
+    [ "$local_oid" = "0000000000000000000000000000000000000000" ] && continue
+
+    if [ "$remote_oid" = "0000000000000000000000000000000000000000" ]; then
+        # New ref: scan all commits reachable from the local ref that aren't on any remote ref.
+        range="${local_oid} --not --remotes"
+    else
+        range="${remote_oid}..${local_oid}"
+    fi
+
+    $gl git --log-opts="$range" --redact
+done

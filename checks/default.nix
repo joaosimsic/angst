@@ -56,9 +56,12 @@ let
   };
 
   lintNix = import ./lint-nix.nix { inherit pkgs; };
+
+  checkSecretsEncrypted = import ./secrets.nix { inherit pkgs; };
 in
 {
   check-password = checkPassword;
+  check-secrets-encrypted = checkSecretsEncrypted;
   lint-nix = lintNix;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop = lintDesktop;

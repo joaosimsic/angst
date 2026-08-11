@@ -31,6 +31,9 @@ check:
 dev:
     nix develop
 
+install-hooks:
+    git config core.hooksPath githooks
+
 vm host="nixos":
     @NIX_DEFAULT_TARGET_HOST={{host}} nix shell ./tools/vm#wrapped -c vm start
 

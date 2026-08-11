@@ -14,3 +14,5 @@ nvim-profile.log
 *.log
 __pycache__
 node_modules
+*.dec
+.agekey
