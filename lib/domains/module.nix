@@ -31,125 +31,95 @@ let
       hasXdgFile = meta ? xdgFile;
       enableOption = config.domains.${category}.${name}.enable;
 
-      configSourceEntries =
-        if hasConfigDir && hasXdg && !isCustomXdg then
-          let
-            go =
-              dirPath: prefix:
-              lib.concatLists (
-                lib.mapAttrsToList (
-                  subName: subType:
-                  let
-                    fullPath = "${toString dirPath}/${subName}";
-                    relPath = prefix + subName;
-                    pathStr = toString fullPath;
-                  in
-                  if subType == "directory" then
-                    go fullPath (relPath + "/")
-                  else if subName == ".gitignore" then
-                    [ ]
-                  else if lib.hasInfix "/node_modules/" pathStr then
-                    [ ]
-                  else if lib.hasSuffix "/node_modules" pathStr then
-                    [ ]
-                  else if builtins.elem subName mutableBaseNames then
-                    [ ]
-                  else
-                    [
-                      {
-                        target = "${meta.xdg}/${relPath}";
-                        source = fullPath;
-                      }
-                    ]
-                ) (builtins.readDir dirPath)
-              );
-          in
-          go configSubdir ""
-        else
-          [ ];
-
-      xdgFileSourceEntries =
-        if hasConfigDir && hasXdgFile && !isCustomXdg && !hasRender then
-          let
-            filePath = "${configSubdir}/${meta.xdgFile}";
-          in
-          [
-            {
-              target = meta.xdgFile;
-              source = filePath;
-            }
-          ]
-        else
-          [ ];
-
-      renderedFiles =
+      outputs =
         if !hasRender then
-          { }
+          [ ]
         else
-          let
-            render = import "${path}/render.nix";
+          (import "${path}/render.nix") {
+            inherit
+              lib
+              themesLib
+              monitors
+              db
+              sshAgent
+              ;
             checkHelpers = import ../../checks/theme/assertions.nix {
               inherit lib;
               themeName = config.theme;
               theme = themesLib.get config.theme;
             };
-            outputs = render {
-              inherit
-                lib
-                themesLib
-                checkHelpers
-                monitors
-                db
-                sshAgent
-                ;
-              fontFamily = "JetBrainsMono Nerd Font";
-              themeName = config.theme;
-              homeDirectory = config.home.homeDirectory;
-            };
-            prefix = "domains/${category}/${name}/config/";
-            entryForOutput =
-              output:
-              let
-                relPath = lib.removePrefix prefix output.path;
-              in
-              lib.optional (hasXdg || (hasXdgFile && relPath == meta.xdgFile)) (
-                lib.nameValuePair (if hasXdg then ".config/${meta.xdg}/${relPath}" else ".config/${meta.xdgFile}") {
-                  inherit (output) text;
+            fontFamily = "JetBrainsMono Nerd Font";
+            themeName = config.theme;
+            homeDirectory = config.home.homeDirectory;
+          };
+
+      isSkippable =
+        subName: pathStr:
+        subName == ".gitignore"
+        || lib.hasInfix "/node_modules/" pathStr
+        || lib.hasSuffix "/node_modules" pathStr
+        || builtins.elem subName mutableBaseNames;
+
+      go =
+        dirPath: prefix:
+        lib.concatLists (
+          lib.mapAttrsToList (
+            subName: subType:
+            let
+              fullPath = "${toString dirPath}/${subName}";
+              relPath = prefix + subName;
+            in
+            if subType == "directory" then
+              go fullPath (relPath + "/")
+            else if isSkippable subName (toString fullPath) then
+              [ ]
+            else
+              [
+                {
+                  target = "${meta.xdg}/${relPath}";
+                  source = fullPath;
                 }
-              );
-          in
-          lib.listToAttrs (lib.concatMap entryForOutput outputs);
+              ]
+          ) (builtins.readDir dirPath)
+        );
+
+      configSourceEntries =
+        if hasConfigDir && hasXdg && !isCustomXdg then go configSubdir "" else [ ];
+
+      xdgFileSourceEntries =
+        if hasConfigDir && hasXdgFile && !isCustomXdg && !hasRender then
+          [
+            {
+              target = meta.xdgFile;
+              source = "${configSubdir}/${meta.xdgFile}";
+            }
+          ]
+        else
+          [ ];
+
+      prefix = "domains/${category}/${name}/config/";
+
+      renderedFiles =
+        lib.listToAttrs (
+          lib.concatMap (
+            output:
+            let
+              relPath = lib.removePrefix prefix output.path;
+            in
+            lib.optional (hasXdg || (hasXdgFile && relPath == meta.xdgFile)) (
+              lib.nameValuePair (if hasXdg then ".config/${meta.xdg}/${relPath}" else ".config/${meta.xdgFile}") {
+                inherit (output) text;
+              }
+            )
+          ) outputs
+        );
 
       renderedRelPaths =
         if hasRender && hasConfigDir && hasXdg && !isCustomXdg then
-          let
-            renderFn = import "${path}/render.nix";
-            outputs = renderFn {
-              inherit
-                lib
-                themesLib
-                monitors
-                db
-                sshAgent
-                ;
-              checkHelpers = import ../../checks/theme/assertions.nix {
-                inherit lib;
-                themeName = config.theme;
-                theme = themesLib.get config.theme;
-              };
-              fontFamily = "JetBrainsMono Nerd Font";
-              themeName = config.theme;
-              homeDirectory = config.home.homeDirectory;
-            };
-            prefix = "domains/${category}/${name}/config/";
-          in
           lib.unique (
             lib.concatMap (
               o:
-              let
-                rel = lib.removePrefix prefix o.path;
-              in
-              lib.optional (lib.hasPrefix "domains/" o.path) rel
+              lib.optional (lib.hasPrefix "domains/" o.path) (lib.removePrefix prefix o.path)
             ) outputs
           )
         else
@@ -176,11 +146,7 @@ let
             let
               allEntries = configSourceEntries ++ xdgFileSourceEntries;
               filteredEntries = lib.filter (
-                e:
-                let
-                  relTarget = lib.removePrefix "${meta.xdg}/" e.target;
-                in
-                !(builtins.elem relTarget renderedRelPaths)
+                e: !(builtins.elem (lib.removePrefix "${meta.xdg}/" e.target) renderedRelPaths)
               ) allEntries;
             in
             builtins.listToAttrs (map (e: lib.nameValuePair e.target { inherit (e) source; }) filteredEntries);
@@ -192,9 +158,8 @@ let
           home.file =
             let
               files = if hasRender && hasConfigDir && hasXdg && !isCustomXdg then renderedFiles else { };
-              filteredFiles = lib.filterAttrs (key: _: !(builtins.elem (baseNameOf key) mutableBaseNames)) files;
             in
-            filteredFiles;
+            lib.filterAttrs (key: _: !(builtins.elem (baseNameOf key) mutableBaseNames)) files;
         };
       };
     in
