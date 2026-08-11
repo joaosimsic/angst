@@ -31,6 +31,13 @@ check:
 dev:
     nix develop
 
+install-hooks:
+    git config core.hooksPath githooks
+
+test-secrets:
+    nix build '.#checks.x86_64-linux.secret-scan' --no-link --print-build-logs
+    nix build '.#checks.x86_64-linux.secret-scan-hooks' --no-link --print-build-logs
+
 vm host="nixos":
     @NIX_DEFAULT_TARGET_HOST={{host}} nix shell ./tools/vm#wrapped -c vm start
 

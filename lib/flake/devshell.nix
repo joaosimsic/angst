@@ -42,6 +42,7 @@ let
       qemu
       sops
       age
+      gitleaks
       cargo
       rustc
       rust-analyzer

@@ -1,0 +1,22 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "angst-plaintext-secret-value"
+description = "Plaintext secret value in secrets.yaml (not sops-encrypted)"
+regex = '''(?i)(password|passphrase|token|secret|api[_-]?key|access[_-]?key|client[_-]?secret)\s*[:=]\s*['"][^'"]{4,}['"]'''
+path = "secrets\\.ya?ml$"
+
+[allowlist]
+description = "angst: SOPS ciphertext, age public keys, and documented examples"
+regexes = [
+  '''ENC\[AES256_GCM,''',
+  '''-----BEGIN AGE ENCRYPTED FILE-----''',
+  '''age1[0-9a-z]{58}''',
+]
+paths = [
+  "README\\.md",
+  "pure\\.md",
+  "analysis\\.md",
+  "openwiki/",
+]

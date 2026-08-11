@@ -1,241 +1,104 @@
 # Domains
 
-Domains are the **unit of user-space configuration** in angst. Each domain describes one application or tool — what package to install, where its config lives, and how to render theme-aware configuration files.
+Domains are the **unit of user-space configuration** in angst. Each domain describes one application or tool — what package to install, where its config lives, and how to render theme-aware configuration files. There are currently **21 domains across 14 categories** (plus a dead `llm/opencode` dir without `meta.nix`).
 
 ## Domain Anatomy
 
-Every domain lives under `/domains/<category>/<name>/` and follows this structure:
-
 ```
 domains/<category>/<name>/
-├── meta.nix       # Required: package name, XDG target, description
-├── module.nix     # Optional: custom home-manager module (rarely needed)
+├── meta.nix       # Required: package name, XDG target, description, building type
+├── module.nix     # Optional: custom home-manager module (only when auto-gen isn't enough)
 ├── render.nix     # Optional: theme-aware config generator
-├── config/        # Optional: static config files (symlinked by activation)
-└── nixos.nix      # Optional: system-level NixOS module
+├── config/        # Optional: static config files (symlinked via xdg.configFile)
+└── nixos.nix      # Optional: NixOS module (only wm/i3 has one)
 ```
 
 ### meta.nix
 
-Defines the domain's metadata — package, binary, XDG target, and description.
+Defines package + XDG target. `validateMeta` in `lib/domains/scan.nix` **throws unless exactly one** of `xdg` (full directory → `~/.config/<name>`), `xdgFile` (single file), or `customXdg` (handled by `module.nix`) is set. `building` filters a domain into home vs NixOS entries (`"home"` default, `"nixos"`, or `"both"`).
 
 ```nix
 {
-  package = "neovim";          # Nix package name
-  binary = "nvim";             # Binary name (for shell entries)
-  description = "Neovim editor";
-  # For full directory symlink:
-  xdg = "nvim";                # -> ~/.config/nvim
-  # For single file:
-  xdgFile = "starship.toml";   # -> ~/.config/starship.toml
-  interactive = true;          # Is this an interactive shell app?
-  customXdg = true;            # Skip auto symlink, handle in module.nix
+  package = "zellij";        # Nix package name (installed when domain enabled)
+  xdg = "zellij";            # -> ~/.config/zellij (full dir) — or xdgFile/customXdg
+  description = "Terminal multiplexer";
 }
 ```
 
-### module.nix (optional)
+### render.nix
 
-A custom home-manager module for domains needing special logic beyond the auto-generated base. Most domains don't need this — the framework provides a sensible default via `/lib/domains/module.nix`.
+The heart of the theme system: a function taking `{ themesLib, themeName, homeDirectory, ... }` (see `lib/render.nix`, `renderDomainOutputsFor`) and returning `[{ path, text, checks? }]`. `path` is repo-relative; the framework maps it to the correct XDG location. Rendered outputs can carry `checks` (e.g. "this ghostty color must equal `palette 5`") that the theme checks assert.
 
-### render.nix (optional)
+## Framework (`lib/domains/`)
 
-The heart of the theme system. A function that takes `{ themesLib, themeName, homeDirectory, ... }` and returns a list of `{ path, text, checks? }` objects.
+- **`scan.nix`** — `readDir` over `/domains/` → category → name, imports each `meta.nix`, validates it, and produces `homeEntries`/`nixosEntries` (each `{ category, name, meta, path, hasRender, hasModule, hasConfigDir, hasNixos }`). Exposed to every builder via `host.scan.domains`.
+- **`module.nix`** — `mkDomainModule` auto-generates a home-manager module per home entry:
+  - `baseModule`: `domains.<cat>.<name>.enable` option, `home.packages` from `meta.package`, `home.file` for rendered outputs;
+  - `configSourceModule`: recursive walk of `config/` → `xdg.configFile` symlinks (skipping `.gitignore`, `node_modules`, and `meta.mutable` files);
+  - `renderOverrideModule`: filters rendered files by `mutable`;
+  - plus the domain's custom `module.nix` if present.
+  - `mkNixosDomainModule` imports `nixos.nix` when present.
 
-```nix
-t = themesLib.get themeName;  # Get all theme tokens
-p = t.palette;
+There is **no** `lib/domains/activation.nix` (README is stale); activation happens through home-manager `xdg.configFile` and, in VMs, `modules/vm/host-mount.nix` gives live access to the host repo.
 
-{
-  path = "domains/terminal/ghostty/config/config";
-  text = ''
-    theme = ${p.foreground.base}
-    background = ${p.background.base}
-    foreground = ${p.foreground.variant}
-    ...
-  '';
-  checks = [
-    { name = "ghostty-magenta"; require = [ "palette 5 = ${p.accent.variant}" ]; }
-  ];
-}
-```
+## Domain Inventory (21)
 
-The `path` is relative to the repository root. The domain framework strips the `domains/<category>/<name>/config/` prefix and maps it to the correct XDG location.
+| Category | Name | Package | XDG | Render | Module | NixOS | Purpose |
+|---|---|---|---|---|---|---|---|
+| agents | cursor-cli | cursor-cli | custom | — | — | — | Cursor AI CLI (meta-only) |
+| agents | opencode | opencode | opencode | ✅ | ✅ | — | AI coding agent: 22 LSPs, themed TUI, API key from sops |
+| bar | i3status | *(none)* | i3status | ✅ | ✅ | — | i3 status bar (themed blocks) |
+| editor | nvim | *(pkgs.neovim in module)* | nvim | ✅ | ✅ | — | Neovim: backend adapters/engines, treesitter, Lua tests |
+| files | yazi | *(none)* | yazi | ✅ | ✅ | — | Terminal file manager |
+| git | lazygit | lazygit | lazygit | ✅ | ✅ | — | Git TUI |
+| http-client | posting | posting | posting | ✅ | ✅ | — | Terminal HTTP client |
+| launcher | rofi | rofi | rofi | ✅ | ✅ | — | App launcher |
+| nix | nh | nh | custom | — | — | — | Nix CLI helper (meta-only) |
+| security | age | age | custom | — | — | — | age encryption (meta-only) |
+| security | sops | sops | custom | — | — | — | sops+age secrets (meta-only) |
+| session | x11 | *(none)* | custom | ✅ | ✅ | — | X11 autostart/session |
+| shell | carapace | carapace | custom | — | ✅ | — | Shell completion engine |
+| shell | nushell | nushell | nushell | ✅ | ✅ | — | Nushell config (themed) |
+| shell | starship | starship | `starship.toml` (xdgFile) | ✅ | ✅ | — | Prompt (themed) |
+| sql-client | rainfrog | rainfrog | rainfrog | ✅ | ✅ | — | TUI DB manager |
+| sql-client | sqlit | sqlit-tui | sqlit | ✅ | ✅ | — | TUI SQL browser |
+| terminal | ghostty | ghostty | ghostty | ✅ | ✅ | — | GPU terminal (themed) |
+| terminal | tmux | tmux | `tmux/tmux.conf` (xdgFile) | ✅ | ✅ | — | Terminal multiplexer |
+| terminal | zellij | zellij | zellij | ✅ | ✅ | — | Multiplexer (layout.nix + theme.nix) |
+| wm | i3 | *(none)* | i3 | ✅ | — | ✅ | i3 WM (`building = "both"`, only `nixos.nix` domain) |
 
-### config/ directory (optional)
+Note: domains with `*(none)*` package rely on the module or system/capability for installation. 16 domains have `render.nix` + `config/`; 16 have a custom `module.nix`; only `wm/i3` has `nixos.nix`.
 
-Static configuration files that get symlinked to `~/.config/<app>/` during home-manager activation (via `/lib/domains/activation.nix`). In a VM, the symlink targets the host 9p mount path for live editing.
+## Notable Domains
 
-### nixos.nix (optional)
+### `agents/opencode`
 
-A system-level NixOS module. Used by domains that need system integration — e.g., `wm/i3/nixos.nix` for enabling X11 window manager services.
+The most complex domain. `module.nix` + `config/opencode.jsonc` wire the opencode agent with **22 LSP servers** (nixd, lua-ls, rust-analyzer, gopls, pyright, ts/js, html/css/json, yaml, bash, marksman, jdtls, phpactor, docker, terraform-ls, clojure-lsp, lemminx, clangd, vue, taplo; intelephense disabled). The provider API key comes from sops via `{file:~/.secrets/opencode-go-key}` (see [Secrets](secrets.md)). `render.nix` emits a themed `tui.json` + `themes/angst.json`. Git history: `50e80de` added the API key, `84b7ab8` fixed decryption, `e117d52` added LSPs, `b622a81` enabled the experimental feature.
 
-## Domain Framework
+### `editor/nvim`
 
-The framework lives in `/lib/domains/` and provides automatic discovery, module generation, and activation:
+A Lua config with a pluggable backend (`config/lua/backend/`):
+- `adapters/*.lua` — 28 per-language definitions `{filetypes, lsp, lsp_cmd, formatter, treesitter}` (e.g. `json.lua`);
+- `engines/` — completion/formatter/linter/lsp/treesitter drivers; `engines/treesitter.lua` registers grammar mappings (sh→bash, jsonc→json…), augroups, and prepends `~/.local/share/tree-sitter(-fixed)` to rtp;
+- `shared/` — AdapterLoader/Scanner/Tool, LspTool; `frontend/`, `common/`, `config/` (themed `palette.lua`), `infra/`, `queries/`.
+- Tests live in `config/tests/` (`run.sh` → `bootstrap.lua` → plenary suite at `tests/adapters/suite.lua`: loader_scanner, lsp_settings, inlay_hints, engine_mappings, startup). CI runs them via `.github/workflows/nvim-tests.yml`. Recent fixes: `be87346` jsonc→json treesitter mapping; `163d922` re-apply highlight on reopen.
 
-### scan.nix (`/lib/domains/scan.nix`)
+### `wm/i3`
 
-Recursively scans `/domains/` for all directories containing `meta.nix`. Returns a list of `homeEntries` (for home-manager) and `nixosEntries` (for NixOS). Each entry has `{ category, name, meta, path, hasRender, hasModule, hasConfigDir, hasNixos }`.
+Only domain with `nixos.nix` (`building = "both"`): enables i3 as the system WM. Note `profiles/desktop.nix` currently has i3/i3status **commented out** (the desktop profile enables rofi/ghostty/x11).
 
-### module.nix (`/lib/domains/module.nix`)
+## Toolchains (`/toolchains/`)
 
-For each domain entry, constructs a home-manager module:
+23 language toolchains (+ `toolchains/default.nix` aggregator): bash, blade, c, clojure, conf, css, docker, go, html, java, javascript, json, just, lua, markdown, nix, php, python, rust, terraform, toml, xml, yaml.
 
-1. Creates `domains.<category>.<name>.enable` option
-2. When enabled: installs `meta.package`, generates `home.file` entries from `render.nix` output (if no `config/` dir), symlinks `config/` directory (if it exists), imports custom `module.nix` (if it exists)
-3. For render-based domains: calls `render.nix` with `themesLib` and `config.theme` to produce XDG-mapped `home.file` entries
+Each file calls `mkToolchain` (`lib/toolchain.nix`) with `{ runtime, lsp, formatter, linter, tools, packageManager, treesitter }`; the builder unions them into `home.packages` and collects `treesitterGrammars`. Examples: `rust.nix` (rustc/cargo + rust-analyzer + clippy/rustfmt + tree-sitter-rust); `nix.nix` (nil+nixd, nixfmt, statix+deadnix, nix-output-monitor+nix-tree); `javascript.nix` (nodejs+bun, 5 LSPs incl. vue/angular/prisma, prettierd, eslint_d).
 
-### activation.nix (`/lib/domains/activation.nix`)
-
-Creates home-manager activation scripts that symlink the domain's `config/` directory to `~/.config/<app>`, with a fallback to the host 9p mount path when running inside a VM.
-
-## Available Domains
-
-### Editor
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `editor/nvim` | `neovim` | Yes | Yes | — |
-
-### Shell
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `shell/nushell` | `nushell` | Yes | Yes | — |
-| `shell/starship` | `starship` | Yes | Yes | — |
-| `shell/carapace` | `carapace` | — | Yes | — |
-
-### Terminal
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `terminal/ghostty` | `ghostty` | Yes | Yes | — |
-| `terminal/tmux` | `tmux` | — | Yes *(no-op)* | — |
-| `terminal/zellij` | `zellij` | Yes | Yes | — |
-
-### Window Manager
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `wm/i3` | `i3` | Yes | Yes | Yes |
-
-### Bar
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `bar/i3status` | `i3status` | Yes | Yes | — |
-
-### Launcher
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `launcher/rofi` | `rofi` | Yes | Yes | — |
-
-### Files
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `files/yazi` | `yazi` | Yes | Yes | — |
-
-### Git
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `git/lazygit` | `lazygit` | Yes | Yes | — |
-
-### Agents (formerly LLM)
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `agents/opencode` | `opencode` | Yes | Yes | — |
-| `agents/cursor-cli` | `cursor-cli` | — | — | — |
-
-### HTTP Client
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `http-client/posting` | `posting` | Yes | — | — |
-
-### SQL Client
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `sql-client/sqlit` | `sqlit` | Yes | — | — |
-
-### Session
-| Domain | meta.package | render.nix | module.nix | nixos.nix |
-|--------|-------------|------------|------------|-----------|
-| `session/x11` | — | — | Yes | — |
-
-## Toolchains
-
-Toolchains (`/toolchains/`) provide declarative language development environments. Each toolchain defines the runtime, LSP server, linter, formatter, and tree-sitter grammar for a language — all managed by Nix and automatically included in dev shells and home-manager profiles.
-
-```
-toolchains/
-├── default.nix   # Auto-discovers all .nix files
-├── bash.nix
-├── blade.nix
-├── c.nix
-├── clojure.nix
-├── conf.nix      # INI/config syntax highlighting (tree-sitter-ini)
-├── css.nix
-├── docker.nix
-├── go.nix
-├── html.nix
-├── java.nix
-├── javascript.nix
-├── json.nix
-├── just.nix      # Justfile support
-├── lua.nix
-├── markdown.nix  # Markdown rendering + tree-sitter
-├── nix.nix
-├── php.nix
-├── python.nix
-├── rust.nix
-├── terraform.nix
-├── toml.nix      # TOML support (taplo formatter + tree-sitter-toml)
-└── xml.nix
-```
-
-Each toolchain calls `mkToolchain` (`/lib/toolchain.nix`) which takes an attrset with `runtime`, `packageManager`, `lsp`, `linter`, `formatter`, `treesitter`, `tools` keys.
-
-Toolchains are consumed by:
-- **home-manager**: All toolchain packages are added to `home.packages` via the base profile or `cfg.toolchainModules` in `lib/build/mkHome.nix`
-- **Dev shells**: `allToolchainPackages` is aggregated in `lib/read-config.nix` and included in dev shell packages via `lib/flake/devshell.nix`
-- **Tree-sitter**: `allGrammars` are built by `/lib/treesitter.nix` for cross-glibc compatibility
-
-## Profile Composition (replaces common/ home.nix)
-
-Instead of a shared `/common/home.nix`, domains are enabled through **profile composition**:
-
-- **`profiles/base.nix`** — Applied to all machines. Enables core domains: `shell.nushell`, `shell.carapace`, `shell.starship`, `terminal.zellij`, `editor.nvim`, `files.yazi`, `git.lazygit`.
-- **`profiles/desktop.nix`** — Workstation GUI. Enables `wm.i3`, `bar.i3status`, `launcher.rofi`, `terminal.ghostty`, `session.x11`.
-- **`profiles/development.nix`** — Developer tooling. Enables `agents.opencode`, `agents.cursor-cli`, `sql-client.sqlit`, `http-client.posting`.
-
-A host's profile list is set in `local/config.nix`: `profiles = ["base" "desktop" "development"]`.
-
-## Source Map
-
-| File | Role |
-|------|------|
-| `/lib/domains/scan.nix` | Auto-discovers all domains |
-| `/lib/domains/module.nix` | Generates home-manager modules per domain |
-| `/lib/domains/activation.nix` | XDG symlink activation scripts |
-| `/lib/toolchain.nix` | `mkToolchain` builder |
-| `/lib/treesitter.nix` | Tree-sitter grammar builder (glibc-safe) |
-| `/profiles/base.nix` | Core domain enables (replaces old common/home.nix) |
-| `/profiles/desktop.nix` | Desktop domain + capability enables |
-| `/profiles/development.nix` | Development tooling enables |
+`lib/treesitter.nix` builds cross-glibc parsers: copies each grammar `parser` → `<lang>.so` with `patchelf --set-rpath`, and copies `queries/` dirs; `lang` = pname minus `tree-sitter-`, `-` → `_`. Selected via `host.toolchains` in the host decl (`"*"` or a validated list — unknown names throw at eval).
 
 ## Change Guidance
 
-### Adding a new domain
-1. Create `domains/<category>/<name>/meta.nix` — define package, XDG target, description
-2. Add `render.nix` if the domain should consume theme tokens. The function signature: `{ themesLib, themeName, hostConfig, fontFamily, monitors, homeDirectory, checkHelpers }` → list of `{ path, text, checks? }`
-3. Add static `config/` files for non-themed defaults
-4. Add `module.nix` only if the auto-generated module (`/lib/domains/module.nix`) isn't sufficient — common reasons: `programs.neovim` enable, custom activation scripts, `customXdg = true`
-5. Add `nixos.nix` only if system-level integration is needed (e.g., X11 WM enablement)
-6. Add to the appropriate profile in `profiles/` — `base.nix` for core domains, `desktop.nix` for GUI, `development.nix` for tooling, or `local/config.nix` extras for one-off machines
-7. Run `nix run .#lint-themes` and the relevant domain rendering check
-
-### Modifying domain framework
-- `/lib/domains/scan.nix` — Controls how domains are discovered and validated. Key behavior: validates `xdg` / `xdgFile` / `customXdg` mutual exclusion
-- `/lib/domains/module.nix` — Auto-generated home-manager module for each domain. Creates `home.file` entries from `render.nix` output or symlinks `config/` directory
-- `/lib/domains/activation.nix` — Creates activation script entries for XDG symlinks with VM host-mount fallback
-- `/lib/build/mkHome.nix` — Orchestrates domain module injection into home-manager; passes `themesLib`, `theme`, `userConfig`, `monitors`, `hostname`, `repoPath` as `extraSpecialArgs`
-
-### Adding a toolchain
-1. Create `/toolchains/<name>.nix` with `mkToolchain { runtime = [...]; lsp = [...]; formatter = [...]; linter = [...]; tools = [...]; treesitter = [...]; }`
-2. Auto-discovered by `lib/read-config.nix` — no registration needed
-3. Packages appear in `allToolchainPackages` (dev shells) and `allGrammars` (tree-sitter)
-4. Toolchains are included via `cfg.toolchainModules` in the build pipeline
+- **Add a domain**: create the dir + `meta.nix`, enable via a profile (`mkDomainEnable "category.name"` in `profiles/<name>.nix`). Rendered outputs follow from `render.nix`; static files from `config/`.
+- **The `mutable` meta flag** excludes files from render-override, useful for user-local state inside a config dir.
+- **Keep `meta.nix` valid** — `scan.nix` throws on malformed meta, and any host build fails.
+- **nvim changes** should keep `config/tests/` green (`bash tests/run.sh` or CI nvim-tests); treesitter grammar mapping lives in `engines/treesitter.lua`.
+- **Toolchain changes** flow into dev shells and home packages automatically once the file exists; verify with `nix eval .#nixosConfigurations.ci.config.home-manager.users.runner.packages` (ci host uses `toolchains = ["nix"]`) or a full build.
