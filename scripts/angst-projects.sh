@@ -32,8 +32,8 @@ projects_root() {
 # Scope key file: personal -> default age key, work -> work-keys.txt.
 projects_keyfile() {
     case "${1:-}" in
-        work) printf '%s\n' "${SOPS_WORK_AGE_KEY_FILE:-$HOME/.config/sops/age/work-keys.txt}" ;;
-        *) printf '%s\n' "${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}" ;;
+    work) printf '%s\n' "${SOPS_WORK_AGE_KEY_FILE:-$HOME/.config/sops/age/work-keys.txt}" ;;
+    *) printf '%s\n' "${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}" ;;
     esac
 }
 
@@ -56,7 +56,7 @@ projects_encrypt() {
     work="$(mktemp -d)" || return 1
     rc=1
     {
-        printf -- '---\ncreation_rules:\n  - path_regex: .*\n    age: |\n      %s\n' "$recipient" > "$work/.sops.yaml"
+        printf -- '---\ncreation_rules:\n  - path_regex: .*\n    age: |\n      %s\n' "$recipient" >"$work/.sops.yaml"
         cp "$plain" "$work/plain"
         if (cd "$work" && SOPS_AGE_KEY_FILE="$keyfile" sops -e --input-type binary --output-type binary --output "$target" plain); then
             rc=0
@@ -75,7 +75,7 @@ projects_decrypt() {
 # Decrypt a store file into `out` (byte-exact: no command substitution).
 projects_decrypt_to_file() {
     local scope="$1" file="$2" out="$3"
-    SOPS_AGE_KEY_FILE="$(projects_keyfile "$scope")" sops -d --input-type binary --output-type binary "$file" > "$out"
+    SOPS_AGE_KEY_FILE="$(projects_keyfile "$scope")" sops -d --input-type binary --output-type binary "$file" >"$out"
 }
 
 # Resolve a project name to "<scope> <id>"; names are unique across the store.
@@ -89,7 +89,7 @@ projects_resolve() {
         [ -f "$key" ] || continue
         for meta in "$scope_dir"/*/metadata.yaml; do
             [ -f "$meta" ] || continue
-            if plain="$(projects_decrypt "$scope" "$meta" 2>/dev/null)" && \
+            if plain="$(projects_decrypt "$scope" "$meta" 2>/dev/null)" &&
                 [ "$(printf '%s' "$plain" | jq -r '.name // empty')" = "$name" ]; then
                 printf '%s %s\n' "$scope" "$(basename "$(dirname "$meta")")"
                 return 0
@@ -103,28 +103,31 @@ projects_add() {
     local name="" repo="" scope="personal"
     while [ "$#" -gt 0 ]; do
         case "$1" in
-            --scope)
-                scope="${2:-}"
-                if [ "$#" -lt 2 ] || [ -z "$scope" ]; then
-                    echo "error: --scope requires a value (work|personal)" >&2
-                    projects_usage >&2
-                    return 2
-                fi
-                shift 2
-                ;;
-            -h | --help) projects_usage; return 0 ;;
-            *)
-                if [ -z "$name" ]; then
-                    name="$1"
-                elif [ -z "$repo" ]; then
-                    repo="$1"
-                else
-                    echo "error: too many arguments" >&2
-                    projects_usage >&2
-                    return 2
-                fi
-                shift
-                ;;
+        --scope)
+            scope="${2:-}"
+            if [ "$#" -lt 2 ] || [ -z "$scope" ]; then
+                echo "error: --scope requires a value (work|personal)" >&2
+                projects_usage >&2
+                return 2
+            fi
+            shift 2
+            ;;
+        -h | --help)
+            projects_usage
+            return 0
+            ;;
+        *)
+            if [ -z "$name" ]; then
+                name="$1"
+            elif [ -z "$repo" ]; then
+                repo="$1"
+            else
+                echo "error: too many arguments" >&2
+                projects_usage >&2
+                return 2
+            fi
+            shift
+            ;;
         esac
     done
 
@@ -134,11 +137,11 @@ projects_add() {
         return 2
     fi
     case "$scope" in
-        personal | work) ;;
-        *)
-            echo "error: invalid scope '$scope' (work|personal)" >&2
-            return 2
-            ;;
+    personal | work) ;;
+    *)
+        echo "error: invalid scope '$scope' (work|personal)" >&2
+        return 2
+        ;;
     esac
 
     local store keyfile
@@ -164,12 +167,15 @@ projects_add() {
     id="$(openssl rand -hex 8)"
     dir="$store/$scope/$id"
     mkdir -p "$dir" || return 1
-    tmp="$(mktemp -d)" || { rm -rf "$dir"; return 1; }
-    if ! jq -n --arg name "$name" --arg repo "$repo" '{name: $name, repo: $repo}' > "$tmp/metadata"; then
+    tmp="$(mktemp -d)" || {
+        rm -rf "$dir"
+        return 1
+    }
+    if ! jq -n --arg name "$name" --arg repo "$repo" '{name: $name, repo: $repo}' >"$tmp/metadata"; then
         rm -rf "$tmp" "$dir"
         return 1
     fi
-    : > "$tmp/env"
+    : >"$tmp/env"
     if ! projects_encrypt "$scope" "$tmp/metadata" "$dir/metadata.yaml" ||
         ! projects_encrypt "$scope" "$tmp/env" "$dir/env"; then
         echo "error: encryption failed for '$name' (check the $scope age key)" >&2
@@ -250,7 +256,7 @@ projects_sync_env() {
     if [ ! -f "$target" ]; then
         cp "$tmp" "$target"
         chmod 600 "$target"
-        printf '%s\n' "$store_hash" > "$sidecar"
+        printf '%s\n' "$store_hash" >"$sidecar"
         echo "materialized $name/.env"
         rm -f "$tmp"
         return 0
@@ -261,7 +267,7 @@ projects_sync_env() {
     [ -f "$sidecar" ] && last="$(cat "$sidecar")"
 
     if [ "$cur" = "$store_hash" ]; then
-        printf '%s\n' "$store_hash" > "$sidecar"
+        printf '%s\n' "$store_hash" >"$sidecar"
         rm -f "$tmp"
         return 0
     fi
@@ -269,7 +275,7 @@ projects_sync_env() {
     if [ "$cur" = "$last" ]; then
         cp "$tmp" "$target"
         chmod 600 "$target"
-        printf '%s\n' "$store_hash" > "$sidecar"
+        printf '%s\n' "$store_hash" >"$sidecar"
         echo "updated $name/.env (store changed)"
         rm -f "$tmp"
         return 0
@@ -366,7 +372,7 @@ projects_capture() {
         echo "error: unknown project '$name'" >&2
         return 1
     }
-    read -r scope id <<< "$res"
+    read -r scope id <<<"$res"
     src="$(projects_root)/$name/.env"
     if [ ! -f "$src" ]; then
         echo "error: no $src to capture" >&2
@@ -380,7 +386,7 @@ projects_capture() {
     fi
     sidecar="$HOME/.secrets/projects/$name.env.sha256"
     mkdir -p "$HOME/.secrets/projects" 2>/dev/null || true
-    sha256sum "$src" | awk '{print $1}' > "$sidecar"
+    sha256sum "$src" | awk '{print $1}' >"$sidecar"
     echo "captured $name (scope $scope)"
 }
 
@@ -390,7 +396,7 @@ projects_edit_env() {
         echo "error: unknown project '$name'" >&2
         return 1
     }
-    read -r scope id <<< "$res"
+    read -r scope id <<<"$res"
     store="$(projects_store_root)"
     env_file="$store/$scope/$id/env"
     tmp="$(mktemp)" || return 1
@@ -422,7 +428,7 @@ projects_edit_env() {
         if [ "$cur" = "$last" ]; then
             if projects_decrypt_to_file "$scope" "$env_file" "$target" 2>/dev/null; then
                 chmod 600 "$target"
-                sha256sum "$target" | awk '{print $1}' > "$sidecar"
+                sha256sum "$target" | awk '{print $1}' >"$sidecar"
                 echo "resynced $name/.env"
             fi
         fi
@@ -435,7 +441,7 @@ projects_rm() {
         echo "error: unknown project '$name'" >&2
         return 1
     }
-    read -r scope id <<< "$res"
+    read -r scope id <<<"$res"
     store="$(projects_store_root)"
     rm -rf "${store:?}/${scope:?}/${id:?}"
     rm -f "$HOME/.secrets/projects/$name.env.sha256"
@@ -446,17 +452,17 @@ angst_projects_cmd() {
     local cmd="${1:-}"
     if [ "$#" -gt 0 ]; then shift; fi
     case "$cmd" in
-        add) projects_add "$@" ;;
-        sync) projects_sync "$@" ;;
-        status) projects_status "$@" ;;
-        capture) projects_capture "$@" ;;
-        edit-env) projects_edit_env "$@" ;;
-        rm) projects_rm "$@" ;;
-        -h | --help | "") projects_usage ;;
-        *)
-            echo "unknown projects command: $cmd" >&2
-            projects_usage >&2
-            return 2
-            ;;
+    add) projects_add "$@" ;;
+    sync) projects_sync "$@" ;;
+    status) projects_status "$@" ;;
+    capture) projects_capture "$@" ;;
+    edit-env) projects_edit_env "$@" ;;
+    rm) projects_rm "$@" ;;
+    -h | --help | "") projects_usage ;;
+    *)
+        echo "unknown projects command: $cmd" >&2
+        projects_usage >&2
+        return 2
+        ;;
     esac
 }

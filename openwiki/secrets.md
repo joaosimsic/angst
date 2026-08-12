@@ -66,12 +66,41 @@ sops hosts/<domain>/<host>/secrets.yaml
 
 `angst bootstrap-secrets` reads the master password interactively (never echo), updates the encrypted file with `sops`, writes the sha-512 hash into the decl's `password` field, and unset its in-memory copy afterwards. The host will only decrypt once the age key is present at `~/.config/sops/age/keys.txt`.
 
+## Project store (`projects/`)
+
+Separate from per-host secrets, the **project store** keeps declared dev repos + their
+`.env` encrypted inside the **public** angst repo (see the [`git/projects` domain](domains.md#gitprojects--encrypted-project-store)):
+
+- **Layout** — `projects/{personal,work}/<opaque-id>/{metadata.yaml,env}`. Opaque ids are
+  `openssl rand -hex 8` (16 chars, not name-derived); real project names and repo URLs live
+  only inside ciphertext.
+- **Binary encryption** — both files are sops-encrypted with `--input-type binary
+  --output-type binary`, so the whole plaintext (names, URLs, structure, comments) is one
+  opaque blob and round-trips byte-exactly. Plaintext metadata is JSON `{name, repo}`
+  (parsed with `jq` after `sops -d`).
+- **Scope-isolated keys** — `projects/personal/*` → the personal age key
+  (`~/.config/sops/age/keys.txt` / `SOPS_AGE_KEY_FILE`); `projects/work/*` → the work age
+  key (`~/.config/sops/age/work-keys.txt` / `SOPS_WORK_AGE_KEY_FILE`, 0600). Work files
+  list **only** the work recipient, so a work-key compromise can never decrypt personal
+  secrets. Both keys are static, generated once, provisioned on every host through the
+  `.config/sops` impermanence dir — this tool never rotates them.
+- **Sops flow** — `add`/`capture`/`edit-env` derive the recipient from the scope key file
+  (`age-keygen -y`), encrypt to a temp dir **outside** the repo, and write only ciphertext
+  into `projects/`. `sync`/`status` self-decrypt with the matching scope key via
+  `SOPS_AGE_KEY_FILE`; the decrypted `.env` (0600) is the sync output at `~/projects/<name>/.env`.
+- **Resilience** — a missing scope key, missing repo, no network, or any decrypt error
+  skips that project with a warning and exits 0; `add --scope work` with a missing work key
+  is the one **hard** error (misprovisioning, not a bootstrap case).
+- **Leak prevention** — plaintext never lands inside the store (temp files only), `sync`/
+  `status` print no env values, the flake check refuses unencrypted store files, and
+  gitleaks flags plaintext secret-like values under `projects/`.
+
 ## Secret scanning (defense in depth)
 
 - **Git hooks** (`githooks/`, install with `just install-hooks`): `pre-commit` runs `gitleaks git --pre-commit --staged --redact`; `pre-push` scans pushed ranges (`<remote_oid>..<local_oid>`, or all new commits for new refs) with gitleaks. Hooks use a host `gitleaks` or fall back to `nix run nixpkgs#gitleaks`.
-- **`.gitleaks.toml`** — extends default rules with an `angst-plaintext-secret-value` rule targeting `secrets.yaml`, and allowlists SOPS ciphertext (`ENC[AES256_GCM`), age blocks/public keys, and `README.md`/`pure.md`/`analysis.md`/`openwiki/`.
+- **`.gitleaks.toml`** — extends default rules with an `angst-plaintext-secret-value` rule targeting `secrets.yaml` and an `angst-projects-plaintext-secret-value` rule targeting `projects/.*`. Allowlists SOPS ciphertext (`ENC[AES256_GCM`), age blocks/public keys, and `README.md`/`pure.md`/`analysis.md`/`openwiki/` — no broad path allowlist on `projects/`.
 - **CI** (`.github/workflows/secret-scan.yml`) — gitleaks-action + trufflehog (`--results=verified,unknown`) on every push/PR; `fix: trufflehog` (HEAD) tuned the trufflehog args.
-- **Flake check** (`checks/secrets.nix`) — fails if any tracked `secrets.yaml`/`secrets.yml` lacks a `sops:` block or `ENC[AES256_GCM` values (runs as `check-secrets-encrypted`).
+- **Flake check** (`checks/secrets.nix`) — `check-secrets-encrypted` fails if any tracked `secrets.yaml`/`secrets.yml` lacks a `sops:` block or `ENC[AES256_GCM` values; `check-projects-encrypted` asserts every `projects/**/metadata.yaml` + `projects/**/env` is sops-encrypted (age envelope present) with no plaintext `name`/`repo`/URL/secret content.
 
 ## Security rules for contributors
 

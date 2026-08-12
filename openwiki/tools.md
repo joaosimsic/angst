@@ -4,17 +4,30 @@ angst ships three CLI tools and an MCP server for VM management: the **angst** s
 
 ## angst CLI (`scripts/angst.sh`)
 
-A bash script packaged via `pkgs.writeShellApplication` (runtime inputs: coreutils, findutils, git, nix, watchexec, jq). Exposed as `apps.angst`, `apps.render`, `apps.watch` and the `angst` package.
+A bash script packaged via `pkgs.writeShellApplication` (runtime inputs: coreutils, findutils, git, nix, watchexec, jq, sops, age, openssl, diffutils). Exposed as `apps.angst`, `apps.render`, `apps.watch` and the `angst` package.
 
 ```
 angst bootstrap-secrets [--host HOST]
 angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
 angst watch  [--repo PATH] [--host HOST] [--theme THEME]
+angst projects <add|sync|status|capture|edit-env|rm> ...
 ```
 
 - **`render`** — determines repo root (`--repo`/git/`pwd`), host (`--host`, default `NIX_DEFAULT_TARGET_HOST`/`ANGST_HOST`/`nixos`), theme (default from the host decl via `nix eval`), batch-evals `.#lib.renderDomainOutputsFor`, writes rendered domain configs, syncs per-dir `.gitignore`, and optionally reloads i3 (`--reload`, default on; requires `i3-msg` + `I3SOCK`).
 - **`watch`** — wraps render with `watchexec` on `themes/`, `domains/`, `hosts/` for hot-reload.
 - **`bootstrap-secrets`** — interactive master-password bootstrap: reads password twice (never echoed), writes it into `hosts/<domain>/<host>/secrets.yaml` via sops, and writes the `mkpasswd -m sha-512` hash into the host's `password` field. Requires `sops` and `mkpasswd` on PATH. See [Secrets](secrets.md).
+- **`projects`** — manages the encrypted dev-project store (`scripts/angst-projects.sh`, shared with the home-manager `angst-projects-sync` wrapper). All subcommands take the **real name** and resolve the opaque id by decrypting metadata (both scopes; names unique store-wide). Store root: `$REPO/projects` on the CLI, `$HOME/<repoPath>/projects` in the wrapper (`ANGST_PROJECTS_STORE` overrides). Scope key selection: personal → `~/.config/sops/age/keys.txt`, work → `~/.config/sops/age/work-keys.txt` (`SOPS_*_AGE_KEY_FILE` overrides).
+
+  | Subcommand | Behavior |
+  |---|---|
+  | `add <name> <repo> [--scope work\|personal]` | Random opaque-id folder + sops-binary metadata/env (default scope `personal`); rejects duplicate names; `--scope work` with a missing work key is a **hard error** |
+  | `sync` | Clone-if-missing into `~/projects/<name>` (no auto-pull, no hooks) + hash-tracked `.env` materialize/refresh; stale local `.env` → redacted diff + exit non-zero; missing key/repo/network/decrypt → warn + exit 0 |
+  | `status` | Table (scope, id, name, repo, env status: `ok`/`store-changed`/`STALE`/`missing`/`no clone`) + `.env.example` var drift |
+  | `capture <name>` | Encrypt current `~/projects/<name>/.env` → store (edit → capture → commit loop) |
+  | `edit-env <name>` | Decrypt store env → `$EDITOR` → re-encrypt (binary) → resync clone if in sync |
+  | `rm <name>` | Remove the store folder + sidecar |
+
+  See [Secrets — Project store](secrets.md#project-store) for the sops/key flow and [Domains](domains.md#gitprojects--encrypted-project-store) for the domain.
 
 There is **no** `angst passwd` (old wiki/README claim); password handling happens through `bootstrap-secrets`.
 

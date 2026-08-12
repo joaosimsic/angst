@@ -1,6 +1,6 @@
 # Domains
 
-Domains (features) are the **unit of configuration** in angst. Each domain describes one feature — a user application, a system feature, or both. There are currently **30 domains across 17 categories**.
+Domains (features) are the **unit of configuration** in angst. Each domain describes one feature — a user application, a system feature, or both. There are currently **31 domains across 17 categories**.
 
 ## Domain Anatomy
 
@@ -55,6 +55,7 @@ There is **no** `lib/domains/activation.nix` (README is stale); activation happe
 | editor | nvim | *(pkgs.neovim in home)* | nvim | ✅ | ✅ | — | Neovim: backend adapters/engines, treesitter, Lua tests |
 | files | yazi | *(none)* | yazi | ✅ | ✅ | — | Terminal file manager |
 | git | lazygit | lazygit | lazygit | ✅ | ✅ | — | Git TUI |
+| git | projects | git | custom | — | ✅ | — | Auto-synced encrypted dev projects (clone + `.env` via sops) |
 | http-client | posting | posting | posting | ✅ | ✅ | — | Terminal HTTP client |
 | launcher | rofi | rofi | rofi | ✅ | ✅ | — | App launcher |
 | nix | nh | nh | — | — | — | — | Nix CLI helper (package-only) |
@@ -95,6 +96,14 @@ A Lua config with a pluggable backend (`config/lua/backend/`):
 - `engines/` — completion/formatter/linter/lsp/treesitter drivers; `engines/treesitter.lua` registers grammar mappings (sh→bash, jsonc→json…), augroups, and prepends `~/.local/share/tree-sitter(-fixed)` to rtp;
 - `shared/` — AdapterLoader/Scanner/Tool, LspTool; `frontend/`, `common/`, `config/` (themed `palette.lua`), `infra/`, `queries/`.
 - Tests live in `config/tests/` (`run.sh` → `bootstrap.lua` → plenary suite at `tests/adapters/suite.lua`: loader_scanner, lsp_settings, inlay_hints, engine_mappings, startup). CI runs them via `.github/workflows/nvim-tests.yml`. Recent fixes: `be87346` jsonc→json treesitter mapping; `163d922` re-apply highlight on reopen.
+
+### `git/projects` — encrypted project store
+
+`home.nix` builds an `angst-projects-sync` wrapper (`pkgs.writeShellApplication`) from the shared `scripts/angst-projects.sh` logic (runtime inputs: git, sops, age, jq, openssl, coreutils, diffutils, findutils). It runs `sync` as a home activation entry and as a `systemd.user` oneshot (`angst-projects-sync`, `After`/`Wants network-online.target`). The store lives at `$HOME/<repoPath>/projects`.
+
+The store is `projects/{personal,work}/<opaque-id>/{metadata.yaml,env}` — both files sops-encrypted in **binary** format (byte-exact; plaintext is JSON `{name, repo}` for metadata). Opaque ids (`openssl rand -hex 8`) are not name-derived; real names/URLs exist only in ciphertext. Scope is the folder path; `personal` and `work` use different age keys (work files never list the personal recipient). `.sops.yaml` routes `projects/personal/.*$` → personal key and `projects/work/.*$` → work key.
+
+Per-registry-project sync: `mkdir -p ~/projects` (0755) → clone-if-missing into `~/projects/<name>` (no auto-pull, no hooks, no `.gitignore` edits — clones are never modified) → `.env` materialized/refreshed hash-tracked via `~/.secrets/projects/<name>.env.sha256`. A locally-edited `.env` is never clobbered: `sync` marks it `stale` and prints a redacted (key-name-only) diff, exiting non-zero. Missing keys/repos, no network, or decrypt errors skip with a warning and exit 0 — nothing fails a build or boot. Plaintext only ever touches temp files outside the repo. See [Secrets — Project store](secrets.md#project-store) for the sops/key flow.
 
 ### `wm/i3`
 
