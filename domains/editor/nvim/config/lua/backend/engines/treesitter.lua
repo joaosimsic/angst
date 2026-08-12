@@ -42,6 +42,7 @@ return {
 			bash = "bash",
 			typescriptreact = "typescript",
 			conf = "ini",
+			editorconfig = "ini",
 			jsonc = "json",
 		}
 

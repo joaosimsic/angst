@@ -8,7 +8,7 @@
 let
   treesitter = import ../../lib/treesitter.nix {
     inherit lib pkgs;
-    grammars = config.toolchains.treesitterGrammars;
+    grammars = lib.unique config.toolchains.treesitterGrammars;
   };
 in
 {
