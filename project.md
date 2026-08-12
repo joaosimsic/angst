@@ -21,6 +21,12 @@ persisted deps and `.env` handling that survives a public repository.
 - **Opaque folder IDs** (`openssl rand -hex 4`, not name-derived, not
   brute-forceable) — real names live only inside encrypted `metadata.yaml`.
   Everything stays in the one repo.
+- Cloned projects land under **`~/projects/`** by default (0755), keeping the
+  generated-project parent distinct from the angst `repoPath` (`proj/angst`,
+  unchanged). Default on-disk dir = `projects/<name>`.
+- **Per-project git hooks** prevent secret leaks from cloned repos (same
+  per-repo `core.hooksPath` mechanism the angst repo itself uses — no global
+  side effects).
 
 ## Storage layout
 
@@ -50,18 +56,49 @@ projects/
 - The tool self-decrypts with the age key at `~/.config/sops/age/keys.txt`;
   missing key → warn and exit 0 (builds/boots never fail). Project metadata
   never enters Nix eval.
+- The tool also installs **per-project git hooks**: after a fresh clone it runs
+  `git -C <dir> config core.hooksPath <hooks-dir>`, pointing at a managed hook
+  directory shipped by the domain (e.g. `~/.local/share/angst/project-hooks`).
+  Per-repo config → no global side effects and no clash with the angst repo's
+  own `core.hooksPath = githooks`. Hook content is generated at build time.
+  - `pre-commit`:
+    1. blocks staged secret-like files, aborting with an offender list:
+       `**/.env`, `**/.env.*` (`.env.example` allowed), `*.dec`, `*.agekey`,
+       `*.pem`, `*.key`, `id_rsa*`, `id_ed25519*`, `*.p12`, `*.pfx`;
+    2. runs `gitleaks git --pre-commit --staged --redact`, falling back to
+       `nix run --quiet nixpkgs#gitleaks --` when gitleaks isn't on PATH
+       (same pattern as the repo's own `githooks/pre-commit`).
+  - `pre-push`: runs gitleaks on the pushed range (same pattern as the repo's
+    `githooks/pre-push`).
 
 ### Sync semantics (per registry project)
 
-1. `mkdir -p` parent root (`~/proj`, 0755).
-2. `[ -d <dir>/.git ] || git clone [--branch <b>] <repo> <dir>` — no auto-pull.
+1. `mkdir -p` parent root (`~/projects`, 0755).
+2. `[ -d <dir>/.git ] || git clone [--branch <b>] <repo> <dir>` — no auto-pull;
+   after a fresh clone, install the project git hooks (see above).
 3. Run `deps` only on a fresh clone (re-run via `angst projects sync`).
 4. Env, hash-tracked via sidecar `~/.secrets/projects/<name>.env.sha256`:
    - `.env` missing → materialize store → `.env` (0600),
    - `.env` unchanged since last materialize → refresh if the store changed,
    - `.env` locally edited → **never clobber**; mark `stale`, print diff,
      exit non-zero.
-5. If not already ignored, append `.env` to `<dir>/.gitignore`.
+5. If not already ignored, append `.env` / `.env.*` to `<dir>/.gitignore`
+   (keeping `.env.example` tracked).
+
+### Secret leak prevention (defense in depth)
+
+1. `.gitignore` guard at clone time (step 5 above).
+2. Per-project git hooks block secret-like files and run gitleaks
+   (`pre-commit` + `pre-push`, see the domain section).
+3. **Store hygiene**: `capture` / `edit-env` write plaintext only to temp files
+   *outside* the repo (`/tmp` or `~/.secrets/projects/.tmp`), then re-encrypt in
+   place — plaintext never lands inside `projects/`.
+4. `sync` / `status` never print decrypted env values (only key names / redacted
+   diffs).
+5. Flake checks (`checks/secrets.nix`) assert `projects/**/metadata.yaml` and
+   `projects/**/env` contain the `sops:` / `ENC[AES256_GCM` block **and** no
+   plaintext `name:` / `repo:` / URL content outside it; `.gitleaks.toml`
+   allowlists the encrypted tree while still flagging plaintext.
 
 ## CLI (`scripts/angst.sh`)
 
@@ -82,13 +119,13 @@ All commands take the real name and resolve the opaque id by decrypting metadata
 
 | File | Change |
 |---|---|
-| `lib/resolve.nix` | default `projects = { persistDirs = ["proj"]; } // (decl.projects or {})` |
+| `lib/resolve.nix` | default `projects = { persistDirs = ["projects"]; } // (decl.projects or {})` |
 | `lib/build/mkNixos.nix` | append `host.projects.persistDirs` to the impermanence dirs (like `secrets.persistDirs`) |
 | `.sops.yaml` | rule `projects/.*$` with the personal age key |
-| `checks/secrets.nix` | require `sops:` / `ENC[AES256_GCM` in `projects/**/metadata.yaml` and `projects/**/env` |
-| `.gitleaks.toml` | allowlist `projects/` ciphertext |
+| `checks/secrets.nix` | require `sops:` / `ENC[AES256_GCM` in `projects/**/metadata.yaml` and `projects/**/env`, and no plaintext `name:`/`repo:`/URL outside the sops block |
+| `.gitleaks.toml` | allowlist `projects/` ciphertext (flag any plaintext secrets) |
 | `profiles/development.nix` | add `"git.projects"` |
-| `hosts/*/default.nix` | `projects.persistDirs = ["proj"]` on impermanence hosts (`nixos`, `vm`) |
+| `hosts/*/default.nix` | `projects.persistDirs = ["projects"]` on impermanence hosts (`nixos`, `vm`) |
 | `domains/agents/opencode/` | **no change** — no host-level access restrictions |
 | openwiki `domains`/`secrets`/`quickstart` + `README.md` | document the domain, sops flow, CLI usage |
 
@@ -102,3 +139,5 @@ All commands take the real name and resolve the opaque id by decrypting metadata
    - edit `.env` → `angst projects capture` → byte-identical round-trip
    - edit `.env` locally again → `stale` fires, no clobber
    - confirm `projects/` tree shows only opaque ids
+   - `git -C <dir> config core.hooksPath` points at the managed hooks dir;
+     staging `.env` / a fake key is blocked, gitleaks runs on commit/push
