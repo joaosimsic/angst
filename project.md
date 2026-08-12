@@ -32,12 +32,13 @@ Declare dev projects (GitHub/GitLab) once, get them cloned on every host, with
 - **Scope-based age keys**: `personal` and `work` projects use *different*
   sops age keys (cryptographic separation). Work files list only the work key
   as recipient, so a company-side/work-key compromise can never decrypt
-  personal secrets, and the two scopes rotate independently.
-- **Single shared work key across hosts**: generated **once** (first host via
-  `init-work`), copied to every host through the existing `.config/sops`
-  impermanence dir. `init-work` refuses to overwrite an existing key. This makes
-  the cross-host store decryptable everywhere and keeps `rekey work` a
-  one-key rotation.
+  personal secrets. Both keys are **static** — generated once, provisioned on
+  every host, never rotated by this tool.
+- **Single shared work key across hosts**: generated **once, out-of-band**
+  (manual `age-keygen`), copied to every host through the existing `.config/sops`
+  impermanence dir. The key is **static** — this tool never generates, rotates,
+  or overwrites it; a missing work key means misprovisioning, not a bootstrap
+  case. This makes the cross-host store decryptable everywhere.
 
 ## Storage layout
 
@@ -137,12 +138,10 @@ the CLI and the home-manager wrapper.
 
 - `angst projects add <name> <repo> [--scope work|personal]`
   — create random-id folder + encrypted metadata (default scope: personal);
-  errors if the name already exists in the store
-- `angst projects init-work` — generate the shared work age keypair **once**
-  (`~/.config/sops/age/work-keys.txt`, 0600); refuses if the key already exists,
-  prints the public key and instructs adding it to the `.sops.yaml` work rule
-  and copying the key to every other host. The key is never committed and
-  persists via the existing `.config/sops` impermanence dir
+  errors if the name already exists in the store. `--scope work` **auto-selects
+  the work key** (`SOPS_WORK_AGE_KEY_FILE` → `~/.config/sops/age/work-keys.txt`):
+  the key is static and must already exist, so a missing file is a **hard error**
+  (misprovisioning), unlike `sync` which stays lenient
 - `angst projects sync` — run the sync logic (no dependency on a
   home-installed binary; the CLI and the systemd service share the same code)
 - `angst projects status` — table of projects (incl. scope); flags stale env;
@@ -152,18 +151,12 @@ the CLI and the home-manager wrapper.
 - `angst projects edit-env <name>` — decrypt store → `$EDITOR` → re-encrypt
   (binary) → resync if in sync
 - `angst projects rm <name>` — remove the folder
-- `angst projects rekey work` — leak response: generate a new work key, add its
-  public key to the `.sops.yaml` work rule, run `sops updatekeys` on all work
-  files (re-encrypts to new+old), then **remove the old public key** from
-  `.sops.yaml` and run `sops updatekeys` a second time to strip it from the
-  files; distribute the new `work-keys.txt` to every host. The personal store
-  is never touched.
 
 ## Supporting changes
 
 | File | Change |
 |---|---|
-| `scripts/angst-projects.sh` | new: shared `projects` command logic (add/init-work/sync/status/capture/edit-env/rm/rekey) |
+| `scripts/angst-projects.sh` | new: shared `projects` command logic (add/sync/status/capture/edit-env/rm) |
 | `scripts/angst.sh` | add `projects) angst_projects_cmd "$@" ;;` case |
 | `lib/flake/context.nix` | add `../../scripts/angst-projects.sh` to the `angstTool` concat list; add `sops age openssl diffutils` to its runtimeInputs |
 | `modules/vm/vm-profile.nix` | add `../../scripts/angst-projects.sh` to the VM `angstCli` concat list; same runtimeInputs additions |
@@ -190,9 +183,8 @@ the CLI and the home-manager wrapper.
    - confirm cloned repos have **no** hooks and no `.gitignore` edits
      (`git -C <dir> config --get core.hooksPath` is empty), and clone dirs are
      named after the decrypted project names
-   - `angst projects init-work` refuses on second run; add a `--scope work`
-     project → syncs under the work key; `sops -d` with the wrong key file fails
-     for that scope; `rekey work` re-encrypts the work store and leaves personal
-     untouched
+   - `angst projects add --scope work` with the work key file removed → **hard
+     error**; with it present → syncs under the work key; `sops -d` with the
+     wrong key file fails for that scope
    - `angst projects sync` with the network down / work key removed → warns,
      exits 0
