@@ -140,7 +140,7 @@ inputs.nixpkgs.lib.nixosSystem {
         (import ../../modules/nixos/persist.nix {
           inherit lib;
           inherit (host) persist username;
-          inherit (secrets) persistDirs;
+          persistDirs = secrets.persistDirs ++ host.projects.persistDirs;
         })
       ]
     else

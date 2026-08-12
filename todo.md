@@ -14,6 +14,7 @@
 - [x] md handling(md-preview/render-md)
 - [ ] add file line length in heirline
 - [ ] fix render md badge and move through zellij
+- [ ] add profiler, benchmark and assembly view for scratch plugin
 
 # nu
 

@@ -19,6 +19,10 @@ let
       nix
       watchexec
       jq
+      sops
+      age
+      openssl
+      diffutils
     ];
     text = builtins.concatStringsSep "\n" (
       map builtins.readFile [
@@ -26,6 +30,7 @@ let
         ../../scripts/angst-bootstrap-secrets.sh
         ../../scripts/angst-render.sh
         ../../scripts/angst-watch.sh
+        ../../scripts/angst-projects.sh
         ../../scripts/angst.sh
       ]
     );

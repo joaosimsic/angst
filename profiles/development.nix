@@ -5,5 +5,6 @@
     "sql-client.sqlit"
     "sql-client.rainfrog"
     "http-client.posting"
+    "git.projects"
   ];
 }

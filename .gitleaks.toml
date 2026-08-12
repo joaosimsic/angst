@@ -7,6 +7,12 @@ description = "Plaintext secret value in secrets.yaml (not sops-encrypted)"
 regex = '''(?i)(password|passphrase|token|secret|api[_-]?key|access[_-]?key|client[_-]?secret)\s*[:=]\s*['"][^'"]{4,}['"]'''
 path = "secrets\\.ya?ml$"
 
+[[rules]]
+id = "angst-projects-plaintext-secret-value"
+description = "Plaintext secret value under projects/ (not sops-encrypted)"
+regex = '''(?i)(password|passphrase|token|secret|api[_-]?key|access[_-]?key|client[_-]?secret)\s*[:=]\s*['"][^'"]{4,}['"]'''
+path = "projects/.*"
+
 [allowlist]
 description = "angst: SOPS ciphertext, age public keys, and documented examples"
 regexes = [

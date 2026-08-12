@@ -42,4 +42,7 @@
       ".cache"
     ];
   };
+  projects = {
+    persistDirs = [ "projects" ];
+  };
 }

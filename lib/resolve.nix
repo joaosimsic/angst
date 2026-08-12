@@ -74,6 +74,11 @@ in
       enable = false;
     }
     // (decl.persist or { });
+    projects =
+      {
+        persistDirs = [ "projects" ];
+      }
+      // (decl.projects or { });
     type = decl.type or "nixos";
     inherit domain;
 

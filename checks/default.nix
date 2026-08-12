@@ -65,7 +65,8 @@ let
 in
 {
   check-password = checkPassword;
-  check-secrets-encrypted = checkSecretsEncrypted;
+  check-secrets-encrypted = checkSecretsEncrypted.secrets;
+  check-projects-encrypted = checkSecretsEncrypted.projects;
   secret-scan = secretScan;
   secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;

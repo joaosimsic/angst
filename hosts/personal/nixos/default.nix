@@ -47,4 +47,7 @@
       ".local/share/keyrings"
     ];
   };
+  projects = {
+    persistDirs = [ "projects" ];
+  };
 }

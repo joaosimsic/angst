@@ -7,6 +7,7 @@ case "$command" in
 bootstrap-secrets) bootstrap_secrets_cmd "$@" ;;
 render) render_cmd "$@" ;;
 watch) watch_cmd "$@" ;;
+projects) angst_projects_cmd "$@" ;;
 -h | --help | "") usage ;;
 *)
     echo "unknown command: $command" >&2

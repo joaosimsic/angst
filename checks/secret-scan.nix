@@ -23,7 +23,7 @@ pkgs.runCommand "secret-scan"
         fail() { echo "FAIL: $1" >&2; exit 1; }
         pass() { echo "PASS: $1"; }
 
-        mkdir -p "$work/leaks/github" "$work/leaks/aws" "$work/leaks/slack" "$work/leaks/private-key" "$work/leaks/plain-secrets"
+        mkdir -p "$work/leaks/github" "$work/leaks/aws" "$work/leaks/slack" "$work/leaks/private-key" "$work/leaks/plain-secrets" "$work/leaks/projects-secret/projects/personal/3f9a1c2b4d7e09a2"
 
         gh_p1='ghp_y'
         gh_p2='ar3TjQ95prkRPC7go9w7datuPIaXJ48VmHH'
@@ -44,6 +44,10 @@ pkgs.runCommand "secret-scan"
         mv "$work/leaks/private-key/key" "$work/leaks/private-key/key.txt"
 
         printf 'masterPassword: "supersecret-password"\n' > "$work/leaks/plain-secrets/secrets.yaml"
+
+        sk_p1='sk-test-12345678'
+        sk_p2='90abcdefghij'
+        printf 'API_KEY = "%s%s"\n' "$sk_p1$sk_p2" > "$work/leaks/projects-secret/projects/personal/3f9a1c2b4d7e09a2/env"
 
         mkdir -p "$work/sops"
         cat > "$work/sops/secrets.yaml" <<'EOF'
@@ -83,6 +87,7 @@ pkgs.runCommand "secret-scan"
         expect_gitleaks_leak "$work/leaks/slack" "slack-webhook-url"
         expect_gitleaks_leak "$work/leaks/private-key" "private-key"
         expect_gitleaks_leak "$work/leaks/plain-secrets" "angst-plaintext-secret-value" ${repoRoot}/.gitleaks.toml
+        expect_gitleaks_leak "$work/leaks/projects-secret" "angst-projects-plaintext-secret-value" ${repoRoot}/.gitleaks.toml
 
         gitleaks detect --no-git --source "$work/sops" --config ${repoRoot}/.gitleaks.toml --no-banner --redact >/dev/null 2>&1 \
             || fail "gitleaks: flagged the sops-encrypted fixture"
