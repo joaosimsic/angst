@@ -111,8 +111,11 @@ Clones are never modified for leak prevention (no hooks, no `core.hooksPath`,
 no `.gitignore` edits) — all detection happens in the angst repo:
 
 1. **Store hygiene**: `capture` / `edit-env` write plaintext only to temp files
-   *outside* the repo (`/tmp` or `~/.secrets/projects/.tmp`), then re-encrypt in
-   place — plaintext never lands inside `projects/`.
+   *outside* the angst repo (`/tmp` or `~/.secrets/projects/.tmp`), then
+   re-encrypt in place — plaintext never lands inside the encrypted store
+   (`projects/` at the repo root). This targets the store only: the clones
+   under `~/projects/<name>` are *expected* to hold the decrypted `.env` (0600),
+   since that is the sync output.
 2. `sync` / `status` never print decrypted env values (only key names / redacted
    diffs).
 3. Flake checks (`checks/secrets.nix`) assert every `projects/**/metadata.yaml`
