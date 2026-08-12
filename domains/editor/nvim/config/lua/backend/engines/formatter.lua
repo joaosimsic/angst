@@ -38,7 +38,10 @@ return {
 		binder:map({ "n", "v" }, "<leader>f", function()
 			local AdapterScanner = require("backend.shared.AdapterScanner")
 			local formatter_opts = { check_executable = true }
-			if not AdapterScanner:supports_filetype("formatter", vim.bo.filetype, formatter_opts) then
+			local has_formatter = AdapterScanner:supports_filetype("formatter", vim.bo.filetype, formatter_opts)
+			local has_lsp_format = #vim.lsp.get_clients({ buftype = 0, method = "textDocument/formatting" }) > 0
+
+			if not (has_formatter or has_lsp_format) then
 				return
 			end
 

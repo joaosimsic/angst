@@ -41,8 +41,27 @@ let
           mkdir -p "$out/${lang}"
           cp -r ${grammar}/queries/* "$out/${lang}/"
         fi
+        # Some grammars (nvim-treesitter style) ship queries nested as
+        # queries/<lang>/... instead of flat files. Flatten that level so
+        # Neovim resolves queries/<lang>/<group>.scm for the parser.
+        # compgen -G is robust to nullglob/failglob, unlike bare `ls path/*`.
+        if [ -d "$out/${lang}/${lang}" ] && ! compgen -G "$out/${lang}/*.scm" >/dev/null; then
+          cp -r "$out/${lang}/${lang}"/. "$out/${lang}/"
+          chmod -R u+w "$out/${lang}/${lang}"
+          rm -rf "$out/${lang}/${lang}"
+        fi
       ''
     ) grammars}
+    # Hard invariant: no grammar may ship queries nested as <lang>/<lang>.
+    # Neovim resolves queries/<lang>/<group>.scm, so a leftover nested dir
+    # means the flatten above silently failed. Fail the build if one remains.
+    for d in "$out"/*/; do
+      lang=$(basename "$d")
+      if [ -d "$d/$lang" ]; then
+        echo "ERROR: tree-sitter queries for '$lang' are nested under '$lang/$lang' (flatten failed)" >&2
+        exit 1
+      fi
+    done
   '';
 in
 {
