@@ -27,23 +27,35 @@ persisted deps and `.env` handling that survives a public repository.
 - **Per-project git hooks** prevent secret leaks from cloned repos (same
   per-repo `core.hooksPath` mechanism the angst repo itself uses — no global
   side effects).
+- **Scope-based age keys**: `personal` and `work` projects use *different*
+  sops age keys (cryptographic separation, same machines). Work files list only
+  the work key as recipient, so a company-side/work-key compromise can never
+  decrypt personal secrets, and the two scopes rotate independently.
 
 ## Storage layout
 
 ```
 projects/
-├── 3f9a1c2b/                # opaque id
-│   ├── metadata.yaml        # sops YAML: name, repo, branch?, dir?, deps?   (encrypted)
-│   └── env                  # sops binary: whole .env, byte-exact            (encrypted)
-└── 7b2d4e88/
-    ├── metadata.yaml
-    └── env
+├── personal/               # encrypted to the PERSONAL age key only
+│   └── 3f9a1c2b/           # opaque id
+│       ├── metadata.yaml   # sops YAML: name, repo, branch?, dir?, deps?, scope   (encrypted)
+│       └── env             # sops binary: whole .env, byte-exact                 (encrypted)
+└── work/                   # encrypted to the WORK age key ONLY — never personal
+    └── 7b2d4e88/
+        ├── metadata.yaml
+        └── env
 ```
 
-- Projects are discovered by globbing `projects/*/metadata.yaml`. No central
-  file. Add/remove project = add/remove folder.
+- Projects are discovered by globbing `projects/{personal,work}/*/metadata.yaml`.
+  No central file. Add/remove project = add/remove folder.
 - Real names, URLs, on-disk paths exist **only** inside encrypted files.
-- `.sops.yaml` rule `projects/.*$` with the personal age key.
+- `.sops.yaml` rules:
+  - `projects/personal/.*$` → personal age public key,
+  - `projects/work/.*$` → work age public key (the personal key is **never**
+    listed as a recipient for work files).
+- The `scope` sub-store is visible; opaque ids still hide *which* projects.
+- `metadata.yaml` carries a `scope` field (`"personal" | "work"`), validated
+  against the folder path.
 
 ## New domain: `domains/git/projects/`
 
@@ -53,9 +65,14 @@ projects/
   - a home activation entry, and
   - a `systemd.user` oneshot `angst-projects-sync`
     (`After = sops-nix.service network-online.target`, `Wants = network-online.target`).
-- The tool self-decrypts with the age key at `~/.config/sops/age/keys.txt`;
-  missing key → warn and exit 0 (builds/boots never fail). Project metadata
-  never enters Nix eval.
+- The tool self-decrypts with sops. Scope is derived from the store path
+  (`projects/personal/…` vs `projects/work/…`) and the matching key file is
+  selected per project via `SOPS_AGE_KEY_FILE`:
+  - personal → default key (`~/.config/sops/age/keys.txt` / `SOPS_AGE_KEY`),
+  - work → `~/.config/sops/age/work-keys.txt` (0600, `SOPS_WORK_AGE_KEY_FILE`
+    override).
+  A missing key for a scope → skip those projects with a warning, exit 0
+  (builds/boots never fail). Project metadata never enters Nix eval.
 - The tool also installs **per-project git hooks**: after a fresh clone it runs
   `git -C <dir> config core.hooksPath <hooks-dir>`, pointing at a managed hook
   directory shipped by the domain (e.g. `~/.local/share/angst/project-hooks`).
@@ -104,16 +121,24 @@ projects/
 
 All commands take the real name and resolve the opaque id by decrypting metadata:
 
-- `angst projects add <name> <repo> [--dir PATH] [--branch B] [--deps CMD]`
-  — create random-id folder + encrypted metadata
+- `angst projects add <name> <repo> [--dir PATH] [--branch B] [--deps CMD] [--scope work|personal]`
+  — create random-id folder + encrypted metadata (default scope: personal)
+- `angst projects init-work` — generate the work age keypair once per host
+  (`~/.config/sops/age/work-keys.txt`, 0600), print the public key and instruct
+  adding it to the `.sops.yaml` work rule; the key is never committed and
+  persists via the existing `.config/sops` impermanence dir
 - `angst projects sync` — run the sync tool
-- `angst projects status` — table of projects; flags stale env; diffs each
-  repo's `.env.example` to surface upstream-added vars
+- `angst projects status` — table of projects (incl. scope); flags stale env;
+  diffs each repo's `.env.example` to surface upstream-added vars
 - `angst projects capture <name>` — encrypt current `<dir>/.env` → store
   (the edit → capture → commit loop)
 - `angst projects edit-env <name>` — decrypt store → `$EDITOR` → re-encrypt
   (binary) → resync if in sync
 - `angst projects rm <name>` — remove the folder
+- `angst projects rekey work` — leak response: generate a new work key, add its
+  public key to the `.sops.yaml` work rule, run `sops updatekeys
+  projects/work/**` to re-encrypt work files, then drop the old public key.
+  The personal store is never touched.
 
 ## Supporting changes
 
@@ -121,7 +146,7 @@ All commands take the real name and resolve the opaque id by decrypting metadata
 |---|---|
 | `lib/resolve.nix` | default `projects = { persistDirs = ["projects"]; } // (decl.projects or {})` |
 | `lib/build/mkNixos.nix` | append `host.projects.persistDirs` to the impermanence dirs (like `secrets.persistDirs`) |
-| `.sops.yaml` | rule `projects/.*$` with the personal age key |
+| `.sops.yaml` | rules `projects/personal/.*$` → personal age key, `projects/work/.*$` → work age key (personal key never a work recipient) |
 | `checks/secrets.nix` | require `sops:` / `ENC[AES256_GCM` in `projects/**/metadata.yaml` and `projects/**/env`, and no plaintext `name:`/`repo:`/URL outside the sops block |
 | `.gitleaks.toml` | allowlist `projects/` ciphertext (flag any plaintext secrets) |
 | `profiles/development.nix` | add `"git.projects"` |
@@ -141,3 +166,6 @@ All commands take the real name and resolve the opaque id by decrypting metadata
    - confirm `projects/` tree shows only opaque ids
    - `git -C <dir> config core.hooksPath` points at the managed hooks dir;
      staging `.env` / a fake key is blocked, gitleaks runs on commit/push
+   - `angst projects init-work` → add a `--scope work` project → syncs under the
+     work key; `sops -d` with the wrong key file fails for that scope;
+     `rekey work` re-encrypts the work store and leaves personal untouched
