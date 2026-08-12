@@ -85,5 +85,38 @@ return function(t)
 				t.assert_parser_installed(adapter)
 			end
 		end)
+
+		it("should merge shared tools across family adapters", function()
+			local lsp_servers = t.AdapterScanner:by_tool("lsp", { check_executable = false })
+			local gopls = lsp_servers.gopls
+
+			assert(gopls, "gopls should be registered across the go family")
+			assert(
+				vim.deep_equal(gopls.filetypes, { "go", "gomod", "gowork" }),
+				"gopls should serve go, gomod and gowork"
+			)
+			assert(
+				vim.deep_equal(gopls.settings, t.all_adapters.go.lsp_settings),
+				"gopls settings should come from the go adapter"
+			)
+
+			local lsp_opts = { check_executable = false }
+			assert(t.AdapterScanner:supports_filetype("lsp", "gomod", lsp_opts), "gomod should be served by an LSP")
+			assert(t.AdapterScanner:supports_filetype("lsp", "gowork", lsp_opts), "gowork should be served by an LSP")
+
+			local exec_opts = { check_executable = true }
+			assert(
+				not t.AdapterScanner:supports_filetype("formatter", "gomod", exec_opts),
+				"gomod should not map to an adapter formatter"
+			)
+			assert(
+				not t.AdapterScanner:supports_filetype("linter", "gomod", exec_opts),
+				"gomod should not map to an adapter linter"
+			)
+			assert(
+				not t.AdapterScanner:supports_filetype("compiler", "gomod", lsp_opts),
+				"gomod should not map to an adapter compiler"
+			)
+		end)
 	end)
 end

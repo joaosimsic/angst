@@ -69,6 +69,32 @@ local function adapter_modules(module_name)
 		end
 	end
 
+	local family_dirs = vim.fn.glob(root .. "/*", false, true)
+	table.sort(family_dirs)
+
+	for _, dir_path in ipairs(family_dirs) do
+		if vim.fn.isdirectory(dir_path) == 1 then
+			local dir = vim.fn.fnamemodify(dir_path, ":t")
+
+			if not seen[dir] and vim.fn.filereadable(dir_path .. "/init.lua") == 0 then
+				local nested = vim.fn.glob(dir_path .. "/*.lua", false, true)
+				table.sort(nested)
+
+				for _, file in ipairs(nested) do
+					local name = vim.fn.fnamemodify(file, ":t:r")
+
+					if name ~= "init" and name ~= "plugins" and not seen[name] then
+						modules[#modules + 1] = {
+							name = name,
+							module = module_name .. "." .. dir .. "." .. name,
+						}
+						seen[name] = true
+					end
+				end
+			end
+		end
+	end
+
 	return modules
 end
 
