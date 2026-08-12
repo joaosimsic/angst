@@ -1,7 +1,7 @@
 # Plan: `projects` — auto-synced, encrypted, single-place project manager
 
 Declare dev projects (GitHub/GitLab) once, get them cloned on every host, with
-persisted deps and `.env` handling that survives a public repository.
+`.env` handling that survives a public repository.
 
 ## Decisions (locked)
 
@@ -45,7 +45,7 @@ persisted deps and `.env` handling that survives a public repository.
 projects/
 ├── personal/               # encrypted to the PERSONAL age key only
 │   └── 3f9a1c2b4d7e09a2/   # opaque id (openssl rand -hex 8)
-│       ├── metadata.yaml   # sops BINARY: plaintext JSON {name,repo,branch?,dir?,deps?,scope}, byte-exact
+│       ├── metadata.yaml   # sops BINARY: plaintext JSON {name,repo}, byte-exact
 │       └── env             # sops BINARY: whole .env, byte-exact
 └── work/                   # encrypted to the WORK age key ONLY — never personal
     └── 7b2d4e88a3c05f11/
@@ -56,8 +56,8 @@ projects/
 - Projects are discovered by globbing `projects/{personal,work}/*/metadata.yaml`.
   No central file. Add/remove project = add/remove folder.
 - Cloned dirs under `~/projects/` use the **decrypted real name**
-  (`~/projects/<name>`, or the `--dir` metadata override) — never the opaque id.
-  The opaque id exists only inside the angst repo's `projects/` store.
+  (`~/projects/<name>`) — never the opaque id. The opaque id exists only inside
+  the angst repo's `projects/` store.
 - **Both** `metadata.yaml` and `env` are encrypted with sops **binary** format:
   the entire plaintext is one opaque blob — real names, URLs, structure, and even
   which fields exist never appear in cleartext. Plaintext metadata is JSON
@@ -66,9 +66,9 @@ projects/
   - `projects/personal/.*$` → personal age public key,
   - `projects/work/.*$` → work age public key (the personal key is **never**
     listed as a recipient for work files).
-- The `scope` sub-store is visible; opaque ids still hide *which* projects.
-- Plaintext metadata carries a `scope` field (`"personal" | "work"`), validated
-  against the folder path after decryption.
+- The `scope` sub-store is visible; opaque ids still hide *which* projects. The
+  scope of a project is its folder path (`projects/personal/…` vs
+  `projects/work/…`) — metadata carries no `scope` field to disagree with it.
 
 ## New domain: `domains/git/projects/`
 
@@ -97,11 +97,9 @@ projects/
 ### Sync semantics (per registry project)
 
 1. `mkdir -p` parent root (`~/projects`, 0755).
-2. `<dir> = ~/projects/<decrypted-name>` (from metadata; the `--dir` field
-   overrides). `[ -d <dir>/.git ] || git clone [--branch <b>] <repo> <dir>` —
-   no auto-pull, no hooks installed.
-3. Run `deps` only on a fresh clone (re-run via `angst projects sync`).
-4. Env, hash-tracked via sidecar `~/.secrets/projects/<name>.env.sha256`:
+2. `<dir> = ~/projects/<name>` (from metadata). `[ -d <dir>/.git ] ||
+   git clone <repo> <dir>` — no auto-pull, no hooks installed.
+3. Env, hash-tracked via sidecar `~/.secrets/projects/<name>.env.sha256`:
    - `.env` missing → materialize store → `.env` (0600),
    - `.env` unchanged since last materialize → refresh if the store changed,
    - `.env` locally edited → **never clobber**; mark `stale`, print diff,
@@ -134,7 +132,7 @@ metadata (both scopes; names must be unique across the whole store — `add`
 rejects duplicates). Sync logic lives in `scripts/angst-projects.sh`, shared by
 the CLI and the home-manager wrapper.
 
-- `angst projects add <name> <repo> [--dir PATH] [--branch B] [--deps CMD] [--scope work|personal]`
+- `angst projects add <name> <repo> [--scope work|personal]`
   — create random-id folder + encrypted metadata (default scope: personal);
   errors if the name already exists in the store
 - `angst projects init-work` — generate the shared work age keypair **once**
