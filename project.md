@@ -24,9 +24,11 @@ persisted deps and `.env` handling that survives a public repository.
 - Cloned projects land under **`~/projects/`** by default (0755), keeping the
   generated-project parent distinct from the angst `repoPath` (`proj/angst`,
   unchanged). Default on-disk dir = `projects/<name>`.
-- **Per-project git hooks** prevent secret leaks from cloned repos (same
-  per-repo `core.hooksPath` mechanism the angst repo itself uses — no global
-  side effects). Hook content is built as a derivation (read-only store path).
+- **Clones are never modified for leak prevention.** Cloned repos under
+  `~/projects/` get no hooks, no `core.hooksPath`, and no `.gitignore` edits —
+  secret-leak detection happens only in the angst repo (`githooks/`,
+  `checks/secrets.nix`, gitleaks CI, and the projects-scoped gitleaks rule).
+  The only file the tool writes into a clone is the decrypted `.env`.
 - **Scope-based age keys**: `personal` and `work` projects use *different*
   sops age keys (cryptographic separation). Work files list only the work key
   as recipient, so a company-side/work-key compromise can never decrypt
@@ -53,6 +55,9 @@ projects/
 
 - Projects are discovered by globbing `projects/{personal,work}/*/metadata.yaml`.
   No central file. Add/remove project = add/remove folder.
+- Cloned dirs under `~/projects/` use the **decrypted real name**
+  (`~/projects/<name>`, or the `--dir` metadata override) — never the opaque id.
+  The opaque id exists only inside the angst repo's `projects/` store.
 - **Both** `metadata.yaml` and `env` are encrypted with sops **binary** format:
   the entire plaintext is one opaque blob — real names, URLs, structure, and even
   which fields exist never appear in cleartext. Plaintext metadata is JSON
@@ -86,53 +91,37 @@ projects/
 - **Nothing fails a build or boot**: a missing key for a scope, a missing repo,
   no network, or any decrypt error → skip those projects with a warning and
   **exit 0**. Project metadata never enters Nix eval.
-- The tool also installs **per-project git hooks**: after a fresh clone it runs
-  `git -C <dir> config core.hooksPath <store-path-of-hooks-dir>`, pointing at a
-  hook derivation shipped by the domain (`~/.local/share/angst/project-hooks`,
-  a read-only store path). Per-repo config → no global side effects and no clash
-  with the angst repo's own `core.hooksPath = githooks`. Hook content is
-  generated at build time.
-  - `pre-commit`:
-    1. blocks staged secret-like files, aborting with an offender list:
-       `**/.env`, `**/.env.*` (`.env.example` explicitly allowed),
-       `*.dec`, `*.agekey`, `*.pem`, `*.key`, `id_rsa*`, `id_ed25519*`,
-       `*.p12`, `*.pfx`;
-    2. runs `gitleaks git --pre-commit --staged --redact`, falling back to
-       `nix run --quiet nixpkgs#gitleaks --` when gitleaks isn't on PATH
-       (same pattern as the repo's own `githooks/pre-commit`).
-  - `pre-push`: runs gitleaks on the pushed range (same pattern as the repo's
-    `githooks/pre-push`).
+- **No hooks, no config changes in clones.** The tool never touches
+  `core.hooksPath` or `.gitignore` inside a clone.
 
 ### Sync semantics (per registry project)
 
 1. `mkdir -p` parent root (`~/projects`, 0755).
-2. `[ -d <dir>/.git ] || git clone [--branch <b>] <repo> <dir>` — no auto-pull;
-   after a fresh clone, install the project git hooks (see above).
+2. `<dir> = ~/projects/<decrypted-name>` (from metadata; the `--dir` field
+   overrides). `[ -d <dir>/.git ] || git clone [--branch <b>] <repo> <dir>` —
+   no auto-pull, no hooks installed.
 3. Run `deps` only on a fresh clone (re-run via `angst projects sync`).
 4. Env, hash-tracked via sidecar `~/.secrets/projects/<name>.env.sha256`:
    - `.env` missing → materialize store → `.env` (0600),
    - `.env` unchanged since last materialize → refresh if the store changed,
    - `.env` locally edited → **never clobber**; mark `stale`, print diff,
      exit non-zero.
-5. If not already ignored, append exactly `.env` to `<dir>/.gitignore`.
-   `.env.example`, `.env.*` (e.g. `.env.production`), and `.envrc` stay
-   trackable — never append the broad `.env.*` pattern.
 
 ### Secret leak prevention (defense in depth)
 
-1. `.gitignore` guard at clone time (step 5 above).
-2. Per-project git hooks block secret-like files and run gitleaks
-   (`pre-commit` + `pre-push`, see the domain section).
-3. **Store hygiene**: `capture` / `edit-env` write plaintext only to temp files
+Clones are never modified for leak prevention (no hooks, no `core.hooksPath`,
+no `.gitignore` edits) — all detection happens in the angst repo:
+
+1. **Store hygiene**: `capture` / `edit-env` write plaintext only to temp files
    *outside* the repo (`/tmp` or `~/.secrets/projects/.tmp`), then re-encrypt in
    place — plaintext never lands inside `projects/`.
-4. `sync` / `status` never print decrypted env values (only key names / redacted
+2. `sync` / `status` never print decrypted env values (only key names / redacted
    diffs).
-5. Flake checks (`checks/secrets.nix`) assert every `projects/**/metadata.yaml`
+3. Flake checks (`checks/secrets.nix`) assert every `projects/**/metadata.yaml`
    and `projects/**/env` contains the `sops:` / `ENC[AES256_GCM` block **and**
    no plaintext `name:` / `repo:` / URL / secret content anywhere in the file
    (guaranteed by binary encryption; the check is a regression guard).
-6. `.gitleaks.toml` adds a **projects-scoped rule** that flags plaintext
+4. `.gitleaks.toml` adds a **projects-scoped rule** that flags plaintext
    secret-like values under `projects/` (like the existing
    `angst-plaintext-secret-value` rule). No broad path allowlist on `projects/`
    — the existing global `ENC[AES256_GCM,` regex already lets ciphertext
@@ -197,8 +186,9 @@ the CLI and the home-manager wrapper.
    - edit `.env` → `angst projects capture` → byte-identical round-trip
    - edit `.env` locally again → `stale` fires, no clobber
    - confirm `projects/` tree shows only opaque ids; `grep name: projects/**` is empty
-   - `git -C <dir> config core.hooksPath` points at the managed hooks dir;
-     staging `.env` / a fake key is blocked, gitleaks runs on commit/push
+   - confirm cloned repos have **no** hooks and no `.gitignore` edits
+     (`git -C <dir> config --get core.hooksPath` is empty), and clone dirs are
+     named after the decrypted project names
    - `angst projects init-work` refuses on second run; add a `--scope work`
      project → syncs under the work key; `sops -d` with the wrong key file fails
      for that scope; `rekey work` re-encrypts the work store and leaves personal
