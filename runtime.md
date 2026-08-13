@@ -140,17 +140,25 @@ in {
 Call sites consume it without any path knowledge:
 
 ```nix
-home.activation.setLoginShell = ''
-  ${runtime.loginShell { shell = cfg.shell; homeDirectory = ...; username = ...; }}.bin shell home user
+home.activation.setLoginShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  ${runtime.loginShell {
+    shell = cfg.shell;
+    homeDirectory = config.home.homeDirectory;
+    username = config.home.username;
+  }}.bin
 '';
 ```
 
 ```nix
-serviceConfig.ExecStart = runtime.bootstrapSecrets { username = ...; hostname = ...; sopsPath = ...; }.bin;
+serviceConfig.ExecStart = runtime.bootstrapSecrets {
+  username = host.username;
+  hostname = host.hostname;
+  sopsPath = config.sops.secrets.masterPassword.path;
+}.bin;
 ```
 
 ```nix
-home.packages = [ runtime.projectsSync { repoPath = ...; projects = ...; } ];  # derivation directly
+home.packages = [ runtime.projectsSync { repoPath = repoPath; projects = projects; } ];  # derivation directly
 ```
 
 ## Wiring
