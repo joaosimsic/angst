@@ -45,6 +45,7 @@ jobs:
           - check-password
           - check-secrets-encrypted
           - check-projects-encrypted
+          - check-ssh-keys
           - secret-scan
           - secret-scan-hooks
           - login-shell-valid

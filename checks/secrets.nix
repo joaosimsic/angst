@@ -83,8 +83,61 @@ let
         echo "==> All projects store files are sops-encrypted."
         touch $out
       '';
+  sshKeysCheck =
+    pkgs.runCommand "check-ssh-keys-encrypted"
+      {
+        nativeBuildInputs = [
+          pkgs.findutils
+          pkgs.gnugrep
+          pkgs.openssh
+        ];
+      }
+      ''
+        set -euo pipefail
+        cd ${repoRoot}
+
+        files=$(find ./secrets/ssh -type f -name '*.age' 2>/dev/null || true)
+        if [ -z "$files" ]; then
+          echo "No secrets/ssh/*.age files found; nothing to check."
+          touch $out
+          exit 0
+        fi
+
+        echo "==> Checking tracked SSH keys are age-encrypted and match their .pub..."
+        failed=0
+        for f in $files; do
+          base="''${f%.age}"
+          pub="$base.pub"
+          if ! grep -q -- 'age-encryption.org/v1' "$f"; then
+            echo "FAIL: $f is not age-encrypted (missing age-encryption.org/v1 envelope)"
+            failed=1
+          elif grep -qF -- '-----BEGIN OPENSSH PRIVATE KEY-----' "$f"; then
+            echo "FAIL: $f contains plaintext OpenSSH private key material"
+            failed=1
+          elif [ ! -f "$pub" ]; then
+            echo "FAIL: $f has no matching $pub"
+            failed=1
+          elif ! ssh-keygen -lf "$pub" >/dev/null 2>&1; then
+            echo "FAIL: $pub is not a valid OpenSSH public key"
+            failed=1
+          else
+            echo "PASS: $f is age-encrypted, envelope intact, $pub valid"
+          fi
+        done
+
+        if [ "$failed" -ne 0 ]; then
+          echo "==> One or more SSH key files are not properly encrypted/valid. Refusing to proceed."
+          echo "    The .pub <-> .age correspondence is cross-checked with:"
+          echo "    angst ssh-key verify --scope <personal|work>"
+          exit 1
+        fi
+
+        echo "==> All SSH key files are age-encrypted with valid public keys."
+        touch $out
+      '';
 in
 {
   secrets = secretsCheck;
   projects = projectsCheck;
+  sshKeys = sshKeysCheck;
 }

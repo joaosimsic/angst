@@ -20,6 +20,7 @@ mkScript {
     sops
     age
     openssl
+    openssh
     diffutils
   ];
   text = builtins.concatStringsSep "\n" [
@@ -31,6 +32,7 @@ mkScript {
         angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
         angst watch  [--repo PATH] [--host HOST] [--theme THEME]
         angst projects <add|sync|status|capture|edit-env|rm> ...
+        angst ssh-key <generate|verify> --scope personal|work
       EOF
       }
 
@@ -165,6 +167,180 @@ mkScript {
           echo "  hash:    $config_file"
           echo ""
           echo "Run 'sudo nixos-rebuild switch --flake .#$host_name' to apply."
+      }
+    ''
+    ''
+      ssh_key_usage() {
+          cat <<'EOF'
+      Usage:
+        angst ssh-key generate --scope personal|work
+        angst ssh-key verify   --scope personal|work
+      EOF
+      }
+
+      ssh_key_scope_keyfile() {
+          case "$1" in
+          personal) printf '%s\n' "$HOME/.config/sops/age/keys.txt" ;;
+          work) printf '%s\n' "$HOME/.config/sops/age/work-keys.txt" ;;
+          esac
+      }
+
+      ssh_key_dest() {
+          case "$1" in
+          personal) printf '%s\n' "id_ed25519" ;;
+          work) printf '%s\n' "work_ed25519" ;;
+          esac
+      }
+
+      ssh_key_generate_cmd() {
+          local scope=""
+          while [ "$#" -gt 0 ]; do
+              case "$1" in
+              --scope)
+                  scope="''${2:-}"
+                  if [ -z "$scope" ]; then
+                      echo "error: --scope requires a value (personal|work)" >&2
+                      return 2
+                  fi
+                  shift 2
+                  ;;
+              -h | --help)
+                  ssh_key_usage
+                  return 0
+                  ;;
+              *)
+                  echo "unknown ssh-key generate option: $1" >&2
+                  ssh_key_usage >&2
+                  return 2
+                  ;;
+              esac
+          done
+          case "$scope" in
+          personal | work) ;;
+          *)
+              echo "error: invalid scope '$scope' (personal|work)" >&2
+              ssh_key_usage >&2
+              return 2
+              ;;
+          esac
+
+          local repo keyfile recipient dir
+          repo="$(repo_root_default)"
+          keyfile="$(ssh_key_scope_keyfile "$scope")"
+          if [ ! -f "$keyfile" ]; then
+              echo "error: no $scope age key at $keyfile" >&2
+              return 1
+          fi
+          recipient="$(age-keygen -y "$keyfile" 2>/dev/null)" || {
+              echo "error: could not derive the $scope age recipient from $keyfile" >&2
+              return 1
+          }
+
+          dir="$repo/secrets/ssh"
+          mkdir -p "$dir" || return 1
+          tmp="$(mktemp -d)" || return 1
+          trap 'rm -rf "$tmp"' EXIT
+
+          ssh-keygen -q -t ed25519 -N "" -f "$tmp/sshkey" -C "angst-$scope" || return 1
+          age -r "$recipient" -o "$dir/$scope.ed25519.age" "$tmp/sshkey" || {
+              echo "error: age encryption failed (recipient $recipient)" >&2
+              return 1
+          }
+          cp "$tmp/sshkey.pub" "$dir/$scope.ed25519.pub" || return 1
+          chmod 644 "$dir/$scope.ed25519.pub" 2>/dev/null || true
+
+          echo "generated $scope SSH key:"
+          echo "  private (age-encrypted): $dir/$scope.ed25519.age"
+          echo "  public (committed):      $dir/$scope.ed25519.pub"
+          echo ""
+          echo "public key: $(cat "$dir/$scope.ed25519.pub")"
+          echo ""
+          echo "authorize it at the $scope provider, then run:"
+          echo "  angst ssh-key verify --scope $scope"
+      }
+
+      ssh_key_verify_cmd() {
+          local scope=""
+          while [ "$#" -gt 0 ]; do
+              case "$1" in
+              --scope)
+                  scope="''${2:-}"
+                  if [ -z "$scope" ]; then
+                      echo "error: --scope requires a value (personal|work)" >&2
+                      return 2
+                  fi
+                  shift 2
+                  ;;
+              -h | --help)
+                  ssh_key_usage
+                  return 0
+                  ;;
+              *)
+                  echo "unknown ssh-key verify option: $1" >&2
+                  ssh_key_usage >&2
+                  return 2
+                  ;;
+              esac
+          done
+          case "$scope" in
+          personal | work) ;;
+          *)
+              echo "error: invalid scope '$scope' (personal|work)" >&2
+              ssh_key_usage >&2
+              return 2
+              ;;
+          esac
+
+          local repo keyfile dir age_file pub_file pub derived
+          repo="$(repo_root_default)"
+          keyfile="$(ssh_key_scope_keyfile "$scope")"
+          dir="$repo/secrets/ssh"
+          age_file="$dir/$scope.ed25519.age"
+          pub_file="$dir/$scope.ed25519.pub"
+          if [ ! -f "$keyfile" ]; then
+              echo "error: no $scope age key at $keyfile" >&2
+              return 1
+          fi
+          if [ ! -f "$age_file" ] || [ ! -f "$pub_file" ]; then
+              echo "error: missing $dir/$scope.ed25519.{age,pub}; run 'angst ssh-key generate --scope $scope' first" >&2
+              return 1
+          fi
+
+          tmp="$(mktemp -d)" || return 1
+          trap 'rm -rf "$tmp"' EXIT
+          age -d -i "$keyfile" -o "$tmp/sshkey" "$age_file" 2>/dev/null || {
+              echo "FAIL: could not decrypt $age_file with the $scope age key" >&2
+              return 1
+          }
+          chmod 600 "$tmp/sshkey"
+          pub="$(cat "$pub_file")"
+          derived="$(ssh-keygen -y -f "$tmp/sshkey" 2>/dev/null)" || {
+              echo "FAIL: decrypted $age_file is not a valid OpenSSH private key" >&2
+              return 1
+          }
+          if [ "$pub" = "$derived" ]; then
+              echo "PASS: $scope.ed25519.pub matches the key inside $scope.ed25519.age"
+              return 0
+          fi
+          echo "FAIL: $scope.ed25519.pub does not match the key inside $scope.ed25519.age" >&2
+          echo "  committed: $pub" >&2
+          echo "  derived:   $derived" >&2
+          return 1
+      }
+
+      ssh_key_cmd() {
+          local cmd="''${1:-}"
+          if [ "$#" -gt 0 ]; then shift; fi
+          case "$cmd" in
+          generate) ssh_key_generate_cmd "$@" ;;
+          verify) ssh_key_verify_cmd "$@" ;;
+          -h | --help | "") ssh_key_usage ;;
+          *)
+              echo "unknown ssh-key command: $cmd" >&2
+              ssh_key_usage >&2
+              return 2
+              ;;
+          esac
       }
     ''
     ''
@@ -343,6 +519,7 @@ mkScript {
       render) render_cmd "$@" ;;
       watch) watch_cmd "$@" ;;
       projects) angst_projects_cmd "$@" ;;
+      ssh-key) ssh_key_cmd "$@" ;;
       -h | --help | "") usage ;;
       *)
           echo "unknown command: $command" >&2

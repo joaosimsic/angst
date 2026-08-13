@@ -53,6 +53,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
       ssh
       projects
       ;
+    hostType = host.type;
     shell = if shellOverride != null then shellOverride else host.shell;
     inherit (host.scan) themes;
     themesLib = host.scan.themes;

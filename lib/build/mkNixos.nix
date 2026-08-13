@@ -60,6 +60,7 @@ inputs.nixpkgs.lib.nixosSystem {
       ssh
       shell
       ;
+    hostType = host.type;
     hostName = host.hostname;
     inherit (host.scan) themes;
     themesLib = host.scan.themes;
@@ -99,7 +100,7 @@ inputs.nixpkgs.lib.nixosSystem {
         users.users.root.hashedPassword = lib.mkDefault host.password;
 
         systemd.services.angst-bootstrap-secrets = lib.mkIf secrets.canDecrypt {
-          description = "angst: set login password hash and enforce SSH key passphrase from secrets";
+          description = "angst: set login password hash from secrets";
           wantedBy = [ "multi-user.target" ];
           before = [
             "getty@.service"
@@ -112,7 +113,7 @@ inputs.nixpkgs.lib.nixosSystem {
             RemainAfterExit = true;
             ExecStart =
               (runtime.bootstrapSecrets {
-                inherit (host) username hostname;
+                inherit (host) username;
                 sopsPath = config.sops.secrets.masterPassword.path;
               }).bin;
           };
@@ -152,6 +153,7 @@ inputs.nixpkgs.lib.nixosSystem {
             shell
             projects
             ;
+          hostType = host.type;
           hostName = host.hostname;
           inherit (host.scan) themes;
           themesLib = host.scan.themes;

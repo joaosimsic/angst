@@ -34,7 +34,10 @@
 
   sshAgent = {
     enable = true;
-    keys = [ "~/.ssh/id_ed25519" ];
+    keys = [
+      "~/.ssh/id_ed25519"
+      "~/.ssh/work_ed25519"
+    ];
   };
   ssh = { };
 

@@ -30,6 +30,7 @@ let
 
   loginShell = import ./login-shell.nix { inherit mkScript pkgs; };
   sshAddKeys = import ./ssh-add-keys.nix { inherit mkScript pkgs lib; };
+  sshKeyProvision = import ./ssh-key-provision.nix { inherit mkScript pkgs; };
   bootstrapSecrets = import ./bootstrap-secrets.nix { inherit mkScript pkgs; };
   projectsSync = import ./projects-sync.nix { inherit mkScript pkgs lib; };
   devshellHook = import ./devshell-hook.nix { inherit pkgs; };
@@ -65,6 +66,7 @@ in
     mkScript
     loginShell
     sshAddKeys
+    sshKeyProvision
     bootstrapSecrets
     projectsSync
     devshellHook

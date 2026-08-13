@@ -30,7 +30,7 @@ in
       default =
         sshAgent.keys or [
           "~/.ssh/id_ed25519"
-          "~/.ssh/id_rsa"
+          "~/.ssh/work_ed25519"
         ];
       description = "Private key paths to load into the SSH agent";
     };

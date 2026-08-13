@@ -37,6 +37,13 @@ projects_keyfile() {
     esac
 }
 
+projects_sshkeyfile() {
+    case "${1:-}" in
+    work) printf '%s\n' "${ANGST_WORK_SSH_KEY:-$HOME/.ssh/work_ed25519}" ;;
+    *) printf '%s\n' "${ANGST_SSH_KEY:-$HOME/.ssh/id_ed25519}" ;;
+    esac
+}
+
 # Age public key for a scope, derived from its key file.
 projects_recipient() {
     local keyfile
@@ -201,7 +208,7 @@ projects_selected() {
 }
 
 projects_sync() {
-    local store root rc scope scope_dir key meta id plain name repo target
+    local store root rc scope scope_dir key meta id plain name repo target sshkey
     store="$(projects_store_root)"
     root="$(projects_root)"
     if [ ! -d "$store" ]; then
@@ -219,6 +226,8 @@ projects_sync() {
             echo "warn: no $scope age key at $key; skipping $scope projects" >&2
             continue
         fi
+        sshkey="$(projects_sshkeyfile "$scope")"
+        export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new -i $sshkey"
         for meta in "$scope_dir"/*/metadata.yaml; do
             [ -f "$meta" ] || continue
             id="$(basename "$(dirname "$meta")")"

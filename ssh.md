@@ -1,13 +1,13 @@
 # SSH keys: shared, encrypted, scope-isolated
 
-> **Status — not yet implemented.** This is the target design for the shared
-> SSH-key model. The current tree still runs the per-host model described in
-> [Why](#why): `angst-bootstrap-secrets` generates a fresh passphrase-protected
-> `~/.ssh/id_ed25519` per host, and a persistent ssh-agent
-> (`domains/remote/ssh/ssh-agent.nix`) unlocks it at login. None of the
-> following exist yet: `secrets/ssh/`, `angst ssh-key generate`,
-> `angst-provision-ssh-key`, the `secrets/ssh` flake check, or the gitleaks
-> allowlist. Everything below describes the intended state.
+> **Status — implemented.** This describes the shared SSH-key model now in the
+> tree: `angst ssh-key generate|verify`, the age-encrypted `secrets/ssh/` store,
+> the boot-time `angst-provision-ssh-key` oneshot (system + home-only hosts),
+> per-scope `GIT_SSH_COMMAND` in the projects sync, and the `check-ssh-keys`
+> flake check + gitleaks allowlist. The per-host model it replaced
+> (`angst-bootstrap-secrets` generating a fresh passphrase-protected
+> `~/.ssh/id_ed25519`) is gone; the persistent ssh-agent
+> (`domains/remote/ssh/ssh-agent.nix`) now loads the passphraseless shared keys.
 
 angst will use **one SSH key per scope** (personal / work), **age-encrypted at
 rest in the repo**, and **provisions the same key to every host** (physical
