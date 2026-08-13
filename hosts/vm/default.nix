@@ -42,5 +42,7 @@
       ".cache"
     ];
   };
-  projects = [ ]; # opaque store ids (angst projects status); names stay encrypted
+  projects = [
+    "7391b51c36a7d266"
+  ]; # opaque store ids (angst projects status); names stay encrypted
 }
