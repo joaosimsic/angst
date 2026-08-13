@@ -1,45 +1,24 @@
 {
   config,
   lib,
-  pkgs,
   repoPath,
   flakeSelf,
   projects,
+  runtime,
   ...
 }:
 
 let
-  projectsSync = pkgs.writeShellApplication {
-    name = "angst-projects-sync";
-    runtimeInputs = with pkgs; [
-      git
-      sops
-      age
-      jq
-      openssl
-      coreutils
-      diffutils
-      findutils
-    ];
-    text = builtins.concatStringsSep "\n" [
-      (builtins.readFile (flakeSelf + "/scripts/angst-lib.sh"))
-      (builtins.readFile (flakeSelf + "/scripts/angst-projects.sh"))
-      ''
-        set -euo pipefail
-        export ANGST_PROJECTS_STORE="$HOME/${repoPath}/projects"
-        export ANGST_PROJECTS_ONLY='${lib.concatStringsSep " " projects}'
-        export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
-        angst_projects_cmd "$@"
-      ''
-    ];
+  sync = runtime.projectsSync {
+    inherit repoPath projects flakeSelf;
   };
 in
 {
   config = lib.mkIf config.domains.git.projects.enable {
-    home.packages = [ projectsSync ];
+    home.packages = [ sync ];
 
     home.activation.angstProjectsSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      ${projectsSync}/bin/angst-projects-sync sync || true
+      ${sync.bin} sync || true
     '';
 
     systemd.user.services.angst-projects-sync = {
@@ -50,7 +29,7 @@ in
       };
       Service = {
         Type = "oneshot";
-        ExecStart = "${projectsSync}/bin/angst-projects-sync sync";
+        ExecStart = "${sync.bin} sync";
       };
       Install.WantedBy = [ "default.target" ];
     };

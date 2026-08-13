@@ -2,9 +2,8 @@
   pkgs,
   host,
   inputs,
-  angstCli,
+  runtime,
   vmOutputs,
-  ...
 }:
 
 let
@@ -19,25 +18,16 @@ let
     export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
   '';
 
-  shellDevHook = pkgs.writeText "shell-dev-hook" ''
-    export VM_SSH_PORT=2222
-    export NIX_DEFAULT_TARGET_HOST=${inputs.vm.defaultVmHost}
-    export CARGO_BUILD_TARGET_DIR="$PWD/target"
-    if [ -z "$SSH_AUTH_SOCK" ]; then
-      eval $(ssh-agent -s) > /dev/null
-      trap "ssh-agent -k > /dev/null" EXIT
-    fi
-    for key in "$HOME"/.ssh/id_ed25519 "$HOME"/.ssh/id_rsa; do
-      [ -f "$key" ] && ssh-add "$key" 2>/dev/null || true
-    done
-  '';
+  shellDevHook = runtime.devshellHook {
+    defaultVmHost = inputs.vm.defaultVmHost;
+  };
 
   fullDevPackages =
     with pkgs;
     [
       neovim
       git
-      angstCli
+      runtime.angstCli
       openssh
       qemu
       sops

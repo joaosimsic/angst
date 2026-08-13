@@ -168,7 +168,7 @@ LAYER_ORDER = [
     "themes",
     "toolchains",
     "hosts",
-    "scripts",
+    "runtime",
 ]
 
 

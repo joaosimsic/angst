@@ -4,6 +4,7 @@
   host,
   hmModules,
   nixosModules,
+  runtime,
   themeOverride ? null,
 }:
 
@@ -65,6 +66,7 @@ inputs.nixpkgs.lib.nixosSystem {
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
+    inherit runtime;
   };
 
   modules = [
@@ -86,41 +88,12 @@ inputs.nixpkgs.lib.nixosSystem {
     ../../modules/vm/vm-variant.nix
     ../../modules/vm/host-mount.nix
     (
-      { config, pkgs, ... }:
-      let
-        bootstrapSecrets = pkgs.writeShellApplication {
-          name = "angst-bootstrap-secrets";
-          runtimeInputs = with pkgs; [
-            coreutils
-            mkpasswd
-            shadow
-            openssh
-          ];
-          text = ''
-            MASTER_PASSWORD=$(cat ${config.sops.secrets.masterPassword.path})
-
-            HASH=$(echo "$MASTER_PASSWORD" | mkpasswd -m sha-512 -s)
-            usermod -p "$HASH" ${host.username}
-            usermod -p "$HASH" root
-
-            KEY_FILE="/home/${host.username}/.ssh/id_ed25519"
-            SSH_DIR="$(dirname "$KEY_FILE")"
-
-            if [ ! -f "$KEY_FILE" ]; then
-              mkdir -p "$SSH_DIR"
-              ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${host.username}@${host.hostname}"
-              chown -R ${host.username}: "$SSH_DIR"
-            else
-              if ! ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
-                ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
-                  ssh-keygen -p -P "" -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null
-              fi
-            fi
-
-            unset MASTER_PASSWORD
-          '';
-        };
-      in
+      {
+        config,
+        lib,
+        runtime,
+        ...
+      }:
       {
         users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
         users.users.root.hashedPassword = lib.mkDefault host.password;
@@ -137,7 +110,11 @@ inputs.nixpkgs.lib.nixosSystem {
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
-            ExecStart = "${bootstrapSecrets}/bin/angst-bootstrap-secrets";
+            ExecStart =
+              (runtime.bootstrapSecrets {
+                inherit (host) username hostname;
+                sopsPath = config.sops.secrets.masterPassword.path;
+              }).bin;
           };
         };
       }
@@ -181,6 +158,7 @@ inputs.nixpkgs.lib.nixosSystem {
           userConfig = userCfg;
           theme = effectiveTheme;
           flakeSelf = self;
+          inherit runtime;
         };
 
         users.${host.username} = {

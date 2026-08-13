@@ -23,10 +23,13 @@ hm-switch host="nixos" user="joao":
     nix build .#homeConfigurations."{{user}}@{{host}}".activationPackage && ./result/activate
 
 analyze:
-    python3 -m scripts.analyze_flake --output analysis.md
+    python3 -m tools.analyze_flake --output analysis.md
 
 check:
     nix flake check
+
+verify:
+    nix flake check --no-build
 
 dev:
     nix develop

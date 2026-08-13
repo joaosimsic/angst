@@ -27,7 +27,7 @@ def section_overview(no_eval_cost: bool = False) -> str:
     )
     total_sh_loc = sum(
         len(read_nix(f).splitlines())
-        for f in Path("scripts").rglob("*.sh")
+        for f in Path("runtime").rglob("*.sh")
         if ".git" not in f.parts
     )
     total_md_loc = sum(
@@ -84,7 +84,7 @@ def section_directory_breakdown() -> str:
         "toolchains",
         "themes",
         "hosts",
-        "scripts",
+        "runtime",
     ):
         path = REPO / d
         if not path.is_dir():
@@ -101,7 +101,7 @@ def section_directory_breakdown() -> str:
             rl = sum(len(read_nix(f).splitlines()) for f in Path("tools").rglob("*.rs") if "target" not in f.parts)
             if rc:
                 extra = f" (+{rc} .rs files, {rl} LOC)"
-        elif d == "scripts":
+        elif d == "runtime":
             sc = sum(1 for _ in path.rglob("*.sh"))
             sl = sum(len(read_nix(f).splitlines()) for f in path.rglob("*.sh"))
             if sc:
