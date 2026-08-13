@@ -5,7 +5,7 @@
   hmModules,
   vmTool,
   shellTool,
-  angstTool,
+  runtime,
   resTool,
   themeOverride ? null,
   shellOverride ? null,
@@ -43,9 +43,9 @@ let
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
-
   extraSpecialArgs = {
-    inherit (host)
+    inherit
+      (host)
       hostname
       monitors
       repoPath
@@ -61,6 +61,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
+    inherit runtime;
   };
 
   modules = [
@@ -76,7 +77,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
       home.packages = [
         vmTool
         shellTool
-        angstTool
+        runtime.angstCli
         resTool
       ];
     })

@@ -2,7 +2,7 @@
 """angst flake analysis — Markdown report.
 
 Usage:
-    python -m scripts.analyze_flake [--no-eval-cost] [--no-graph] [-o output.md]
+    python -m tools.analyze_flake [--no-eval-cost] [--no-graph] [-o output.md]
 
 Outputs a Markdown report to stdout (or -o FILE).
 """

@@ -44,30 +44,12 @@ let
   vmResTool = vmOutputs.packages.${defaultSystem}.res or vmOutputs.packages.${defaultSystem}.vm-run;
   shellTool = shellOutputs.packages.${defaultSystem}.default;
 
-  angstTool = pkgs.writeShellApplication {
-    name = "angst";
-    runtimeInputs = with pkgs; [
-      coreutils
-      findutils
-      git
-      nix
-      watchexec
-      jq
-      sops
-      age
-      openssl
-      diffutils
-    ];
-    text = builtins.concatStringsSep "\n" (
-      map builtins.readFile [
-        ../../scripts/angst-lib.sh
-        ../../scripts/angst-bootstrap-secrets.sh
-        ../../scripts/angst-render.sh
-        ../../scripts/angst-watch.sh
-        ../../scripts/angst-projects.sh
-        ../../scripts/angst.sh
-      ]
-    );
+  runtime = import ../../runtime {
+    inherit
+      pkgs
+      lib
+      self
+      ;
   };
 
   fallbackHost = {
@@ -100,7 +82,7 @@ let
         host
         vmTool
         shellTool
-        angstTool
+        runtime
         hmModules
         themeOverride
         shellOverride
@@ -114,15 +96,14 @@ let
       p = profilesFor host;
     in
     mkHost {
-      inherit self inputs host;
+      inherit self inputs host runtime;
       hmModules = map enableModule p.enabled;
       nixosModules = map enableModule (builtins.filter (e: e.hasSystem) p.enabled) ++ p.modules;
     };
 
   devshell = import ./devshell.nix {
-    inherit pkgs inputs vmOutputs;
+    inherit pkgs inputs vmOutputs runtime;
     host = representative;
-    angstCli = angstTool;
   };
 
   mkChecks = import ../../checks/default.nix {
@@ -211,7 +192,7 @@ in
     vmTool
     vmResTool
     shellTool
-    angstTool
+    runtime
     render
     mkHomeCfg
     mkHostFor

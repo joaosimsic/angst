@@ -4,128 +4,12 @@
   pkgs,
   userConfig,
   repoPath,
+  runtime,
   ...
 }:
 
 let
   hostAngstPath = "/host${userConfig.homeDirectory}/${repoPath}";
-
-  angstCli = pkgs.writeShellApplication {
-    name = "angst";
-    runtimeInputs = with pkgs; [
-      coreutils
-      findutils
-      git
-      nix
-      watchexec
-      jq
-      sops
-      age
-      openssl
-      diffutils
-    ];
-    text = builtins.concatStringsSep "\n" (
-      map builtins.readFile [
-        ../../scripts/angst-lib.sh
-        ../../scripts/angst-bootstrap-secrets.sh
-        ../../scripts/angst-render.sh
-        ../../scripts/angst-watch.sh
-        ../../scripts/angst-projects.sh
-        ../../scripts/angst.sh
-      ]
-    );
-  };
-
-  homeManagerUpgrade = pkgs.writeShellApplication {
-    name = "angst-vm-home-manager-upgrade";
-    runtimeInputs = with pkgs; [
-      coreutils
-      gnused
-      systemd
-    ];
-    text = ''
-      active_hp=""
-      service_exec="$(systemctl show home-manager-${userConfig.username} -p ExecStart 2>/dev/null || true)"
-      active_gen="$(echo "$service_exec" | sed -n 's/.* \([^ ]*\)-home-manager-generation.*/\1-home-manager-generation/p')"
-      if [ -n "$active_gen" ] && [ -L "$active_gen/home-path" ]; then
-        active_hp="$(readlink -f "$active_gen/home-path" 2>/dev/null || true)"
-      fi
-
-      if [ -z "$active_hp" ]; then
-        echo "Could not determine active home-manager-path; nothing to upgrade."
-        exit 0
-      fi
-
-      latest=""
-      shopt -s nullglob 2>/dev/null || true
-      for gen in /nix/store/*-home-manager-generation/activate; do
-        [ -f "$gen" ] || continue
-        dir="''${gen%/activate}" || continue
-        hp="$(readlink -f "$dir/home-path" 2>/dev/null || true)"
-        [ -n "$hp" ] || continue
-        [ "$hp" = "$active_hp" ] && continue
-        latest="$dir"
-      done
-
-      if [ -n "$latest" ] && [ -x "$latest/activate" ]; then
-        "$latest/activate" --driver-version 1 || true
-      fi
-    '';
-  };
-
-  vmEphemeralSsh = pkgs.writeShellApplication {
-    name = "angst-vm-ephemeral-ssh";
-    runtimeInputs = with pkgs; [
-      coreutils
-      util-linux
-    ];
-    text = ''
-      mount -t tmpfs tmpfs /etc/ssh -o mode=0755
-      for f in /run/current-system/etc/ssh/sshd_config /etc/static/ssh/sshd_config; do
-        if [ -f "$f" ]; then
-          cp "$f" /etc/ssh/sshd_config
-          break
-        fi
-      done
-    '';
-  };
-
-  vmAuthorizedKeys = pkgs.writeShellApplication {
-    name = "angst-vm-authorized-keys";
-    runtimeInputs = with pkgs; [
-      coreutils
-    ];
-    text = ''
-      key_file=/tmp/shared/authorized_keys
-
-      if [ ! -s "$key_file" ]; then
-        echo "No runtime VM SSH keys found at $key_file; keeping declarative authorized_keys fallback."
-        exit 0
-      fi
-
-      install -d -m 700 -o ${userConfig.username} -g users ${userConfig.homeDirectory}/.ssh
-      install -m 600 -o ${userConfig.username} -g users "$key_file" ${userConfig.homeDirectory}/.ssh/authorized_keys
-    '';
-  };
-
-  vmAgeKey = pkgs.writeShellApplication {
-    name = "angst-vm-age-key";
-    runtimeInputs = with pkgs; [
-      coreutils
-    ];
-    text = ''
-      key_file=/tmp/shared/age-keys.txt
-
-      if [ ! -s "$key_file" ]; then
-        echo "No host age key found at $key_file; secrets will be unavailable."
-        exit 0
-      fi
-
-      sops_dir="${userConfig.homeDirectory}/.config/sops/age"
-      install -d -m 700 -o ${userConfig.username} -g users "$sops_dir"
-      install -m 600 -o ${userConfig.username} -g users "$key_file" "$sops_dir/keys.txt"
-    '';
-  };
 in
 {
   config = {
@@ -188,7 +72,7 @@ in
         spice-vdagent
         pkg-config
         openssl.dev
-        angstCli
+        runtime.angstCli
       ];
       sessionVariables = {
         ANGST_REPO = hostAngstPath;
@@ -224,7 +108,7 @@ in
             Type = "oneshot";
             RemainAfterExit = true;
             User = userConfig.username;
-            ExecStart = "${homeManagerUpgrade}/bin/angst-vm-home-manager-upgrade";
+            ExecStart = (runtime.vm.homeManagerUpgrade { inherit (userConfig) username; }).bin;
           };
         };
 
@@ -238,7 +122,7 @@ in
           after = [ "local-fs.target" ];
           serviceConfig = {
             Type = "oneshot";
-            ExecStart = "${vmEphemeralSsh}/bin/angst-vm-ephemeral-ssh";
+            ExecStart = runtime.vm.ephemeralSsh.bin;
           };
         };
 
@@ -252,7 +136,9 @@ in
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
-            ExecStart = "${vmAuthorizedKeys}/bin/angst-vm-authorized-keys";
+            ExecStart = (runtime.vm.authorizedKeys {
+              inherit (userConfig) username homeDirectory;
+            }).bin;
           };
         };
 
@@ -266,7 +152,9 @@ in
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
-            ExecStart = "${vmAgeKey}/bin/angst-vm-age-key";
+            ExecStart = (runtime.vm.ageKey {
+              inherit (userConfig) username homeDirectory;
+            }).bin;
           };
         };
       };

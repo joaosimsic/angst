@@ -3,6 +3,7 @@
   lib,
   pkgs,
   sshAgent,
+  runtime,
   ...
 }:
 
@@ -15,24 +16,6 @@ let
   keys = map resolve cfg.keys;
 
   hasKeys = builtins.any (k: builtins.pathExists k) keys;
-
-  sshAddScript = pkgs.writeShellApplication {
-    name = "ssh-add-keys";
-    runtimeInputs = [
-      pkgs.openssh
-      pkgs.gnugrep
-      pkgs.gawk
-    ];
-    excludeShellChecks = [ "SC2043" ];
-    text = ''
-      for key in ${toString (map lib.escapeShellArg keys)}; do
-        [ -f "$key" ] || continue
-        fp="$(ssh-keygen -lf "$key" | awk '{print $2}')"
-        ssh-add -l 2>/dev/null | grep -q "$fp" && continue
-        ssh-add "$key" 2>/dev/null || true
-      done
-    '';
-  };
 in
 {
   options.angst.sshAgent = {
@@ -78,7 +61,7 @@ in
             "SSH_ASKPASS_REQUIRE=force"
             "SSH_ASKPASS=${pkgs.x11_ssh_askpass}/libexec/x11-ssh-askpass"
           ];
-          ExecStart = "${sshAddScript}/bin/ssh-add-keys";
+          ExecStart = (runtime.sshAddKeys { inherit keys; }).bin;
         };
 
         Install.WantedBy = [ "graphical-session.target" ];

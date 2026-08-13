@@ -39,11 +39,12 @@ nix run .#lint-themes                # fast, eval-only theme check
 @lib/            build system, domain framework, host resolution, flake outputs
 @modules/        core NixOS/home/VM modules + sops secrets integration
 @profiles/       reusable composition units — selected via the host decl's `profiles` list
-@scripts/        auxiliary shell scripts (angst CLI, analyze_flake/ analysis generator)
+@runtime/        runtime tooling as Nix functions (angst CLI, login-shell, projects-sync, bootstrap-secrets, VM + app scripts)
 @themes/         color token definitions (9 themes, strict 13-token schema)
 @toolchains/     language-domain tooling (23 languages: runtime/LSP/formatter/linter/grammar)
 @tools/vm/       standalone Rust workspace for NixOS VM lifecycle (vm-core, vm-cli, vm-mcp)
 @tools/shell/    standalone Rust env switcher (dev/safe shells, no nix at runtime)
+@tools/analyze_flake/  Python flake-analysis report generator (analysis.md)
 @githooks/       gitleaks pre-commit / pre-push hooks (install via `just install-hooks`)
 ```
 
@@ -123,7 +124,7 @@ Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run
 
 ### `@projects/` — Auto-Synced Encrypted Dev Projects
 
-`domains/git/projects` + `scripts/angst-projects.sh` give every host the same set of dev
+`domains/git/projects` + `runtime/angst-projects.sh` (shared by the `angst projects` CLI and the `angst-projects-sync` wrapper) give every host the same set of dev
 repositories with working `.env` files — while the angst repo stays **public** and reveals
 nothing about them.
 
@@ -234,7 +235,7 @@ Toolchains are auto-discovered by `lib/resolve.nix` and selected via `toolchains
 
 ### `@tools/` — Standalone Tools
 
-**angst CLI** (`scripts/angst.sh`, packaged as `angst`):
+**angst CLI** (`runtime/angst-cli.nix`, packaged as `angst`):
 - `angst bootstrap-secrets [--host HOST]` — interactive master-password bootstrap (sops + mkpasswd); writes `secrets.yaml` and the sha-512 hash into the host decl.
 - `angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]` — batch-evals `.#lib.renderDomainOutputsFor` and writes rendered domain configs.
 - `angst watch [...]` — watchexec-based hot-reload on `themes/`, `domains/`, `hosts/`.
