@@ -3,7 +3,6 @@
   pkgs,
 }:
 {
-  repoPath,
   configFile,
   mountPoint,
 }:
@@ -20,7 +19,7 @@ mkScript {
     set -euo pipefail
 
     work_key="''${SOPS_WORK_AGE_KEY_FILE:-$HOME/.config/sops/age/work-keys.txt}"
-    conf="$HOME/${repoPath}/${configFile}"
+    conf="$HOME/${configFile}"
 
     if [ ! -f "$conf" ]; then
       echo "warn: ftp config not found at $conf; nothing to mount" >&2

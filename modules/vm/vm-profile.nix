@@ -3,12 +3,12 @@
   lib,
   pkgs,
   userConfig,
-  repoPath,
   runtime,
   ...
 }:
 
 let
+  repoPath = ".config/angst";
   hostAngstPath = "/host${userConfig.homeDirectory}/${repoPath}";
 in
 {

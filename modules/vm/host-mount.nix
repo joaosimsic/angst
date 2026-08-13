@@ -1,11 +1,11 @@
 {
   lib,
   userConfig,
-  repoPath,
   ...
 }:
 
 let
+  repoPath = ".config/angst";
   hostAngstPath = "/host${userConfig.homeDirectory}/${repoPath}";
   repoPathLink = "/home/${userConfig.username}/${repoPath}";
   repoPathDir = builtins.dirOf repoPathLink;

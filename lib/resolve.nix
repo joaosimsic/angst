@@ -61,7 +61,6 @@ in
     db = decl.db or { };
     profiles = decl.profiles or [ "base" ];
     toolchains = _toolchains;
-    repoPath = decl.repoPath or "proj/angst";
     extraNixos = decl.nixos or { };
     extraHome = decl.home or { };
     env = decl.env or { };

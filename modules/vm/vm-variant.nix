@@ -1,10 +1,12 @@
 {
   lib,
   userConfig,
-  repoPath,
   ...
 }:
 
+let
+  repoPath = ".config/angst";
+in
 {
   virtualisation.vmVariant = {
     angst.isQemuVm = lib.mkForce true;

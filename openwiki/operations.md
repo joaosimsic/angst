@@ -98,8 +98,7 @@ VM gotchas:
 mkdir -p hosts/<domain>/<hostname>
 cat > hosts/<domain>/<hostname>/default.nix <<'EOF'
 { type = "nixos"; system = "x86_64-linux"; hostname = "<hostname>"; username = "joao";
-  theme = "miasma"; profiles = ["base" "desktop" "development"]; toolchains = "*";
-  repoPath = "proj/angst"; }
+  theme = "miasma"; profiles = ["base" "desktop" "development"]; toolchains = "*"; }
 EOF
 just hardware host=<hostname>        # generate hardware.nix next to the decl
 just bootstrap-secrets host=<hostname>   # create encrypted secrets.yaml + password hash

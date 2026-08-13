@@ -2,10 +2,10 @@
   lib,
   flakeSelf ? null,
   userConfig ? null,
-  repoPath,
 }:
 
 let
+  repoPath = ".config/angst";
   flakePath = if flakeSelf != null then toString flakeSelf else "";
   hostFlake =
     if userConfig != null then "/host${userConfig.homeDirectory}/${repoPath}/flake.nix" else null;

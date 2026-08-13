@@ -23,6 +23,7 @@ mkScript {
     diffutils
   ];
   text = builtins.concatStringsSep "\n" [
+    (builtins.readFile ./angst-lib.sh)
     ''
       usage() {
           cat <<'EOF'
@@ -32,10 +33,6 @@ mkScript {
         angst watch  [--repo PATH] [--host HOST] [--theme THEME]
         angst projects <add|sync|status|capture|edit-env|rm> ...
       EOF
-      }
-
-      repo_root_default() {
-          git rev-parse --show-toplevel 2>/dev/null || pwd
       }
 
       find_host_config_dir() {

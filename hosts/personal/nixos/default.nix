@@ -1,7 +1,6 @@
 {
   type = "nixos";
   system = "x86_64-linux";
-  repoPath = "proj/angst";
   hostname = "nixos";
   username = "joao";
   theme = "miasma";

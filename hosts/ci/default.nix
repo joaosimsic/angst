@@ -6,5 +6,4 @@
   theme = "monochrome";
   profiles = [ "base" ];
   toolchains = [ "nix" ];
-  repoPath = "proj/angst";
 }
