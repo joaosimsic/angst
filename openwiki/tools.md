@@ -4,13 +4,14 @@ angst ships three CLI tools and an MCP server for VM management: the **angst** s
 
 ## angst CLI (`scripts/angst.sh`)
 
-A bash script packaged via `pkgs.writeShellApplication` (runtime inputs: coreutils, findutils, git, nix, watchexec, jq, sops, age, openssl, diffutils). Exposed as `apps.angst`, `apps.render`, `apps.watch` and the `angst` package.
+A bash script packaged via `pkgs.writeShellApplication` (runtime inputs: coreutils, findutils, git, nix, watchexec, jq, sops, age, openssl, openssh, diffutils). Exposed as `apps.angst`, `apps.render`, `apps.watch` and the `angst` package.
 
 ```
 angst bootstrap-secrets [--host HOST]
 angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
 angst watch  [--repo PATH] [--host HOST] [--theme THEME]
 angst projects <add|sync|status|capture|edit-env|rm> ...
+angst ssh-key <generate|verify> --scope personal|work
 ```
 
 - **`render`** — determines repo root (`--repo`/git/`pwd`), host (`--host`, default `NIX_DEFAULT_TARGET_HOST`/`ANGST_HOST`/`nixos`), theme (default from the host decl via `nix eval`), batch-evals `.#lib.renderDomainOutputsFor`, writes rendered domain configs, syncs per-dir `.gitignore`, and optionally reloads i3 (`--reload`, default on; requires `i3-msg` + `I3SOCK`).
@@ -28,6 +29,7 @@ angst projects <add|sync|status|capture|edit-env|rm> ...
   | `rm <name>` | Remove the store folder + sidecar |
 
   See [Secrets — Project store](secrets.md#project-store) for the sops/key flow and [Domains](domains.md#gitprojects--encrypted-project-store) for the domain.
+- **`ssh-key`** — manages the shared, scope-isolated SSH keys in `secrets/ssh/` (age-encrypted at rest, one key per scope, provisioned to every host at boot). `generate` derives the recipient from the scope age key (`age-keygen -y`), writes `.age` + `.pub` from the same keypair, and prints where to authorize the public key; `verify` decrypts `.age` locally and cross-checks the committed `.pub`. See [Secrets — Shared SSH keys](secrets.md#shared-ssh-keys-secretsssh).
 
 There is **no** `angst passwd` (old wiki/README claim); password handling happens through `bootstrap-secrets`.
 

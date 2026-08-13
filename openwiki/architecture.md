@@ -30,7 +30,7 @@ The `representative` host (first NixOS host) drives shared outputs: `default` pa
 Assembles a `nixosSystem` from:
 - the host decl's profile modules (`nixosModules`), domain system modules (`mkNixosSystemModule` over `systemEntries`), `modules/nixos` base, per-host `hardware.nix` (auto-detected next to the decl), `host.extraNixos`, session env vars;
 - **always**: `sops-nix` NixOS module + `secrets.systemCore`, and the VM stack (`modules/vm/detect.nix`, `runtime.nix`, `vm-variant.nix`, `host-mount.nix`);
-- **`angst-bootstrap-secrets`** systemd service (when secrets are decryptable): derives the login hash from the decrypted `masterPassword` via `mkpasswd -m sha-512`, applies it to user + root, and generates/repairs `~/.ssh/id_ed25519` with the master password as passphrase (runs before getty/display-manager);
+- **`angst-bootstrap-secrets`** systemd service (when secrets are decryptable): derives the login hash from the decrypted `masterPassword` via `mkpasswd -m sha-512` and applies it to user + root (runs before getty/display-manager). SSH keys are not part of it — shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned by the `remote/ssh` domain's `angst-provision-ssh-key` oneshot (see [Secrets](secrets.md));
 - impermanence (when `host.persist.enable`), home-manager NixOS module wiring `secrets.homeModules` into the user, and service ordering (`home-manager-<user>` before sshd/getty; getty ordering skipped on QEMU VMs).
 
 ### `lib/build/mkHome.nix`

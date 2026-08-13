@@ -43,8 +43,13 @@ mkScript {
             return 0
         fi
 
-        install -d -m 700 -o ${username} -g users "$ssh_dir"
-        install -m 600 -o ${username} -g users "$plain" "$tmp_install"
+        if [ "$(id -u)" -eq 0 ]; then
+            install -d -m 700 -o ${username} -g users "$ssh_dir"
+            install -m 600 -o ${username} -g users "$plain" "$tmp_install"
+        else
+            install -d -m 700 "$ssh_dir"
+            install -m 600 "$plain" "$tmp_install"
+        fi
         mv -f "$tmp_install" "$ssh_dir/$dest"
         rm -f "$plain"
         echo "provisioned $scope SSH key -> $ssh_dir/$dest"

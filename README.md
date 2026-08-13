@@ -240,6 +240,7 @@ Toolchains are auto-discovered by `lib/resolve.nix` and selected via `toolchains
 - `angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]` — batch-evals `.#lib.renderDomainOutputsFor` and writes rendered domain configs.
 - `angst watch [...]` — watchexec-based hot-reload on `themes/`, `domains/`, `hosts/`.
 - `angst projects <add|sync|status|capture|edit-env|rm> ...` — manage the encrypted dev-project store (see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)).
+- `angst ssh-key <generate|verify> --scope personal|work` — generate/verify the shared, age-encrypted scope SSH keys in `secrets/ssh/` (see [`@secrets/`](#secrets-summary)).
 
 **shell CLI** (`tools/shell`, Rust) — standalone env switcher (no nix at runtime): `nix run .#shell -- dev` or `shell safe` after `nix profile install .#shell`.
 
@@ -280,7 +281,7 @@ home-manager activation                    # xdg.configFile symlinks → ~/.conf
 
 ### Secrets (summary)
 
-Per-host `secrets.yaml` (sops + age) → decrypted at runtime into `~/.secrets/`. The `masterPassword` secret drives login-hash and SSH-key bootstrap (`angst-bootstrap-secrets` systemd service + home activation). The VM receives the host's age key + SSH keys via a shared dir at boot — keys are never baked into the image. The `projects/` store is sops-encrypted too, with scope-isolated keys (see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets.yaml` / `projects/**`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
+Per-host `secrets.yaml` (sops + age) → decrypted at runtime into `~/.secrets/`. The `masterPassword` secret drives the login-hash bootstrap (`angst-bootstrap-secrets` systemd service + home activation). Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`. The VM receives the host's age key + SSH keys via a shared dir at boot — keys are never baked into the image. The `projects/` store is sops-encrypted too, with scope-isolated keys (see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets.yaml` / `projects/**` / non-encrypted `secrets/ssh/*.age`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
 
 ### CI
 
