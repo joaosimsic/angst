@@ -161,6 +161,52 @@ serviceConfig.ExecStart = runtime.bootstrapSecrets {
 home.packages = [ runtime.projectsSync { repoPath = repoPath; projects = projects; } ];  # derivation directly
 ```
 
+## Derivation ownership: derive where you use
+
+Parameters are declared **once per owning module**. A `let` binding is only needed when the
+same instance is consumed in 2+ places; single-use sites inline the factory call directly.
+
+| Factory | Consumers in its module | Need `let`? |
+|---|---|---|
+| `loginShell` | 1 (activation) | No — inline `.bin` |
+| `sshAddKeys` | 1 (ExecStart) | No — inline `.bin` |
+| `vm.homeManagerUpgrade` / `.ephemeralSsh` / `.authorizedKeys` / `.ageKey` | 1 each (ExecStart) | No — inline `.bin` |
+| `bootstrapSecrets` | 1 (ExecStart) | No — inline `.bin` |
+| `projectsSync` | 3 (packages + activation + ExecStart) | **Yes** — one `let` |
+| `angstCli` | many, but **no params** | No — bare `runtime.angstCli` |
+
+Single-use (inline, no `let`):
+
+```nix
+home.activation.setLoginShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  ${runtime.loginShell { shell = cfg.shell; homeDirectory = config.home.homeDirectory; username = config.home.username; }}.bin
+'';
+```
+
+Multi-consumer (one `let`, params said once, `.bin` reuses the same instance):
+
+```nix
+{ config, lib, pkgs, runtime, repoPath, projects, ... }:
+let
+  sync = runtime.projectsSync { inherit repoPath projects; };
+in {
+  home.packages = [ sync ];                                   # drv mode (install)
+  home.activation.angstProjectsSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    ${sync.bin} sync || true                                  # path mode, no re-derivation
+  '';
+  systemd.user.services.angst-projects-sync.Service.ExecStart = "${sync.bin} sync";
+}
+```
+
+### Cross-module instances
+
+Every parameterized script is derived **and** consumed inside its owning module. The only
+cross-module script is `angstCli`, which takes no params — its single instance (and `.bin`)
+lives in the runtime library itself, so `runtime.angstCli.bin` works from any module without
+re-deriving. If a param'd script ever needs cross-module use, derive it once at the
+host/context level and thread the instance via `specialArgs` (same mechanism as `themesLib`,
+`secrets`, and `runtime` itself) — share the reference, `.bin` comes along for free.
+
 ## Wiring
 
 1. `lib/flake/context.nix` builds the library once and returns it:
