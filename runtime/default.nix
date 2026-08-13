@@ -15,8 +15,15 @@ let
     }:
     let
       drv = pkgs.writeShellApplication {
-        inherit name text runtimeInputs excludeShellChecks;
-        meta = meta // { mainProgram = name; };
+        inherit
+          name
+          text
+          runtimeInputs
+          excludeShellChecks
+          ;
+        meta = meta // {
+          mainProgram = name;
+        };
       };
     in
     drv // { bin = "${drv}/bin/${name}"; };
@@ -29,8 +36,14 @@ let
   angstCli = import ./angst-cli.nix { inherit mkScript pkgs; };
 
   apps = {
-    render = import ./apps/render.nix { inherit mkScript; inherit angstCli; };
-    watch = import ./apps/watch.nix { inherit mkScript; inherit angstCli; };
+    render = import ./apps/render.nix {
+      inherit mkScript;
+      inherit angstCli;
+    };
+    watch = import ./apps/watch.nix {
+      inherit mkScript;
+      inherit angstCli;
+    };
     check = import ./apps/check.nix { inherit mkScript pkgs; };
     lint-themes = import ./apps/lint-themes.nix { inherit mkScript pkgs self; };
     lint-desktop = import ./apps/lint-desktop.nix { inherit mkScript pkgs self; };

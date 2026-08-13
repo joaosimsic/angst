@@ -44,8 +44,7 @@ in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
   extraSpecialArgs = {
-    inherit
-      (host)
+    inherit (host)
       hostname
       monitors
       repoPath

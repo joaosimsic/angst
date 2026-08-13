@@ -47,7 +47,8 @@ in
           inherit (cfg) shell;
           homeDirectory = config.home.homeDirectory;
           username = config.home.username;
-        }).bin}
+        }).bin
+        }
     '';
   };
 }

@@ -136,9 +136,10 @@ in
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
-            ExecStart = (runtime.vm.authorizedKeys {
-              inherit (userConfig) username homeDirectory;
-            }).bin;
+            ExecStart =
+              (runtime.vm.authorizedKeys {
+                inherit (userConfig) username homeDirectory;
+              }).bin;
           };
         };
 
@@ -152,9 +153,10 @@ in
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
-            ExecStart = (runtime.vm.ageKey {
-              inherit (userConfig) username homeDirectory;
-            }).bin;
+            ExecStart =
+              (runtime.vm.ageKey {
+                inherit (userConfig) username homeDirectory;
+              }).bin;
           };
         };
       };

@@ -96,13 +96,23 @@ let
       p = profilesFor host;
     in
     mkHost {
-      inherit self inputs host runtime;
+      inherit
+        self
+        inputs
+        host
+        runtime
+        ;
       hmModules = map enableModule p.enabled;
       nixosModules = map enableModule (builtins.filter (e: e.hasSystem) p.enabled) ++ p.modules;
     };
 
   devshell = import ./devshell.nix {
-    inherit pkgs inputs vmOutputs runtime;
+    inherit
+      pkgs
+      inputs
+      vmOutputs
+      runtime
+      ;
     host = representative;
   };
 

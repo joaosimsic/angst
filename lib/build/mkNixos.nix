@@ -88,7 +88,12 @@ inputs.nixpkgs.lib.nixosSystem {
     ../../modules/vm/vm-variant.nix
     ../../modules/vm/host-mount.nix
     (
-      { config, lib, runtime, ... }:
+      {
+        config,
+        lib,
+        runtime,
+        ...
+      }:
       {
         users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
         users.users.root.hashedPassword = lib.mkDefault host.password;
@@ -105,10 +110,11 @@ inputs.nixpkgs.lib.nixosSystem {
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
-            ExecStart = (runtime.bootstrapSecrets {
-              inherit (host) username hostname;
-              sopsPath = config.sops.secrets.masterPassword.path;
-            }).bin;
+            ExecStart =
+              (runtime.bootstrapSecrets {
+                inherit (host) username hostname;
+                sopsPath = config.sops.secrets.masterPassword.path;
+              }).bin;
           };
         };
       }
