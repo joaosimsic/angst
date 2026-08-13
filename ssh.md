@@ -1,17 +1,26 @@
 # SSH keys: shared, encrypted, scope-isolated
 
-angst uses **one SSH key per scope** (personal / work), **age-encrypted at rest in
-the repo**, and **provisions the same key to every host** (physical machines and
-the disposable VM). A host does not generate its own identity; it decrypts the
-shared key at boot with its scope age key, so the same GitHub-authorized key is
-available everywhere — including non-interactive contexts like the boot-time
-projects sync.
+> **Status — not yet implemented.** This is the target design for the shared
+> SSH-key model. The current tree still runs the per-host model described in
+> [Why](#why): `angst-bootstrap-secrets` generates a fresh passphrase-protected
+> `~/.ssh/id_ed25519` per host, and a persistent ssh-agent
+> (`domains/remote/ssh/ssh-agent.nix`) unlocks it at login. None of the
+> following exist yet: `secrets/ssh/`, `angst ssh-key generate`,
+> `angst-provision-ssh-key`, the `secrets/ssh` flake check, or the gitleaks
+> allowlist. Everything below describes the intended state.
+
+angst will use **one SSH key per scope** (personal / work), **age-encrypted at
+rest in the repo**, and **provisions the same key to every host** (physical
+machines and the disposable VM). A host does not generate its own identity; it
+decrypts the shared key at boot with its scope age key, so the same
+GitHub-authorized key is available everywhere — including non-interactive
+contexts like the boot-time projects sync.
 
 ## Why
 
-- The previous model (`angst-bootstrap-secrets`) generated a **fresh
+- The current model (`angst-bootstrap-secrets`) generates a **fresh
   `~/.ssh/id_ed25519` per host**, passphrase-protected by that host's master
-  password. The result:
+  password; the shared model below replaces it. The result:
   - each machine had a key GitHub did not recognize (the VM in particular could
     never clone `angst` itself);
   - boot-time clones failed because a passphrase-protected key cannot be used
@@ -31,6 +40,10 @@ projects sync.
 - The SSH keys are **passphraseless**; protection at rest comes from the
   age-encrypted copy in the repo. A passphrase would be unusable in non-interactive
   clones and, if stored alongside for auto-unlock, would provide no real security.
+- The scope age keys are the **same sops age keys** already used for
+  [secrets](openwiki/secrets.md) and the [project store](openwiki/secrets.md#project-store-projects):
+  `~/.config/sops/age/keys.txt` (personal) and
+  `~/.config/sops/age/work-keys.txt` (work). No new key material is introduced.
 - Encryption mirrors the scope isolation already used by the [project store](openwiki/secrets.md#project-store-projects):
   the personal key file lists **only** the personal age recipient, the work file
   **only** the work recipient — a work-key compromise can never decrypt the
@@ -89,8 +102,13 @@ The projects sync clones each project with the **matching scope key**:
 
 ### VM
 
-- `vm-age-key` provisions the host's scope age key(s) into the VM; the mounted
-  repo carries `secrets/ssh/*.age`.
+The VM is just another host: it gets **the same scope age keys as any machine**
+(both `keys.txt` and `work-keys.txt`) and mounts the repo (which carries
+`secrets/ssh/*.age`), so `angst-provision-ssh-key` decrypts **both** shared SSH
+keys there exactly as on a physical host.
+
+- `vm-age-key` installs the host's scope age keys (personal + work) into the VM;
+  `vm-authorized-keys` still grants inbound SSH access from the host.
 - Boot-time `angst-projects-sync` therefore clones over SSH using the shared key,
   no agent forwarding and no interactive prompt required.
 
