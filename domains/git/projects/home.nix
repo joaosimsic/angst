@@ -4,6 +4,7 @@
   pkgs,
   repoPath,
   flakeSelf,
+  projects,
   ...
 }:
 
@@ -26,6 +27,7 @@ let
       ''
         set -euo pipefail
         export ANGST_PROJECTS_STORE="$HOME/${repoPath}/projects"
+        export ANGST_PROJECTS_ONLY='${lib.concatStringsSep " " projects}'
         angst_projects_cmd "$@"
       ''
     ];

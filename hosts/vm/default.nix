@@ -42,7 +42,5 @@
       ".cache"
     ];
   };
-  projects = {
-    persistDirs = [ "projects" ];
-  };
+  projects = [ ]; # opaque store ids (angst projects status); names stay encrypted
 }

@@ -186,6 +186,20 @@ projects_add() {
     echo "added project '$name' -> $scope/$id"
 }
 
+# Host selection: ANGST_PROJECTS_ONLY is a space-separated list of opaque store
+# ids. Unset (manual CLI) = sync all; set-but-empty (host declared no projects)
+# = sync none. Names stay encrypted; hosts reference ids only.
+projects_selected() {
+    local id="$1" p
+    if [ -n "${ANGST_PROJECTS_ONLY+x}" ]; then
+        for p in ${ANGST_PROJECTS_ONLY:-}; do
+            [ "$p" = "$id" ] && return 0
+        done
+        return 1
+    fi
+    return 0
+}
+
 projects_sync() {
     local store root rc scope scope_dir key meta id plain name repo target
     store="$(projects_store_root)"
@@ -208,6 +222,7 @@ projects_sync() {
         for meta in "$scope_dir"/*/metadata.yaml; do
             [ -f "$meta" ] || continue
             id="$(basename "$(dirname "$meta")")"
+            projects_selected "$id" || continue
             if ! plain="$(projects_decrypt "$scope" "$meta" 2>/dev/null)"; then
                 echo "warn: could not decrypt $scope/$id metadata; skipping" >&2
                 continue

@@ -18,6 +18,11 @@ Declare dev projects (GitHub/GitLab) once, get them cloned on every host, with
   (byte-exact round-trip: comments, quoting, blank lines all preserved).
   Two-way sync so the encrypted store can't silently go stale.
 - Shared `projects/` at the repo root — one store for all hosts.
+- **Hosts select by opaque id, never by name.** Each host decl's `projects = [...]`
+  lists the opaque store ids it wants synced (ids are already public folder names,
+  not name-derived). An empty list syncs and persists nothing. The wrapper filters on
+  `ANGST_PROJECTS_ONLY` (unset = manual CLI syncs all). Works on **both** `nixos` and
+  `home`-only hosts via a `projects` specialArg.
 - **Opaque folder IDs** (`openssl rand -hex 8`, 16 chars / 64 bits, not
   name-derived and not brute-forceable) — real names live only inside encrypted
   files. Everything stays in the one repo.
@@ -80,6 +85,9 @@ projects/
   - a home activation entry, and
   - a `systemd.user` oneshot `angst-projects-sync`
     (`After = network-online.target`, `Wants = network-online.target`).
+  The wrapper bakes `ANGST_PROJECTS_ONLY` from the host's declared `projects` ids
+  (a `projects` specialArg is threaded through home-manager on both `nixos` and
+  `home` hosts), so only host-selected projects sync.
 - The store is located via `repoPath` (specialArg already available to `home.nix`):
   `$HOME/<repoPath>/projects`. The CLI locates it with the existing
   `repo_root_default()` (`git rev-parse --show-toplevel`).
@@ -97,6 +105,9 @@ projects/
 
 ### Sync semantics (per registry project)
 
+0. Only projects whose opaque id is in the host's declared `projects` list are
+   processed (`ANGST_PROJECTS_ONLY`, set-but-empty = none; unset = manual CLI
+   syncs everything).
 1. `mkdir -p` parent root (`~/projects`, 0755).
 2. `<dir> = ~/projects/<name>` (from metadata). `[ -d <dir>/.git ] ||
    git clone <repo> <dir>` — no auto-pull, no hooks installed.
@@ -156,17 +167,19 @@ the CLI and the home-manager wrapper.
 
 | File | Change |
 |---|---|
-| `scripts/angst-projects.sh` | new: shared `projects` command logic (add/sync/status/capture/edit-env/rm) |
+| `scripts/angst-projects.sh` | new: shared `projects` command logic (add/sync/status/capture/edit-env/rm); `sync` filters store ids against `ANGST_PROJECTS_ONLY` |
 | `scripts/angst.sh` | add `projects) angst_projects_cmd "$@" ;;` case |
 | `lib/flake/context.nix` | add `../../scripts/angst-projects.sh` to the `angstTool` concat list; add `sops age openssl diffutils` to its runtimeInputs |
 | `modules/vm/vm-profile.nix` | add `../../scripts/angst-projects.sh` to the VM `angstCli` concat list; same runtimeInputs additions |
-| `lib/resolve.nix` | default `projects = { persistDirs = ["projects"]; } // (decl.projects or {})` |
-| `lib/build/mkNixos.nix` | append `host.projects.persistDirs` to the impermanence dirs (alongside `secrets.persistDirs`) |
+| `lib/resolve.nix` | default `projects = decl.projects or []` — the host's list of opaque store ids (no persist dir declared by hosts) |
+| `lib/build/mkNixos.nix` | `persistDirs = secrets.persistDirs ++ lib.optionals (host.projects != []) ["projects"]` — the single derived persistence point; add `projects` to home-manager `extraSpecialArgs` |
+| `lib/build/mkHome.nix` | add `projects` to home-manager `extraSpecialArgs` (makes the domain work on home-only hosts) |
+| `domains/git/projects/home.nix` | bake `ANGST_PROJECTS_ONLY` from the `projects` specialArg into the wrapper text |
 | `.sops.yaml` | rules `projects/personal/.*$` → personal age key, `projects/work/.*$` → work age key (personal key never a work recipient) |
 | `checks/secrets.nix` | also scan `projects/**/metadata.yaml` and `projects/**/env`: require `sops:` / `ENC[AES256_GCM` and no plaintext `name:` / `repo:` / URL / secret content anywhere in the file |
 | `.gitleaks.toml` | add a `projects/.*` rule flagging plaintext secret-like values (no path allowlist) |
 | `profiles/development.nix` | add `"git.projects"` |
-| `hosts/{personal/nixos,vm}/default.nix` | `projects.persistDirs = ["projects"]` (explicit; the `resolve.nix` default already covers it, kept for readability) |
+| `hosts/{personal/nixos,vm,personal/mint}/default.nix` | `projects = [<opaque ids>]` — which projects each host syncs; names never appear in tracked files (empty lists until projects are added) |
 | `domains/agents/opencode/` | **no change** — no host-level access restrictions |
 | openwiki `domains`/`secrets`/`quickstart` + `README.md` | document the domain, sops flow, CLI usage |
 

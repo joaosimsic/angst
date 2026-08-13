@@ -88,6 +88,10 @@ Separate from per-host secrets, the **project store** keeps declared dev repos +
   (`age-keygen -y`), encrypt to a temp dir **outside** the repo, and write only ciphertext
   into `projects/`. `sync`/`status` self-decrypt with the matching scope key via
   `SOPS_AGE_KEY_FILE`; the decrypted `.env` (0600) is the sync output at `~/projects/<name>/.env`.
+- **Host selection by opaque id** — each host decl lists the store ids it syncs
+  (`projects = [ "<opaque id>" ... ]`); names never appear in tracked files. Empty list =
+  nothing synced. `~/projects` persistence is derived from this list in one place
+  (`lib/build/mkNixos.nix`) — hosts never declare a persist dir.
 - **Resilience** — a missing scope key, missing repo, no network, or any decrypt error
   skips that project with a warning and exits 0; `add --scope work` with a missing work key
   is the one **hard** error (misprovisioning, not a bootstrap case).

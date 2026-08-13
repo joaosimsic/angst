@@ -21,7 +21,7 @@ angst projects <add|sync|status|capture|edit-env|rm> ...
   | Subcommand | Behavior |
   |---|---|
   | `add <name> <repo> [--scope work\|personal]` | Random opaque-id folder + sops-binary metadata/env (default scope `personal`); rejects duplicate names; `--scope work` with a missing work key is a **hard error** |
-  | `sync` | Clone-if-missing into `~/projects/<name>` (no auto-pull, no hooks) + hash-tracked `.env` materialize/refresh; stale local `.env` → redacted diff + exit non-zero; missing key/repo/network/decrypt → warn + exit 0 |
+  | `sync` | Clone-if-missing into `~/projects/<name>` (no auto-pull, no hooks) + hash-tracked `.env` materialize/refresh; stale local `.env` → redacted diff + exit non-zero; missing key/repo/network/decrypt → warn + exit 0. Filters to the host's declared ids when `ANGST_PROJECTS_ONLY` is set (wrapper: `projects = [...]` in the host decl; unset = CLI syncs all) |
   | `status` | Table (scope, id, name, repo, env status: `ok`/`store-changed`/`STALE`/`missing`/`no clone`) + `.env.example` var drift |
   | `capture <name>` | Encrypt current `~/projects/<name>/.env` → store (edit → capture → commit loop) |
   | `edit-env <name>` | Decrypt store env → `$EDITOR` → re-encrypt (binary) → resync clone if in sync |

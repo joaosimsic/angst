@@ -103,6 +103,12 @@ A Lua config with a pluggable backend (`config/lua/backend/`):
 
 The store is `projects/{personal,work}/<opaque-id>/{metadata.yaml,env}` — both files sops-encrypted in **binary** format (byte-exact; plaintext is JSON `{name, repo}` for metadata). Opaque ids (`openssl rand -hex 8`) are not name-derived; real names/URLs exist only in ciphertext. Scope is the folder path; `personal` and `work` use different age keys (work files never list the personal recipient). `.sops.yaml` routes `projects/personal/.*$` → personal key and `projects/work/.*$` → work key.
 
+Hosts declare **which** projects they want as a list of opaque store ids
+(`projects = [ "<opaque id>" ... ]` in the host decl — ids from `angst projects status`).
+Names stay encrypted; an empty list syncs nothing. The wrapper bakes the list into
+`ANGST_PROJECTS_ONLY`; the same domain module works on `nixos` and home-only hosts
+(a `projects` specialArg is threaded through both builders).
+
 Per-registry-project sync: `mkdir -p ~/projects` (0755) → clone-if-missing into `~/projects/<name>` (no auto-pull, no hooks, no `.gitignore` edits — clones are never modified) → `.env` materialized/refreshed hash-tracked via `~/.secrets/projects/<name>.env.sha256`. A locally-edited `.env` is never clobbered: `sync` marks it `stale` and prints a redacted (key-name-only) diff, exiting non-zero. Missing keys/repos, no network, or decrypt errors skip with a warning and exit 0 — nothing fails a build or boot. Plaintext only ever touches temp files outside the repo. See [Secrets — Project store](secrets.md#project-store) for the sops/key flow.
 
 ### `wm/i3`

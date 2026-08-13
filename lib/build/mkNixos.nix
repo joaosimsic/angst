@@ -140,7 +140,7 @@ inputs.nixpkgs.lib.nixosSystem {
         (import ../../modules/nixos/persist.nix {
           inherit lib;
           inherit (host) persist username;
-          persistDirs = secrets.persistDirs ++ host.projects.persistDirs;
+          persistDirs = secrets.persistDirs ++ lib.optionals (host.projects != [ ]) [ "projects" ];
         })
       ]
     else
@@ -163,6 +163,7 @@ inputs.nixpkgs.lib.nixosSystem {
             sshAgent
             ssh
             shell
+            projects
             ;
           hostName = host.hostname;
           inherit (host.scan) themes;

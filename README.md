@@ -136,10 +136,16 @@ nothing about them.
   secrets. `.sops.yaml` routes `projects/personal/*` → personal key, `projects/work/*` →
   work key. Personal = default `~/.config/sops/age/keys.txt`; work =
   `~/.config/sops/age/work-keys.txt` (static, provisioned out-of-band).
+- **Hosts declare *which* projects, by opaque id** — each host decl sets
+  `projects = [ "<opaque id>" ... ]` (ids come from `angst projects status`); names
+  never appear in tracked files. Empty list = nothing synced. Works on NixOS **and**
+  home-only hosts (`nixos`/`home` host types). `~/projects` is only persisted when the
+  host declared at least one project.
 - **Clone if missing only** — `sync` (home activation + `systemd.user` oneshot
-  `angst-projects-sync`) clones into `~/projects/<name>` when the dir has no `.git`; no
-  auto-pull, no hooks, no `.gitignore` edits — clones are never modified for leak
-  prevention. The only file written into a clone is the decrypted `.env` (0600).
+  `angst-projects-sync`) clones the host's selected projects into `~/projects/<name>`
+  when the dir has no `.git`; no auto-pull, no hooks, no `.gitignore` edits — clones are
+  never modified for leak prevention. The only file written into a clone is the
+  decrypted `.env` (0600).
 - **Env handling** — store `.env` is materialized/refreshed hash-tracked via a sidecar
   (`~/.secrets/projects/<name>.env.sha256`). A locally-edited `.env` is **never clobbered**:
   `sync` marks it `stale`, prints a redacted key-name-only diff, and exits non-zero.
