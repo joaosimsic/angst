@@ -11,7 +11,7 @@
     "vm"
   ];
   toolchains = "*";
-  repoPath = "proj/angst";
+  repoPath = ".config/angst";
 
   monitors = { };
 

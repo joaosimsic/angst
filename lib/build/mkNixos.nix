@@ -85,53 +85,63 @@ inputs.nixpkgs.lib.nixosSystem {
     ../../modules/vm/runtime.nix
     ../../modules/vm/vm-variant.nix
     ../../modules/vm/host-mount.nix
-    ({ pkgs, ... }: {
-      users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
-      users.users.root.hashedPassword = lib.mkDefault host.password;
+    (
+      { config, pkgs, ... }:
+      let
+        bootstrapSecrets = pkgs.writeShellApplication {
+          name = "angst-bootstrap-secrets";
+          runtimeInputs = with pkgs; [
+            coreutils
+            mkpasswd
+            shadow
+            openssh
+          ];
+          text = ''
+            MASTER_PASSWORD=$(cat ${config.sops.secrets.masterPassword.path})
 
-      systemd.services.angst-bootstrap-secrets = lib.mkIf secrets.canDecrypt {
-        description = "angst: set login password hash and enforce SSH key passphrase from secrets";
-        wantedBy = [ "multi-user.target" ];
-        before = [
-          "getty@.service"
-          "serial-getty@.service"
-          "display-manager.service"
-        ];
+            HASH=$(echo "$MASTER_PASSWORD" | mkpasswd -m sha-512 -s)
+            usermod -p "$HASH" ${host.username}
+            usermod -p "$HASH" root
 
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-        };
+            KEY_FILE="/home/${host.username}/.ssh/id_ed25519"
+            SSH_DIR="$(dirname "$KEY_FILE")"
 
-        script = ''
-          set -euo pipefail
-
-          MASTER_PASSWORD=$(cat ''${config.sops.secrets.masterPassword.path})
-
-          set +x
-          HASH=$(echo "$MASTER_PASSWORD" | ${pkgs.mkpasswd}/bin/mkpasswd -m sha-512 -s)
-          ${pkgs.shadow}/bin/usermod -p "$HASH" ${host.username}
-          ${pkgs.shadow}/bin/usermod -p "$HASH" root
-
-          KEY_FILE="/home/${host.username}/.ssh/id_ed25519"
-          SSH_DIR="$(dirname "$KEY_FILE")"
-
-          if [ ! -f "$KEY_FILE" ]; then
-            mkdir -p "$SSH_DIR"
-            ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${host.username}@${host.hostname}"
-            chown -R ${host.username}: "$SSH_DIR"
-          else
-            if ! ${pkgs.openssh}/bin/ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
-              ${pkgs.openssh}/bin/ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
-                ${pkgs.openssh}/bin/ssh-keygen -p -P "" -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null
+            if [ ! -f "$KEY_FILE" ]; then
+              mkdir -p "$SSH_DIR"
+              ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${host.username}@${host.hostname}"
+              chown -R ${host.username}: "$SSH_DIR"
+            else
+              if ! ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
+                ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
+                  ssh-keygen -p -P "" -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null
+              fi
             fi
-          fi
 
-          unset MASTER_PASSWORD
-          set -x
-        '';
-      };
-    })
+            unset MASTER_PASSWORD
+          '';
+        };
+      in
+      {
+        users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
+        users.users.root.hashedPassword = lib.mkDefault host.password;
+
+        systemd.services.angst-bootstrap-secrets = lib.mkIf secrets.canDecrypt {
+          description = "angst: set login password hash and enforce SSH key passphrase from secrets";
+          wantedBy = [ "multi-user.target" ];
+          before = [
+            "getty@.service"
+            "serial-getty@.service"
+            "display-manager.service"
+          ];
+
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStart = "${bootstrapSecrets}/bin/angst-bootstrap-secrets";
+          };
+        };
+      }
+    )
   ]
   ++ (if host.persist.enable then [ inputs.impermanence.nixosModules.impermanence ] else [ ])
   ++ (

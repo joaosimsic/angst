@@ -60,4 +60,7 @@ for i in $(seq 1 120); do
     sleep 1
 done
 
+echo "Syncing declared projects..."
+ssh $SSH_OPTS "$SSH_USER@localhost" 'bash -lc "angst-projects-sync sync"' 2>&1 || true
+
 exec ssh $SSH_OPTS "$SSH_USER@localhost"

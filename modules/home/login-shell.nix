@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   shell,
   ...
 }:
@@ -16,41 +17,28 @@ let
   ];
 
   shellFound = lib.any (c: builtins.pathExists c) candidates;
-in
-{
-  options.angst.loginShell = {
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Sync the login shell on non-NixOS systems (adds to /etc/shells and chsh)";
-    };
 
-    shell = lib.mkOption {
-      type = lib.types.str;
-      default = shell;
-      description = "Name of the shell to set as the login shell";
-    };
-  };
-
-  config = lib.mkIf (cfg.enable && cfg.shell != "") {
-    assertions = [
-      {
-        assertion = shellFound;
-        message = "angst: login shell '${cfg.shell}' not found (checked ${lib.concatStringsSep ", " candidates}). Install it via home packages or a system package.";
-      }
+  loginShellScript = pkgs.writeShellApplication {
+    name = "angst-set-login-shell";
+    runtimeInputs = with pkgs; [
+      coreutils
+      gnugrep
+      bash
     ];
+    text = ''
+      shell_name="$1"
+      home_dir="$2"
+      username="$3"
 
-    home.activation.setLoginShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       if [ -e /etc/NIXOS ]; then
         $VERBOSE_ECHO "angst: NixOS detected, login shell managed by NixOS config"
         exit 0
       fi
 
       # Resolve the shell binary: nix profile first, then system locations.
-      shell_name="${cfg.shell}"
       shell=""
       for candidate in \
-        "${config.home.homeDirectory}/.nix-profile/bin/$shell_name" \
+        "$home_dir/.nix-profile/bin/$shell_name" \
         "/usr/local/bin/$shell_name" \
         "/usr/bin/$shell_name" \
         "/bin/$shell_name"
@@ -103,11 +91,40 @@ in
         $DRY_RUN_CMD escalate sh -c 'printf "%s\n" "$1" | tee -a /etc/shells > /dev/null' _ "$shell"
       fi
 
-      current_shell=$(grep "^${config.home.username}:" /etc/passwd | cut -d: -f7)
+      current_shell=$(grep "^$username:" /etc/passwd | cut -d: -f7)
       if [ "$current_shell" != "$shell" ]; then
         $VERBOSE_ECHO "angst: setting login shell to $shell..."
-        $DRY_RUN_CMD escalate "$chsh_cmd" -s "$shell" "${config.home.username}"
+        $DRY_RUN_CMD escalate "$chsh_cmd" -s "$shell" "$username"
       fi
+    '';
+  };
+in
+{
+  options.angst.loginShell = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Sync the login shell on non-NixOS systems (adds to /etc/shells and chsh)";
+    };
+
+    shell = lib.mkOption {
+      type = lib.types.str;
+      default = shell;
+      description = "Name of the shell to set as the login shell";
+    };
+  };
+
+  config = lib.mkIf (cfg.enable && cfg.shell != "") {
+    assertions = [
+      {
+        assertion = shellFound;
+        message = "angst: login shell '${cfg.shell}' not found (checked ${lib.concatStringsSep ", " candidates}). Install it via home packages or a system package.";
+      }
+    ];
+
+    home.activation.setLoginShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      VERBOSE_ECHO="$VERBOSE_ECHO" DRY_RUN_CMD="$DRY_RUN_CMD" \
+        ${loginShellScript}/bin/angst-set-login-shell "${cfg.shell}" "${config.home.homeDirectory}" "${config.home.username}"
     '';
   };
 }

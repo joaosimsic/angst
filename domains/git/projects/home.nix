@@ -28,6 +28,7 @@ let
         set -euo pipefail
         export ANGST_PROJECTS_STORE="$HOME/${repoPath}/projects"
         export ANGST_PROJECTS_ONLY='${lib.concatStringsSep " " projects}'
+        export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
         angst_projects_cmd "$@"
       ''
     ];
