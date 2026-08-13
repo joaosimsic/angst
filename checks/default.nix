@@ -4,7 +4,6 @@
   pkgs,
   lib,
   render,
-  ...
 }:
 
 let
@@ -48,7 +47,7 @@ let
   };
 
   checkPassword = import ./password.nix {
-    inherit lib pkgs host;
+    inherit pkgs host;
   };
 
   loginShell = import ./login-shell.nix {

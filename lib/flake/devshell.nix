@@ -4,7 +4,6 @@
   inputs,
   runtime,
   vmOutputs,
-  ...
 }:
 
 let

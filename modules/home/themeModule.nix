@@ -2,7 +2,6 @@
   lib,
   themesLib,
   hostTheme,
-  ...
 }:
 
 {

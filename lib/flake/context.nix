@@ -119,7 +119,6 @@ let
   mkChecks = import ../../checks/default.nix {
     inherit
       self
-      inputs
       pkgs
       lib
       render
