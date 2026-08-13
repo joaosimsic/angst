@@ -44,6 +44,38 @@ is the function, not a loose `.sh` file. The function owns:
 - **Build-time bash** — `runCommand` build commands. Executes during `nix build`. → stays in
   `checks/`, `lib/treesitter.nix`.
 
+## Store behavior: only what's built gets baked
+
+Nix builds only the **dependency closure of the target you request**, and flake output attrsets
+are lazy. Consequences:
+
+- Building one host (`nix build .#homeConfigurations.joao.activationPackage`,
+  `nixos-rebuild switch --flake .#nixos`) forces **only that host's** config. Other hosts'
+  script variations are never evaluated, never `.drv`-written, never copied to the store. There
+  is no `runner` variation baked when building the `joao` machine.
+- One machine per host ⇒ each machine's store holds exactly the one variation of each script it
+  needs. Identical invocations across hosts share one content-addressed store path.
+- **Exception: `nix flake check`** forces everything reachable from `checks`. The checks
+  reference the representative host's *test* configs (`checks/default.nix:79-82`:
+  `home-theme-override-test`, `login-shell-valid` with `shellOverride = "sh"`,
+  `login-shell-invalid`), so check bakes those test variants. That's expected and harmless —
+  it does not touch other hosts' real scripts.
+
+### Baked variation across the current hosts (`hosts/*/default.nix`)
+
+| Value baked | Distinct values | Notes |
+|---|---|---|
+| `username` | 2 | `joao` (nixos/mint/vm) vs `runner` (ci) |
+| `homeDirectory` | 2 | `/home/joao` vs `/home/runner` |
+| `repoPath` | 2 | `proj/angst` (nixos/ci) vs `.config/angst` (vm); mint uses none |
+| `hostname` | 4 | only feeds `ssh-deploy` default target + a `-C` comment |
+| `ssh keys` | 1 | all hosts `["~/.ssh/id_ed25519"]` |
+| `shell` | 1 (empty) | login-shell disabled on all hosts (`shell = ""`); only test configs use `"sh"` |
+| `projects` | 2 | `[]` vs `["7391b51c36a7d266"]` (vm) |
+
+Worst case per script: ~2–4 store copies across the whole fleet, KB-scale, deduped for
+identical combos. Baked variation is a non-issue.
+
 ## Target layout
 
 ```
