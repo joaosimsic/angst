@@ -33,6 +33,10 @@ is the function, not a loose `.sh` file. The function owns:
   time, so validation survives even with inline bash.
 - The library is **built once and injected via `specialArgs`** (same mechanism as
   `themesLib`/`secrets`), so any module calls `runtime.xxx { ... }`.
+- Every factory returns a derivation that also exposes **`.bin`** — the absolute store path to
+  its `bin/<name>` entry (`drv // { bin = "${drv}/bin/${name}"; }`, plus `meta.mainProgram`).
+  Call sites use `runtime.xxx { ... }.bin` for `ExecStart`/activation strings and the raw
+  derivation for `home.packages`. No `/bin/<name>` knowledge leaks out of `runtime/`.
 - **Build-time bash stays put.** `pkgs.runCommand` build commands (`checks/*.nix`,
   `lib/treesitter.nix`) execute during `nix build` — they are validation, not runtime tooling,
   and do NOT move into the runtime library.
@@ -80,7 +84,7 @@ identical combos. Baked variation is a non-issue.
 
 ```
 runtime/
-  default.nix            # { pkgs, lib, self, inputs } -> attrset of script factories
+  default.nix            # { pkgs, lib, self, inputs } -> mkScript wrapper + attrset of factories
   login-shell.nix        # { shell, homeDirectory, username } -> writeShellApplication
   ssh-add-keys.nix       # { keys } -> writeShellApplication
   bootstrap-secrets.nix  # { username, hostname, sopsPath } -> writeShellApplication
@@ -106,33 +110,47 @@ runtime/
 
 ## Interface shape
 
-Each function follows this pattern:
+`runtime/default.nix` exposes a `mkScript` wrapper that every factory goes through. It wraps
+`writeShellApplication` and attaches the `.bin` attribute (plus `meta.mainProgram`) so callers
+never hardcode a path:
 
 ```nix
-# runtime/ssh-add-keys.nix
-{ pkgs, lib }:
-{ keys }:
-pkgs.writeShellApplication {
-  name = "ssh-add-keys";
-  runtimeInputs = with pkgs; [ openssh gnugrep gawk ];
-  excludeShellChecks = [ "SC2043" ];
-  text = ''
-    for key in ${lib.concatStringsSep " " (map lib.escapeShellArg keys)}; do
-      [ -f "$key" ] || continue
-      fp="$(ssh-keygen -lf "$key" | awk '{print $2}')"
-      ssh-add -l 2>/dev/null | grep -q "$fp" && continue
-      ssh-add "$key" 2>/dev/null || true
-    done
-  '';
-};
+# runtime/default.nix (excerpt)
+{ pkgs, lib, self, inputs }:
+let
+  mkScript = { name, text, runtimeInputs ? [ ], excludeShellChecks ? [ ], meta ? { } }:
+    let
+      drv = pkgs.writeShellApplication {
+        inherit name text runtimeInputs excludeShellChecks;
+        meta = meta // { mainProgram = name; };
+      };
+    in
+    drv // { bin = "${drv}/bin/${name}"; };
+in {
+  loginShell = { shell, homeDirectory, username }:
+    mkScript {
+      name = "angst-set-login-shell";
+      runtimeInputs = with pkgs; [ coreutils gnugrep bash ];
+      text = '' ... '';   # direct ${...} interpolation of shell/homeDirectory/username
+    };
+  # ... every factory goes through mkScript
+}
 ```
 
-Call sites consume it directly:
+Call sites consume it without any path knowledge:
 
 ```nix
 home.activation.setLoginShell = ''
-  ${runtime.loginShell { shell = cfg.shell; homeDirectory = ...; username = ...; }}/bin/angst-set-login-shell
+  ${runtime.loginShell { shell = cfg.shell; homeDirectory = ...; username = ...; }}.bin shell home user
 '';
+```
+
+```nix
+serviceConfig.ExecStart = runtime.bootstrapSecrets { username = ...; hostname = ...; sopsPath = ...; }.bin;
+```
+
+```nix
+home.packages = [ runtime.projectsSync { repoPath = ...; projects = ...; } ];  # derivation directly
 ```
 
 ## Wiring
@@ -155,7 +173,7 @@ home.activation.setLoginShell = ''
 | `modules/home/login-shell.nix:21` (loginShell) | `runtime.loginShell { shell; homeDirectory; username; }` | args instead of `$1/$2/$3` |
 | `domains/remote/ssh/ssh-agent.nix:19` (sshAddScript) | `runtime.sshAddKeys { keys; }` | resolved key paths as args |
 | `modules/vm/vm-profile.nix:39,76,93,111` | `runtime.vm.homeManagerUpgrade`, `.ephemeralSsh`, `.authorizedKeys`, `.ageKey` | username/homeDir as args |
-| `lib/flake/apps.nix:26-33` | `runtime.apps.*` | flake refs passed as `flakeSelf = self` args |
+| `lib/flake/apps.nix:26-33` | `runtime.apps.*` | `exec ${runtime.angstCli.bin} render "$@"` etc. — `/bin/angst` knowledge dies inside the factories |
 | `lib/flake/devshell.nix:22` (shellDevHook) | `runtime.devshellHook` | still `writeText`, sourced as today |
 | `modules/home/secrets-activation.nix` | **stays generated** | already the model — a Nix function emitting per-secret bash |
 | `checks/*.nix`, `lib/treesitter.nix` | **untouched** | build-time bash |
@@ -178,6 +196,8 @@ home.activation.setLoginShell = ''
 - `statix` / `deadnix` via the existing `checks.lint-nix` check.
 - grep for stale `scripts/` references (`lib/flake/context.nix`, `modules/vm/vm-profile.nix`,
   `domains/git/projects/home.nix`).
+- grep that no call site hardcodes a `/bin/<name>` path — all `ExecStart`/activation usages go
+  through `runtime.xxx { ... }.bin`.
 - Confirm `builtins.toString self` stringifies identically to today's `${self}#...` for the
   `apps` flake-ref wrappers.
 - Confirm `writeShellApplication` build-time shellcheck does not flag existing code that
