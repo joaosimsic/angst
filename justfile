@@ -28,6 +28,9 @@ analyze:
 check:
     nix flake check
 
+verify:
+    nix flake check --no-build
+
 dev:
     nix develop
 
