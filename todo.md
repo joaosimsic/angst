@@ -48,6 +48,11 @@
 
 - [x] screen freeze when exit or close last pane
 
+# encryption
+
+- [ ] stardand way to encrypt files and dirs
+- [ ] validate projects and ftp pipelines
+
 # miscellaneous
 
 - [ ] login screen
