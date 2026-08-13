@@ -37,6 +37,13 @@
     keys = [ "~/.ssh/id_ed25519" ];
   };
   ssh = { };
+  ftp = {
+    mounts = [
+      {
+        mountPoint = "ftp/server";
+      }
+    ];
+  };
 
   persist = {
     enable = true;

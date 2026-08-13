@@ -83,8 +83,51 @@ let
         echo "==> All projects store files are sops-encrypted."
         touch $out
       '';
+
+  ftpCheck =
+    pkgs.runCommand "check-ftp-encrypted"
+      {
+        nativeBuildInputs = [
+          pkgs.findutils
+          pkgs.gnugrep
+        ];
+      }
+      ''
+        set -euo pipefail
+        cd ${repoRoot}
+
+        files=$(find ./secrets/ftp -type f 2>/dev/null || true)
+        if [ -z "$files" ]; then
+          echo "No secrets/ftp files found; nothing to check."
+          touch $out
+          exit 0
+        fi
+
+        echo "==> Checking secrets/ftp files are age-encrypted (work key scope)..."
+        failed=0
+        for f in $files; do
+          if ! grep -q 'BEGIN AGE ENCRYPTED FILE' "$f"; then
+            echo "FAIL: $f is not age-encrypted (missing age envelope marker)"
+            failed=1
+          elif grep -qE '"host"|"user"|"pass"|"remote"|"path"|"config"|"type"|password' "$f"; then
+            echo "FAIL: $f contains plaintext server/secret-like content"
+            failed=1
+          else
+            echo "PASS: $f is age-encrypted"
+          fi
+        done
+
+        if [ "$failed" -ne 0 ]; then
+          echo "==> One or more secrets/ftp files are not properly encrypted. Refusing to proceed."
+          exit 1
+        fi
+
+        echo "==> All secrets/ftp files are age-encrypted."
+        touch $out
+      '';
 in
 {
   secrets = secretsCheck;
   projects = projectsCheck;
+  ftp = ftpCheck;
 }

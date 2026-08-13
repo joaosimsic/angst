@@ -32,6 +32,7 @@ let
   sshAddKeys = import ./ssh-add-keys.nix { inherit mkScript pkgs lib; };
   bootstrapSecrets = import ./bootstrap-secrets.nix { inherit mkScript pkgs; };
   projectsSync = import ./projects-sync.nix { inherit mkScript pkgs lib; };
+  ftpMount = import ./ftp-mount.nix { inherit mkScript pkgs; };
   devshellHook = import ./devshell-hook.nix { inherit pkgs; };
   angstCli = import ./angst-cli.nix { inherit mkScript pkgs; };
 
@@ -67,6 +68,7 @@ in
     sshAddKeys
     bootstrapSecrets
     projectsSync
+    ftpMount
     devshellHook
     angstCli
     apps

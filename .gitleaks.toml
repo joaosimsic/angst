@@ -25,4 +25,5 @@ paths = [
   "pure\\.md",
   "analysis\\.md",
   "openwiki/",
+  "secrets/ftp/.*\\.age",
 ]

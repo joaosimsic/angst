@@ -51,6 +51,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
       db
       sshAgent
       ssh
+      ftp
       projects
       ;
     shell = if shellOverride != null then shellOverride else host.shell;

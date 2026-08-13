@@ -16,3 +16,6 @@ creation_rules:
   - path_regex: projects/work/.*$
     age: |
       age1z2rn3lr0f9s0qnpgk8d7ta2fd79vrl09yxgw8enrcdzqcaaaau0qu7f76p
+  - path_regex: secrets/ftp/.*$
+    age: |
+      age1z2rn3lr0f9s0qnpgk8d7ta2fd79vrl09yxgw8enrcdzqcaaaau0qu7f76p

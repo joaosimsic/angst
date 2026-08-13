@@ -149,6 +149,7 @@ inputs.nixpkgs.lib.nixosSystem {
             db
             sshAgent
             ssh
+            ftp
             shell
             projects
             ;

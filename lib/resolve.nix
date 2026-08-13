@@ -67,6 +67,7 @@ in
     env = decl.env or { };
     sshAgent = decl.sshAgent or { };
     ssh = decl.ssh or { };
+    ftp = decl.ftp or { };
     shell = decl.shell or "";
     persist = {
       root = "/persist";

@@ -20,5 +20,12 @@
     keys = [ "~/.ssh/id_ed25519" ];
   };
   ssh = { };
+  ftp = {
+    mounts = [
+      {
+        mountPoint = "ftp/server";
+      }
+    ];
+  };
   projects = [ ]; # opaque store ids (angst projects status); names stay encrypted
 }

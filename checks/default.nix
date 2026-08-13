@@ -105,6 +105,7 @@ in
   check-password = checkPassword;
   check-secrets-encrypted = checkSecretsEncrypted.secrets;
   check-projects-encrypted = checkSecretsEncrypted.projects;
+  check-ftp-encrypted = checkSecretsEncrypted.ftp;
   secret-scan = secretScan;
   secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;
