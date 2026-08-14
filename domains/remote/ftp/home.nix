@@ -11,10 +11,10 @@ let
   cfg = config.angst.ftp;
   ftpEnabled = config.domains.remote.ftp.enable;
 
-  installPath = m:
-    "secrets/angst/${lib.removeSuffix ".age" (baseNameOf m.configFile)}.age";
+  installPath = m: "secrets/angst/${lib.removeSuffix ".age" (baseNameOf m.configFile)}.age";
 
-  mountService = m:
+  mountService =
+    m:
     let
       name = lib.removeSuffix ".conf" (lib.removeSuffix ".age" (baseNameOf m.configFile));
       mount = runtime.ftpMount {
@@ -74,12 +74,10 @@ in
     );
 
     home.activation.ensureFtpMountDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      ${lib.concatMapStringsSep "\n" (
-        m: ''
-          mkdir -p "$HOME/${m.mountPoint}"
-          chmod 600 "$HOME/${installPath m}" 2>/dev/null || true
-        ''
-      ) cfg.mounts}
+      ${lib.concatMapStringsSep "\n" (m: ''
+        mkdir -p "$HOME/${m.mountPoint}"
+        chmod 600 "$HOME/${installPath m}" 2>/dev/null || true
+      '') cfg.mounts}
     '';
 
     systemd.user.services = lib.listToAttrs (map mountService cfg.mounts);

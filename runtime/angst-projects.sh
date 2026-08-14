@@ -227,8 +227,15 @@ projects_import() {
     while [ "$#" -gt 0 ]; do
         case "$1" in
         --all) all=1 ;;
-        -h | --help) projects_usage; return 0 ;;
-        *) echo "unknown import option: $1" >&2; projects_usage >&2; return 2 ;;
+        -h | --help)
+            projects_usage
+            return 0
+            ;;
+        *)
+            echo "unknown import option: $1" >&2
+            projects_usage >&2
+            return 2
+            ;;
         esac
         shift
     done
@@ -268,8 +275,15 @@ projects_export() {
     while [ "$#" -gt 0 ]; do
         case "$1" in
         --all) all=1 ;;
-        -h | --help) projects_usage; return 0 ;;
-        *) echo "unknown export option: $1" >&2; projects_usage >&2; return 2 ;;
+        -h | --help)
+            projects_usage
+            return 0
+            ;;
+        *)
+            echo "unknown export option: $1" >&2
+            projects_usage >&2
+            return 2
+            ;;
         esac
         shift
     done
