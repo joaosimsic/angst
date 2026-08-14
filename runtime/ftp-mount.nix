@@ -51,6 +51,7 @@ mkScript {
     } >"$tmpconf"
     chmod 600 "$tmpconf"
 
+    fusermount3 -u "$HOME/${mountPoint}" 2>/dev/null || fusermount -u "$HOME/${mountPoint}" 2>/dev/null || true
     mkdir -p "$HOME/${mountPoint}"
     exec rclone mount --config "$tmpconf" --no-modtime --vfs-cache-mode off "$remote:$path" "$HOME/${mountPoint}"
   '';

@@ -78,7 +78,7 @@ in
     home.activation.ensureFtpMountDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       rmdir "$HOME/secrets/angst" "$HOME/secrets" 2>/dev/null || true
       ${lib.concatMapStringsSep "\n" (m: ''
-        mkdir -p "$HOME/${m.mountPoint}"
+        mkdir -p "$HOME/${m.mountPoint}" 2>/dev/null || true
       '') cfg.mounts}
     '';
 
