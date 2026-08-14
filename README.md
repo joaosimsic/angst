@@ -190,7 +190,7 @@ The repo store only changes via `export` — after `add`/`capture`/`edit-env` yo
 |---|---|
 | `lib/discover.nix` | Recursively finds host decls under `hosts/` |
 | `lib/resolve.nix` | Normalizes a host decl into a `host` object (defaults, domain/toolchain scanning) |
-| `lib/build/mkNixos.nix` | NixOS system constructor (wires profiles, domains, modules, secrets bootstrap, VM detection, hardware) |
+| `lib/build/mkNixos.nix` | NixOS system constructor (wires profiles, domains, modules, secrets bootstrap, VM stack, hardware) |
 | `lib/build/mkHome.nix` | Home-manager profile constructor (domains, toolchains, secrets activation, special args) |
 | `lib/domains/` | Domain interface (`mkDomain.nix`) + discovery (`scan.nix`) + module generation (`module.nix`) |
 | `lib/flake/outputs.nix` | All flake outputs: home configs, NixOS configs, packages, apps, dev shells, checks, formatter |
@@ -208,7 +208,7 @@ The repo store only changes via `export` — after `add`/`capture`/`edit-env` yo
 
 **`modules/home/`** — Base home-manager config: username, stateVersion, fontconfig, tree-sitter (`treesitter.nix`), login shell handling (`login-shell.nix`), secrets activation (`secrets-activation.nix`), theme option (`themeModule.nix`). (SSH client config + agent live in `domains/remote/ssh/`.)
 
-**`modules/vm/`** — Multi-layered VM support: detection (`detect.nix`, `is-qemu-vm.nix` — true when evaluated from a 9p mount), conditional bootloader (`runtime.nix`), vmVariant resources (`vm-variant.nix` — tmpfs `/`, `/persist` ext4, SPICE, 9p host mount), declarative inbound auth + age-key injection (`vm-profile.nix` — `authorized_keys` baked from `secrets/ssh/*.pub`, `vm-age-key` consumes `/tmp/shared`), and host-repo symlink for live editing (`host-mount.nix`). `specialisation.nix` exists but is never imported (dead code).
+**`modules/vm/`** — Multi-layered VM support: internal `angst.isQemuVm` flag (declared — forced on by the `vm` profile and by `vmVariant`, never probed at eval time), conditional bootloader (`runtime.nix`), vmVariant resources (`vm-variant.nix` — tmpfs `/`, `/persist` ext4, SPICE, 9p host mount), declarative inbound auth + age-key injection (`vm-profile.nix` — `authorized_keys` baked from `secrets/ssh/*.pub`, `vm-age-key` consumes `/tmp/shared`), and host-repo symlink for live editing (`host-mount.nix`). `specialisation.nix` exists but is never imported (dead code).
 
 **`modules/secrets.nix`** — sops-nix integration per host: locates `secrets.yaml`, detects an age key, gates everything behind `canDecrypt`, wires `masterPassword` (system + home) and app secrets (e.g. `opencodeGoKey` → `~/.secrets/opencode-go-key`). See [openwiki/secrets.md](openwiki/secrets.md).
 
@@ -224,7 +224,7 @@ Profiles replace host-specific `home.nix` / `configuration.nix` files. Each is a
 | `desktop` | rofi, ghostty, x11, graphical, audio, clipboard |
 | `development` | opencode, cursor-cli, sqlit, rainfrog, posting, **git.projects** |
 | `server` | ssh (sshd is driven per-host via `host.ssh.server.enable`) |
-| `vm` | ssh + VM modules (detect, runtime, variant, profile, host-mount) |
+| `vm` | ssh + VM modules (runtime, variant, profile, host-mount) |
 
 > Note: `wm/i3` and `bar/i3status` exist as domains but are currently **commented out** in `profiles/desktop.nix`.
 

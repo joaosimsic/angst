@@ -83,7 +83,6 @@ inputs.nixpkgs.lib.nixosSystem {
     secrets.systemCore
   ]
   ++ [
-    ../../modules/vm/detect.nix
     ../../modules/vm/runtime.nix
     ../../modules/vm/vm-variant.nix
     ../../modules/vm/host-mount.nix

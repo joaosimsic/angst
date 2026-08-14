@@ -48,11 +48,11 @@
     ];
   };
   ftp = {
-    mounts = [
-      {
-        mountPoint = "ftp/server";
-      }
-    ];
+    # mounts = [
+    #   {
+    #     mountPoint = "ftp/server";
+    #   }
+    # ];
   };
   projects = [ "7391b51c36a7d266" ];
 }
