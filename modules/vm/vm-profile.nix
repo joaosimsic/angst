@@ -102,6 +102,8 @@ in
         pkg-config
         openssl.dev
         runtime.angstCli
+        runtime.vm.nixosSwitch
+        runtime.vm.homeSwitch
       ];
       sessionVariables = {
         ANGST_REPO = hostAngstPath;
