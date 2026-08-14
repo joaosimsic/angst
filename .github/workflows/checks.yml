@@ -51,7 +51,6 @@ jobs:
           - login-shell-valid
           - login-shell-invalid
           - lint-nix
-          - home-theme-override-test
           - eval-all
     steps:
       - uses: actions/checkout@v4
@@ -68,6 +67,16 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: nix build '.#checks.x86_64-linux.build-all' --no-link --print-build-logs
+
+  home-theme-override-test:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.tools == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix build '.#checks.x86_64-linux.home-theme-override-test' --no-link --print-build-logs
 
   nixfmt:
     runs-on: ubuntu-latest

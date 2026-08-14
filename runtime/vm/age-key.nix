@@ -5,28 +5,37 @@
 {
   username,
   homeDirectory,
+  injectWorkKey ? false,
 }:
 mkScript {
   name = "angst-vm-age-key";
   runtimeInputs = with pkgs; [
     coreutils
   ];
-  text = ''
-    key_file=/tmp/shared/age-keys.txt
-    work_key_file=/tmp/shared/work-keys.txt
+  excludeShellChecks = [ "SC2050" ];
+  text =
+    let
+      injectStr = if injectWorkKey then "true" else "false";
+    in
+    ''
+      key_file=/tmp/shared/age-keys.txt
 
-    sops_dir="${homeDirectory}/.config/sops/age"
-    install -d -m 700 -o ${username} -g users "$sops_dir"
+      if [ ! -s "$key_file" ]; then
+        echo "No host age key found at $key_file; secrets will be unavailable."
+        exit 0
+      fi
 
-    if [ -s "$key_file" ]; then
+      sops_dir="${homeDirectory}/.config/sops/age"
+      install -d -m 700 -o ${username} -g users "$sops_dir"
       install -m 600 -o ${username} -g users "$key_file" "$sops_dir/keys.txt"
-    else
-      echo "No host age key found at $key_file; personal secrets will be unavailable."
-    fi
 
-    if [ -s "$work_key_file" ]; then
-      install -m 600 -o ${username} -g users "$work_key_file" "$sops_dir/work-keys.txt"
-      echo "Installed work age key from shared dir."
-    fi
-  '';
+      if [ "${injectStr}" = "true" ]; then
+        work_key=/tmp/shared/work-keys.txt
+        if [ -s "$work_key" ]; then
+          install -m 600 -o ${username} -g users "$work_key" "$sops_dir/work-keys.txt"
+        else
+          echo "warn: work age key requested but not found at $work_key" >&2
+        fi
+      fi
+    '';
 }

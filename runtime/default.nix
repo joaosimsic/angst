@@ -33,6 +33,7 @@ let
   sshKeyProvision = import ./ssh-key-provision.nix { inherit mkScript pkgs; };
   bootstrapSecrets = import ./bootstrap-secrets.nix { inherit mkScript pkgs; };
   projectsSync = import ./projects-sync.nix { inherit mkScript pkgs lib; };
+  ftpMount = import ./ftp-mount.nix { inherit mkScript pkgs; };
   devshellHook = import ./devshell-hook.nix { inherit pkgs; };
   angstCli = import ./angst-cli.nix { inherit mkScript pkgs; };
 
@@ -69,6 +70,7 @@ in
     sshKeyProvision
     bootstrapSecrets
     projectsSync
+    ftpMount
     devshellHook
     angstCli
     apps

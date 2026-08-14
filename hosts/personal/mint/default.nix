@@ -23,5 +23,12 @@
     ];
   };
   ssh = { };
+  ftp = {
+    mounts = [
+      {
+        mountPoint = "ftp/server";
+      }
+    ];
+  };
   projects = [ ]; # opaque store ids (angst projects status); names stay encrypted
 }

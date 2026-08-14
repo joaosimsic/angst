@@ -97,11 +97,22 @@ A Lua config with a pluggable backend (`config/lua/backend/`):
 - `shared/` — AdapterLoader/Scanner/Tool, LspTool; `frontend/`, `common/`, `config/` (themed `palette.lua`), `infra/`, `queries/`.
 - Tests live in `config/tests/` (`run.sh` → `bootstrap.lua` → plenary suite at `tests/adapters/suite.lua`: loader_scanner, lsp_settings, inlay_hints, engine_mappings, startup). CI runs them via `.github/workflows/nvim-tests.yml`. Recent fixes: `be87346` jsonc→json treesitter mapping; `163d922` re-apply highlight on reopen.
 
-### `git/projects` — encrypted project store
+### `git/projects` — encrypted project store (three layers)
 
-`home.nix` builds an `angst-projects-sync` wrapper (`pkgs.writeShellApplication`) from the shared `scripts/angst-projects.sh` logic (runtime inputs: git, sops, age, jq, openssl, coreutils, diffutils, findutils). It runs `sync` as a home activation entry and as a `systemd.user` oneshot (`angst-projects-sync`, `After`/`Wants network-online.target`). The store lives at `$HOME/<repoPath>/projects`.
+`home.nix` builds an `angst-projects-sync` wrapper (`pkgs.writeShellApplication`) from the shared `runtime/angst-projects.sh` logic (runtime inputs: git, sops, age, jq, openssl, coreutils, diffutils, findutils). It runs `import` then `sync` as a home activation entry and as a `systemd.user` oneshot (`angst-projects-sync`, `After`/`Wants network-online.target`).
 
-The store is `projects/{personal,work}/<opaque-id>/{metadata.yaml,env}` — both files sops-encrypted in **binary** format (byte-exact; plaintext is JSON `{name, repo}` for metadata). Opaque ids (`openssl rand -hex 8`) are not name-derived; real names/URLs exist only in ciphertext. Scope is the folder path; `personal` and `work` use different age keys (work files never list the personal recipient). `.sops.yaml` routes `projects/personal/.*$` → personal key and `projects/work/.*$` → work key.
+Three layers:
+
+- **Repo store** — `projects/{personal,work}/<opaque-id>/{metadata.yaml,env}` (committed,
+  sops-binary **encrypted**). The transport: travels with the public repo, so a new machine
+  that clones the repo has the metadata to clone its projects. Written only by
+  `angst projects export`.
+- **Working store** — `~/.secrets/angst/projects/{personal,work}/<opaque-id>/{metadata.yaml,env}`
+  (fixed per-host, **decrypted plaintext**). Runtime ops read/write this directly (no sops at
+  runtime). Seeded from the repo store at build time via `import`.
+- **Clone root** — `~/projects/<name>`: cloned repo + decrypted `.env`, divergent per host.
+
+Opaque ids (`openssl rand -hex 8`) are not name-derived; real names/URLs exist only in the encrypted repo store. Scope is the folder path; `personal` and `work` use different age keys (work files never list the personal recipient). The per-scope recipient is derived from the scope key file at import/export time (no repo `.sops.yaml` routing).
 
 Hosts declare **which** projects they want as a list of opaque store ids
 (`projects = [ "<opaque id>" ... ]` in the host decl — ids from `angst projects status`).
@@ -109,7 +120,7 @@ Names stay encrypted; an empty list syncs nothing. The wrapper bakes the list in
 `ANGST_PROJECTS_ONLY`; the same domain module works on `nixos` and home-only hosts
 (a `projects` specialArg is threaded through both builders).
 
-Per-registry-project sync: `mkdir -p ~/projects` (0755) → clone-if-missing into `~/projects/<name>` (no auto-pull, no hooks, no `.gitignore` edits — clones are never modified) → `.env` materialized/refreshed hash-tracked via `~/.secrets/projects/<name>.env.sha256`. A locally-edited `.env` is never clobbered: `sync` marks it `stale` and prints a redacted (key-name-only) diff, exiting non-zero. Missing keys/repos, no network, or decrypt errors skip with a warning and exit 0 — nothing fails a build or boot. Plaintext only ever touches temp files outside the repo. See [Secrets — Project store](secrets.md#project-store) for the sops/key flow.
+Per-registry-project sync: `mkdir -p ~/projects` (0755) → clone-if-missing into `~/projects/<name>` (no auto-pull, no hooks, no `.gitignore` edits — clones are never modified) → `.env` materialized/refreshed hash-tracked via `~/.secrets/projects/<name>.env.sha256`. A locally-edited `.env` is never clobbered: `sync` marks it `stale` and prints a redacted (key-name-only) diff, exiting non-zero. Missing keys/repos, no network, or decrypt errors skip with a warning and exit 0 — nothing fails a build or boot. The repo store only changes via `angst projects export` (then commit). See [Secrets — Project store](secrets.md#project-store) for the sops/key flow.
 
 ### `wm/i3`
 

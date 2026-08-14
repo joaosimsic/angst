@@ -54,7 +54,6 @@ inputs.nixpkgs.lib.nixosSystem {
     inherit (host)
       hostname
       monitors
-      repoPath
       db
       sshAgent
       ssh
@@ -146,10 +145,10 @@ inputs.nixpkgs.lib.nixosSystem {
           inherit (host)
             hostname
             monitors
-            repoPath
             db
             sshAgent
             ssh
+            ftp
             shell
             projects
             ;

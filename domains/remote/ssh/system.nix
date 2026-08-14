@@ -3,7 +3,7 @@
   lib,
   ssh,
   userConfig,
-  repoPath,
+  flakeSelf,
   runtime,
   ...
 }:
@@ -64,7 +64,7 @@ in
           ExecStart =
             (runtime.sshKeyProvision {
               inherit (userConfig) username homeDirectory;
-              inherit repoPath;
+              secretsDir = "${flakeSelf}/secrets/ssh";
             }).bin;
         };
       };

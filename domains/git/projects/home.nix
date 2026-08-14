@@ -1,7 +1,7 @@
 {
   config,
   lib,
-  repoPath,
+  pkgs,
   flakeSelf,
   projects,
   runtime,
@@ -10,7 +10,7 @@
 
 let
   sync = runtime.projectsSync {
-    inherit repoPath projects flakeSelf;
+    inherit projects flakeSelf;
   };
 in
 {
@@ -18,6 +18,9 @@ in
     home.packages = [ sync ];
 
     home.activation.angstProjectsSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      mkdir -p "$HOME/.secrets/angst/projects"
+      chmod 700 "$HOME/.secrets/angst" 2>/dev/null || true
+      ${sync.bin} import || true
       ${sync.bin} sync || true
     '';
 
@@ -29,7 +32,7 @@ in
       };
       Service = {
         Type = "oneshot";
-        ExecStart = "${sync.bin} sync";
+        ExecStart = "${pkgs.bash}/bin/bash -c '${sync.bin} import; ${sync.bin} sync'";
       };
       Install.WantedBy = [ "default.target" ];
     };

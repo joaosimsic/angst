@@ -2,7 +2,6 @@
   lib,
   flakeSelf ? null,
   userConfig ? null,
-  repoPath,
   ...
 }:
 
@@ -12,7 +11,6 @@ let
       lib
       flakeSelf
       userConfig
-      repoPath
       ;
   };
 in

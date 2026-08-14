@@ -5,7 +5,7 @@
 {
   username,
   homeDirectory,
-  repoPath,
+  secretsDir,
 }:
 mkScript {
   name = "angst-provision-ssh-key";
@@ -18,14 +18,14 @@ mkScript {
     set -uo pipefail
 
     ssh_dir="${homeDirectory}/.ssh"
-    repo="${homeDirectory}/${repoPath}"
+    secrets_dir="${secretsDir}"
     tmp_dir="$(mktemp -d)" || exit 1
     trap 'rm -rf "$tmp_dir"' EXIT
     umask 0077
 
     provision_scope() {
         local scope="$1" age_key="$2" dest="$3"
-        local age_file="$repo/secrets/ssh/$scope.ed25519.age"
+        local age_file="$secrets_dir/$scope.ed25519.age"
         local plain="$tmp_dir/$scope.key"
         local tmp_install="$ssh_dir/$dest.tmp"
 

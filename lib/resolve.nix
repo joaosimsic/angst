@@ -61,12 +61,12 @@ in
     db = decl.db or { };
     profiles = decl.profiles or [ "base" ];
     toolchains = _toolchains;
-    repoPath = decl.repoPath or "proj/angst";
     extraNixos = decl.nixos or { };
     extraHome = decl.home or { };
     env = decl.env or { };
     sshAgent = decl.sshAgent or { };
     ssh = decl.ssh or { };
+    ftp = decl.ftp or { };
     shell = decl.shell or "";
     persist = {
       root = "/persist";

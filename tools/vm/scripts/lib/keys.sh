@@ -31,7 +31,7 @@ collect_ssh_keys() {
         chmod 600 "$KEY_DIR/age-keys.txt"
     fi
 
-    if [ -n "${VM_WORK_KEYS:-}" ] && [ -f "$HOME/.config/sops/age/work-keys.txt" ]; then
+    if [ -f "$HOME/.config/sops/age/work-keys.txt" ]; then
         cp "$HOME/.config/sops/age/work-keys.txt" "$KEY_DIR/work-keys.txt"
         chmod 600 "$KEY_DIR/work-keys.txt"
     fi
