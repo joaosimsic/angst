@@ -3,7 +3,7 @@
 # and the home-manager `angst-projects-sync` wrapper.
 #
 # Three layers:
-#   working store  ~/.secrets/angst/projects  -- decrypted plaintext metadata+env
+#   working store  ~/.secrets/projects  -- decrypted plaintext metadata+env
 #   repo store     <repo>/projects            -- sops-binary encrypted transport
 #   clone root     ~/projects/<name>          -- cloned repo + decrypted .env
 # Runtime ops read the working store directly (no sops). The repo store is only
@@ -23,13 +23,13 @@ Usage:
 EOF
 }
 
-# Working store root (decrypted): ANGST_PROJECTS_STORE or ~/.secrets/angst/projects.
+# Working store root (decrypted): ANGST_PROJECTS_STORE or ~/.secrets/projects.
 projects_store_root() {
     if [ -n "${ANGST_PROJECTS_STORE:-}" ]; then
         printf '%s\n' "$ANGST_PROJECTS_STORE"
         return 0
     fi
-    printf '%s\n' "${ANGST_PROJECTS_STORE_DEFAULT:-$HOME/.secrets/angst/projects}"
+    printf '%s\n' "${ANGST_PROJECTS_STORE_DEFAULT:-$HOME/.secrets/projects}"
 }
 
 # Repo store root (encrypted): ANGST_PROJECTS_REPO or $REPO/projects (git root).

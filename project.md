@@ -19,7 +19,7 @@ Declare dev projects (GitHub/GitLab) once, get them cloned on every host, with
   repo store. `export` re-encrypts the working store into the repo store.
 - **Three layers** — a committed **repo store** (`projects/`, sops-encrypted
   transport: travels with the public repo so new machines can clone projects),
-  a **working store** at the fixed per-host path `~/.secrets/angst/projects`
+  a **working store** at the fixed per-host path `~/.secrets/projects`
   (decrypted plaintext; runtime ops read/write it directly, no `repoPath`), and
   clones at `~/projects` (divergent per host). The repo store is written **only
   by `angst projects export`** (then commit); the working store is seeded from
@@ -63,7 +63,7 @@ projects/
         └── env
 
 # working store (per-host, DECRYPTED plaintext)
-~/.secrets/angst/projects/
+~/.secrets/projects/
 ├── personal/
 │   └── 3f9a1c2b4d7e09a2/
 │       ├── metadata.yaml   # plaintext JSON {name,repo}
@@ -78,7 +78,7 @@ projects/
 ```
 
 - Repo-store projects are discovered by globbing `projects/{personal,work}/*/metadata.yaml`;
-  working-store by globbing `~/.secrets/angst/projects/{personal,work}/*/metadata.yaml`.
+  working-store by globbing `~/.secrets/projects/{personal,work}/*/metadata.yaml`.
   No central file. Add/remove project = add/remove folder.
 - The repo store is written **only by `angst projects export`** (encrypt working →
   repo) and read by `import`/the build seed (decrypt repo → working). Every other
@@ -112,7 +112,7 @@ projects/
   and `ANGST_PROJECTS_REPO=${flakeSelf}/projects` as the build-time seed source
   (a `projects` specialArg is threaded through home-manager on both `nixos` and
   `home` hosts), so only host-selected projects sync.
-- The working store lives at the fixed per-host path `~/.secrets/angst/projects`
+- The working store lives at the fixed per-host path `~/.secrets/projects`
   (decrypted plaintext; `ANGST_PROJECTS_STORE` overrides). The repo store is
   `projects/` in the repo (`ANGST_PROJECTS_REPO` overrides; the CLI resolves it
   via git discovery).
@@ -187,14 +187,14 @@ the CLI and the home-manager wrapper.
 
 | File | Change |
 |---|---|
-| `runtime/angst-projects.sh` | shared `projects` command logic (add/sync/status/capture/edit-env/import/export/rm); working store at `~/.secrets/angst/projects` (plaintext), repo store at `<repo>/projects` (encrypted); `sync` filters store ids against `ANGST_PROJECTS_ONLY` |
+| `runtime/angst-projects.sh` | shared `projects` command logic (add/sync/status/capture/edit-env/import/export/rm); working store at `~/.secrets/projects` (plaintext), repo store at `<repo>/projects` (encrypted); `sync` filters store ids against `ANGST_PROJECTS_ONLY` |
 | `runtime/angst-cli.nix` | `projects) angst_projects_cmd "$@" ;;` case (already wired) |
 | `lib/flake/context.nix` | add `runtime/angst-projects.sh` to the `angstTool` concat list; add `sops age openssl diffutils` to its runtimeInputs |
 | `modules/vm/vm-profile.nix` | add `runtime/angst-projects.sh` to the VM `angstCli` concat list; same runtimeInputs additions |
 | `lib/resolve.nix` | default `projects = decl.projects or []` — the host's list of opaque store ids (no persist dir declared by hosts) |
 | `lib/build/mkNixos.nix` | `persistDirs = secrets.persistDirs ++ lib.optionals (host.projects != []) ["projects"]` — the single derived persistence point (clone root); add `projects` to home-manager `extraSpecialArgs` |
 | `lib/build/mkHome.nix` | add `projects` to home-manager `extraSpecialArgs` (makes the domain work on home-only hosts) |
-| `domains/git/projects/home.nix` | bake `ANGST_PROJECTS_ONLY` from the `projects` specialArg + `ANGST_PROJECTS_REPO=${flakeSelf}/projects` into the wrapper text; activation `mkdir -p ~/.secrets/angst/projects` then `import; sync` |
+| `domains/git/projects/home.nix` | bake `ANGST_PROJECTS_ONLY` from the `projects` specialArg + `ANGST_PROJECTS_REPO=${flakeSelf}/projects` into the wrapper text; activation `mkdir -p ~/.secrets/projects` then `import; sync` |
 | `.sops.yaml` | `projects/personal/.*$` → personal key, `projects/work/.*$` → work key (guard the committed repo store) |
 | `checks/secrets.nix` + `checks/default.nix` | `check-projects-encrypted`: every committed `projects/**/metadata.yaml` + `env` is sops-encrypted with no plaintext name/repo/URL content |
 | `.gitleaks.toml` | `angst-projects-plaintext-secret-value` rule under `projects/.*` |

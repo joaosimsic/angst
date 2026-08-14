@@ -15,7 +15,8 @@ let
 
   sharedPubs =
     let
-      pubFor = scope:
+      pubFor =
+        scope:
         let
           p = flakeSelf + "/secrets/ssh/${scope}.ed25519.pub";
         in
@@ -24,7 +25,11 @@ let
     (pubFor "personal") ++ (pubFor "work");
 in
 {
-  options.angst.vm.injectWorkAgeKey = lib.mkEnableOption "inject the work age key into the VM (needed to decrypt work-scoped secrets such as ftp mounts)";
+  options.angst.vm.injectWorkAgeKey = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Inject the work age key into the VM (needed to decrypt work-scoped secrets such as ftp mounts). Every host must be able to use the work key.";
+  };
 
   config = {
     assertions = [

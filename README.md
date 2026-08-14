@@ -133,7 +133,7 @@ Three layers:
   sops-binary **encrypted**). This is the transport: it travels with the public repo, so a
   new machine that clones the repo has all the metadata to clone its projects. Written only
   by `angst projects export`.
-- **Working store** — `~/.secrets/angst/projects/{personal,work}/<opaque-id>/{metadata.yaml,env}`
+- **Working store** — `~/.secrets/projects/{personal,work}/<opaque-id>/{metadata.yaml,env}`
   (fixed per-host, **decrypted plaintext**). Every runtime op (`sync`/`status`/`capture`/
   `edit-env`/`add`/`rm`) reads/writes this directly — no sops needed at runtime. Seeded
   from the repo store at build time (home activation runs `import` for host-selected ids).
@@ -296,7 +296,7 @@ home-manager activation                    # xdg.configFile symlinks → ~/.conf
 
 ### Secrets (summary)
 
-Per-host `secrets.yaml` (sops + age) → decrypted at runtime into `~/.secrets/`. The `masterPassword` secret drives login-hash and SSH-key bootstrap (`angst-bootstrap-secrets` systemd service + home activation). Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`; the FTP server config lives age-encrypted in `secrets/ftp/`. The VM receives the host's age key + SSH keys via a shared dir at boot — keys are never baked into the image. The `projects/` store is sops-encrypted too, with scope-isolated keys (repo store travels; working store decrypted at `~/.secrets/angst/projects`, see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets.yaml` / `projects/**` / non-encrypted `secrets/ssh/*.age` / `secrets/ftp/*`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
+Per-host `secrets.yaml` (sops + age) → decrypted at runtime into `~/.secrets/`. The `masterPassword` secret drives login-hash and SSH-key bootstrap (`angst-bootstrap-secrets` systemd service + home activation). Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`; the FTP server config lives age-encrypted in `secrets/ftp/`. The VM receives the host's age key + SSH keys via a shared dir at boot — keys are never baked into the image. The `projects/` store is sops-encrypted too, with scope-isolated keys (repo store travels; working store decrypted at `~/.secrets/projects`, see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets.yaml` / `projects/**` / non-encrypted `secrets/ssh/*.age` / `secrets/ftp/*`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
 
 ### CI
 

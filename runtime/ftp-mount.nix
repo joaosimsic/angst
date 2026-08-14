@@ -10,23 +10,16 @@ mkScript {
   name = "angst-ftp-mount";
   runtimeInputs = with pkgs; [
     rclone
-    sops
-    age
-    coreutils
     jq
+    coreutils
   ];
   text = ''
     set -euo pipefail
 
-    work_key="''${SOPS_WORK_AGE_KEY_FILE:-$HOME/.config/sops/age/work-keys.txt}"
     conf="$HOME/${configFile}"
 
     if [ ! -f "$conf" ]; then
       echo "warn: ftp config not found at $conf; nothing to mount" >&2
-      exit 0
-    fi
-    if [ ! -f "$work_key" ]; then
-      echo "warn: work age key not found at $work_key; cannot decrypt ftp config" >&2
       exit 0
     fi
 
@@ -49,14 +42,12 @@ mkScript {
     tmpconf="$(mktemp "$tmpdir/ftp.XXXXXX.conf")"
     trap 'rm -f "$tmpconf"' EXIT
 
-    SOPS_AGE_KEY_FILE="$work_key" sops -d --input-type binary --output-type binary "$conf" >"$tmpconf.json"
-
-    remote="$(jq -r '.remote' "$tmpconf.json")"
-    path="$(jq -r '.path // "/"' "$tmpconf.json")"
+    remote="$(jq -r '.remote' "$conf")"
+    path="$(jq -r '.path // "/"' "$conf")"
 
     {
       echo "[$remote]"
-      jq -r '.config | to_entries[] | "\(.key) = \(.value|tostring)"' "$tmpconf.json"
+      jq -r '.config | to_entries[] | "\(.key) = \(.value|tostring)"' "$conf"
     } >"$tmpconf"
     chmod 600 "$tmpconf"
 

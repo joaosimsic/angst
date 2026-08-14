@@ -4,6 +4,7 @@
   ftp,
   flakeSelf,
   runtime,
+  userConfig,
   ...
 }:
 
@@ -11,7 +12,17 @@ let
   cfg = config.angst.ftp;
   ftpEnabled = config.domains.remote.ftp.enable;
 
-  installPath = m: "secrets/angst/${lib.removeSuffix ".age" (baseNameOf m.configFile)}.age";
+  secretPath =
+    m:
+    ".secrets/ftp/${lib.removeSuffix ".conf" (lib.removeSuffix ".age" (baseNameOf m.configFile))}.conf";
+
+  secretsDecrypt = runtime.ftpSecretsHome {
+    inherit (userConfig) homeDirectory;
+    configs = map (m: {
+      source = "${flakeSelf}/${m.configFile}";
+      dest = secretPath m;
+    }) cfg.mounts;
+  };
 
   mountService =
     m:
@@ -19,7 +30,7 @@ let
       name = lib.removeSuffix ".conf" (lib.removeSuffix ".age" (baseNameOf m.configFile));
       mount = runtime.ftpMount {
         inherit (m) mountPoint;
-        configFile = installPath m;
+        configFile = secretPath m;
       };
     in
     lib.nameValuePair "angst-ftp-${name}" {
@@ -53,31 +64,26 @@ in
             configFile = lib.mkOption {
               type = lib.types.str;
               default = "secrets/ftp/ftp-server.conf.age";
-              description = "Path (repo-relative) of the work-key-encrypted rclone config, installed at build time";
+              description = "Path (repo-relative) of the work-key-encrypted rclone config, decrypted into ~/.secrets/ftp at home activation";
             };
           };
         }
       );
       default = ftp.mounts or [ ];
-      description = "FTP mounts: each entry installs a work-key rclone config at build time and mounts it with rclone";
+      description = "FTP mounts: each entry decrypts a work-key rclone config into ~/.secrets/ftp and mounts it with rclone";
     };
   };
 
   config = lib.mkIf (ftpEnabled && cfg.mounts != [ ]) {
-    home.file = lib.listToAttrs (
-      map (m: {
-        name = installPath m;
-        value = {
-          text = builtins.readFile "${flakeSelf}/${m.configFile}";
-        };
-      }) cfg.mounts
-    );
-
     home.activation.ensureFtpMountDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      rmdir "$HOME/secrets/angst" "$HOME/secrets" 2>/dev/null || true
       ${lib.concatMapStringsSep "\n" (m: ''
         mkdir -p "$HOME/${m.mountPoint}"
-        chmod 600 "$HOME/${installPath m}" 2>/dev/null || true
       '') cfg.mounts}
+    '';
+
+    home.activation.angstFtpSecrets = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      ${secretsDecrypt.bin}
     '';
 
     systemd.user.services = lib.listToAttrs (map mountService cfg.mounts);

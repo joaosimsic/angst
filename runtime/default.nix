@@ -34,6 +34,7 @@ let
   bootstrapSecrets = import ./bootstrap-secrets.nix { inherit mkScript pkgs; };
   projectsSync = import ./projects-sync.nix { inherit mkScript pkgs lib; };
   ftpMount = import ./ftp-mount.nix { inherit mkScript pkgs; };
+  ftpSecretsHome = import ./ftp-secrets-home.nix { inherit mkScript pkgs; };
   devshellHook = import ./devshell-hook.nix { inherit pkgs; };
   angstCli = import ./angst-cli.nix { inherit mkScript pkgs; };
 
@@ -70,6 +71,7 @@ in
     bootstrapSecrets
     projectsSync
     ftpMount
+    ftpSecretsHome
     devshellHook
     angstCli
     apps

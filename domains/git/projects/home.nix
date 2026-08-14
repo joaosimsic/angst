@@ -18,8 +18,8 @@ in
     home.packages = [ sync ];
 
     home.activation.angstProjectsSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      mkdir -p "$HOME/.secrets/angst/projects"
-      chmod 700 "$HOME/.secrets/angst" 2>/dev/null || true
+      mkdir -p "$HOME/.secrets/projects"
+      chmod 700 "$HOME/.secrets" 2>/dev/null || true
       ${sync.bin} import || true
       ${sync.bin} sync || true
     '';
