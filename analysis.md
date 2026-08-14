@@ -97,7 +97,7 @@
 
 | Output | Count | Entries |
 |---|---|---|
-| packages | 7 | angst, default, res, shell, vm, vm-cli, vm-run |
+| packages | 6 | angst, default, shell, vm, vm-cli |
 | devShells | 3 | dev, safe, vm |
 | apps | 12 | analyze, analyze-to-file, angst, check, lint-desktop, lint-shell, lint-themes, render... |
 | checks | 9 | check-password, home-theme-override-test, lint-desktop, lint-nix, lint-shell, lint-themes, theme-override, theme-rendered... |

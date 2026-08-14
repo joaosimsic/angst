@@ -208,7 +208,7 @@ The repo store only changes via `export` — after `add`/`capture`/`edit-env` yo
 
 **`modules/home/`** — Base home-manager config: username, stateVersion, fontconfig, tree-sitter (`treesitter.nix`), login shell handling (`login-shell.nix`), secrets activation (`secrets-activation.nix`), theme option (`themeModule.nix`). (SSH client config + agent live in `domains/remote/ssh/`.)
 
-**`modules/vm/`** — Multi-layered VM support: detection (`detect.nix`, `is-qemu-vm.nix` — true when evaluated from a 9p mount), conditional bootloader (`runtime.nix`), vmVariant resources (`vm-variant.nix` — tmpfs `/`, `/persist` ext4, SPICE, 9p host mount), secret/SSH-key injection (`vm-profile.nix`), and host-repo symlink for live editing (`host-mount.nix`). `specialisation.nix` exists but is never imported (dead code).
+**`modules/vm/`** — Multi-layered VM support: detection (`detect.nix`, `is-qemu-vm.nix` — true when evaluated from a 9p mount), conditional bootloader (`runtime.nix`), vmVariant resources (`vm-variant.nix` — tmpfs `/`, `/persist` ext4, SPICE, 9p host mount), declarative inbound auth + age-key injection (`vm-profile.nix` — `authorized_keys` baked from `secrets/ssh/*.pub`, `vm-age-key` consumes `/tmp/shared`), and host-repo symlink for live editing (`host-mount.nix`). `specialisation.nix` exists but is never imported (dead code).
 
 **`modules/secrets.nix`** — sops-nix integration per host: locates `secrets.yaml`, detects an age key, gates everything behind `canDecrypt`, wires `masterPassword` (system + home) and app secrets (e.g. `opencodeGoKey` → `~/.secrets/opencode-go-key`). See [openwiki/secrets.md](openwiki/secrets.md).
 

@@ -4,6 +4,7 @@ pub struct VmConfig {
     pub ssh_port: String,
     pub ssh_user: String,
     pub default_host: String,
+    pub ssh_identity: String,
 }
 
 impl VmConfig {
@@ -12,7 +13,18 @@ impl VmConfig {
             ssh_port: var("VM_SSH_PORT").unwrap_or_else(|_| "2222".to_string()),
             ssh_user: Self::resolve_username(),
             default_host: var("NIX_DEFAULT_TARGET_HOST").unwrap_or_else(|_| "personal".to_string()),
+            ssh_identity: Self::resolve_identity(),
         }
+    }
+
+    fn resolve_identity() -> String {
+        if let Ok(id) = var("VM_SSH_IDENTITY") {
+            if !id.is_empty() {
+                return id;
+            }
+        }
+        let home = var("HOME").unwrap_or_else(|_| "~".to_string());
+        format!("{home}/.ssh/id_ed25519")
     }
 
     fn resolve_username() -> String {
@@ -45,6 +57,8 @@ mod tests {
             std::env::remove_var("VM_SSH_USER");
             std::env::remove_var("ANGST_USERNAME");
             std::env::remove_var("NIX_DEFAULT_TARGET_HOST");
+            std::env::remove_var("VM_SSH_IDENTITY");
+            std::env::set_var("HOME", "/home/test");
         }
 
         let config = VmConfig::load();
@@ -52,6 +66,11 @@ mod tests {
         assert_eq!(config.ssh_port, "2222");
         assert_eq!(config.ssh_user, "joao");
         assert_eq!(config.default_host, "personal");
+        assert_eq!(config.ssh_identity, "/home/test/.ssh/id_ed25519");
+
+        unsafe {
+            std::env::remove_var("HOME");
+        }
     }
 
     #[test]
@@ -61,6 +80,7 @@ mod tests {
             std::env::set_var("VM_SSH_PORT", "2200");
             std::env::set_var("VM_SSH_USER", "ci");
             std::env::set_var("NIX_DEFAULT_TARGET_HOST", "ci-host");
+            std::env::set_var("VM_SSH_IDENTITY", "/keys/custom");
         }
 
         let config = VmConfig::load();
@@ -68,11 +88,13 @@ mod tests {
         assert_eq!(config.ssh_port, "2200");
         assert_eq!(config.ssh_user, "ci");
         assert_eq!(config.default_host, "ci-host");
+        assert_eq!(config.ssh_identity, "/keys/custom");
 
         unsafe {
             std::env::remove_var("VM_SSH_PORT");
             std::env::remove_var("VM_SSH_USER");
             std::env::remove_var("NIX_DEFAULT_TARGET_HOST");
+            std::env::remove_var("VM_SSH_IDENTITY");
         }
     }
 }

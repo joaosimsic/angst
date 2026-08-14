@@ -48,7 +48,7 @@ Usage: `nix run .#shell -- dev`, or `nix profile install .#shell` then `shell de
 
 ## vm tool (`tools/vm`, Rust workspace)
 
-Multi-crate workspace — `vm-core` (config/SSH/process plumbing), `vm-cli` (CLI + runner), `vm-mcp` (MCP server) — integrated as `inputs.vm`; `vmOutputs = inputs.vm.mkOutputs self` in `lib/flake/outputs.nix`. Exposed as `vm-cli`/`vm`/`vm-run`/`res` packages and the `vm` app (`nix run .#vm`).
+Multi-crate workspace — `vm-core` (config/SSH/shared-dir/runner plumbing), `vm-cli` (CLI + runner), `vm-mcp` (MCP server) — integrated as `inputs.vm`; `vmOutputs = inputs.vm.mkOutputs self` in `lib/flake/outputs.nix`. Exposed as the `vm-cli`/`vm` package and the `vm` app (`nix run .#vm`).
 
 ### Commands (`crates/vm-cli/src/commands.rs` + `runner/vm.rs`)
 
@@ -68,16 +68,15 @@ Multi-crate workspace — `vm-core` (config/SSH/process plumbing), `vm-cli` (CLI
 ### Behavior details
 
 - **Headless**: `--headless` flag or auto when `DISPLAY` is unset (CI-friendly). `-display gtk` for interactive use.
-- **SSH**: `SshEngine` connects to `127.0.0.1:2222` (hostfwd `tcp::2222-:22` set by the `vm-run`/`res` wrappers), authenticating via ssh-agent.
-- **Key injection**: wrappers collect `ssh-add -L` + `~/.ssh/*.pub`, filter/sort into `$XDG_STATE_HOME/vm/keys/<host>/authorized_keys`, shared into the VM via `SHARED_DIR`; `modules/vm/vm-profile.nix` installs them (`vm-authorized-keys`, plus `vm-age-key` for the sops age key — see [Secrets](secrets.md)).
+- **SSH**: `SshEngine` connects to `127.0.0.1:2222` (hostfwd `tcp::2222-:22`), authenticating with the host's provisioned shared key (`~/.ssh/id_ed25519` by default, overridable via `VM_SSH_IDENTITY`) via `userauth_pubkey_file` — no ssh-agent, no agent forwarding.
+- **Shared dir**: `vm start` prepares `$XDG_STATE_HOME/vm/keys/<host>` with copies of the host age keys only (`age-keys.txt`, optional `work-keys.txt`), passes it to the runner as `SHARED_DIR` (mounted at `/tmp/shared`). No host SSH keys or agent material crosses into the guest; inbound access is the declarative `authorized_keys` baked from `secrets/ssh/*.pub` in `modules/vm/vm-profile.nix`. The runner is spawned directly (`result/bin/run-<host>-vm`) with `ANGST_REPO`/`NIX_DISK_IMAGE`/`QEMU_NET_OPTS`/`QEMU_OPTS` env.
 - **MCP server** (`crates/vm-mcp`): axum HTTP server on `127.0.0.1:8765` with `/mcp` (JSON-RPC MCP `2025-03-26`) and `/health`. Tools: `vm_exec`, `vm_status`, `vm_restart`. Managed as a background service via `VmProcessController` (`vm mcp …`). AI agents (e.g. OpenCode) can drive the VM through this.
-- Recent change (`ec3ee47 fix: ci`): reformatted the "VM image not found" build message in `crates/vm-cli/src/runner/vm.rs`.
 
 ### justfile shortcuts
 
 ```bash
-just vm              # nix shell ./tools/vm#wrapped -c vm start
-just vm-ssh          # nix shell ./tools/vm#wrapped -c vm ssh --auto-start
+just vm              # NIX_DEFAULT_TARGET_HOST=vm nix shell ./tools/vm#wrapped -c vm start
+just vm-ssh          # NIX_DEFAULT_TARGET_HOST=vm nix shell ./tools/vm#wrapped -c vm ssh --auto-start
 ```
 
 ## Analysis script (`scripts/analyze_flake/`)

@@ -30,8 +30,6 @@ in
             angst = runtime.angstCli;
             vm-cli = vmOutputs.packages.${defaultSystem}.wrapped;
             vm = vmOutputs.packages.${defaultSystem}.wrapped;
-            vm-run = vmOutputs.packages.${defaultSystem}.vm-run;
-            res = vmOutputs.packages.${defaultSystem}.res;
             shell = shellTool;
           }
         else

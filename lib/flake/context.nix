@@ -41,7 +41,6 @@ let
   vmOutputs = inputs.vm.mkOutputs self;
   shellOutputs = inputs.shell.mkOutputs self;
   vmTool = vmOutputs.packages.${defaultSystem}.default or vmOutputs.packages.${defaultSystem}.vm;
-  vmResTool = vmOutputs.packages.${defaultSystem}.res or vmOutputs.packages.${defaultSystem}.vm-run;
   shellTool = shellOutputs.packages.${defaultSystem}.default;
 
   runtime = import ../../runtime {
@@ -87,7 +86,6 @@ let
         themeOverride
         shellOverride
         ;
-      resTool = vmResTool;
     };
 
   mkHostFor =
@@ -199,7 +197,6 @@ in
     vmOutputs
     shellOutputs
     vmTool
-    vmResTool
     shellTool
     runtime
     render

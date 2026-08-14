@@ -42,8 +42,6 @@ let
     ++ allToolchainPkgs
     ++ [
       vmOutputs.packages.${host.system}.wrapped
-      vmOutputs.packages.${host.system}.vm-run
-      vmOutputs.packages.${host.system}.res
     ];
 in
 {

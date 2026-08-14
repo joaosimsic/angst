@@ -58,7 +58,6 @@ let
   vm = {
     homeManagerUpgrade = import ./vm/home-manager-upgrade.nix { inherit mkScript pkgs; };
     ephemeralSsh = import ./vm/ephemeral-ssh.nix { inherit mkScript pkgs; };
-    authorizedKeys = import ./vm/authorized-keys.nix { inherit mkScript pkgs; };
     ageKey = import ./vm/age-key.nix { inherit mkScript pkgs; };
   };
 in

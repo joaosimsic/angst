@@ -19,7 +19,7 @@ Outputs flow:
 
 1. `lib/discover.nix ./hosts` — recursively finds host decls (`{hostname, domain, dir}`). A directory containing `default.nix` is a host; a directory of host directories is a domain (e.g. `personal/` contains `mint/`, `nixos/`).
 2. For each entry, `lib/resolve.nix` imports the decl and normalizes it into a `host` object: defaults (`system`, `hostname`, `username`, `theme = "monochrome"`, `profiles = ["base"]`, a default "changeme" password hash, `type = "nixos"`), plus `scan` (domains via `lib/domains/scan.nix`, themes, tree-sitter grammar builder) and resolved `toolchainModules` (validated against `/toolchains/`, `"*"` or list).
-3. `lib/flake/outputs.nix` — for every host builds a `homeConfigurations.<username>` via `lib/build/mkHome.nix` and, for `type == "nixos"` hosts, a `nixosConfigurations.<hostname>` via `lib/build/mkNixos.nix`. It also emits `packages` (activation packages, `angst`, `shell`, `vm-cli`, `vm-run`, `res`, `default`), `apps` (`vm`, `shell`, `angst`, `render`, `watch`, `check`, `lint-*`, `analyze`, `ssh`), `devShells` (`safe`, `dev`, `vm`), `checks`, and `formatter` (nixfmt).
+3. `lib/flake/outputs.nix` — for every host builds a `homeConfigurations.<username>` via `lib/build/mkHome.nix` and, for `type == "nixos"` hosts, a `nixosConfigurations.<hostname>` via `lib/build/mkNixos.nix`. It also emits `packages` (activation packages, `angst`, `shell`, `vm-cli`, `default`), `apps` (`vm`, `shell`, `angst`, `render`, `watch`, `check`, `lint-*`, `analyze`, `ssh`), `devShells` (`safe`, `dev`, `vm`), `checks`, and `formatter` (nixfmt).
 
 The `representative` host (first NixOS host) drives shared outputs: `default` package, dev shells, checks, and the `ssh` deploy app (`nix build .#homeConfigurations.<user>.activationPackage` → `./result/activate` → gc).
 
@@ -36,7 +36,7 @@ Assembles a `nixosSystem` from:
 ### `lib/build/mkHome.nix`
 
 Assembles `homeManagerConfiguration` from:
-- `modules/home` base, `themeModule`, one generated module per domain (`mkDomainModule`), profile enable modules (`hmModules`), `host.toolchainModules`, `secrets.homeModules`, plus `angst`/`shell`/`vm`/`res` tools in `home.packages`;
+- `modules/home` base, `themeModule`, one generated module per domain (`mkDomainModule`), profile enable modules (`hmModules`), `host.toolchainModules`, `secrets.homeModules`, plus `angst`/`shell`/`vm` tools in `home.packages`;
 - `host.env` → `home.sessionVariables`, `host.extraHome` passthrough, and per-host special args (`hostname`, `monitors`, `db`, `sshAgent`, `ssh`, `shell`, `themes`, `flakeSelf`, …).
 
 Both builders receive `themeOverride`/`shellOverride` to power the representative test configs (`<user>-theme-override-test`, `login-shell-valid`, `login-shell-invalid`) used by checks.
@@ -63,7 +63,7 @@ The same flake builds a disposable QEMU VM per host. Stack (`modules/vm/`):
 - `detect.nix` + `is-qemu-vm.nix` — internal `angst.isQemuVm` option; true when the flake is evaluated from a 9p mount (`/host…`) or the expected host-repo path exists on the guest.
 - `runtime.nix` — conditional bootloader: systemd-boot/EFI only when **not** a QEMU VM; grub disabled in VMs.
 - `vm-variant.nix` — `virtualisation.vmVariant`: tmpfs `/` (2G), `/persist` ext4 on `/dev/disk/by-label/nixos`, 4 cores / 4096 MB / 16G disk, SPICE + vdagent, and a 9p `sharedDirectories.angst` mount (`${ANGST_REPO:-$PWD}` → `/host/…`).
-- `vm-profile.nix` — via `profiles/vm.nix`: ephemeral `/etc/ssh` tmpfs, `vm-authorized-keys` + `vm-age-key` units consuming `/tmp/shared` (SSH keys and the host age key injected from outside), `home-manager-upgrade` service.
+- `vm-profile.nix` — via `profiles/vm.nix`: ephemeral `/etc/ssh` tmpfs, declarative `authorized_keys` baked from `secrets/ssh/*.pub`, `vm-age-key` unit consuming `/tmp/shared` (host age key only), `home-manager-upgrade` service. No host SSH key or ssh-agent material reaches the guest.
 - `host-mount.nix` — activation symlink `~/.config/angst → /host/…/angst` for **live editing** of the repo from inside the VM.
 - `specialisation.nix` — defines a `specialisation.vm.configuration` but is **never imported** (dead code).
 
@@ -78,7 +78,7 @@ When `host.persist.enable` is true (currently `personal/nixos` and `vm`), `modul
 `lib/flake/devshell.nix` builds three shells from the representative host:
 
 - `safe` — neovim, git, deadnix, statix + toolchain packages (editing without dev tooling);
-- `dev` — everything in `safe` plus the angst CLI, openssh, qemu, sops, age, gitleaks, Rust toolchain, and the VM tools (`vm` wrapped, `vm-run`, `res`); exports `VM_SSH_PORT=2222` and `NIX_DEFAULT_TARGET_HOST`, inits ssh-agent, and hooks tree-sitter.
+- `dev` — everything in `safe` plus the angst CLI, openssh, qemu, sops, age, gitleaks, Rust toolchain, and the VM tool (`vm` wrapped); exports `VM_SSH_PORT=2222` and `NIX_DEFAULT_TARGET_HOST`, inits ssh-agent for host-side git/ssh, and hooks tree-sitter.
 - `vm` — `inputsFrom` the vm tool's dev shell + dev packages (Rust tooling for `tools/vm`).
 
 ## Known Staleness and Dead Code

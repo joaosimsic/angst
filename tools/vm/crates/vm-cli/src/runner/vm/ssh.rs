@@ -60,7 +60,9 @@ pub async fn ssh(
         .arg("-o")
         .arg("LogLevel=ERROR")
         .arg("-o")
-        .arg("ForwardAgent=yes");
+        .arg("IdentitiesOnly=yes")
+        .arg("-i")
+        .arg(&config.ssh_identity);
 
     if tty {
         cmd.arg("-t");

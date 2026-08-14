@@ -27,7 +27,9 @@ mkScript {
         local scope="$1" age_key="$2" dest="$3"
         local age_file="$secrets_dir/$scope.ed25519.age"
         local plain="$tmp_dir/$scope.key"
+        local pub="$tmp_dir/$scope.pub"
         local tmp_install="$ssh_dir/$dest.tmp"
+        local tmp_pub="$ssh_dir/$dest.pub.tmp"
 
         [ -f "$age_key" ] || return 0
         [ -f "$age_file" ] || return 0
@@ -38,19 +40,23 @@ mkScript {
         fi
         chmod 600 "$plain"
 
-        if ! ssh-keygen -y -f "$plain" >/dev/null 2>&1; then
+        if ! ssh-keygen -y -f "$plain" >"$pub" 2>/dev/null; then
             echo "warn: decrypted $scope key is invalid; leaving existing $dest untouched" >&2
             return 0
         fi
+        chmod 600 "$pub"
 
         if [ "$(id -u)" -eq 0 ]; then
             install -d -m 700 -o ${username} -g users "$ssh_dir"
             install -m 600 -o ${username} -g users "$plain" "$tmp_install"
+            install -m 644 -o ${username} -g users "$pub" "$tmp_pub"
         else
             install -d -m 700 "$ssh_dir"
             install -m 600 "$plain" "$tmp_install"
+            install -m 644 "$pub" "$tmp_pub"
         fi
         mv -f "$tmp_install" "$ssh_dir/$dest"
+        mv -f "$tmp_pub" "$ssh_dir/$dest.pub"
         rm -f "$plain"
         echo "provisioned $scope SSH key -> $ssh_dir/$dest"
     }

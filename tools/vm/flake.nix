@@ -39,14 +39,6 @@
               rustc = rustToolchain;
             };
 
-            vmRunnerScript =
-              name: script:
-              pkgs.writeShellScriptBin name (
-                pkgs.lib.replaceStrings [ "@defaultHost@" ] [ defaultHost ] (
-                  builtins.readFile ./scripts/lib/keys.sh + builtins.readFile script
-                )
-              );
-
             vm-package = rustPlatform.buildRustPackage {
               pname = "vm";
               version = "0.1.0";
@@ -68,6 +60,9 @@
                       pkgs.nix
                       pkgs.qemu
                       pkgs.openssh
+                      pkgs.coreutils
+                      pkgs.procps
+                      pkgs.bash
                     ]
                   }
               '';
@@ -77,17 +72,12 @@
               };
             };
 
-            vm-run-script = vmRunnerScript "vm-run" ./scripts/vm-run.sh;
-
-            res-script = vmRunnerScript "res" ./scripts/res.sh;
-
             vm-wrapped = pkgs.symlinkJoin {
               name = "vm-wrapped";
               paths = [ vm-package ];
               nativeBuildInputs = [ pkgs.makeWrapper ];
               postBuild = ''
                 wrapProgram $out/bin/vm \
-                  --prefix PATH : ${pkgs.lib.makeBinPath [ vm-run-script ]} \
                   --set NIX_DEFAULT_TARGET_HOST "${defaultHost}"
               '';
             };
@@ -98,8 +88,6 @@
               vm = vm-package;
 
               wrapped = vm-wrapped;
-              vm-run = vm-run-script;
-              res = res-script;
             };
 
             devShells.default = pkgs.mkShell {
@@ -118,20 +106,6 @@
                 export VM_SSH_PORT="2222"
 
                 export NIX_DEFAULT_TARGET_HOST="${defaultHost}"
-
-                export PATH="${vm-run-script}/bin:$PATH"
-
-                if [ -z "$SSH_AUTH_SOCK" ]; then
-                  echo "Initializing local shell-bound SSH Agent..."
-                  eval $(ssh-agent -s) > /dev/null
-                  trap "ssh-agent -k > /dev/null" EXIT
-                fi
-
-                if [ -f "$HOME/.ssh/id_ed25519" ]; then
-                  ssh-add "$HOME/.ssh/id_ed25519" 2>/dev/null
-                elif [ -f "$HOME/.ssh/id_rsa" ]; then
-                  ssh-add "$HOME/.ssh/id_rsa" 2>/dev/null
-                fi
 
                 echo "VM Workspace Tool Active"
                 echo "Target Host Variable: \$NIX_DEFAULT_TARGET_HOST"

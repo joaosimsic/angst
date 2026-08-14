@@ -74,7 +74,7 @@ The projects sync clones each project with the matching scope key: `GIT_SSH_COMM
 
 ### VM
 
-The VM is just another host. The runner injects **only the personal age key** by default (`tools/vm/scripts/lib/keys.sh` copies `keys.txt` → shared dir; `vm-age-key` installs it as `keys.txt`) — if the VM only clones personal projects it never sees `work-age-key`. To run work projects too, opt in by setting `VM_WORK_KEYS` when starting the VM: `keys.sh` then also carries `work-keys.txt` and `vm-age-key` installs it as `work-keys.txt` (an explicit capability, not a silent default). The VM mounts the repo (which carries `secrets/ssh/*.age`), so provisioning decrypts exactly the keys the VM is entitled to. `vm-authorized-keys` still grants inbound SSH access from the host; boot-time `angst-projects-sync` clones over SSH with the shared key — no agent forwarding, no interactive prompt.
+The VM is just another host. `vm start` injects **only the host age keys** by default (`vm-core`'s shared-dir prep copies `keys.txt` → `age-keys.txt`; `vm-age-key` installs it as `keys.txt`) — if the VM only clones personal projects it never sees `work-age-key`. To run work projects too, copy `work-keys.txt` into the shared dir as well (an explicit capability, not a silent default). The VM mounts the repo (which carries `secrets/ssh/*.age`), so provisioning decrypts exactly the keys the VM is entitled to — the same age keys the host injected. Inbound SSH access from the host is **declarative**: `modules/vm/vm-profile.nix` bakes the committed `secrets/ssh/{personal,work}.ed25519.pub` into the VM's `authorized_keys` at build time; no host SSH key or agent material is forwarded at runtime. The host authenticates with its provisioned shared key; boot-time `angst-projects-sync` clones over SSH with the shared key — no agent forwarding, no interactive prompt.
 
 ### Checks
 
@@ -92,11 +92,11 @@ The VM is just another host. The runner injects **only the personal age key** by
 
 The disposable VM decrypts the same secrets as the host **without baking keys into the image**:
 
-- The host's age key and SSH public keys are copied into the VM's shared dir (`/tmp/shared` on the guest) by the `tools/vm` runner scripts (`vm-run`/`res`), which gather `ssh-add -L` + `~/.ssh/*.pub` and the age key.
-- `modules/vm/vm-profile.nix` installs them: `vm-age-key` → `~/.config/sops/age/keys.txt` (and, when a work key was injected, `work-keys.txt`), `vm-authorized-keys` → `~/.ssh/authorized_keys`.
+- The host's **age keys** are copied into the VM's shared dir (`/tmp/shared` on the guest) by `vm-core`'s shared-dir prep when `vm start`/`vm restart` runs; `modules/vm/vm-profile.nix` installs them via `vm-age-key` → `~/.config/sops/age/keys.txt` (and, when a work key was injected, `work-keys.txt`).
+- Inbound host→VM SSH auth is **declarative**: the committed shared scope public keys (`secrets/ssh/*.pub`) are baked into `~/.ssh/authorized_keys` at build time (`modules/vm/vm-profile.nix`). No host SSH keys and no ssh-agent are forwarded to the VM.
 - `~/.config/sops` and `~/.secrets` are added to `persistDirs` so decrypted state survives across VM reboots (impermanence).
 
-History: `50e80de feat: opencode api key` (first secret) → `84b7ab8` decryption fix → `e64a982 feat: forwarding age secret to vm` → `6b24dfc feat: sops key on vm`.
+History: `50e80de feat: opencode api key` (first secret) → `84b7ab8` decryption fix → `e64a982 feat: forwarding age secret to vm` → `6b24dfc feat: sops key on vm` → *no host SSH key/agent forwarding: VM trusts the shared scope keys declaratively and authenticates the host with the provisioned shared key*.
 
 ## Creating / rotating secrets
 

@@ -4,12 +4,24 @@
   pkgs,
   userConfig,
   runtime,
+  flakeSelf,
+  ssh,
   ...
 }:
 
 let
   repoPath = ".config/angst";
   hostAngstPath = "/host${userConfig.homeDirectory}/${repoPath}";
+
+  sharedPubs =
+    let
+      pubFor = scope:
+        let
+          p = flakeSelf + "/secrets/ssh/${scope}.ed25519.pub";
+        in
+        lib.optional (builtins.pathExists p) (lib.trim (builtins.readFile p));
+    in
+    (pubFor "personal") ++ (pubFor "work");
 in
 {
   options.angst.vm.injectWorkAgeKey = lib.mkEnableOption "inject the work age key into the VM (needed to decrypt work-scoped secrets such as ftp mounts)";
@@ -83,7 +95,7 @@ in
     };
 
     users.users.${userConfig.username}.openssh.authorizedKeys.keys =
-      userConfig.ssh.authorizedKeys or [ ];
+      sharedPubs ++ (ssh.authorizedKeys or [ ]);
 
     systemd = {
       user.services.spice-vdagent = {
@@ -125,23 +137,6 @@ in
           serviceConfig = {
             Type = "oneshot";
             ExecStart = runtime.vm.ephemeralSsh.bin;
-          };
-        };
-
-        vm-authorized-keys = {
-          description = "Install runtime SSH authorized_keys for VM access";
-          wantedBy = [ "multi-user.target" ];
-          before = [ "sshd.service" ];
-          requires = [ "tmp-shared.mount" ];
-          after = [ "tmp-shared.mount" ];
-
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            ExecStart =
-              (runtime.vm.authorizedKeys {
-                inherit (userConfig) username homeDirectory;
-              }).bin;
           };
         };
 

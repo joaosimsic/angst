@@ -6,7 +6,6 @@
   vmTool,
   shellTool,
   runtime,
-  resTool,
   themeOverride ? null,
   shellOverride ? null,
 }:
@@ -78,7 +77,6 @@ inputs.home-manager.lib.homeManagerConfiguration {
         vmTool
         shellTool
         runtime.angstCli
-        resTool
       ];
     })
   ]

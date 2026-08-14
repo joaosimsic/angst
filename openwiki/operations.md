@@ -78,12 +78,12 @@ The VM is the fastest way to test changes without touching a real machine; the h
 
 ```bash
 nix run .#vm -- --headless          # or: just vm; add DISPLAY for gtk UI
-nix run .#vm -- ssh                 # connect (port 2222, ssh-agent auth)
+nix run .#vm -- ssh                 # connect (port 2222, shared-key auth)
 nix run .#vm -- status / health     # verify QEMU + port + SSH
 nix run .#vm -- mcp start           # expose MCP server for AI agents (port 8765)
 ```
 
-Inside the VM: `~/.config/angst` is symlinked to the host repo (`modules/vm/host-mount.nix`), secrets are injected via `/tmp/shared` (age key + authorized keys), and `/persist` keeps `.config/sops`, `.secrets`, `.ssh`, and configured home dirs. Use `angst watch` on the host to hot-reload configs into both machines.
+Inside the VM: `~/.config/angst` is symlinked to the host repo (`modules/vm/host-mount.nix`), the host age keys are injected via `/tmp/shared` (`vm-age-key`), inbound SSH auth is the declarative `authorized_keys` baked from `secrets/ssh/*.pub`, and `/persist` keeps `.config/sops`, `.secrets`, `.ssh`, and configured home dirs. Use `angst watch` on the host to hot-reload configs into both machines.
 
 VM gotchas:
 - `vm start` refuses to run if the target host's decl doesn't include the `vm` profile (`ensure_vm_profile`).
