@@ -62,6 +62,10 @@ let
   tuiConfig = builtins.toJSON {
     theme = "angst";
     "$schema" = "https://opencode.ai/tui.json";
+    keybinds = {
+      messages_half_page_up = "ctrl+u";
+      messages_half_page_down = "ctrl+d";
+    };
   };
 in
 [

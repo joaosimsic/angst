@@ -14,8 +14,6 @@ let
   resolve = k: lib.replaceStrings [ "~" ] [ config.home.homeDirectory ] k;
 
   keys = map resolve cfg.keys;
-
-  hasKeys = builtins.any (k: builtins.pathExists k) keys;
 in
 {
   options.angst.sshAgent = {
@@ -36,7 +34,7 @@ in
     };
   };
 
-  config = lib.mkIf (sshEnabled && cfg.enable && hasKeys) {
+  config = lib.mkIf (sshEnabled && cfg.enable) {
     systemd.user = {
       sessionVariables.SSH_AUTH_SOCK = "\${XDG_RUNTIME_DIR}/ssh-agent.socket";
 

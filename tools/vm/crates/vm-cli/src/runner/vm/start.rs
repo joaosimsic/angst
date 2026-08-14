@@ -71,13 +71,18 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
 
     println!("VM Started! Validating connection status...");
 
-    for _ in 0..300 {
+    for i in 1..=750 {
         if ssh.exec("true").is_ok() {
             println!("VM was initialized and ready via SSH");
             return Ok(());
         }
 
-        time::sleep(Duration::from_secs(1)).await;
+        let elapsed = i * 2;
+        if elapsed % 60 == 0 {
+            println!("still waiting for guest SSH (elapsed {elapsed}s)");
+        }
+
+        time::sleep(Duration::from_secs(2)).await;
     }
 
     let extra = if any_qemu_running() {

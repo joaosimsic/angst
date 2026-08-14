@@ -52,8 +52,11 @@ in
     documentation.nixos.enable = lib.mkForce false;
 
     # Don't persist SSH host keys on the VM — vm-ephemeral-ssh handles it.
+    # Keep /var/log volatile: the vm tool SIGTERMs QEMU on stop/restart (an
+    # unclean shutdown), and a persisted journal accumulates corruption that
+    # makes journald recovery slow on the next boot. A disposable VM doesn't
+    # need boot logs persisted.
     environment.persistence."/persist".directories = lib.mkForce [
-      "/var/log"
       "/var/lib/bluetooth"
       "/var/lib/nixos"
       "/var/lib/systemd/coredump"
@@ -85,6 +88,13 @@ in
 
     domains.remote.ssh.enable = lib.mkForce true;
     domains.remote.ssh.server.enable = lib.mkForce true;
+
+    # VM auth is fully declarative: only the system-managed keys (baked from
+    # secrets/ssh/*.pub at build time) are trusted. vm-ephemeral-ssh mounts a
+    # tmpfs over /etc/ssh and copies the baked authorized_keys.d back into it,
+    # so sshd reads the keys from the tmpfs (deterministic; a fresh disk has no
+    # ~/.ssh/authorized_keys fallback).
+    services.openssh.settings.AuthorizedKeysFile = "/etc/ssh/authorized_keys.d/%u";
 
     environment = {
       systemPackages = with pkgs; [

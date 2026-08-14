@@ -32,7 +32,22 @@
       "~/.ssh/work_ed25519"
     ];
   };
-  ssh = { };
+  ssh = {
+    hosts = [
+      {
+        host = "github.com";
+        hostName = "github.com";
+        user = "git";
+        identityFile = "~/.ssh/id_ed25519";
+      }
+      {
+        host = "gitlab.com";
+        hostName = "gitlab.com";
+        user = "git";
+        identityFile = "~/.ssh/work_ed25519";
+      }
+    ];
+  };
   ftp = {
     mounts = [
       {
