@@ -30,4 +30,9 @@ collect_ssh_keys() {
         cp "$HOME/.config/sops/age/keys.txt" "$KEY_DIR/age-keys.txt"
         chmod 600 "$KEY_DIR/age-keys.txt"
     fi
+
+    if [ -f "$HOME/.config/sops/age/work-keys.txt" ]; then
+        cp "$HOME/.config/sops/age/work-keys.txt" "$KEY_DIR/work-keys.txt"
+        chmod 600 "$KEY_DIR/work-keys.txt"
+    fi
 }

@@ -17,6 +17,8 @@
   db.connections = { };
   nixos = {
     keyboardLayout = "br-abnt2";
+    # ftp mounts are work-scoped secrets; the VM needs the work age key to decrypt them
+    angst.vm.injectWorkAgeKey = true;
   };
   home = { };
   env = {
@@ -30,6 +32,13 @@
     keys = [ "~/.ssh/id_ed25519" ];
   };
   ssh = { };
+  ftp = {
+    mounts = [
+      {
+        mountPoint = "ftp/server";
+      }
+    ];
+  };
 
   persist = {
     enable = true;

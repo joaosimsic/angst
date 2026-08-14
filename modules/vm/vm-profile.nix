@@ -12,6 +12,8 @@ let
   hostAngstPath = "/host${userConfig.homeDirectory}/${repoPath}";
 in
 {
+  options.angst.vm.injectWorkAgeKey = lib.mkEnableOption "inject the work age key into the VM (needed to decrypt work-scoped secrets such as ftp mounts)";
+
   config = {
     assertions = [
       {
@@ -156,6 +158,7 @@ in
             ExecStart =
               (runtime.vm.ageKey {
                 inherit (userConfig) username homeDirectory;
+                injectWorkKey = config.angst.vm.injectWorkAgeKey;
               }).bin;
           };
         };
