@@ -174,11 +174,10 @@ inputs.nixpkgs.lib.nixosSystem {
       };
     }
     ({ config, lib, ... }: {
-      systemd.services."home-manager-${host.username}".before =
-        lib.optionals (!config.angst.isQemuVm) [
-          "getty@.service"
-          "serial-getty@.service"
-        ];
+      systemd.services."home-manager-${host.username}".before = lib.optionals (!config.angst.isQemuVm) [
+        "getty@.service"
+        "serial-getty@.service"
+      ];
     })
   ];
 }
