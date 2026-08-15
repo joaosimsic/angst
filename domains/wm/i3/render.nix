@@ -4,7 +4,6 @@
   themeName,
   fontFamily,
   monitors ? { },
-  ...
 }:
 
 let

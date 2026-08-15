@@ -58,27 +58,31 @@ let
         else
           checked;
 
+      renderArgs = {
+        inherit
+          lib
+          themesLib
+          monitors
+          db
+          sshAgent
+          ;
+        checkHelpers = import ../../checks/theme/assertions.nix {
+          inherit lib;
+          themeName = config.theme;
+          theme = themesLib.get config.theme;
+        };
+        fontFamily = "JetBrainsMono Nerd Font";
+        themeName = config.theme;
+        homeDirectory = config.home.homeDirectory;
+      };
+
       outputs =
         if !hasRender then
           [ ]
         else
-          validateOutputs (render {
-            inherit
-              lib
-              themesLib
-              monitors
-              db
-              sshAgent
-              ;
-            checkHelpers = import ../../checks/theme/assertions.nix {
-              inherit lib;
-              themeName = config.theme;
-              theme = themesLib.get config.theme;
-            };
-            fontFamily = "JetBrainsMono Nerd Font";
-            themeName = config.theme;
-            homeDirectory = config.home.homeDirectory;
-          });
+          validateOutputs (
+            render (lib.filterAttrs (name: _: builtins.hasAttr name (lib.functionArgs render)) renderArgs)
+          );
 
       isSkippable =
         subName: pathStr:

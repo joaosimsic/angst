@@ -1,4 +1,4 @@
-{ themesLib, themeName, ... }:
+{ themesLib, themeName }:
 
 let
   t = themesLib.get themeName;

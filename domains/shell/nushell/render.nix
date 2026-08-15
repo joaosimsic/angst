@@ -4,7 +4,6 @@
   themeName,
   checkHelpers,
   sshAgent,
-  ...
 }:
 
 let

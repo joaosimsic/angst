@@ -3,7 +3,6 @@
   themesLib,
   themeName,
   monitors,
-  ...
 }:
 
 let

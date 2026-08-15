@@ -20,19 +20,24 @@ rec {
     lib.concatLists (
       map (
         path:
-        import path {
-          inherit
-            lib
-            themesLib
-            themeName
-            checkHelpers
-            ;
-          fontFamily = defaultFontFamily;
-          monitors = host.monitors or { };
-          db = host.db or { };
-          sshAgent = host.sshAgent or { };
-          homeDirectory = "/home/${host.username}";
-        }
+        let
+          render = import path;
+        in
+        render (
+          lib.filterAttrs (name: _: builtins.hasAttr name (lib.functionArgs render)) {
+            inherit
+              lib
+              themesLib
+              themeName
+              checkHelpers
+              ;
+            fontFamily = defaultFontFamily;
+            monitors = host.monitors or { };
+            db = host.db or { };
+            sshAgent = host.sshAgent or { };
+            homeDirectory = "/home/${host.username}";
+          }
+        )
       ) domainRendererPaths
     );
 
