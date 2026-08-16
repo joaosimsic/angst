@@ -23,8 +23,9 @@ inject PATH; the Go code lives in one place.
   `openssl rand`, `text/tabwriter` for the status table.
 - Build via `pkgs.buildGoModule` inside `runtime/default.nix` (no new flake
   input).
-- **Defer** `apps/analyze*` (Python) and `devshell-hook.nix` (pure shellHook,
-  not a command) — unchanged for now.
+- **Defer** `apps/analyze*` (Python), `apps/check`/`apps/lint-*`/`apps/ssh-deploy`
+  (flake-app wrappers), and `devshell-hook.nix` (pure shellHook, not a command)
+  — unchanged for now.
 
 ## Go module layout (`runtime/angst/`)
 
@@ -40,7 +41,9 @@ runtime/angst/
     render/   nix eval batch → JSON decode → write files → .gitignore sync → i3 reload
     sshkey/   generate | verify (age encrypt/decrypt + pub cross-check)
     boot/     interactive bootstrap-secrets (CLI)  +  set-password-hash (systemd service)
-    system/   login-shell, ssh-add-keys, provision-ssh-key, ftp {decrypt,mount,transform}, vm subcommands
+    system/   login-shell, ssh-add-keys, provision-ssh-key
+    ftp/      decrypt (ftp-secrets-home), transform (JSON→INI), mount|unmount
+    vm/       age-key, ephemeral-ssh, home-manager-upgrade, nixos-switch, home-switch
 ```
 
 Subcommand surface (all from **one binary**, `angst`):
@@ -57,6 +60,21 @@ Subcommand surface (all from **one binary**, `angst`):
 - `ftp <decrypt|mount|unmount|transform>`
 - `vm <home-manager-upgrade|ephemeral-ssh|age-key|nixos-switch|home-switch>`
 
+## Bash → Go mapping (behavior-preserving)
+
+| Bash (today) | Go subcommand | Notes |
+|---|---|---|
+| `angst-cli.nix` internals | `render`, `watch`, `bootstrap-secrets`, `projects`, `ssh-key` | watch re-execs `os.Executable render ...`; preserve `--repo/--host/--theme/--reload`, `NIX_DEFAULT_TARGET_HOST`, theme default from `config_val theme` |
+| `angst-projects.sh` (concatenated into CLI + sync) | `projects *` | single code path; preserve env contract (`ANGST_PROJECTS_{STORE,REPO,ROOT,ONLY}`, `SOPS_{,WORK_}_AGE_KEY_FILE`), exit codes (stale → 1), `--all` import/export, byte-exact sops binary round-trip |
+| `bootstrap-secrets.nix` (systemd service) | `set-password-hash` (baked args: `--username`, `--sops-path`) | keeps `mkpasswd -m sha-512` + `usermod` shell-outs |
+| `projects-sync.nix` | wrapper: `exec angst projects "$@"` + baked `ANGST_PROJECTS_{REPO,ONLY,STORE}` env |
+| `ftp-secrets-home.nix` | `ftp decrypt` (baked home + configs) | warn+exit 0 on missing work key |
+| `ftp-mount.nix` + `ftp-mount-lib.sh` | `ftp mount|unmount`, `ftp transform --conf --ini` | transform prints `remote=`/`path=` on stdout for the pipeline check |
+| `login-shell.nix` | `login-shell` | honor `$VERBOSE_ECHO`/`$DRY_RUN_CMD` passthrough from home activation |
+| `ssh-add-keys.nix` | `ssh-add-keys` (baked keys) | |
+| `ssh-key-provision.nix` | `provision-ssh-key` (baked user/home/secrets-dir) | |
+| `vm/*.nix` (5) | `vm age-key|ephemeral-ssh|home-manager-upgrade|nixos-switch|home-switch` | |
+
 ## Dedup wins (the point of the rewrite)
 
 | Duplication today | After |
@@ -70,7 +88,8 @@ Subcommand surface (all from **one binary**, `angst`):
 ## Nix refactor (`runtime/*.nix`)
 
 - `default.nix` builds `goAngst = pkgs.buildGoModule { src = ./angst; vendorHash = …; }`
-  (stdlib-only → tiny go.sum) and exports it.
+  (stdlib-only → empty vendor; the hash is the sha256 of empty, a one-time
+  constant — verify against the build error if nixpkgs disagrees) and exports it.
 - Each `runtime/*.nix` becomes a one-liner body, e.g.:
   - `angst-cli.nix` → `exec ${goAngst}/bin/angst "$@"` with `runtimeInputs =
     [nix sops age git openssh watchexec coreutils findutils]` (jq/openssl/diffutils
@@ -78,35 +97,59 @@ Subcommand surface (all from **one binary**, `angst`):
   - `projects-sync.nix` → `exec …/angst projects "$@"` + the same `ANGST_PROJECTS_*`
     env as today.
   - `ftp-secrets-home.nix`, `vm/age-key.nix`, etc. → `exec …/angst <sub> <baked args>`.
+- Script names are preserved (`angst-projects-sync`, `angst-ftp-mount`,
+  `angst-ftp-secrets-home`, `angst-vm-*`, `ssh-add-keys`, `angst-set-login-shell`,
+  `angst-provision-ssh-key`, `angst-bootstrap-secrets`) so all `.bin` consumers
+  are untouched.
 - `.bin` shape preserved everywhere → **zero changes** in `mkNixos.nix`,
   `mkHome.nix`, `modules/vm/vm-profile.nix`, `domains/*`, `lib/flake/*`.
-- Delete `angst-lib.sh`, `angst-projects.sh`, `ftp-mount-lib.sh`.
+- Delete `angst-lib.sh`, `angst-projects.sh`, `ftp-mount-lib.sh` (then only
+  `domains/editor/nvim/config/tests/run.sh` remains for the shfmt CI job).
 
 ## Checks + CI + docs
 
 - `checks/projects-pipeline.nix`: replace `cat runtime/angst*.sh` + sourcing with
   driving `${runtime.angstCli.bin} projects export/import/sync/status` against the
-  same synthetic store/env (keeps the "test real code" guarantee).
+  same synthetic store/env (keeps the "test real code" guarantee). `runtime` must
+  be threaded into this check (currently only `pkgs`).
 - `checks/ftp-pipeline.nix`: keep using `${runtime.ftpSecretsHome}` (still a `.bin`),
-  swap the `ftp-mount-lib.sh` sourcing for `angst ftp transform --conf … --ini …`.
+  swap the `ftp-mount-lib.sh` sourcing for `angst ftp transform --conf … --ini …`
+  and read its `remote=`/`path=` stdout.
 - `.github/workflows/checks.yml`: add `runtime/**` to the `tools` paths-filter and a
-  `go-fmt`/`go-tests` job (`gofmt -l . && go test ./...` via `nix develop .#dev`,
-  which already ships Go).
+  `go` job (`gofmt -l . && go vet ./... && go test ./...` via `nix develop .#dev`).
+- **`lib/flake/devshell.nix`**: add `go` + `gofumpt` to `fullDevPackages` (the dev
+  shell does *not* ship Go today).
 - `justfile`: add `go-fmt` / `go-test` recipes.
 - Update `README.md`/`openwiki/tools.md` runtime references (generated OpenWiki
   pages left to the cron job).
 
+## Implementation order
+
+1. Go scaffold: `go.mod`, `main.go` dispatcher, `internal/paths`, `internal/scope`
+   (+ unit tests).
+2. `internal/projects` (biggest, and the pipeline check validates it) and
+   `internal/ftp` — both have flake checks that prove byte-exact behavior.
+3. `render`/`watch`, `sshkey`, `boot` (interactive + service), `system`, `vm`.
+4. Nix wrappers + deletions; rewrite the two pipeline checks.
+5. Dev shell, CI, justfile, docs.
+
 ## Verification
 
+- `gofmt -l .` + `go test ./...` (unit tests for projects/env-hash/stale logic,
+  scope resolution, ftp transform, repo-root resolution).
 - `nix build .#angst` and `nix flake check` (incl. rewritten pipelines).
-- `go test ./...` for projects/env-hash/stale logic, scope resolution, ftp transform.
-- Spot-build a home config + VM config that exercise the `.bin` consumers.
+- Spot-build `.#nixosConfigurations.vm`, `.#homeConfigurations.joao` and the mint
+  (home-only) config — proves the `.bin` contract intact.
+- Manual: `angst render`, `angst watch`, `angst projects add/export/import/status`,
+  `angst ssh-key verify`, stale-env no-clobber.
 
 ## Risk notes
 
 - `buildGoModule` needs `vendorHash`; stdlib-only keeps it a one-time
-  `lib.fakeHash` → real hash swap.
+  `lib.fakeHash` → real hash swap (empty vendor = sha256 of empty).
 - The systemd service scripts run as root/early-boot — Go binary's PATH comes from
   the Nix wrapper's `runtimeInputs`, same guarantee as today.
 - Naming of new subcommands (`set-password-hash`, ...) is flexible; the mapping to
   existing script names is preserved in the wrappers, so nothing external cares.
+- The two pipeline checks enforce byte-exact sops round-trip and `stale → exit 1`
+  — port `projects` and `ftp` first so regressions surface immediately.
