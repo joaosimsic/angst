@@ -4,6 +4,7 @@
   pkgs,
   lib,
   render,
+  hostList,
 }:
 
 let
@@ -58,6 +59,17 @@ let
 
   checkSecretsEncrypted = import ./secrets.nix { inherit pkgs; };
 
+  checkDeclared = import ./declared.nix {
+    inherit pkgs lib hostList;
+  };
+
+  checkProjectsPipeline = import ./projects-pipeline.nix { inherit pkgs; };
+
+  checkFtpPipeline = import ./ftp-pipeline.nix {
+    inherit pkgs;
+    runtime = import ../runtime { inherit pkgs lib self; };
+  };
+
   secretScan = import ./secret-scan.nix { inherit pkgs; };
 
   secretScanHooks = import ./secret-scan-hooks.nix { inherit pkgs; };
@@ -107,6 +119,9 @@ in
   check-projects-encrypted = checkSecretsEncrypted.projects;
   check-ssh-keys = checkSecretsEncrypted.sshKeys;
   check-ftp-encrypted = checkSecretsEncrypted.ftp;
+  check-projects-ftp-declared = checkDeclared;
+  check-projects-pipeline = checkProjectsPipeline;
+  check-ftp-pipeline = checkFtpPipeline;
   secret-scan = secretScan;
   secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;

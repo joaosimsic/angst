@@ -46,7 +46,7 @@ mkScript {
         }
       ''
     ]
-    ++ map (c: "decrypt '${c.source}' '${c.dest}'") configs
+    ++ map (c: "decrypt \"${c.source}\" \"${c.dest}\"") configs
     ++ [ "" ]
   );
 }

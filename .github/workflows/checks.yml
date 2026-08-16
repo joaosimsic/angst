@@ -46,6 +46,10 @@ jobs:
           - check-secrets-encrypted
           - check-projects-encrypted
           - check-ssh-keys
+          - check-ftp-encrypted
+          - check-projects-ftp-declared
+          - check-projects-pipeline
+          - check-ftp-pipeline
           - secret-scan
           - secret-scan-hooks
           - login-shell-valid

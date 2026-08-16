@@ -26,6 +26,10 @@ Standalone: `nix run .#shell -- dev` / `nix profile install .#shell && shell dev
 | `theme-semantic-distinct` | `ansi.error/warn/info/success` mutually distinct |
 | `check-password` | Host `password` field is a valid `$6$` sha-512 hash (skips home-only/`!` hosts) |
 | `check-secrets-encrypted` | Every tracked `secrets.yaml` is sops-encrypted (`sops:` + `ENC[AES256_GCM`) |
+| `check-ftp-encrypted` | Every `secrets/ftp/*` is age-encrypted (age envelope, no plaintext server fields) |
+| `check-projects-ftp-declared` | Host-declared `projects` ids exist in the encrypted store; host-declared ftp `configFile`s exist + are encrypted + use a safe `mountPoint` |
+| `check-projects-pipeline` | Functional round trip with throwaway age keys: export → leak-free encrypted store → byte-exact import; sync materializes `.env` (0600), store-change updates it, local edits are never clobbered (status `STALE`) |
+| `check-ftp-pipeline` | Functional pipeline: sample rclone config encrypted to a throwaway work key → decrypted by the real `angst-ftp-secrets-home` script into `~/.secrets/ftp` (0600/0700) → JSON→INI transform parses via `rclone listremotes` |
 | `login-shell-valid` / `login-shell-invalid` | `shellOverride` handling: valid shell builds, invalid shell asserts |
 | `home-theme-override-test` | Builds a representative home config with an alternate theme |
 | `lint-nix` | `deadnix --fail` + `statix check .` |
@@ -36,14 +40,14 @@ Formatting is enforced by the `formatter` output (`nix fmt` → nixfmt) and CI a
 
 | Workflow | Triggers | What it runs |
 |---|---|---|
-| `checks.yml` | push (all branches) + PR | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the 10 checks + nixfmt + shellfmt + `shell-rust-fmt` + `vm-tests` (`cargo fmt --check && cargo test --workspace --locked` via `nix develop .#vm`) |
+| `checks.yml` | push (all branches) + PR | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the eval checks (themes, secrets encryption, projects/ftp pipelines, eval of all configs) + nixfmt + shellfmt + `shell-rust-fmt` + `vm-tests` (`cargo fmt --check && cargo test --workspace --locked` via `nix develop .#vm`) |
 | `nvim-tests.yml` | push + PR | Links `domains/editor/nvim/config` → `~/.config/nvim`, `nvim --headless '+Lazy! sync'`, then plenary adapter tests (`tests/adapters/init.lua`); lazy plugin cache keyed on `lazy-lock.json` |
 | `secret-scan.yml` | push + PR | gitleaks-action (fetch-depth 0) + trufflehog (`--results=verified,unknown`) |
 | `openwiki-update.yml` | daily cron + manual | Runs `openwiki code --update --print` (OpenRouter + LangSmith env) and opens a PR with `openwiki/`, `AGENTS.md`, `CLAUDE.md`, workflow changes |
 
 Nix CI uses DeterminateSystems `nix-installer-action` + `magic-nix-cache-action`.
 
-> CI gap: `checks.yml` only runs 10 of the 12 flake checks. `check-secrets-encrypted` and `home-theme-override-test` exist as flake checks (run by local `nix flake check`) but have no dedicated CI job — plaintext-secret regressions are caught in CI by gitleaks/trufflehog instead.
+> CI gap: `home-theme-override-test` and `build-all` have dedicated jobs in `checks.yml`; `check-secrets-encrypted`, `check-ftp-encrypted`, and the three pipeline/declared checks run in the `eval-checks` matrix. Secret-hygiene regressions are additionally caught by gitleaks/trufflehog in `secret-scan.yml`. Functional `projects`/`ftp` checks use throwaway age keys — decryption keys never leave real hosts, so live FTP mounts remain a per-host runbook check.
 
 ## Git Hooks and Secret Hygiene
 

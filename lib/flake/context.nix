@@ -120,6 +120,7 @@ let
       pkgs
       lib
       render
+      hostList
       ;
     host = representative;
   };
