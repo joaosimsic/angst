@@ -12,9 +12,20 @@ impl VmProcessController {
     pub fn start(service: &str, headless: bool) -> Result<(), String> {
         let (log_file_path, log_file, err_file) = Self::prepare_service_start(service)?;
 
-        println!("Spawning background VM process via nix run target...");
+        let runner = crate::runner::prepare(headless)?;
 
-        let pid = Sys::spawn_background_runner(log_file, err_file, headless)?;
+        println!(
+            "Spawning background VM process via {}...",
+            runner.path.display()
+        );
+
+        let pid = Sys::spawn_background_runner(
+            &runner.path.to_string_lossy(),
+            &runner.env,
+            log_file,
+            err_file,
+            headless,
+        )?;
 
         Self::write_started_state(service, pid, log_file_path)
     }

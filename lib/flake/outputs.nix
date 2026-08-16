@@ -24,7 +24,7 @@ in
   inherit (import ./packages.nix { inherit context; })
     packages
     ;
-  inherit (import ./apps.nix { inherit self context; })
+  inherit (import ./apps.nix { inherit context; })
     apps
     ;
   inherit (import ./checks.nix { inherit context; })

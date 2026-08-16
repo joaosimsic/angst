@@ -1,9 +1,15 @@
 name: nvim-tests
 on:
   push:
-    branches: 
+    branches:
       - '**'
+    paths:
+      - 'domains/editor/nvim/**'
+      - '.github/workflows/nvim-tests.yml'
   pull_request:
+    paths:
+      - 'domains/editor/nvim/**'
+      - '.github/workflows/nvim-tests.yml'
 jobs:
   nvim-tests:
     runs-on: ubuntu-latest

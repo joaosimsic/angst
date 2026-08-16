@@ -16,5 +16,6 @@
     "system.monitoring"
     "system.container"
     "remote.ssh"
+    "remote.ftp"
   ];
 }

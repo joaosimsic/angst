@@ -7,7 +7,7 @@ let
     homeConfigurations
     representative
     defaultSystem
-    angstTool
+    runtime
     vmOutputs
     shellTool
     ;
@@ -27,11 +27,9 @@ in
         if representative != null then
           {
             default = homeConfigurations.${representative.username}.activationPackage;
-            angst = angstTool;
+            angst = runtime.angstCli;
             vm-cli = vmOutputs.packages.${defaultSystem}.wrapped;
             vm = vmOutputs.packages.${defaultSystem}.wrapped;
-            vm-run = vmOutputs.packages.${defaultSystem}.vm-run;
-            res = vmOutputs.packages.${defaultSystem}.res;
             shell = shellTool;
           }
         else

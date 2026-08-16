@@ -10,3 +10,12 @@ creation_rules:
   - path_regex: hosts/vm/secrets\.yaml$
     age: |
       age17yz8euqt9y33l5ypyeeg54auar65wv2wdu2sxcmtx3t8l0dzjvwq3v7zl9
+  - path_regex: projects/personal/.*$
+    age: |
+      age17yz8euqt9y33l5ypyeeg54auar65wv2wdu2sxcmtx3t8l0dzjvwq3v7zl9
+  - path_regex: projects/work/.*$
+    age: |
+      age1z2rn3lr0f9s0qnpgk8d7ta2fd79vrl09yxgw8enrcdzqcaaaau0qu7f76p
+  - path_regex: secrets/ftp/.*$
+    age: |
+      age1z2rn3lr0f9s0qnpgk8d7ta2fd79vrl09yxgw8enrcdzqcaaaau0qu7f76p

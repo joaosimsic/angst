@@ -4,7 +4,7 @@
   pkgs,
   lib,
   render,
-  ...
+  hostList,
 }:
 
 let
@@ -48,7 +48,7 @@ let
   };
 
   checkPassword = import ./password.nix {
-    inherit lib pkgs host;
+    inherit pkgs host;
   };
 
   loginShell = import ./login-shell.nix {
@@ -59,13 +59,69 @@ let
 
   checkSecretsEncrypted = import ./secrets.nix { inherit pkgs; };
 
+  checkDeclared = import ./declared.nix {
+    inherit pkgs lib hostList;
+  };
+
+  checkProjectsPipeline = import ./projects-pipeline.nix { inherit pkgs; };
+
+  checkFtpPipeline = import ./ftp-pipeline.nix {
+    inherit pkgs;
+    runtime = import ../runtime { inherit pkgs lib self; };
+  };
+
   secretScan = import ./secret-scan.nix { inherit pkgs; };
 
   secretScanHooks = import ./secret-scan-hooks.nix { inherit pkgs; };
+
+  excludedHomes = [
+    "login-shell-valid"
+    "login-shell-invalid"
+  ];
+
+  evalAllConfigs =
+    let
+      nixosToplevels = builtins.mapAttrs (
+        _: c:
+        builtins.baseNameOf (builtins.unsafeDiscardStringContext c.config.system.build.toplevel.drvPath)
+      ) self.nixosConfigurations;
+      homeActivations = builtins.mapAttrs (
+        _: c: builtins.baseNameOf (builtins.unsafeDiscardStringContext c.activationPackage.drvPath)
+      ) (builtins.removeAttrs self.homeConfigurations excludedHomes);
+    in
+    pkgs.writeText "eval-all-configs" (
+      builtins.concatStringsSep "\n" (builtins.attrValues (nixosToplevels // homeActivations))
+    );
+
+  buildAllConfigs =
+    let
+      nixosDrvs = builtins.attrValues (
+        builtins.mapAttrs (_: c: c.config.system.build.toplevel) self.nixosConfigurations
+      );
+      homeDrvs = builtins.attrValues (
+        builtins.mapAttrs (_: c: c.activationPackage) (
+          builtins.removeAttrs self.homeConfigurations excludedHomes
+        )
+      );
+    in
+    pkgs.runCommand "build-all-configs"
+      {
+        nativeBuildInputs = nixosDrvs ++ homeDrvs;
+      }
+      ''
+        mkdir -p "$out"
+        echo "built all configurations" > "$out/ok"
+      '';
 in
 {
   check-password = checkPassword;
-  check-secrets-encrypted = checkSecretsEncrypted;
+  check-secrets-encrypted = checkSecretsEncrypted.secrets;
+  check-projects-encrypted = checkSecretsEncrypted.projects;
+  check-ssh-keys = checkSecretsEncrypted.sshKeys;
+  check-ftp-encrypted = checkSecretsEncrypted.ftp;
+  check-projects-ftp-declared = checkDeclared;
+  check-projects-pipeline = checkProjectsPipeline;
+  check-ftp-pipeline = checkFtpPipeline;
   secret-scan = secretScan;
   secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;
@@ -79,4 +135,6 @@ in
     self.homeConfigurations."${host.username}-theme-override-test".activationPackage;
   login-shell-valid = loginShell.valid;
   login-shell-invalid = loginShell.invalid;
+  eval-all = evalAllConfigs;
+  build-all = buildAllConfigs;
 }

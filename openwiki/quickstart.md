@@ -13,7 +13,8 @@ Machines are declared as plain, diffable Nix files under `hosts/` and auto-disco
 | `/hosts/` | Machine declarations: `hosts/<domain>/<hostname>/default.nix` (+ optional `secrets.yaml`, `hardware.nix`) |
 | `/profiles/` | Reusable composition units (base, desktop, development, server, vm) selected per host |
 | `/modules/` | Core modules: `home/`, `nixos/`, `vm/`, plus `secrets.nix` (sops integration) |
-| `/domains/` | Features — the unit of configuration (30 features / 17 categories), each with a `default.nix` interface + optional `home.nix`/`system.nix` sides |
+| `/domains/` | Features — the unit of configuration (31 features / 17 categories), each with a `default.nix` interface + optional `home.nix`/`system.nix` sides |
+| `/projects/` | Encrypted dev-project store (sops binary, opaque ids, scope-isolated age keys) synced by `angst projects` |
 | `/themes/` | Color token definitions (9 themes, strict 13-token schema) |
 | `/toolchains/` | Declarative dev-language toolchains (23 languages via `mkToolchain`) |
 | `/tools/` | Standalone Rust workspaces: `shell` (env switcher), `vm` (QEMU lifecycle + MCP) |
@@ -29,7 +30,8 @@ Machines are declared as plain, diffable Nix files under `hosts/` and auto-disco
 - **Domains** — The unit of configuration: `domains/<category>/<name>/` with a `default.nix` interface (package + XDG target + description, validated by `mkDomain`), optional `home.nix` (home-manager), `system.nix` (NixOS), `render.nix` (theme-aware config generator), and `config/`. A feature may be user-space, system-space, or both. Auto-discovered and turned into modules by `lib/domains/`.
 - **Themes** — 13 color tokens (9 palette + 4 ansi). 9 themes, all validated at build time; rendered into every domain config. See [Themes](themes.md).
 - **Toolchains** — Declarative language environments (runtime, LSP, formatter, linter, treesitter grammar) for 23 languages; selected by `toolchains = "*"` or a list in the host decl.
-- **Secrets** — sops-nix + age. `secrets.yaml` per host holds `masterPassword` (+ app keys such as `opencodeGoKey`); decrypted at runtime into `~/.secrets/` and used to bootstrap login hashes and the SSH key passphrase. See [Secrets](secrets.md).
+- **Secrets** — sops-nix + age. `secrets.yaml` per host holds `masterPassword` (+ app keys such as `opencodeGoKey`); decrypted at runtime into `~/.secrets/` and used to bootstrap login hashes. Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`. See [Secrets](secrets.md).
+- **Projects** — `angst projects` syncs declared dev repos into `~/projects/` with encrypted `.env` handling that survives a public repo: a `projects/` store holds sops-binary `metadata.yaml` + `env` under opaque ids, split into `personal`/`work` scopes encrypted to different age keys. `sync` runs at home activation and as a `systemd.user` oneshot. See [Domains](domains.md#gitprojects--encrypted-project-store) and [Secrets](secrets.md#project-store).
 - **Hot-reload** — `angst render` / `angst watch` regenerate theme-rendered configs without a full Nix rebuild.
 
 ## Getting Started
@@ -90,7 +92,7 @@ nix run .#lint-shell               # starship + nushell per theme
 |---------|---------------------|
 | `base` | nushell, carapace, starship, zellij, nvim, yazi, lazygit, nh, age, sops, network, git, search, monitoring, container, ssh |
 | `desktop` | rofi, ghostty, x11, graphical, audio, clipboard |
-| `development` | opencode, cursor-cli, sqlit, rainfrog, posting |
+| `development` | opencode, cursor-cli, sqlit, rainfrog, posting, git.projects |
 | `server` | ssh (sshd driven per-host via `host.ssh.server.enable`) |
 | `vm` | ssh + VM modules (detect, runtime, variant, profile, host-mount) |
 

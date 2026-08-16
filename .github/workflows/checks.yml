@@ -1,96 +1,111 @@
 name: checks
 on:
   push:
-    branches: 
+    branches:
       - '**'
   pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint-themes:
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      docs: ${{ steps.filter.outputs.docs }}
+      tools: ${{ steps.filter.outputs.tools }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docs:
+              - '**.md'
+              - 'justfile'
+            tools:
+              - 'tools/**'
+
+  eval-checks:
+    name: ${{ matrix.check }}
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docs == 'false' || needs.changes.outputs.tools == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - lint-themes
+          - lint-desktop
+          - lint-shell
+          - theme-rendered
+          - theme-override
+          - theme-semantic-distinct
+          - check-password
+          - check-secrets-encrypted
+          - check-projects-encrypted
+          - check-ssh-keys
+          - check-ftp-encrypted
+          - check-projects-ftp-declared
+          - check-projects-pipeline
+          - check-ftp-pipeline
+          - secret-scan
+          - secret-scan-hooks
+          - login-shell-valid
+          - login-shell-invalid
+          - lint-nix
+          - eval-all
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build '.#checks.x86_64-linux.lint-themes' --no-link --print-build-logs
-  lint-desktop:
+      - run: nix build '.#checks.x86_64-linux.${{ matrix.check }}' --no-link --print-build-logs
+
+  build-all:
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docs == 'false' && needs.changes.outputs.tools == 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build '.#checks.x86_64-linux.lint-desktop' --no-link --print-build-logs
-  lint-shell:
+      - run: nix build '.#checks.x86_64-linux.build-all' --no-link --print-build-logs
+
+  home-theme-override-test:
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.tools == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build '.#checks.x86_64-linux.lint-shell' --no-link --print-build-logs
-  theme-rendered:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build '.#checks.x86_64-linux.theme-rendered' --no-link --print-build-logs
-  theme-override:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build '.#checks.x86_64-linux.theme-override' --no-link --print-build-logs
-  theme-semantic-distinct:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build '.#checks.x86_64-linux.theme-semantic-distinct' --no-link --print-build-logs
-  check-password:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build '.#checks.x86_64-linux.check-password' --no-link --print-build-logs
-  login-shell-valid:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build '.#checks.x86_64-linux.login-shell-valid' --no-link --print-build-logs
-  login-shell-invalid:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build '.#checks.x86_64-linux.login-shell-invalid' --no-link --print-build-logs
-  lint-nix:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build '.#checks.x86_64-linux.lint-nix' --no-link --print-build-logs
+      - run: nix build '.#checks.x86_64-linux.home-theme-override-test' --no-link --print-build-logs
+
   nixfmt:
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docs == 'false' || needs.changes.outputs.tools == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: nix run '.#formatter.x86_64-linux' -- --check $(git ls-files '*.nix')
+
   shellfmt:
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docs == 'false' || needs.changes.outputs.tools == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: nix run nixpkgs#shfmt -- --diff $(git ls-files '*.sh')
+
   shell-rust-fmt:
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docs == 'false' || needs.changes.outputs.tools == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
@@ -99,8 +114,11 @@ jobs:
         run: |
           nix develop ./tools/shell#default --command bash -lc \
             'cd tools/shell && cargo fmt --check'
+
   vm-tests:
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docs == 'false' || needs.changes.outputs.tools == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main

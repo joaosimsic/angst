@@ -1,6 +1,6 @@
 # Domains
 
-Domains (features) are the **unit of configuration** in angst. Each domain describes one feature — a user application, a system feature, or both. There are currently **30 domains across 17 categories**.
+Domains (features) are the **unit of configuration** in angst. Each domain describes one feature — a user application, a system feature, or both. There are currently **31 domains across 17 categories**.
 
 ## Domain Anatomy
 
@@ -55,6 +55,7 @@ There is **no** `lib/domains/activation.nix` (README is stale); activation happe
 | editor | nvim | *(pkgs.neovim in home)* | nvim | ✅ | ✅ | — | Neovim: backend adapters/engines, treesitter, Lua tests |
 | files | yazi | *(none)* | yazi | ✅ | ✅ | — | Terminal file manager |
 | git | lazygit | lazygit | lazygit | ✅ | ✅ | — | Git TUI |
+| git | projects | git | custom | — | ✅ | — | Auto-synced encrypted dev projects (clone + `.env` via sops) |
 | http-client | posting | posting | posting | ✅ | ✅ | — | Terminal HTTP client |
 | launcher | rofi | rofi | rofi | ✅ | ✅ | — | App launcher |
 | nix | nh | nh | — | — | — | — | Nix CLI helper (package-only) |
@@ -95,6 +96,31 @@ A Lua config with a pluggable backend (`config/lua/backend/`):
 - `engines/` — completion/formatter/linter/lsp/treesitter drivers; `engines/treesitter.lua` registers grammar mappings (sh→bash, jsonc→json…), augroups, and prepends `~/.local/share/tree-sitter(-fixed)` to rtp;
 - `shared/` — AdapterLoader/Scanner/Tool, LspTool; `frontend/`, `common/`, `config/` (themed `palette.lua`), `infra/`, `queries/`.
 - Tests live in `config/tests/` (`run.sh` → `bootstrap.lua` → plenary suite at `tests/adapters/suite.lua`: loader_scanner, lsp_settings, inlay_hints, engine_mappings, startup). CI runs them via `.github/workflows/nvim-tests.yml`. Recent fixes: `be87346` jsonc→json treesitter mapping; `163d922` re-apply highlight on reopen.
+
+### `git/projects` — encrypted project store (three layers)
+
+`home.nix` builds an `angst-projects-sync` wrapper (`pkgs.writeShellApplication`) from the shared `runtime/angst-projects.sh` logic (runtime inputs: git, sops, age, jq, openssl, coreutils, diffutils, findutils). It runs `import` then `sync` as a home activation entry and as a `systemd.user` oneshot (`angst-projects-sync`, `After`/`Wants network-online.target`).
+
+Three layers:
+
+- **Repo store** — `projects/{personal,work}/<opaque-id>/{metadata.yaml,env}` (committed,
+  sops-binary **encrypted**). The transport: travels with the public repo, so a new machine
+  that clones the repo has the metadata to clone its projects. Written only by
+  `angst projects export`.
+- **Working store** — `~/.secrets/angst/projects/{personal,work}/<opaque-id>/{metadata.yaml,env}`
+  (fixed per-host, **decrypted plaintext**). Runtime ops read/write this directly (no sops at
+  runtime). Seeded from the repo store at build time via `import`.
+- **Clone root** — `~/projects/<name>`: cloned repo + decrypted `.env`, divergent per host.
+
+Opaque ids (`openssl rand -hex 8`) are not name-derived; real names/URLs exist only in the encrypted repo store. Scope is the folder path; `personal` and `work` use different age keys (work files never list the personal recipient). The per-scope recipient is derived from the scope key file at import/export time (no repo `.sops.yaml` routing).
+
+Hosts declare **which** projects they want as a list of opaque store ids
+(`projects = [ "<opaque id>" ... ]` in the host decl — ids from `angst projects status`).
+Names stay encrypted; an empty list syncs nothing. The wrapper bakes the list into
+`ANGST_PROJECTS_ONLY`; the same domain module works on `nixos` and home-only hosts
+(a `projects` specialArg is threaded through both builders).
+
+Per-registry-project sync: `mkdir -p ~/projects` (0755) → clone-if-missing into `~/projects/<name>` (no auto-pull, no hooks, no `.gitignore` edits — clones are never modified) → `.env` materialized/refreshed hash-tracked via `~/.secrets/projects/<name>.env.sha256`. A locally-edited `.env` is never clobbered: `sync` marks it `stale` and prints a redacted (key-name-only) diff, exiting non-zero. Missing keys/repos, no network, or decrypt errors skip with a warning and exit 0 — nothing fails a build or boot. The repo store only changes via `angst projects export` (then commit). See [Secrets — Project store](secrets.md#project-store) for the sops/key flow.
 
 ### `wm/i3`
 

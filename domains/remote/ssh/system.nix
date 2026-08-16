@@ -2,11 +2,15 @@
   config,
   lib,
   ssh,
+  userConfig,
+  flakeSelf,
+  runtime,
   ...
 }:
 
 let
   cfg = config.domains.remote.ssh;
+  inherit (userConfig) homeDirectory;
 in
 {
   options.domains.remote.ssh = {
@@ -26,14 +30,48 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.enable && cfg.server.enable) {
-    services.openssh = {
-      enable = true;
-      settings = {
-        PasswordAuthentication = cfg.server.passwordAuthentication;
-        PermitRootLogin = "no";
-        AllowAgentForwarding = true;
+  config = lib.mkMerge [
+    (lib.mkIf (cfg.enable && cfg.server.enable) {
+      services.openssh = {
+        enable = true;
+        settings = {
+          PasswordAuthentication = cfg.server.passwordAuthentication;
+          PermitRootLogin = "no";
+          AllowAgentForwarding = false;
+          # The vm tool polls a new SSH connection every couple of seconds
+          # while the guest boots; a low MaxStartups makes sshd throttle those
+          # pre-auth connections into a self-sustaining rejection loop.
+          MaxStartups = "100:30:200";
+        };
       };
-    };
-  };
+    })
+    (lib.mkIf cfg.enable {
+      systemd.services.angst-provision-ssh-key = {
+        description = "angst: decrypt and install the shared scope SSH keys";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "home-manager-${userConfig.username}.service" ];
+        after = [
+          "local-fs.target"
+          "vm-age-key.service"
+        ];
+
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          PrivateTmp = true;
+          ProtectSystem = "strict";
+          ProtectHome = "read-only";
+          ReadWritePaths = [ "${homeDirectory}/.ssh" ];
+          NoNewPrivileges = true;
+          UMask = "0077";
+          RestrictAddressFamilies = [ "AF_UNIX" ];
+          ExecStart =
+            (runtime.sshKeyProvision {
+              inherit (userConfig) username homeDirectory;
+              secretsDir = "${flakeSelf}/secrets/ssh";
+            }).bin;
+        };
+      };
+    })
+  ];
 }

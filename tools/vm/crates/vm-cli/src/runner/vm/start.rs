@@ -1,9 +1,8 @@
 use std::env;
-use std::path::Path;
 use std::time::Duration;
 
 use tokio::{process::Command, time};
-use vm_core::{SshEngine, VmProcessController};
+use vm_core::{SshEngine, VmProcessController, runner};
 
 use super::health::{any_qemu_running, detect_display, kill_stale_qemu};
 use super::target::{ensure_vm_profile, read_env_value, target_host, target_username};
@@ -16,16 +15,7 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
 
     let effective_headless = headless || !detect_display();
 
-    let runner_path = format!("result/bin/run-{}-vm", host);
-    let fallback_path = "result/bin/run-nixos-vm".to_string();
-    let runner_path = if Path::new(&runner_path).exists() {
-        runner_path
-    } else {
-        fallback_path.clone()
-    };
-    let runner_exists = Path::new(&runner_path).exists();
-
-    if !runner_exists {
+    if runner::find_runner().is_none() {
         println!(
             "VM image not found. Building NixOS VM system image for host '{}'...",
             host
@@ -81,13 +71,18 @@ pub async fn start(ssh: &SshEngine, headless: bool) -> Result<(), String> {
 
     println!("VM Started! Validating connection status...");
 
-    for _ in 0..300 {
+    for i in 1..=750 {
         if ssh.exec("true").is_ok() {
             println!("VM was initialized and ready via SSH");
             return Ok(());
         }
 
-        time::sleep(Duration::from_secs(1)).await;
+        let elapsed = i * 2;
+        if elapsed % 60 == 0 {
+            println!("still waiting for guest SSH (elapsed {elapsed}s)");
+        }
+
+        time::sleep(Duration::from_secs(2)).await;
     }
 
     let extra = if any_qemu_running() {

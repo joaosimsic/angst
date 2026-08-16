@@ -4,6 +4,7 @@
   host,
   hmModules,
   nixosModules,
+  runtime,
   themeOverride ? null,
 }:
 
@@ -53,18 +54,19 @@ inputs.nixpkgs.lib.nixosSystem {
     inherit (host)
       hostname
       monitors
-      repoPath
       db
       sshAgent
       ssh
       shell
       ;
+    hostType = host.type;
     hostName = host.hostname;
     inherit (host.scan) themes;
     themesLib = host.scan.themes;
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
+    inherit runtime;
   };
 
   modules = [
@@ -81,57 +83,41 @@ inputs.nixpkgs.lib.nixosSystem {
     secrets.systemCore
   ]
   ++ [
-    ../../modules/vm/detect.nix
     ../../modules/vm/runtime.nix
     ../../modules/vm/vm-variant.nix
     ../../modules/vm/host-mount.nix
-    ({ pkgs, ... }: {
-      users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
-      users.users.root.hashedPassword = lib.mkDefault host.password;
+    (
+      {
+        config,
+        lib,
+        runtime,
+        ...
+      }:
+      {
+        users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
+        users.users.root.hashedPassword = lib.mkDefault host.password;
 
-      systemd.services.angst-bootstrap-secrets = lib.mkIf secrets.canDecrypt {
-        description = "angst: set login password hash and enforce SSH key passphrase from secrets";
-        wantedBy = [ "multi-user.target" ];
-        before = [
-          "getty@.service"
-          "serial-getty@.service"
-          "display-manager.service"
-        ];
+        systemd.services.angst-bootstrap-secrets = lib.mkIf secrets.canDecrypt {
+          description = "angst: set login password hash from secrets";
+          wantedBy = [ "multi-user.target" ];
+          before = [
+            "getty@.service"
+            "serial-getty@.service"
+            "display-manager.service"
+          ];
 
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStart =
+              (runtime.bootstrapSecrets {
+                inherit (host) username;
+                sopsPath = config.sops.secrets.masterPassword.path;
+              }).bin;
+          };
         };
-
-        script = ''
-          set -euo pipefail
-
-          MASTER_PASSWORD=$(cat ''${config.sops.secrets.masterPassword.path})
-
-          set +x
-          HASH=$(echo "$MASTER_PASSWORD" | ${pkgs.mkpasswd}/bin/mkpasswd -m sha-512 -s)
-          ${pkgs.shadow}/bin/usermod -p "$HASH" ${host.username}
-          ${pkgs.shadow}/bin/usermod -p "$HASH" root
-
-          KEY_FILE="/home/${host.username}/.ssh/id_ed25519"
-          SSH_DIR="$(dirname "$KEY_FILE")"
-
-          if [ ! -f "$KEY_FILE" ]; then
-            mkdir -p "$SSH_DIR"
-            ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$KEY_FILE" -N "$MASTER_PASSWORD" -C "${host.username}@${host.hostname}"
-            chown -R ${host.username}: "$SSH_DIR"
-          else
-            if ! ${pkgs.openssh}/bin/ssh-keygen -y -P "$MASTER_PASSWORD" -f "$KEY_FILE" > /dev/null 2>&1; then
-              ${pkgs.openssh}/bin/ssh-keygen -p -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null || \
-                ${pkgs.openssh}/bin/ssh-keygen -p -P "" -N "$MASTER_PASSWORD" -f "$KEY_FILE" 2>/dev/null
-            fi
-          fi
-
-          unset MASTER_PASSWORD
-          set -x
-        '';
-      };
-    })
+      }
+    )
   ]
   ++ (if host.persist.enable then [ inputs.impermanence.nixosModules.impermanence ] else [ ])
   ++ (
@@ -140,7 +126,7 @@ inputs.nixpkgs.lib.nixosSystem {
         (import ../../modules/nixos/persist.nix {
           inherit lib;
           inherit (host) persist username;
-          inherit (secrets) persistDirs;
+          persistDirs = secrets.persistDirs ++ lib.optionals (host.projects != [ ]) [ "projects" ];
         })
       ]
     else
@@ -158,18 +144,21 @@ inputs.nixpkgs.lib.nixosSystem {
           inherit (host)
             hostname
             monitors
-            repoPath
             db
             sshAgent
             ssh
+            ftp
             shell
+            projects
             ;
+          hostType = host.type;
           hostName = host.hostname;
           inherit (host.scan) themes;
           themesLib = host.scan.themes;
           userConfig = userCfg;
           theme = effectiveTheme;
           flakeSelf = self;
+          inherit runtime;
         };
 
         users.${host.username} = {
@@ -185,10 +174,7 @@ inputs.nixpkgs.lib.nixosSystem {
       };
     }
     ({ config, lib, ... }: {
-      systemd.services."home-manager-${host.username}".before = [
-        "sshd.service"
-      ]
-      ++ lib.optionals (!config.angst.isQemuVm) [
+      systemd.services."home-manager-${host.username}".before = lib.optionals (!config.angst.isQemuVm) [
         "getty@.service"
         "serial-getty@.service"
       ];

@@ -3,7 +3,6 @@
   themesLib,
   themeName,
   checkHelpers,
-  ...
 }:
 
 let
@@ -68,7 +67,7 @@ let
     "zig"
   ];
 
-  modules = import ./modules.nix { inherit lib p t; };
+  modules = import ./modules.nix { inherit p; };
 
   renderModule =
     module:

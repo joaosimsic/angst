@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib }:
 
 let
   inherit (import ../lib/toolchain.nix { inherit lib pkgs; }) mkToolchain;
@@ -9,5 +9,9 @@ mkToolchain {
   formatter = with pkgs; [ gofumpt ];
   tools = with pkgs; [ gotools ];
   linter = with pkgs; [ golangci-lint ];
-  treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-go tree-sitter-gomod tree-sitter-gowork ];
+  treesitter = with pkgs.tree-sitter-grammars; [
+    tree-sitter-go
+    tree-sitter-gomod
+    tree-sitter-gowork
+  ];
 }

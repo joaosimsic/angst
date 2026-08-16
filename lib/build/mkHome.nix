@@ -5,8 +5,7 @@
   hmModules,
   vmTool,
   shellTool,
-  angstTool,
-  resTool,
+  runtime,
   themeOverride ? null,
   shellOverride ? null,
 }:
@@ -43,7 +42,6 @@ let
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
-
   extraSpecialArgs = {
     inherit (host)
       hostname
@@ -51,7 +49,10 @@ inputs.home-manager.lib.homeManagerConfiguration {
       db
       sshAgent
       ssh
+      ftp
+      projects
       ;
+    hostType = host.type;
     shell = if shellOverride != null then shellOverride else host.shell;
     inherit (host.scan) themes;
     themesLib = host.scan.themes;
@@ -59,6 +60,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
+    inherit runtime;
   };
 
   modules = [
@@ -74,8 +76,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
       home.packages = [
         vmTool
         shellTool
-        angstTool
-        resTool
+        runtime.angstCli
       ];
     })
   ]

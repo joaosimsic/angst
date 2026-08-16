@@ -2,7 +2,6 @@
   themesLib,
   themeName,
   checkHelpers,
-  ...
 }:
 
 let

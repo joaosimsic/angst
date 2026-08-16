@@ -27,17 +27,19 @@ impl Sys {
     }
 
     pub fn spawn_background_runner(
+        runner: &str,
+        env: &[(String, String)],
         log_file: File,
         err_file: File,
         headless: bool,
     ) -> Result<u32, String> {
-        let mut cmd = Command::new("vm-run");
+        let mut cmd = Command::new(runner);
+        cmd.envs(env.iter().cloned());
 
         cmd.stdout(Stdio::from(log_file))
             .stderr(Stdio::from(err_file));
 
         if headless {
-            cmd.arg("--headless");
             cmd.stdin(Stdio::null());
         }
 

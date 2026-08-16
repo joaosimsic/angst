@@ -3,7 +3,6 @@
   themeName,
   checkHelpers,
   fontFamily,
-  ...
 }:
 
 let

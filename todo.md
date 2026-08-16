@@ -14,6 +14,7 @@
 - [x] md handling(md-preview/render-md)
 - [ ] add file line length in heirline
 - [ ] fix render md badge and move through zellij
+- [ ] add profiler, benchmark and assembly view for scratch plugin
 
 # nu
 
@@ -46,6 +47,11 @@
 # zellij
 
 - [x] screen freeze when exit or close last pane
+
+# encryption
+
+- [ ] stardand way to encrypt files and dirs
+- [ ] validate projects and ftp pipelines
 
 # miscellaneous
 

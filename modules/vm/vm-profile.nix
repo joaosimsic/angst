@@ -3,35 +3,34 @@
   lib,
   pkgs,
   userConfig,
-  repoPath,
+  runtime,
+  flakeSelf,
+  ssh,
   ...
 }:
 
 let
+  repoPath = ".config/angst";
   hostAngstPath = "/host${userConfig.homeDirectory}/${repoPath}";
 
-  angstCli = pkgs.writeShellApplication {
-    name = "angst";
-    runtimeInputs = with pkgs; [
-      coreutils
-      findutils
-      git
-      nix
-      watchexec
-      jq
-    ];
-    text = builtins.concatStringsSep "\n" (
-      map builtins.readFile [
-        ../../scripts/angst-lib.sh
-        ../../scripts/angst-bootstrap-secrets.sh
-        ../../scripts/angst-render.sh
-        ../../scripts/angst-watch.sh
-        ../../scripts/angst.sh
-      ]
-    );
-  };
+  sharedPubs =
+    let
+      pubFor =
+        scope:
+        let
+          p = flakeSelf + "/secrets/ssh/${scope}.ed25519.pub";
+        in
+        lib.optional (builtins.pathExists p) (lib.trim (builtins.readFile p));
+    in
+    (pubFor "personal") ++ (pubFor "work");
 in
 {
+  options.angst.vm.injectWorkAgeKey = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Inject the work age key into the VM (needed to decrypt work-scoped secrets such as ftp mounts). Every host must be able to use the work key.";
+  };
+
   config = {
     assertions = [
       {
@@ -52,9 +51,7 @@ in
 
     documentation.nixos.enable = lib.mkForce false;
 
-    # Don't persist SSH host keys on the VM — vm-ephemeral-ssh handles it.
     environment.persistence."/persist".directories = lib.mkForce [
-      "/var/log"
       "/var/lib/bluetooth"
       "/var/lib/nixos"
       "/var/lib/systemd/coredump"
@@ -87,12 +84,18 @@ in
     domains.remote.ssh.enable = lib.mkForce true;
     domains.remote.ssh.server.enable = lib.mkForce true;
 
+    services.openssh.settings.AuthorizedKeysFile = "/etc/ssh/authorized_keys.d/%u";
+
+    services.openssh.settings.PerSourcePenalties = lib.mkForce false;
+
     environment = {
       systemPackages = with pkgs; [
         spice-vdagent
         pkg-config
         openssl.dev
-        angstCli
+        runtime.angstCli
+        runtime.vm.nixosSwitch
+        runtime.vm.homeSwitch
       ];
       sessionVariables = {
         ANGST_REPO = hostAngstPath;
@@ -101,7 +104,7 @@ in
     };
 
     users.users.${userConfig.username}.openssh.authorizedKeys.keys =
-      userConfig.ssh.authorizedKeys or [ ];
+      sharedPubs ++ (ssh.authorizedKeys or [ ]);
 
     systemd = {
       user.services.spice-vdagent = {
@@ -128,35 +131,8 @@ in
             Type = "oneshot";
             RemainAfterExit = true;
             User = userConfig.username;
+            ExecStart = (runtime.vm.homeManagerUpgrade { inherit (userConfig) username; }).bin;
           };
-          script = ''
-            active_hp=""
-            service_exec="$(systemctl show home-manager-${userConfig.username} -p ExecStart 2>/dev/null || true)"
-            active_gen="$(echo "$service_exec" | sed -n 's/.* \([^ ]*\)-home-manager-generation.*/\1-home-manager-generation/p')"
-            if [ -n "$active_gen" ] && [ -L "$active_gen/home-path" ]; then
-              active_hp="$(readlink -f "$active_gen/home-path" 2>/dev/null || true)"
-            fi
-
-            if [ -z "$active_hp" ]; then
-              echo "Could not determine active home-manager-path; nothing to upgrade."
-              exit 0
-            fi
-
-            latest=""
-            shopt -s nullglob 2>/dev/null || true
-            for gen in /nix/store/*-home-manager-generation/activate; do
-              [ -f "$gen" ] || continue
-              dir="''${gen%/activate}" || continue
-              hp="$(readlink -f "$dir/home-path" 2>/dev/null || true)"
-              [ -n "$hp" ] || continue
-              [ "$hp" = "$active_hp" ] && continue
-              latest="$dir"
-            done
-
-            if [ -n "$latest" ] && [ -x "$latest/activate" ]; then
-              "$latest/activate" --driver-version 1 || true
-            fi
-          '';
         };
 
         vm-ephemeral-ssh = {
@@ -167,41 +143,10 @@ in
             "sshd.service"
           ];
           after = [ "local-fs.target" ];
-          serviceConfig.Type = "oneshot";
-          script = ''
-            mount -t tmpfs tmpfs /etc/ssh -o mode=0755
-            for f in /run/current-system/etc/ssh/sshd_config /etc/static/ssh/sshd_config; do
-              if [ -f "$f" ]; then
-                cp "$f" /etc/ssh/sshd_config
-                break
-              fi
-            done
-          '';
-        };
-
-        vm-authorized-keys = {
-          description = "Install runtime SSH authorized_keys for VM access";
-          wantedBy = [ "multi-user.target" ];
-          before = [ "sshd.service" ];
-          requires = [ "tmp-shared.mount" ];
-          after = [ "tmp-shared.mount" ];
-
           serviceConfig = {
             Type = "oneshot";
-            RemainAfterExit = true;
+            ExecStart = runtime.vm.ephemeralSsh.bin;
           };
-
-          script = ''
-            key_file=/tmp/shared/authorized_keys
-
-            if [ ! -s "$key_file" ]; then
-              echo "No runtime VM SSH keys found at $key_file; keeping declarative authorized_keys fallback."
-              exit 0
-            fi
-
-            install -d -m 700 -o ${userConfig.username} -g users ${userConfig.homeDirectory}/.ssh
-            install -m 600 -o ${userConfig.username} -g users "$key_file" ${userConfig.homeDirectory}/.ssh/authorized_keys
-          '';
         };
 
         vm-age-key = {
@@ -214,20 +159,12 @@ in
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
+            ExecStart =
+              (runtime.vm.ageKey {
+                inherit (userConfig) username homeDirectory;
+                injectWorkKey = config.angst.vm.injectWorkAgeKey;
+              }).bin;
           };
-
-          script = ''
-            key_file=/tmp/shared/age-keys.txt
-
-            if [ ! -s "$key_file" ]; then
-              echo "No host age key found at $key_file; secrets will be unavailable."
-              exit 0
-            fi
-
-            sops_dir="${userConfig.homeDirectory}/.config/sops/age"
-            install -d -m 700 -o ${userConfig.username} -g users "$sops_dir"
-            install -m 600 -o ${userConfig.username} -g users "$key_file" "$sops_dir/keys.txt"
-          '';
         };
       };
     };

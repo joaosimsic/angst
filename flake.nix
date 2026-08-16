@@ -36,7 +36,7 @@
       hostEntries = discoverHosts ./hosts;
 
       mkHost =
-        { domain, dir, ... }:
+        { domain, dir }:
         let
           hostDecl = import (./hosts + "/${dir}");
         in
@@ -48,7 +48,7 @@
       hostDefs = builtins.listToAttrs (
         map (h: {
           name = h.hostname;
-          value = mkHost h;
+          value = mkHost { inherit (h) domain dir; };
         }) hostEntries
       );
     in

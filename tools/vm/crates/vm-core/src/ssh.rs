@@ -4,11 +4,38 @@ use std::{
     fs::{File, metadata},
     io::{Read, Write},
     net::TcpStream,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 pub struct SshEngine {
     config: VmConfig,
+}
+
+fn ensure_pub_key(key: &Path, pub_key: &Path) -> Result<(), String> {
+    let output = std::process::Command::new("ssh-keygen")
+        .args(["-y", "-f"])
+        .arg(key)
+        .output()
+        .map_err(|e| format!("Failed to run ssh-keygen to derive public key: {}", e))?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to derive public key {} from {}: {}",
+            pub_key.display(),
+            key.display(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+
+    let pubkey = String::from_utf8_lossy(&output.stdout);
+    std::fs::write(pub_key, pubkey.trim_end_matches('\n')).map_err(|e| {
+        format!(
+            "Failed to write derived public key {}: {}",
+            pub_key.display(),
+            e
+        )
+    })?;
+    Ok(())
 }
 
 impl SshEngine {
@@ -16,6 +43,13 @@ impl SshEngine {
         Self {
             config: VmConfig::load(),
         }
+    }
+
+    fn identity_paths(&self) -> (PathBuf, PathBuf) {
+        let key = PathBuf::from(&self.config.ssh_identity);
+        let mut pub_key = key.clone();
+        pub_key.set_extension("pub");
+        (key, pub_key)
     }
 
     fn connect(&self) -> Result<Session, String> {
@@ -33,10 +67,32 @@ impl SshEngine {
         sess.set_tcp_stream(tcp);
         sess.handshake()
             .map_err(|e| format!("SSH handshake failed: {}", e))?;
-        sess.userauth_agent(&self.config.ssh_user).map_err(|e| {
+
+        let (key, pub_key) = self.identity_paths();
+
+        if !key.exists() {
+            return Err(format!(
+                "VM SSH identity not found at {}. Provision it with the shared scope key (angst-provision-ssh-key) or set VM_SSH_IDENTITY.",
+                key.display()
+            ));
+        }
+
+        if !pub_key.exists() {
+            ensure_pub_key(&key, &pub_key)?;
+        }
+
+        sess.userauth_pubkey_file(
+            &self.config.ssh_user,
+            Some(pub_key.as_path()),
+            key.as_path(),
+            None,
+        )
+        .map_err(|e| {
             format!(
-                "SSH Agent auth failed for user {}: {}",
-                self.config.ssh_user, e
+                "SSH pubkey auth failed for user {} with {}: {}",
+                self.config.ssh_user,
+                key.display(),
+                e
             )
         })?;
 
@@ -47,7 +103,6 @@ impl SshEngine {
         let sess = self.connect()?;
 
         let mut channel = sess.channel_session().map_err(|e| e.to_string())?;
-        channel.request_auth_agent_forwarding().ok();
         channel.exec(command).map_err(|e| e.to_string())?;
 
         let mut stdout = String::new();
