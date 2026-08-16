@@ -1,6 +1,7 @@
 {
   mkScript,
   pkgs,
+  goAngst,
 }:
 {
   username,
@@ -14,12 +15,6 @@ mkScript {
     shadow
   ];
   text = ''
-    MASTER_PASSWORD=$(cat ${sopsPath})
-
-    HASH=$(echo "$MASTER_PASSWORD" | mkpasswd -m sha-512 -s)
-    usermod -p "$HASH" ${username}
-    usermod -p "$HASH" root
-
-    unset MASTER_PASSWORD
+    exec ${goAngst}/bin/angst set-password-hash --username "${username}" --sops-path "${sopsPath}"
   '';
 }

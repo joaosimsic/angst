@@ -6,12 +6,10 @@
 # Functional test of the `angst ftp` pipeline, using a throwaway work key and a
 # synthetic rclone FTP config (no real secrets, no network):
 #   encrypt sample JSON -> *.age (work-key scope)
-#   decrypt via the real runtime.ftpSecretsHome script -> ~/.secrets/ftp/*.conf
-#   transform via the real ftp-mount-lib.sh -> rclone INI (parseable offline)
+#   decrypt via the real runtime.ftpSecretsHome wrapper -> ~/.secrets/ftp/*.conf
+#   transform via the real `angst ftp transform` -> rclone INI (parseable offline)
 
 let
-  repoRoot = ../.;
-
   secretsHome = runtime.ftpSecretsHome {
     homeDirectory = "$CHK_FTP_HOME";
     configs = [
@@ -30,9 +28,9 @@ pkgs.runCommand "check-ftp-pipeline"
       pkgs.gnugrep
       pkgs.sops
       pkgs.age
-      pkgs.jq
       pkgs.rclone
       secretsHome
+      runtime.goAngst
     ];
   }
   ''
@@ -44,6 +42,8 @@ pkgs.runCommand "check-ftp-pipeline"
               failed=1
             }
             failed=0
+
+            angst="${runtime.goAngst}/bin/angst"
 
             scratch="$(mktemp -d)"
             work="$scratch/work"
@@ -71,7 +71,7 @@ pkgs.runCommand "check-ftp-pipeline"
               fail "sample config not properly encrypted"
             fi
 
-            echo "==> Decrypt via the real runtime.ftpSecretsHome script..."
+            echo "==> Decrypt via the real runtime.ftpSecretsHome wrapper..."
             "${secretsHome}/bin/angst-ftp-secrets-home"
 
             conf="$CHK_FTP_HOME/.secrets/ftp/ftp-server.conf"
@@ -90,10 +90,10 @@ pkgs.runCommand "check-ftp-pipeline"
               fail "decrypted config missing the secret"
             fi
 
-            echo "==> Render + validate the rclone INI via the real ftp-mount-lib.sh..."
-            cat "${repoRoot}/runtime/ftp-mount-lib.sh" > "$scratch/mount-lib.sh"
-            . "$scratch/mount-lib.sh"
-            ftp_transform_config "$conf" "$scratch/ftp.ini"
+            echo "==> Render + validate the rclone INI via the real angst ftp transform..."
+            "$angst" ftp transform --conf "$conf" --ini "$scratch/ftp.ini" > "$scratch/transform.out"
+            FTP_REMOTE="$(sed -n 's/^remote=//p' "$scratch/transform.out")"
+            FTP_PATH="$(sed -n 's/^path=//p' "$scratch/transform.out")"
 
             if [ "$FTP_REMOTE" != "angstci" ] || [ "$FTP_PATH" != "/incoming" ]; then
               fail "transform parsed wrong remote/path: $FTP_REMOTE / $FTP_PATH"

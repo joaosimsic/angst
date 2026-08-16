@@ -123,7 +123,7 @@ Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run
 
 ### `@projects/` — Auto-Synced Encrypted Dev Projects
 
-`domains/git/projects` + `runtime/angst-projects.sh` (shared by the `angst projects` CLI and the `angst-projects-sync` wrapper) give every host the same set of dev
+`domains/git/projects` + the `angst projects` subcommand of the Go `angst` binary (`runtime/angst`, shared by the CLI and the `angst-projects-sync` wrapper) give every host the same set of dev
 repositories with working `.env` files — while the angst repo stays **public** and reveals
 nothing about them.
 

@@ -5,6 +5,13 @@
 }:
 
 let
+  goAngst = pkgs.buildGoModule {
+    pname = "angst";
+    version = "0.1.0";
+    src = ./angst;
+    vendorHash = null;
+  };
+
   mkScript =
     {
       name,
@@ -28,15 +35,15 @@ let
     in
     drv // { bin = "${drv}/bin/${name}"; };
 
-  loginShell = import ./login-shell.nix { inherit mkScript pkgs; };
-  sshAddKeys = import ./ssh-add-keys.nix { inherit mkScript pkgs lib; };
-  sshKeyProvision = import ./ssh-key-provision.nix { inherit mkScript pkgs; };
-  bootstrapSecrets = import ./bootstrap-secrets.nix { inherit mkScript pkgs; };
-  projectsSync = import ./projects-sync.nix { inherit mkScript pkgs lib; };
-  ftpMount = import ./ftp-mount.nix { inherit mkScript pkgs; };
-  ftpSecretsHome = import ./ftp-secrets-home.nix { inherit mkScript pkgs; };
+  loginShell = import ./login-shell.nix { inherit mkScript pkgs goAngst; };
+  sshAddKeys = import ./ssh-add-keys.nix { inherit mkScript pkgs goAngst lib; };
+  sshKeyProvision = import ./ssh-key-provision.nix { inherit mkScript pkgs goAngst; };
+  bootstrapSecrets = import ./bootstrap-secrets.nix { inherit mkScript pkgs goAngst; };
+  projectsSync = import ./projects-sync.nix { inherit mkScript pkgs goAngst lib; };
+  ftpMount = import ./ftp-mount.nix { inherit mkScript pkgs goAngst; };
+  ftpSecretsHome = import ./ftp-secrets-home.nix { inherit mkScript pkgs goAngst; };
   devshellHook = import ./devshell-hook.nix { inherit pkgs; };
-  angstCli = import ./angst-cli.nix { inherit mkScript pkgs; };
+  angstCli = import ./angst-cli.nix { inherit mkScript pkgs goAngst; };
 
   apps = {
     render = import ./apps/render.nix {
@@ -57,15 +64,16 @@ let
   };
 
   vm = {
-    homeManagerUpgrade = import ./vm/home-manager-upgrade.nix { inherit mkScript pkgs; };
-    ephemeralSsh = import ./vm/ephemeral-ssh.nix { inherit mkScript pkgs; };
-    ageKey = import ./vm/age-key.nix { inherit mkScript pkgs; };
-    nixosSwitch = import ./vm/nixos-switch.nix { inherit mkScript pkgs; };
-    homeSwitch = import ./vm/home-switch.nix { inherit mkScript pkgs; };
+    homeManagerUpgrade = import ./vm/home-manager-upgrade.nix { inherit mkScript pkgs goAngst; };
+    ephemeralSsh = import ./vm/ephemeral-ssh.nix { inherit mkScript pkgs goAngst; };
+    ageKey = import ./vm/age-key.nix { inherit mkScript pkgs goAngst; };
+    nixosSwitch = import ./vm/nixos-switch.nix { inherit mkScript pkgs goAngst; };
+    homeSwitch = import ./vm/home-switch.nix { inherit mkScript pkgs goAngst; };
   };
 in
 {
   inherit
+    goAngst
     mkScript
     loginShell
     sshAddKeys

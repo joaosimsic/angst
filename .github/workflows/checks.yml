@@ -26,6 +26,7 @@ jobs:
               - 'justfile'
             tools:
               - 'tools/**'
+              - 'runtime/**'
 
   eval-checks:
     name: ${{ matrix.check }}
@@ -114,6 +115,19 @@ jobs:
         run: |
           nix develop ./tools/shell#default --command bash -lc \
             'cd tools/shell && cargo fmt --check'
+
+  go:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docs == 'false' || needs.changes.outputs.tools == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Check runtime/angst Go
+        run: |
+          nix develop .#dev --command bash -lc \
+            'cd runtime/angst && gofmt -l . && go vet ./... && go test ./...'
 
   vm-tests:
     runs-on: ubuntu-latest

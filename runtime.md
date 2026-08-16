@@ -87,9 +87,9 @@ Subcommand surface (all from **one binary**, `angst`):
 
 ## Nix refactor (`runtime/*.nix`)
 
-- `default.nix` builds `goAngst = pkgs.buildGoModule { src = ./angst; vendorHash = …; }`
-  (stdlib-only → empty vendor; the hash is the sha256 of empty, a one-time
-  constant — verify against the build error if nixpkgs disagrees) and exports it.
+- `default.nix` builds `goAngst = pkgs.buildGoModule { src = ./angst; vendorHash = null; }`
+  (stdlib-only → `vendorHash = null`; nixpkgs refuses a non-null hash for an
+  empty vendor dir, so no constant is needed) and exports it.
 - Each `runtime/*.nix` becomes a one-liner body, e.g.:
   - `angst-cli.nix` → `exec ${goAngst}/bin/angst "$@"` with `runtimeInputs =
     [nix sops age git openssh watchexec coreutils findutils]` (jq/openssl/diffutils
@@ -109,11 +109,13 @@ Subcommand surface (all from **one binary**, `angst`):
 ## Checks + CI + docs
 
 - `checks/projects-pipeline.nix`: replace `cat runtime/angst*.sh` + sourcing with
-  driving `${runtime.angstCli.bin} projects export/import/sync/status` against the
-  same synthetic store/env (keeps the "test real code" guarantee). `runtime` must
-  be threaded into this check (currently only `pkgs`).
+  driving `${runtime.goAngst}/bin/angst projects export/import/sync/status` against the
+  same synthetic store/env (keeps the "test real code" guarantee; the lean raw
+  `goAngst` binary + existing `nativeBuildInputs` avoid pulling the `nix`
+  closure into the check). `runtime` must be threaded into this check (currently
+  only `pkgs`).
 - `checks/ftp-pipeline.nix`: keep using `${runtime.ftpSecretsHome}` (still a `.bin`),
-  swap the `ftp-mount-lib.sh` sourcing for `angst ftp transform --conf … --ini …`
+  swap the `ftp-mount-lib.sh` sourcing for `${runtime.goAngst}/bin/angst ftp transform --conf … --ini …`
   and read its `remote=`/`path=` stdout.
 - `.github/workflows/checks.yml`: add `runtime/**` to the `tools` paths-filter and a
   `go` job (`gofmt -l . && go vet ./... && go test ./...` via `nix develop .#dev`).
@@ -145,11 +147,29 @@ Subcommand surface (all from **one binary**, `angst`):
 
 ## Risk notes
 
-- `buildGoModule` needs `vendorHash`; stdlib-only keeps it a one-time
-  `lib.fakeHash` → real hash swap (empty vendor = sha256 of empty).
+- `buildGoModule` with a stdlib-only module needs `vendorHash = null` (nixpkgs
+  errors on a non-null hash for an empty vendor dir — no `lib.fakeHash` dance).
 - The systemd service scripts run as root/early-boot — Go binary's PATH comes from
-  the Nix wrapper's `runtimeInputs`, same guarantee as today.
+  the Nix wrapper's `runtimeInputs`, same guarantee as today; `ephemeral-ssh`
+  additionally bakes absolute tool paths as CLI args (early-boot PATH is minimal).
 - Naming of new subcommands (`set-password-hash`, ...) is flexible; the mapping to
   existing script names is preserved in the wrappers, so nothing external cares.
 - The two pipeline checks enforce byte-exact sops round-trip and `stale → exit 1`
-  — port `projects` and `ftp` first so regressions surface immediately.
+  — `projects` and `ftp` were ported first so regressions surfaced immediately.
+
+## Implementation deltas vs this plan
+
+- **Pipeline checks drive `runtime.goAngst`** (the raw `buildGoModule` binary),
+  not `runtime.angstCli.bin` — the wrapper pulls the `nix` closure into the check
+  for no reason; the checks' `nativeBuildInputs` already provide sops/age/git/ssh.
+- **`angst ssh-key` keyfile policy**: `ssh-key`/`provision-ssh-key` use the fixed
+  home paths (personal → `~/.config/sops/age/keys.txt`, work → `work-keys.txt`);
+  projects/ftp honor `SOPS_{,WORK_}AGE_KEY_FILE`.
+- **`bootstrap-secrets` decl edit**: the old `sed "/^\s*};/i"` inserted before
+  *every* `};` line (corrupting decls with multiple nested attrsets) and no-opped
+  on decls closing with `}`. The Go port inserts before the final top-level
+  closing brace instead — a deliberate bug fix.
+- **Redacted env diff**: replaced gnu `diff`'s `XcY`/`---` markers with plain
+  `  store: KEY` / `  local: KEY` lines (still key-name only).
+- **ephemeral-ssh** bakes `--mountpoint-bin/--mount-bin/--rm-bin/--cp-bin/--mkdir-bin`
+  absolute store paths as args (early-boot PATH independence preserved).
