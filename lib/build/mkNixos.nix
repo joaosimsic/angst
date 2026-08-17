@@ -106,6 +106,10 @@ inputs.nixpkgs.lib.nixosSystem {
             "display-manager.service"
           ];
 
+          unitConfig = {
+            ConditionPathExists = config.sops.secrets.masterPassword.path;
+          };
+
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;

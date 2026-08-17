@@ -20,7 +20,7 @@ pub fn target_host() -> String {
 
     env::var("NIX_DEFAULT_TARGET_HOST")
         .or_else(|_| env::var("ANGST_HOST"))
-        .unwrap_or_else(|_| "nixos".to_string())
+        .unwrap_or_else(|_| "vm".to_string())
 }
 
 pub fn target_username() -> String {
