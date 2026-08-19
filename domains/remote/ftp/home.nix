@@ -29,7 +29,7 @@ let
     let
       name = lib.removeSuffix ".conf" (lib.removeSuffix ".age" (baseNameOf m.configFile));
       mount = runtime.ftpMount {
-        inherit (m) mountPoint;
+        inherit (m) mountPoint remotePath;
         configFile = secretPath m;
       };
     in
@@ -65,6 +65,12 @@ in
               type = lib.types.str;
               default = "secrets/ftp/ftp-server.conf.age";
               description = "Path (repo-relative) of the work-key-encrypted rclone config, decrypted into ~/.secrets/ftp at home activation";
+            };
+
+            remotePath = lib.mkOption {
+              type = lib.types.str;
+              default = "/";
+              description = "Subdirectory on the remote to mount (e.g. /httpdocs). Reduces memory usage by only caching metadata for this path";
             };
           };
         }

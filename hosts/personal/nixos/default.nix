@@ -68,6 +68,7 @@
     mounts = [
       {
         mountPoint = "ftp/server";
+        remotePath = "/httpdocs";
       }
     ];
   };

@@ -91,7 +91,7 @@ func usage() {
 	fmt.Print(`Usage:
   angst ftp decrypt --home DIR --conf SOURCE:DEST [...]
   angst ftp transform --conf FILE --ini FILE
-  angst ftp mount --conf FILE --mount-point DIR
+  angst ftp mount --conf FILE --mount-point DIR [--remote-path PATH]
   angst ftp unmount --mount-point DIR
 `)
 }
@@ -332,6 +332,7 @@ func cmdTransform(args []string) int {
 func cmdMount(args []string) int {
 	configFile := ""
 	mountPoint := ""
+	remotePath := ""
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--conf":
@@ -342,6 +343,11 @@ func cmdMount(args []string) int {
 		case "--mount-point":
 			if i+1 < len(args) {
 				mountPoint = args[i+1]
+				i++
+			}
+		case "--remote-path":
+			if i+1 < len(args) {
+				remotePath = args[i+1]
 				i++
 			}
 		case "-h", "--help":
@@ -382,6 +388,10 @@ func cmdMount(args []string) int {
 	}
 	if err := os.WriteFile(tmpconf, ini, 0o600); err != nil {
 		return exitError
+	}
+
+	if remotePath != "" {
+		path = remotePath
 	}
 
 	unmount(mountPoint)
@@ -437,9 +447,22 @@ func unmount(mountPoint string) {
 	c1 := exec.Command("fusermount3", "-u", p)
 	c1.Stdout = nil
 	c1.Stderr = nil
-	_ = c1.Run()
+	if err := c1.Run(); err == nil {
+		return
+	}
 	c2 := exec.Command("fusermount", "-u", p)
 	c2.Stdout = nil
 	c2.Stderr = nil
-	_ = c2.Run()
+	if err := c2.Run(); err == nil {
+		return
+	}
+	// Lazy unmount as fallback for stale mounts after home-manager switch
+	c3 := exec.Command("fusermount3", "-uz", p)
+	c3.Stdout = nil
+	c3.Stderr = nil
+	_ = c3.Run()
+	c4 := exec.Command("fusermount", "-uz", p)
+	c4.Stdout = nil
+	c4.Stderr = nil
+	_ = c4.Run()
 }

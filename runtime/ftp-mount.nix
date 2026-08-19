@@ -6,6 +6,7 @@
 {
   configFile,
   mountPoint,
+  remotePath ? "/",
 }:
 mkScript {
   name = "angst-ftp-mount";
@@ -17,7 +18,7 @@ mkScript {
     cmd="''${1:-}"
     case "$cmd" in
     mount)
-      exec ${goAngst}/bin/angst ftp mount --conf "${configFile}" --mount-point "${mountPoint}"
+      exec ${goAngst}/bin/angst ftp mount --conf "${configFile}" --mount-point "${mountPoint}" --remote-path "${remotePath}"
       ;;
     unmount)
       exec ${goAngst}/bin/angst ftp unmount --mount-point "${mountPoint}"
