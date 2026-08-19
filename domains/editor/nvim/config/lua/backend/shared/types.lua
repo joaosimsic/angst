@@ -14,6 +14,7 @@
 ---@field formatter_cmd? string[]|fun():string[]
 ---@field linter? string|string[]
 ---@field linter_cmd? string[]|fun():string[]
+---@field linter_def? table<string, any>
 ---@field compiler? string|string[]
 ---@field compiler_cmd? string[]|fun():string[]
 ---@field plugins? table[]
