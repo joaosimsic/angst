@@ -38,6 +38,9 @@ go-fmt:
 go-test:
     cd runtime/angst && go test ./...
 
+vault-test:
+    cd runtime/angst && go test ./internal/vault/... -v
+
 dev:
     nix develop
 
