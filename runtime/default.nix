@@ -36,10 +36,24 @@ let
     drv // { bin = "${drv}/bin/${name}"; };
 
   loginShell = import ./login-shell.nix { inherit mkScript pkgs goAngst; };
-  sshAddKeys = import ./ssh-add-keys.nix { inherit mkScript pkgs goAngst lib; };
+  sshAddKeys = import ./ssh-add-keys.nix {
+    inherit
+      mkScript
+      pkgs
+      goAngst
+      lib
+      ;
+  };
   sshKeyProvision = import ./ssh-key-provision.nix { inherit mkScript pkgs goAngst; };
   bootstrapSecrets = import ./bootstrap-secrets.nix { inherit mkScript pkgs goAngst; };
-  projectsSync = import ./projects-sync.nix { inherit mkScript pkgs goAngst lib; };
+  projectsSync = import ./projects-sync.nix {
+    inherit
+      mkScript
+      pkgs
+      goAngst
+      lib
+      ;
+  };
   ftpMount = import ./ftp-mount.nix { inherit mkScript pkgs goAngst; };
   ftpSecretsHome = import ./ftp-secrets-home.nix { inherit mkScript pkgs goAngst; };
   devshellHook = import ./devshell-hook.nix { inherit pkgs; };
