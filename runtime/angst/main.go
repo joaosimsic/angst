@@ -10,6 +10,7 @@ import (
 	"angst/internal/render"
 	"angst/internal/sshkey"
 	"angst/internal/system"
+	"angst/internal/vault"
 	"angst/internal/vm"
 )
 
@@ -44,6 +45,8 @@ func run(args []string) int {
 		return system.ProvisionSSHKey(args)
 	case "ftp":
 		return ftp.Run(args)
+	case "vault":
+		return vault.Run(args)
 	case "vm":
 		return vm.Run(args)
 	case "", "-h", "--help":
@@ -62,6 +65,7 @@ func usage() {
   angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
   angst watch  [--repo PATH] [--host HOST] [--theme THEME]
   angst projects <add|sync|status|capture|edit-env|import|export|rm> ...
+  angst vault <encrypt|decrypt|status> ...
   angst ssh-key <generate|verify> --scope personal|work
   angst login-shell --shell NAME --home DIR --user USER
   angst ssh-add-keys KEY...
