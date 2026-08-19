@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"angst/internal/shared"
 )
 
 type Scope string
@@ -19,11 +21,7 @@ func Valid(s string) bool {
 }
 
 func home() string {
-	if h := os.Getenv("HOME"); h != "" {
-		return h
-	}
-	hd, _ := os.UserHomeDir()
-	return hd
+	return shared.Home()
 }
 
 type RespectSopsEnv bool

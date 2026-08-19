@@ -9,12 +9,13 @@ import (
 	"syscall"
 
 	"angst/internal/cmd"
+	"angst/internal/shared"
 )
 
 const (
-	exitUsage = 2
-	exitError = 1
-	exitOK    = 0
+	exitUsage = shared.ExitUsage
+	exitError = shared.ExitError
+	exitOK    = shared.ExitOK
 )
 
 func usage() {

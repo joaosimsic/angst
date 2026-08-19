@@ -3,19 +3,19 @@ package sshkey
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"angst/internal/cmd"
 	"angst/internal/paths"
+	"angst/internal/shared"
 	"angst/internal/scope"
 )
 
 const (
-	exitUsage = 2
-	exitError = 1
-	exitOK    = 0
+	exitUsage = shared.ExitUsage
+	exitError = shared.ExitError
+	exitOK    = shared.ExitOK
 )
 
 func usage() {
@@ -164,7 +164,7 @@ func verify(args []string) int {
 	defer os.RemoveAll(tmp)
 
 	key := filepath.Join(tmp, "sshkey")
-	if err := ageDecrypt(keyfile, ageFile, key); err != nil {
+	if err := shared.AgeDecrypt(keyfile, ageFile, key); err != nil {
 		fmt.Fprintf(os.Stderr, "FAIL: could not decrypt %s with the %s age key\n", ageFile, sc)
 		return exitError
 	}
@@ -185,10 +185,4 @@ func verify(args []string) int {
 	fmt.Fprintf(os.Stderr, "  committed: %s\n", pub)
 	fmt.Fprintf(os.Stderr, "  derived:   %s\n", derived)
 	return exitError
-}
-
-func ageDecrypt(keyfile, in, out string) error {
-	c := exec.Command("age", "-d", "-i", keyfile, "-o", out, in)
-	c.Stderr = nil
-	return c.Run()
 }
