@@ -63,7 +63,7 @@ M.get = function()
 
 		["@lsp.mod.defaultLibrary"] = { link = "@type.builtin" },
 		["@lsp.mod.deprecated"] = { link = "@markup.strikethrough" },
-		["@lsp.mod.readonly"] = { link = "@markup.italic" },
+		["@lsp.mod.readonly"] = { link = "@constant" },
 		["@lsp.mod.static"] = { link = "@constant" },
 		["@lsp.mod.declaration"] = { link = "Declaration" },
 

@@ -27,6 +27,18 @@ return {
 			},
 		},
 	},
+	lsp_settings = {
+		clangd = {
+			InlayHints = {
+				Enabled = true,
+				ParameterNames = true,
+				DeducedParameters = true,
+				TypeHints = true,
+				DesignatedParameters = true,
+				BlockEnd = true,
+			},
+		},
+	},
 	treesitter = { "c", "cpp" },
 	compiler = { "gcc", "g++" },
 	compiler_cmd = {

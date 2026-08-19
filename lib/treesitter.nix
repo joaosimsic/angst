@@ -52,6 +52,13 @@ let
         fi
       ''
     ) grammars}
+    # tree-sitter-cpp inherits from tree-sitter-c but its highlights.scm
+    # doesn't declare `; inherits: c`, so C primitives/strings/keywords are
+    # missing. Patch it in after copying.
+    if [ -f "$out/cpp/highlights.scm" ] && ! head -1 "$out/cpp/highlights.scm" | grep -q 'inherits: c'; then
+      printf '; inherits: c\n\n' | cat - "$out/cpp/highlights.scm" > "$out/cpp/highlights.scm.tmp"
+      mv "$out/cpp/highlights.scm.tmp" "$out/cpp/highlights.scm"
+    fi
     # Hard invariant: no grammar may ship queries nested as <lang>/<lang>.
     # Neovim resolves queries/<lang>/<group>.scm, so a leftover nested dir
     # means the flatten above silently failed. Fail the build if one remains.
