@@ -2,7 +2,14 @@
 return {
 	filetypes = { "c", "cpp" },
 	lsp = "clangd",
-	lsp_cmd = { "clangd" },
+	lsp_cmd = function()
+		local gpp = vim.fn.exepath("g++")
+		local cmd = { "clangd" }
+		if gpp ~= "" then
+			table.insert(cmd, "--query-driver=" .. gpp)
+		end
+		return cmd
+	end,
 	treesitter = { "c", "cpp" },
 	compiler = { "gcc", "g++" },
 	compiler_cmd = {
