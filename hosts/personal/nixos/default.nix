@@ -8,6 +8,7 @@
     "base"
     "desktop"
     "development"
+    "embedded"
   ];
   toolchains = "*";
 
@@ -78,6 +79,7 @@
       ".mozilla"
       ".config/google-chrome"
       ".local/share/keyrings"
+      ".arduino15"
     ];
   };
   projects = [ "7391b51c36a7d266" ];

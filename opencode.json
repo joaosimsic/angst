@@ -91,6 +91,18 @@
       "command": ["clangd"],
       "extensions": [".c", ".h", ".cpp", ".hpp", ".cc", ".hh", ".cxx", ".hxx"]
     },
+    "arduino": {
+      "command": [
+        "arduino-language-server",
+        "-cli-config",
+        "/home/joao/.arduino15/arduino-cli.yaml",
+        "-fqbn",
+        "arduino:avr:uno",
+        "-cli",
+        "arduino-cli"
+      ],
+      "extensions": [".ino"]
+    },
     "vue": {
       "command": ["vue-language-server", "--stdio"],
       "extensions": [".vue"]

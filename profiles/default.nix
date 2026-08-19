@@ -23,6 +23,7 @@ let
     base = import ./base.nix;
     desktop = import ./desktop.nix;
     development = import ./development.nix;
+    embedded = import ./embedded.nix;
     server = import ./server.nix;
     vm = import ./vm.nix;
   };

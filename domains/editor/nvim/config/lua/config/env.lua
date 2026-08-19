@@ -5,7 +5,9 @@ return {
 	lazy = false,
 	priority = 1001,
 	config = function()
-		vim.filetype.add({ extension = { env = "conf" } })
+		vim.filetype.add({
+			extension = { env = "conf", ino = "arduino" },
+		})
 		vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
 			pattern = { "*.env", ".env", ".env.*" },
 			callback = function(ev)

@@ -44,6 +44,7 @@ return {
 			conf = "ini",
 			editorconfig = "ini",
 			jsonc = "json",
+			arduino = "c",
 		}
 
 		for filetype, grammar in pairs(grammar_mappings) do
