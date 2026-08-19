@@ -108,4 +108,12 @@ alias c = clear
 alias q = exit
 alias reload = exec nu
 
+def --wrapped agent [...rest] {
+    if (which cursor-agent | length) > 0 {
+        ^cursor-agent ...$rest
+    } else {
+        error make { msg: "cursor-agent is not installed" }
+    }
+}
+
 

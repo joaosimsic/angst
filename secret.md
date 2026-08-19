@@ -49,7 +49,7 @@ Register `ftpSecretsHome` (let-block + inherit list, alongside `ftpMount`).
 - `runtime/projects-sync.nix`: `ANGST_PROJECTS_STORE` -> `$HOME/.secrets/projects`.
 - `domains/git/projects/home.nix`: `mkdir -p "$HOME/.secrets/projects"`,
   `chmod 700 "$HOME/.secrets"`.
-- `runtime/angst-projects.sh`: default store path -> `~/.secrets/projects`.
+- `runtime/angst` (`internal/projects/`): default working store path -> `~/.secrets/projects`.
 
 ## Part B — Work key available on all hosts
 

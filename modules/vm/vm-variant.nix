@@ -29,9 +29,9 @@ in
     };
 
     virtualisation = {
-      memorySize = 4096;
+      memorySize = 12288;
       cores = 4;
-      diskSize = 16384;
+      diskSize = 32768;
 
       qemu.options = [
         "-device virtio-vga,xres=1920,yres=1080"

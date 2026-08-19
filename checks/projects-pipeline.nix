@@ -1,17 +1,16 @@
 {
   pkgs,
+  runtime,
 }:
 
-# Functional round-trip test of the `angst projects` pipeline, using throwaway
-# age keys and synthetic data (no real secrets, no network):
+# Functional round-trip test of the `angst projects` pipeline, driving the
+# real Go binary (runtime.goAngst), using throwaway age keys and synthetic
+# data (no real secrets, no network):
 #   export (encrypt) -> repo store is a valid, leak-free sops-age store
 #   import (decrypt) -> byte-exact round trip of metadata + env
 #   sync             -> .env materialized into a fake clone (0600, sidecar)
 #   stale            -> locally-edited .env is not clobbered; status shows STALE
 
-let
-  repoRoot = ../.;
-in
 pkgs.runCommand "check-projects-pipeline"
   {
     nativeBuildInputs = [
@@ -23,6 +22,8 @@ pkgs.runCommand "check-projects-pipeline"
       pkgs.git
       pkgs.sops
       pkgs.age
+      pkgs.openssh
+      runtime.goAngst
     ];
   }
   ''
@@ -34,6 +35,8 @@ pkgs.runCommand "check-projects-pipeline"
       failed=1
     }
     failed=0
+
+    angst="${runtime.goAngst}/bin/angst"
 
     scratch="$(mktemp -d)"
     home="$scratch/home"
@@ -52,10 +55,6 @@ pkgs.runCommand "check-projects-pipeline"
     export SOPS_AGE_KEY_FILE="$home/.config/sops/age/keys.txt"
     export SOPS_WORK_AGE_KEY_FILE="$home/.config/sops/age/work-keys.txt"
 
-    # Exercise the real runtime code, not a reimplementation.
-    cat "${repoRoot}/runtime/angst-lib.sh" "${repoRoot}/runtime/angst-projects.sh" > "$scratch/projects.sh"
-    . "$scratch/projects.sh"
-
     echo "==> Seeding a synthetic working store (personal + work)..."
 
     personal_id="$(openssl rand -hex 8)"
@@ -71,11 +70,10 @@ pkgs.runCommand "check-projects-pipeline"
       '{name: $name, repo: $repo}' > "$store/work/$work_id/metadata.yaml"
     printf 'PIPELINE_WORK_KEY=secret-two-ö\n' > "$store/work/$work_id/env"
 
-    # Snapshot the plain working store for the round-trip comparison.
     cp -a "$store" "$scratch/store.orig"
 
     echo "==> export --all (encrypt into the repo store)..."
-    if ! projects_export --all; then
+    if ! "$angst" projects export --all; then
       fail "projects export --all failed"
     else
       ok "projects export --all"
@@ -94,7 +92,7 @@ pkgs.runCommand "check-projects-pipeline"
 
     echo "==> Wipe working store, import --all, verify byte-exact round trip..."
     rm -rf "$store"
-    if ! projects_import --all; then
+    if ! "$angst" projects import --all; then
       fail "projects import --all failed"
     else
       ok "projects import --all"
@@ -109,7 +107,7 @@ pkgs.runCommand "check-projects-pipeline"
     mkdir -p "$root/$personal_name" "$root/$work_name"
     git init -q "$root/$personal_name"
     git init -q "$root/$work_name"
-    if ! projects_sync; then
+    if ! "$angst" projects sync; then
       fail "projects sync failed"
     fi
     for p in "$personal_name" "$work_name"; do
@@ -131,7 +129,7 @@ pkgs.runCommand "check-projects-pipeline"
 
     echo "==> Store change -> next sync updates .env..."
     printf 'PIPELINE_PERSONAL_KEY=secret-one\nPIPELINE_SHARED=yes\nPIPELINE_EXTRA=added\n' > "$store/personal/$personal_id/env"
-    if ! projects_sync; then
+    if ! "$angst" projects sync; then
       fail "projects sync after store change failed"
     fi
     if grep -q 'PIPELINE_EXTRA=added' "$root/$personal_name/.env"; then
@@ -143,8 +141,8 @@ pkgs.runCommand "check-projects-pipeline"
     echo "==> Locally-edited .env is not clobbered; status flags STALE..."
     printf 'PIPELINE_PERSONAL_KEY=local-edit\n' > "$root/$personal_name/.env"
     sync_rc=0
-    projects_sync || sync_rc=$?
-    projects_status >"$scratch/status.txt" 2>&1 || true
+    "$angst" projects sync || sync_rc=$?
+    "$angst" projects status >"$scratch/status.txt" 2>&1 || true
     if [ "$sync_rc" -eq 1 ] && grep -q 'STALE' "$scratch/status.txt"; then
       ok "stale .env preserved (sync rc=$sync_rc, status flags STALE)"
     else

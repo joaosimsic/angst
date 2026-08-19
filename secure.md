@@ -32,10 +32,13 @@ sops/age envelopes). Age keys on disk are correctly `0600`. Scope isolation
    compromise exposes that scope's identity everywhere it is authorized.
    Documented trade, but the largest real-world risk.
 
-4. **Build-time `canDecrypt` gating** (`modules/secrets.nix:32`) — whether sops
-   wiring lands in the output depends on eval env (`HOME` + key presence).
-   Non-reproducible builds; a build on a keyless machine (CI) silently drops
-   secret wiring. Footgun, not a direct vuln.
+4. **Eval-time key detection removed** (`modules/secrets.nix`) — sops wiring is
+   declared whenever a host ships a `secrets.yaml`; whether decryption succeeds is
+   decided at runtime (age key at `~/.config/sops/age/keys.txt`, sops-nix running).
+   The old `builtins.getEnv "HOME"` check was dropped: pure `nix build` eval returns
+   `""`, so it silently dropped secret wiring on hosts switched with plain `nix
+   build` (e.g. the VM). `angst-bootstrap-secrets` is now a `ConditionPathExists`
+   oneshot, so an undecryptable boot skips cleanly (fallback hash stays).
 
 5. **VM age-key forwarding** (`tools/vm/crates/vm-core/src/shared.rs`) — private
    age keys are copied to `~/.local/state/vm/keys/<host>` and into guest

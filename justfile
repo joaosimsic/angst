@@ -31,6 +31,13 @@ check:
 verify:
     nix flake check --no-build
 
+go-fmt:
+    cd runtime/angst && gofmt -l .
+    cd runtime/angst && go vet ./...
+
+go-test:
+    cd runtime/angst && go test ./...
+
 dev:
     nix develop
 

@@ -101,9 +101,9 @@ projects/
 ## New domain: `domains/git/projects/`
 
 - `default.nix`: `{ package = "git"; customXdg = true; description = "Automatically sync declared dev projects"; }` (passes `mkDomain`).
-- `home.nix`: an `angst-projects-sync` tool built with `pkgs.writeShellApplication`
-  whose `text` sources the shared `runtime/angst-projects.sh` sync logic
-  (runtimeInputs: `git sops age jq openssl coreutils diffutils findutils`), wired as:
+- `home.nix`: an `angst-projects-sync` wrapper (`runtime/projects-sync.nix`) whose
+  `text` execs the shared `angst` Go binary (`runtime/angst`) `projects` code path
+  (runtimeInputs: `git sops age openssh`), wired as:
   - a home activation entry (`import` then `sync`), and
   - a `systemd.user` oneshot `angst-projects-sync`
     (`After = network-online.target`, `Wants = network-online.target`,
@@ -162,15 +162,16 @@ no `.gitignore` edits) — all detection happens in the angst repo:
 
 All commands take the real name and resolve the opaque id within the working
 store (both scopes; names must be unique across the whole store — `add`
-rejects duplicates). Sync logic lives in `runtime/angst-projects.sh`, shared by
-the CLI and the home-manager wrapper.
+rejects duplicates). Sync logic lives in the `angst projects` subcommand of the
+Go binary (`runtime/angst`), shared by the CLI and the home-manager wrapper.
 
 - `angst projects add <name> <repo> [--scope work|personal]`
   — create random-id folder + plaintext metadata in the working store (default
   scope: personal); errors if the name already exists in the store. Then
   `angst projects export` pushes it to the repo store.
 - `angst projects sync` — run the sync logic (no dependency on a
-  home-installed binary; the CLI and the systemd service share the same code)
+  home-installed shell package; the CLI and the systemd service share the same
+  Go binary)
 - `angst projects status` — table of projects (incl. scope); flags stale env;
   diffs each repo's `.env.example` to surface upstream-added vars
 - `angst projects capture <name>` — copy current `<dir>/.env` → working store
@@ -187,10 +188,10 @@ the CLI and the home-manager wrapper.
 
 | File | Change |
 |---|---|
-| `runtime/angst-projects.sh` | shared `projects` command logic (add/sync/status/capture/edit-env/import/export/rm); working store at `~/.secrets/projects` (plaintext), repo store at `<repo>/projects` (encrypted); `sync` filters store ids against `ANGST_PROJECTS_ONLY` |
-| `runtime/angst-cli.nix` | `projects) angst_projects_cmd "$@" ;;` case (already wired) |
-| `lib/flake/context.nix` | add `runtime/angst-projects.sh` to the `angstTool` concat list; add `sops age openssl diffutils` to its runtimeInputs |
-| `modules/vm/vm-profile.nix` | add `runtime/angst-projects.sh` to the VM `angstCli` concat list; same runtimeInputs additions |
+| `runtime/angst` | Go source (`internal/projects/`): shared `projects` command logic (add/sync/status/capture/edit-env/import/export/rm); working store at `~/.secrets/projects` (plaintext), repo store at `<repo>/projects` (encrypted); `sync` filters store ids against `ANGST_PROJECTS_ONLY` |
+| `runtime/projects-sync.nix` | thin wrapper: `exec …/angst projects "$@"` + the same `ANGST_PROJECTS_*` env as before |
+| `lib/flake/context.nix` | thread `runtime` into the checks (`checks/default.nix`) |
+| `modules/vm/vm-profile.nix` | unchanged `.bin` consumers (thin wrappers preserve the contract) |
 | `lib/resolve.nix` | default `projects = decl.projects or []` — the host's list of opaque store ids (no persist dir declared by hosts) |
 | `lib/build/mkNixos.nix` | `persistDirs = secrets.persistDirs ++ lib.optionals (host.projects != []) ["projects"]` — the single derived persistence point (clone root); add `projects` to home-manager `extraSpecialArgs` |
 | `lib/build/mkHome.nix` | add `projects` to home-manager `extraSpecialArgs` (makes the domain work on home-only hosts) |

@@ -36,6 +36,8 @@ let
       cargo
       rustc
       rust-analyzer
+      go
+      gofumpt
       deadnix
       statix
     ]

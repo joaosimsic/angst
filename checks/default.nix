@@ -5,6 +5,7 @@
   lib,
   render,
   hostList,
+  runtime,
 }:
 
 let
@@ -63,11 +64,12 @@ let
     inherit pkgs lib hostList;
   };
 
-  checkProjectsPipeline = import ./projects-pipeline.nix { inherit pkgs; };
+  checkProjectsPipeline = import ./projects-pipeline.nix {
+    inherit pkgs runtime;
+  };
 
   checkFtpPipeline = import ./ftp-pipeline.nix {
-    inherit pkgs;
-    runtime = import ../runtime { inherit pkgs lib self; };
+    inherit pkgs runtime;
   };
 
   secretScan = import ./secret-scan.nix { inherit pkgs; };

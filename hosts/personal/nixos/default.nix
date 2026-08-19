@@ -8,6 +8,7 @@
     "base"
     "desktop"
     "development"
+    "embedded"
   ];
   toolchains = "*";
 
@@ -67,6 +68,7 @@
     mounts = [
       {
         mountPoint = "ftp/server";
+        remotePath = "/httpdocs";
       }
     ];
   };
@@ -78,6 +80,7 @@
       ".mozilla"
       ".config/google-chrome"
       ".local/share/keyrings"
+      ".arduino15"
     ];
   };
   projects = [ "7391b51c36a7d266" ];

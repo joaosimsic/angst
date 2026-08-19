@@ -8,6 +8,7 @@
     "base"
     "desktop"
     "development"
+    "embedded"
   ];
   toolchains = "*";
   env = {
@@ -48,11 +49,13 @@
     ];
   };
   ftp = {
-    # mounts = [
-    #   {
-    #     mountPoint = "ftp/server";
-    #   }
-    # ];
+    mounts = [
+      {
+        mountPoint = "ftp/server";
+        remotePath = "/httpdocs";
+
+      }
+    ];
   };
   projects = [ "7391b51c36a7d266" ];
 }

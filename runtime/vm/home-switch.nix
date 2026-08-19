@@ -1,6 +1,7 @@
 {
   mkScript,
   pkgs,
+  goAngst,
 }:
 
 mkScript {
@@ -10,9 +11,6 @@ mkScript {
     coreutils
   ];
   text = ''
-    flake_ref="''${1:-.}"
-
-    gen="$(nix build --no-link --print-out-paths "$flake_ref#homeConfigurations.vm.activationPackage")"
-    exec "$gen/activate" --driver-version 1
+    exec ${goAngst}/bin/angst vm home-switch "$@"
   '';
 }

@@ -13,23 +13,7 @@ let
       self + "/hosts/${host.hostname}/secrets.yaml";
   hasSecrets = builtins.pathExists secretsFile;
 
-  hasAgeKey =
-    let
-      home = builtins.getEnv "HOME";
-      sopsKeyEnv = builtins.getEnv "SOPS_AGE_KEY";
-      sopsKeyFileEnv = builtins.getEnv "SOPS_AGE_KEY_FILE";
-      keyOk =
-        if home != "" then
-          let
-            k = builtins.tryEval (builtins.pathExists "${home}/.config/sops/age/keys.txt");
-          in
-          k.success && k.value
-        else
-          false;
-    in
-    (sopsKeyEnv != "") || (sopsKeyFileEnv != "") || keyOk;
-
-  canDecrypt = hasSecrets && hasAgeKey;
+  enableSecrets = hasSecrets;
 
   homeSecretDefs = {
     opencodeGoKey = {
@@ -44,7 +28,7 @@ let
 
   mkCore =
     secretDefs:
-    lib.mkIf canDecrypt {
+    lib.mkIf enableSecrets {
       sops = {
         age.keyFile = "/home/${host.username}/.config/sops/age/keys.txt";
         defaultSopsFile = secretsFile;
@@ -57,11 +41,11 @@ let
 
   syncActivation =
     { config, lib, ... }:
-    lib.mkIf canDecrypt {
+    lib.mkIf enableSecrets {
       home.activation.secrets-ready = lib.hm.dag.entryAfter [ "sops-nix" ] ''
         systemdStatus=$(${config.systemd.user.systemctlPath} --user is-system-running 2>&1 || true)
         if [[ $systemdStatus == "running" || $systemdStatus == "degraded" ]]; then
-          ${config.systemd.user.systemctlPath} --user start --wait sops-nix.service
+          ${config.systemd.user.systemctlPath} --user start --wait sops-nix.service || true
         fi
       '';
     };
@@ -79,12 +63,17 @@ in
   inherit
     secretsFile
     hasSecrets
-    canDecrypt
+    enableSecrets
     homeSecretDefs
     homeCore
     systemCore
     homeModules
     ;
 
-  persistDirs = lib.optional canDecrypt ".config/sops" ++ lib.optional canDecrypt ".secrets";
+  canDecrypt = enableSecrets;
+
+  persistDirs = lib.optionals hasSecrets [
+    ".config/sops"
+    ".secrets"
+  ];
 }

@@ -123,7 +123,7 @@ Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run
 
 ### `@projects/` — Auto-Synced Encrypted Dev Projects
 
-`domains/git/projects` + `runtime/angst-projects.sh` (shared by the `angst projects` CLI and the `angst-projects-sync` wrapper) give every host the same set of dev
+`domains/git/projects` + the `angst projects` subcommand of the Go `angst` binary (`runtime/angst`, shared by the CLI and the `angst-projects-sync` wrapper) give every host the same set of dev
 repositories with working `.env` files — while the angst repo stays **public** and reveals
 nothing about them.
 
@@ -210,7 +210,7 @@ The repo store only changes via `export` — after `add`/`capture`/`edit-env` yo
 
 **`modules/vm/`** — Multi-layered VM support: internal `angst.isQemuVm` flag (declared — forced on by the `vm` profile and by `vmVariant`, never probed at eval time), conditional bootloader (`runtime.nix`), vmVariant resources (`vm-variant.nix` — tmpfs `/`, `/persist` ext4, SPICE, 9p host mount), declarative inbound auth + age-key injection (`vm-profile.nix` — `authorized_keys` baked from `secrets/ssh/*.pub`, `vm-age-key` consumes `/tmp/shared`), and host-repo symlink for live editing (`host-mount.nix`). `specialisation.nix` exists but is never imported (dead code).
 
-**`modules/secrets.nix`** — sops-nix integration per host: locates `secrets.yaml`, detects an age key, gates everything behind `canDecrypt`, wires `masterPassword` (system + home) and app secrets (e.g. `opencodeGoKey` → `~/.secrets/opencode-go-key`). See [openwiki/secrets.md](openwiki/secrets.md).
+**`modules/secrets.nix`** — sops-nix integration per host: locates `secrets.yaml` and, when present, wires sops for `masterPassword` (system + home) and app secrets (e.g. `opencodeGoKey` → `~/.secrets/opencode-go-key`). Decryption is decided at runtime (age key at `~/.config/sops/age/keys.txt`), never at eval — pure-`nix build` hosts like the VM still get secret wiring, and `secrets-ready` starts `sops-nix.service` tolerantly. See [openwiki/secrets.md](openwiki/secrets.md).
 
 ---
 
