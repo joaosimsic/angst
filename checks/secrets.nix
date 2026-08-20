@@ -64,8 +64,8 @@ let
         echo "==> Checking secrets/ftp files are age-encrypted (work key scope)..."
         failed=0
         for f in $files; do
-          if ! grep -q 'BEGIN AGE ENCRYPTED FILE' "$f"; then
-            echo "FAIL: $f is not age-encrypted (missing age envelope marker)"
+          if ! grep -q 'age-encryption.org/v1' "$f"; then
+            echo "FAIL: $f is not age-encrypted (missing age-encryption.org/v1 envelope)"
             failed=1
           elif grep -qE '"host"|"user"|"pass"|"remote"|"path"|"config"|"type"|password' "$f"; then
             echo "FAIL: $f contains plaintext server/secret-like content"

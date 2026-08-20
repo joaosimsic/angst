@@ -77,7 +77,7 @@ pkgs.runCommand "check-projects-ftp-declared"
           esac
           if [ ! -f "$cfg" ]; then
             fail "$hostname ftp config $cfg not found in repo"
-          elif ! grep -q 'BEGIN AGE ENCRYPTED FILE' "$cfg"; then
+          elif ! grep -q 'age-encryption.org/v1' "$cfg"; then
             fail "$hostname ftp config $cfg is not age-encrypted"
           else
             ok "$hostname ftp config $cfg (encrypted, mountPoint '$mnt')"
