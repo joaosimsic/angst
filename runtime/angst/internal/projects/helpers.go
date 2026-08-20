@@ -2,22 +2,15 @@ package projects
 
 import (
 	"bufio"
-	"bytes"
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
-
-	"angst/internal/cmd"
-	"angst/internal/shared"
-	"angst/internal/scope"
 )
 
 func keys(path string) []string {
@@ -93,65 +86,6 @@ func readTrimmed(path string) string {
 	return strings.TrimRight(string(data), "\n")
 }
 
-func randomID() string {
-	b := make([]byte, 8)
-	if _, err := rand.Read(b); err != nil {
-		panic(err)
-	}
-	return hex.EncodeToString(b)
-}
-
-func unknownProject(name string) int {
-	fmt.Fprintf(os.Stderr, "error: unknown project '%s'\n", name)
-	return shared.ExitError
-}
-
-func sopsDecrypt(s scope.Scope, file string) ([]byte, error) {
-	c := exec.Command("sops", "-d", "--input-type", "binary", "--output-type", "binary", file)
-	c.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+scope.AgeKeyfile(s, scope.EnvOverride))
-	c.Stderr = os.Stderr
-	var out bytes.Buffer
-	c.Stdout = &out
-	if err := c.Run(); err != nil {
-		return nil, err
-	}
-	return out.Bytes(), nil
-}
-
-func sopsDecryptToFile(s scope.Scope, file, out string) error {
-	c := exec.Command("sops", "-d", "--input-type", "binary", "--output-type", "binary", "--output", out, file)
-	c.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+scope.AgeKeyfile(s, scope.EnvOverride))
-	c.Stderr = os.Stderr
-	return c.Run()
-}
-
-func encrypt(s scope.Scope, plain, target string) error {
-	recipient, err := scope.RecipientFor(s, scope.EnvOverride)
-	if err != nil {
-		return err
-	}
-	keyfile := scope.AgeKeyfile(s, scope.EnvOverride)
-	work, err := os.MkdirTemp("", "angst-encrypt-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(work)
-
-	sopsConf := fmt.Sprintf("---\ncreation_rules:\n  - path_regex: .*\n    age: |\n      %s\n", recipient)
-	if err := os.WriteFile(filepath.Join(work, ".sops.yaml"), []byte(sopsConf), 0o600); err != nil {
-		return err
-	}
-	data, err := os.ReadFile(plain)
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(filepath.Join(work, "plain"), data, 0o600); err != nil {
-		return err
-	}
-	return cmd.RunDir(work, []string{"SOPS_AGE_KEY_FILE=" + keyfile},
-		"sops", "-e", "--input-type", "binary", "--output-type", "binary", "--output", target, "plain")
-}
-
 func clone(gitSSH, remote, target string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -200,20 +134,4 @@ func envKeyDiff(storePath, localPath string) {
 	for _, k := range localOnly {
 		fmt.Fprintf(os.Stderr, "  local: %s\n", k)
 	}
-}
-
-func missingKeys(examplePath, envPath string) []string {
-	a := keys(examplePath)
-	b := keys(envPath)
-	set := map[string]bool{}
-	for _, k := range b {
-		set[k] = true
-	}
-	var out []string
-	for _, k := range a {
-		if !set[k] {
-			out = append(out, k)
-		}
-	}
-	return out
 }

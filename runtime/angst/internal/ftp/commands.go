@@ -1,7 +1,6 @@
 package ftp
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,8 +8,8 @@ import (
 	"strings"
 	"syscall"
 
-	"angst/internal/shared"
 	"angst/internal/scope"
+	"angst/internal/shared"
 )
 
 func cmdDecrypt(args []string) int {
@@ -56,17 +55,9 @@ func cmdDecrypt(args []string) int {
 			continue
 		}
 		tmp := filepath.Join(homeDir, dst+".tmp")
-		c := exec.Command("sops", "-d", "--input-type", "binary", "--output-type", "binary", src)
-		c.Env = append(os.Environ(), "SOPS_AGE_KEY_FILE="+workKey)
-		c.Stderr = nil
-		var out bytes.Buffer
-		c.Stdout = &out
-		if err := c.Run(); err != nil {
+		if err := shared.AgeDecrypt(workKey, src, tmp); err != nil {
 			fmt.Fprintf(os.Stderr, "warn: could not decrypt %s\n", src)
 			_ = os.Remove(tmp)
-			continue
-		}
-		if err := os.WriteFile(tmp, out.Bytes(), 0o600); err != nil {
 			continue
 		}
 		_ = os.Chmod(tmp, 0o600)

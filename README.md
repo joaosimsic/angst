@@ -35,7 +35,7 @@ nix run .#lint-themes                # fast, eval-only theme check
 @hosts/          machine declarations (hosts/<domain>/<hostname>/default.nix) — auto-discovered
 @checks/         build-time validation (theme lint, config rendering, secrets, projects, password, login shell, Nix lint)
 @domains/        features (31 domains / 17 categories) — each with a default.nix interface + optional home.nix/system.nix sides
-@projects/       encrypted, auto-synced dev-project store (sops binary; opaque ids, names only in ciphertext)
+@projects/       encrypted, auto-synced dev-project store (age-encrypted tarballs; opaque ids, names only in ciphertext)
 @lib/            build system, domain framework, host resolution, flake outputs
 @modules/        core NixOS/home/VM modules + sops secrets integration
 @profiles/       reusable composition units — selected via the host decl's `profiles` list
@@ -127,30 +127,27 @@ Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run
 repositories with working `.env` files — while the angst repo stays **public** and reveals
 nothing about them.
 
-Three layers:
+Two layers, with the repo store as committed, age-encrypted tarballs:
 
-- **Repo store** — `projects/{personal,work}/<opaque-id>/{metadata.yaml,env}` (committed,
-  sops-binary **encrypted**). This is the transport: it travels with the public repo, so a
-  new machine that clones the repo has all the metadata to clone its projects. Written only
-  by `angst projects export`.
-- **Working store** — `~/.secrets/projects/{personal,work}/<opaque-id>/{metadata.yaml,env}`
-  (fixed per-host, **decrypted plaintext**). Every runtime op (`sync`/`status`/`capture`/
-  `edit-env`/`add`/`rm`) reads/writes this directly — no sops needed at runtime. Seeded
-  from the repo store at build time (home activation runs `import` for host-selected ids).
+- **Repo store** — `projects/{personal,work}.tar.age` (committed, **age-encrypted**). Each
+  tarball holds the whole `<scope>/<id>/{metadata.yaml,env}` tree. This is the transport:
+  it travels with the public repo, so a new machine that clones the repo has all the
+  metadata to clone its projects. Rewritten only by your manual `vault` edit flow (below).
+- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.yaml,env}` (fixed
+  per-host, **decrypted plaintext**). `sync` reads this directly — no age needed at runtime.
+  Seeded from the tarballs at build time (home activation runs `import`).
 - **Clone root** — `~/projects/<name>`: the cloned repo + its decrypted `.env`. Clones
   **diverge per host** (each host selects by opaque id; `sync` only clone-if-missing).
 
-- **Scope keys** — `personal` and `work` use different age keys (cryptographic separation).
-  Work files list only the work recipient, so a work-key compromise can't decrypt personal
-  secrets. Personal = default `~/.config/sops/age/keys.txt`; work =
-  `~/.config/sops/age/work-keys.txt` (static, provisioned out-of-band). The per-scope
-  recipient is derived from the scope key file at encrypt/decrypt time (no repo `.sops.yaml`
-  routing needed).
+- **Scope-isolated tarballs** — `personal.tar.age` is encrypted only with the personal age
+  recipient, `work.tar.age` only with the work recipient, so a work-key compromise can't
+  decrypt personal projects. Personal = `~/.config/sops/age/keys.txt`; work =
+  `~/.config/sops/age/work-keys.txt` (static, provisioned out-of-band). The recipient is
+  derived from the scope key file at encrypt/decrypt time (no repo `.sops.yaml` routing).
 - **Hosts declare *which* projects, by opaque id** — each host decl sets
-  `projects = [ "<opaque id>" ... ]` (ids come from `angst projects status`); names
-  never appear in tracked files. Empty list = nothing synced. Works on NixOS **and**
-  home-only hosts (`nixos`/`home` host types). `~/projects` is only persisted when the
-  host declared at least one project.
+  `projects = [ "<opaque id>" ... ]`; names never appear in tracked files. Empty list =
+  nothing synced. Works on NixOS **and** home-only hosts (`nixos`/`home` host types).
+  `~/projects` is only persisted when the host declared at least one project.
 - **Clone if missing only** — `sync` (home activation + `systemd.user` oneshot
   `angst-projects-sync`) clones the host's selected projects into `~/projects/<name>`
   when the dir has no `.git`; no auto-pull, no hooks, no `.gitignore` edits — clones are
@@ -160,25 +157,27 @@ Three layers:
   sidecar (`~/.secrets/projects/<name>.env.sha256`). A locally-edited `.env` is **never
   clobbered**: `sync` marks it `stale`, prints a redacted key-name-only diff, and exits
   non-zero.
-- **Resilient** — missing key, missing repo, no network, or a decrypt error skips that
+- **Resilient** — missing key, missing tarball, no network, or a decrypt error skips that
   project with a warning and exits 0; nothing fails a build or boot.
-- **Leak prevention (defense in depth)** — the repo store is always sops-encrypted
+- **Leak prevention (defense in depth)** — the repo store is always age-encrypted
   (`check-projects-encrypted` + gitleaks guard it); plaintext lives only in the private
   `~/.secrets` working store (0700) and in the decrypted `.env` files.
 
 ```bash
-angst projects add <name> <repo> [--scope work|personal]   # new project (name must be unique) -> working store
-angst projects sync                                        # clone-if-missing + env materialize (working store)
-angst projects status                                      # table incl. scope; flags stale env
-angst projects capture <name>                              # copy <dir>/.env -> working store
-angst projects edit-env <name>                             # edit working-store env -> resync
-angst projects import [--all]                              # decrypt repo store -> working store (seed)
-angst projects export [--all]                              # encrypt working store -> repo store (commit me)
-angst projects rm <name>                                   # remove from both stores
+# Runtime (on a host):
+angst projects import   # decrypt projects/*.tar.age -> working store
+angst projects sync     # clone-if-missing + env materialize (working store)
+
+# Editing the repo store (run from the repo root, then commit the .tar.age):
+angst vault decrypt projects/personal.tar.age --dir --scope personal   # -> projects/personal/
+# ... edit projects/personal/<id>/metadata.yaml and/or env by hand ...
+angst vault encrypt projects/personal --dir --scope personal           # overwrites projects/personal.tar.age, removes projects/personal/
+git add projects/personal.tar.age && git commit
 ```
 
-The repo store only changes via `export` — after `add`/`capture`/`edit-env` you must run
-`angst projects export` and commit to share projects across hosts.
+The decrypted scope dirs (`projects/personal/`, `projects/work/`) are gitignored, so an
+in-place decrypt never stages plaintext. `secrets.yaml` stays on sops (consumed by
+sops-nix), so sops is *not* fully removable.
 
 ---
 
@@ -296,7 +295,7 @@ home-manager activation                    # xdg.configFile symlinks → ~/.conf
 
 ### Secrets (summary)
 
-Per-host `secrets.yaml` (sops + age) → decrypted at runtime into `~/.secrets/`. The `masterPassword` secret drives login-hash and SSH-key bootstrap (`angst-bootstrap-secrets` systemd service + home activation). Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`; the FTP server config lives age-encrypted in `secrets/ftp/`. The VM receives the host's age key + SSH keys via a shared dir at boot — keys are never baked into the image. The `projects/` store is sops-encrypted too, with scope-isolated keys (repo store travels; working store decrypted at `~/.secrets/projects`, see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets.yaml` / `projects/**` / non-encrypted `secrets/ssh/*.age` / `secrets/ftp/*`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
+Per-host `secrets.yaml` (sops + age) → decrypted at runtime into `~/.secrets/`. The `masterPassword` secret drives login-hash and SSH-key bootstrap (`angst-bootstrap-secrets` systemd service + home activation). Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`; the FTP server config lives age-encrypted in `secrets/ftp/`. The VM receives the host's age key + SSH keys via a shared dir at boot — keys are never baked into the image. The `projects/` store is age-encrypted (vault tarballs) too, with scope-isolated keys (repo tarballs travel; working store decrypted at `~/.secrets/projects`, see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets.yaml` / non-encrypted `projects/*.tar.age` / `secrets/ssh/*.age` / `secrets/ftp/*`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
 
 ### CI
 

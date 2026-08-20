@@ -6,8 +6,11 @@
 
 # Cross-check host declarations against the encrypted repo store, without
 # needing any decryption key:
-#   - every host-declared `projects` id must have an encrypted store entry
-#     (metadata.yaml + env) under projects/{personal,work}/<id>
+#   - every host-declared `projects` id must resolve to an encrypted scope
+#     tarball (projects/{personal,work}.tar.age). Per-id listing inside the
+#     tarball requires a decryption key, so the per-id presence check now
+#     happens at import/sync time (which warn + skip missing ids); here we
+#     only confirm the relevant scope tarball is present and age-encrypted.
 #   - every host-declared ftp mount must point at an existing, age-encrypted
 #     secrets/ftp config, with a safe (relative, no `..`) mountPoint
 
@@ -48,15 +51,15 @@ pkgs.runCommand "check-projects-ftp-declared"
         }
         failed=0
 
-        echo "==> Checking host-declared projects exist in the encrypted store..."
+        echo "==> Checking host-declared projects resolve to an encrypted scope tarball..."
         count=0
         while IFS=$'\t' read -r hostname id; do
           count=$((count + 1))
-          if { [ -f "projects/personal/$id/metadata.yaml" ] && [ -f "projects/personal/$id/env" ]; } ||
-            { [ -f "projects/work/$id/metadata.yaml" ] && [ -f "projects/work/$id/env" ]; }; then
-            ok "$hostname declares projects/$id (store entry present)"
+          if { [ -f "projects/personal.tar.age" ] && grep -q 'age-encryption.org/v1' "projects/personal.tar.age"; } ||
+            { [ -f "projects/work.tar.age" ] && grep -q 'age-encryption.org/v1' "projects/work.tar.age"; }; then
+            ok "$hostname declares projects/$id (a scope tarball is present and encrypted)"
           else
-            fail "$hostname declares projects/$id but no projects/{personal,work}/$id entry exists"
+            fail "$hostname declares projects/$id but no encrypted projects/{personal,work}.tar.age exists"
           fi
         done <<'EOF'
     ${projRows}

@@ -115,53 +115,56 @@ sops hosts/<domain>/<host>/secrets.yaml
 
 `angst bootstrap-secrets` reads the master password interactively (never echo), updates the encrypted file with `sops`, writes the sha-512 hash into the decl's `password` field, and unset its in-memory copy afterwards. The host will only decrypt once the age key is present at `~/.config/sops/age/keys.txt`.
 
-## Project store (three layers)
+## Project store (tarball + vault/age)
 
 Separate from per-host secrets, the **project store** keeps declared dev repos + their
-`.env` across **three layers** (see the
-[`git/projects` domain](domains.md#gitprojects--encrypted-project-store)):
+`.env` (see the [`git/projects` domain](domains.md#gitprojects--encrypted-project-store)).
+Unlike `secrets.yaml` (still on sops-nix), the project store is **age/vault**, not sops:
 
-- **Repo store** — `projects/{personal,work}/<opaque-id>/{metadata.yaml,env}` (committed,
-  sops-binary **encrypted**). The transport: travels with the public repo, so a new machine
-  that clones the repo has the metadata to clone its projects. Written only by
-  `angst projects export`.
-- **Working store** — `~/.secrets/angst/projects/{personal,work}/<opaque-id>/{metadata.yaml,env}`
-  (fixed per-host, **decrypted plaintext**). Every runtime op reads/writes this directly (no
-  sops at runtime). Seeded from the repo store at build time via `import`.
+- **Repo store** — `projects/{personal,work}.tar.age` (committed, **age-encrypted**). Each
+  tarball holds the whole `<scope>/<id>/{metadata.yaml,env}` tree. The transport: travels
+  with the public repo so a new machine has the metadata to clone its projects. Rewritten
+  only by the manual `vault` edit flow (`angst vault decrypt --dir` → edit → `angst vault
+  encrypt --dir`), then committed.
+- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.yaml,env}` (fixed
+  per-host, **decrypted plaintext**). Runtime ops read this directly (no age at runtime).
+  Seeded from the tarballs at build time via `import`.
 - **Clone root** — `~/projects/<name>`: cloned repo + decrypted `.env`, divergent per host.
 
 - **Layout** — opaque ids are `openssl rand -hex 8` (16 chars, not name-derived); real
-  project names and repo URLs appear only inside the encrypted repo store.
-- **Binary encryption** — repo-store files are sops-encrypted with `--input-type binary
-  --output-type binary`, so the whole plaintext (names, URLs, structure, comments) is one
-  opaque blob and round-trips byte-exactly. Plaintext metadata is JSON `{name, repo}`.
-- **Scope-isolated keys** — `personal/*` → the personal age key
-  (`~/.config/sops/age/keys.txt` / `SOPS_AGE_KEY_FILE`); `work/*` → the work age
-  key (`~/.config/sops/age/work-keys.txt` / `SOPS_WORK_AGE_KEY_FILE`, 0600). Work files
-  list **only** the work recipient, so a work-key compromise can never decrypt personal
-  secrets. Both keys are static, generated once, provisioned on every host through the
-  `.config/sops` impermanence dir — this tool never rotates them.
-- **Sops flow** — `import`/`export`/seed derive the recipient from the scope key file
-  (`age-keygen -y`), encrypt/decrypt to a temp dir outside the stores. `export` is the only
-  writer of the repo store; `sync`/`status` read the plaintext working store; the decrypted
-  `.env` (0600) is the sync output at `~/projects/<name>/.env`.
+  project names and repo URLs appear only inside the encrypted tarball.
+- **Tarball encryption** — `vault encrypt --dir` tars the scope dir and age-encrypts it, so
+  the whole plaintext tree (names, URLs, structure, comments) is one opaque blob that
+  round-trips byte-exactly. Plaintext metadata is JSON `{name, repo}`.
+- **Scope-isolated keys** — `personal.tar.age` → the personal age key
+  (`~/.config/sops/age/keys.txt` / `SOPS_AGE_KEY_FILE`); `work.tar.age` → the work age
+  key (`~/.config/sops/age/work-keys.txt` / `SOPS_WORK_AGE_KEY_FILE`, 0600). The work
+  tarball lists **only** the work recipient, so a work-key compromise can never decrypt
+  personal projects. Both keys are static, generated once, provisioned on every host through
+  the `.config/sops` impermanence dir — this tool never rotates them.
+- **Vault flow** — `import` decrypts each `projects/<scope>.tar.age` into the working store
+  (`vault.DecryptTarball`); `sync` reads the plaintext working store and materializes
+  `.env` (0600) at `~/projects/<name>/.env`. The repo tarballs only change via the manual
+  `vault` edit flow above. Host selection (`ANGST_PROJECTS_ONLY`) still happens in `sync`,
+  not `import`.
 - **Host selection by opaque id** — each host decl lists the store ids it syncs
   (`projects = [ "<opaque id>" ... ]`); names never appear in tracked files. Empty list =
   nothing synced. `~/projects` persistence is derived from this list in one place
   (`lib/build/mkNixos.nix`) — hosts never declare a persist dir.
-- **Resilience** — a missing scope key, missing repo, no network, or any decrypt error
-  skips that project with a warning and exits 0; `add --scope work` with a missing work key
-  is the one **hard** error (misprovisioning, not a bootstrap case).
-- **Leak prevention** — the repo store is always sops-encrypted (`check-projects-encrypted`
-  + gitleaks guard it); plaintext lives only in the private `~/.secrets` working store (0700)
-  and decrypted `.env` files; `sync`/`status` print no env values.
+- **Resilience** — a missing scope key, missing tarball, no network, or any decrypt error
+  skips that project with a warning and exits 0; nothing fails a build or boot.
+- **Leak prevention** — the repo store is always age-encrypted (`check-projects-encrypted`
+  + gitleaks guard it); the decrypted scope dirs (`projects/personal/`, `projects/work/`) are
+  gitignored so an in-place decrypt never stages plaintext; plaintext lives only in the
+  private `~/.secrets` working store (0700) and decrypted `.env` files; `sync` prints no env
+  values.
 
 ## Secret scanning (defense in depth)
 
 - **Git hooks** (`githooks/`, install with `just install-hooks`): `pre-commit` runs `gitleaks git --pre-commit --staged --redact`; `pre-push` scans pushed ranges (`<remote_oid>..<local_oid>`, or all new commits for new refs) with gitleaks. Hooks use a host `gitleaks` or fall back to `nix run nixpkgs#gitleaks`.
 - **`.gitleaks.toml`** — extends default rules with an `angst-plaintext-secret-value` rule targeting `secrets.yaml` and an `angst-projects-plaintext-secret-value` rule targeting `projects/.*`. Allowlists SOPS ciphertext (`ENC[AES256_GCM`), age blocks/public keys, `secrets/ssh/.*\.age`, `secrets/ftp/.*\.age`, and `README.md`/`pure.md`/`analysis.md`/`openwiki/` — no broad path allowlist on `projects/`.
 - **CI** (`.github/workflows/secret-scan.yml`) — gitleaks-action + trufflehog (`--results=verified,unknown`) on every push/PR; `fix: trufflehog` (HEAD) tuned the trufflehog args.
-- **Flake check** (`checks/secrets.nix`) — `check-secrets-encrypted` fails if any tracked `secrets.yaml`/`secrets.yml` lacks a `sops:` block or `ENC[AES256_GCM` values; `check-projects-encrypted` asserts every `projects/**/metadata.yaml` + `projects/**/env` is sops-encrypted (age envelope present) with no plaintext `name`/`repo`/URL/secret content; `check-ssh-keys` asserts every `secrets/ssh/*.age` is age-encrypted (envelope present, no plaintext private key) with a valid matching `.pub` (see [Shared SSH keys](#shared-ssh-keys-secretsssh)); `check-ftp-encrypted` asserts every `secrets/ftp/*` carries an age envelope with no plaintext server fields.
+- **Flake check** (`checks/secrets.nix`) — `check-secrets-encrypted` fails if any tracked `secrets.yaml`/`secrets.yml` lacks a `sops:` block or `ENC[AES256_GCM` values; `check-projects-encrypted` asserts every `projects/*.tar.age` is age-encrypted (envelope present); `check-ssh-keys` asserts every `secrets/ssh/*.age` is age-encrypted (envelope present, no plaintext private key) with a valid matching `.pub` (see [Shared SSH keys](#shared-ssh-keys-secretsssh)); `check-ftp-encrypted` asserts every `secrets/ftp/*` carries an age envelope with no plaintext server fields.
 
 ## Security rules for contributors
 

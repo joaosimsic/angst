@@ -12,7 +12,6 @@ mkScript {
   name = "angst-projects-sync";
   runtimeInputs = with pkgs; [
     git
-    sops
     age
     openssh
   ];

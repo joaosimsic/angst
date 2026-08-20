@@ -66,24 +66,10 @@ func decryptDir(keyfile, path string, info os.FileInfo) int {
 		return shared.ExitError
 	}
 
-	tmpDir, err := os.MkdirTemp("", "vault-untar-*")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error creating temp dir: %v\n", err)
-		return shared.ExitError
-	}
-	defer os.RemoveAll(tmpDir)
-
-	tmpTar := filepath.Join(tmpDir, "out.tar")
-
-	if err := shared.AgeDecrypt(keyfile, path, tmpTar); err != nil {
-		fmt.Fprintf(os.Stderr, "error decrypting tarball: %v\n", err)
-		return shared.ExitError
-	}
-
 	destDir := strings.TrimSuffix(path, ".tar.age")
 
-	if err := untarDirectory(tmpTar, destDir); err != nil {
-		fmt.Fprintf(os.Stderr, "error extracting tarball: %v\n", err)
+	if err := DecryptTarball(keyfile, path, destDir); err != nil {
+		fmt.Fprintf(os.Stderr, "error decrypting tarball: %v\n", err)
 		return shared.ExitError
 	}
 
@@ -91,6 +77,26 @@ func decryptDir(keyfile, path string, info os.FileInfo) int {
 
 	fmt.Printf("%s -> %s/\n", path, destDir)
 	return shared.ExitOK
+}
+
+// DecryptTarball decrypts an age-encrypted tarball (src) and extracts its
+// contents into destDir. It is used both by the CLI (decrypt --dir) and by
+// callers that need to extract into an arbitrary directory (e.g. boot, which
+// extracts into the working store rather than the read-only nix store).
+func DecryptTarball(keyfile, src, destDir string) error {
+	tmpDir, err := os.MkdirTemp("", "vault-untar-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	tmpTar := filepath.Join(tmpDir, "out.tar")
+
+	if err := shared.AgeDecrypt(keyfile, src, tmpTar); err != nil {
+		return err
+	}
+
+	return untarDirectory(tmpTar, destDir)
 }
 
 func tarDirectory(srcDir, outTar string) error {

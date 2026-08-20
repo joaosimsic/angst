@@ -68,5 +68,5 @@
   };
   projects = [
     "7391b51c36a7d266"
-  ]; # opaque store ids (angst projects status); names stay encrypted
+  ]; # opaque store ids (decrypted from projects/*.tar.age via `angst projects import`); names stay encrypted
 }

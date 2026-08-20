@@ -10,7 +10,6 @@ import (
 
 	"angst/internal/paths"
 	"angst/internal/shared"
-	"angst/internal/scope"
 )
 
 var errStale = errors.New("stale env")
@@ -71,36 +70,10 @@ func selected(id string) bool {
 	return false
 }
 
-func resolve(name string) (scope.Scope, string, bool) {
-	store := storeRoot()
-	for _, s := range []scope.Scope{scope.Personal, scope.Work} {
-		metas, err := filepath.Glob(filepath.Join(store, string(s), "*", "metadata.yaml"))
-		if err != nil {
-			continue
-		}
-		for _, meta := range metas {
-			m, err := readMetadata(meta)
-			if err != nil {
-				continue
-			}
-			if m.Name == name {
-				return s, filepath.Base(filepath.Dir(meta)), true
-			}
-		}
-	}
-	return "", "", false
-}
-
 func usage() {
 	fmt.Print(`Usage:
-  angst projects add <name> <repo> [--scope work|personal]
   angst projects sync
-  angst projects status
-  angst projects capture <name>
-  angst projects edit-env <name>
   angst projects import [--all]
-  angst projects export [--all]
-  angst projects rm <name>
 `)
 }
 
@@ -111,22 +84,10 @@ func Run(args []string) int {
 		args = args[1:]
 	}
 	switch cmdName {
-	case "add":
-		return cmdAdd(args)
 	case "sync":
 		return cmdSync(args)
-	case "status":
-		return cmdStatus(args)
-	case "capture":
-		return cmdCapture(args)
-	case "edit-env":
-		return cmdEditEnv(args)
 	case "import":
 		return cmdImport(args)
-	case "export":
-		return cmdExport(args)
-	case "rm":
-		return cmdRm(args)
 	case "", "-h", "--help":
 		usage()
 		return shared.ExitOK
