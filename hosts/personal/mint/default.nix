@@ -57,5 +57,10 @@
       }
     ];
   };
-  projects = [ "angst" ];
+  projects = [
+    "angst"
+    "agent"
+    "intelligence/backend"
+    "intelligence/frontend"
+  ];
 }

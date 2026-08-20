@@ -83,5 +83,10 @@
       ".arduino15"
     ];
   };
-  projects = [ "angst" ];
+  projects = [
+    "angst"
+    "agent"
+    "intelligence/backend"
+    "intelligence/frontend"
+  ];
 }
