@@ -113,10 +113,10 @@ Layers:
   Seeded from the tarballs at build time via `import`.
 - **Clone root** — `~/projects/<name>`: cloned repo + decrypted `.env`, divergent per host.
 
-Opaque ids (`openssl rand -hex 8`) are not name-derived; real names/URLs exist only in the encrypted tarball. Scope is the tarball path; `personal` and `work` use different age keys (a `work.tar.age` never lists the personal recipient). The per-scope recipient is derived from the scope key file at encrypt/decrypt time (no repo `.sops.yaml` routing — the old `projects/{personal,work}/.*` sops rules are gone).
+Each project is a folder `<slug>/` inside the scope tarball, where `<slug>` is any simple identifier you choose (e.g. `dotfiles`, `website`); real names/URLs exist only in the encrypted tarball (in `metadata.yaml`). Scope is the tarball path; `personal` and `work` use different age keys (a `work.tar.age` never lists the personal recipient). The per-scope recipient is derived from the scope key file at encrypt/decrypt time (no repo `.sops.yaml` routing — the old `projects/{personal,work}/.*` sops rules are gone).
 
-Hosts declare **which** projects they want as a list of opaque store ids
-(`projects = [ "<opaque id>" ... ]` in the host decl). Names stay encrypted; an empty list
+Hosts declare **which** projects they want as a list of slugs
+(`projects = [ "<slug>" ... ]` in the host decl). The real name never appears in tracked files (it lives only in the encrypted `metadata.yaml`); an empty list
 syncs nothing. The wrapper bakes the list into `ANGST_PROJECTS_ONLY`; the same domain module
 works on `nixos` and home-only hosts (a `projects` specialArg is threaded through both
 builders).

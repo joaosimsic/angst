@@ -50,7 +50,7 @@ minus the `desktop` profile since this is headless):
     target = ".secrets/cursor-api-key";
     mode = "0600";
   };
-  # projects = [ "..." ];  # optional opaque ids for the encrypted project store
+  # projects = [ "..." ];  # optional slug ids for the encrypted project store
 }
 ```
 

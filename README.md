@@ -35,7 +35,7 @@ nix run .#lint-themes                # fast, eval-only theme check
 @hosts/          machine declarations (hosts/<domain>/<hostname>/default.nix) — auto-discovered
 @checks/         build-time validation (theme lint, config rendering, secrets, projects, password, login shell, Nix lint)
 @domains/        features (31 domains / 17 categories) — each with a default.nix interface + optional home.nix/system.nix sides
-@projects/       encrypted, auto-synced dev-project store (age-encrypted tarballs; opaque ids, names only in ciphertext)
+@projects/       encrypted, auto-synced dev-project store (age-encrypted tarballs; simple slug ids, real name only in encrypted metadata)
 @lib/            build system, domain framework, host resolution, flake outputs
 @modules/        core NixOS/home/VM modules + sops secrets integration
 @profiles/       reusable composition units — selected via the host decl's `profiles` list
@@ -137,15 +137,16 @@ Two layers, with the repo store as committed, age-encrypted tarballs:
   per-host, **decrypted plaintext**). `sync` reads this directly — no age needed at runtime.
   Seeded from the tarballs at build time (home activation runs `import`).
 - **Clone root** — `~/projects/<name>`: the cloned repo + its decrypted `.env`. Clones
-  **diverge per host** (each host selects by opaque id; `sync` only clone-if-missing).
+  **diverge per host** (each host selects by slug; `sync` only clone-if-missing).
 
 - **Scope-isolated tarballs** — `personal.tar.age` is encrypted only with the personal age
   recipient, `work.tar.age` only with the work recipient, so a work-key compromise can't
   decrypt personal projects. Personal = `~/.config/sops/age/keys.txt`; work =
   `~/.config/sops/age/work-keys.txt` (static, provisioned out-of-band). The recipient is
   derived from the scope key file at encrypt/decrypt time (no repo `.sops.yaml` routing).
-- **Hosts declare *which* projects, by opaque id** — each host decl sets
-  `projects = [ "<opaque id>" ... ]`; names never appear in tracked files. Empty list =
+- **Hosts declare *which* projects, by slug** — each host decl sets
+  `projects = [ "<slug>" ... ]`; the real name never appears in tracked files (it lives only
+  in the encrypted `metadata.yaml`). Empty list =
   nothing synced. Works on NixOS **and** home-only hosts (`nixos`/`home` host types).
   `~/projects` is only persisted when the host declared at least one project.
 - **Clone if missing only** — `sync` (home activation + `systemd.user` oneshot

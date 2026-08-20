@@ -14,7 +14,7 @@ Machines are declared as plain, diffable Nix files under `hosts/` and auto-disco
 | `/profiles/` | Reusable composition units (base, desktop, development, server, vm) selected per host |
 | `/modules/` | Core modules: `home/`, `nixos/`, `vm/`, plus `secrets.nix` (sops integration) |
 | `/domains/` | Features — the unit of configuration (31 features / 17 categories), each with a `default.nix` interface + optional `home.nix`/`system.nix` sides |
-| `/projects/` | Encrypted dev-project store (age-encrypted tarballs, opaque ids, scope-isolated age keys) synced by `angst projects` |
+| `/projects/` | Encrypted dev-project store (age-encrypted tarballs, simple slug ids, scope-isolated age keys) synced by `angst projects` |
 | `/themes/` | Color token definitions (9 themes, strict 13-token schema) |
 | `/toolchains/` | Declarative dev-language toolchains (23 languages via `mkToolchain`) |
 | `/tools/` | Standalone Rust workspaces: `shell` (env switcher), `vm` (QEMU lifecycle + MCP) |

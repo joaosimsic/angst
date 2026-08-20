@@ -131,8 +131,9 @@ Unlike `secrets.yaml` (still on sops-nix), the project store is **age/vault**, n
   Seeded from the tarballs at build time via `import`.
 - **Clone root** — `~/projects/<name>`: cloned repo + decrypted `.env`, divergent per host.
 
-- **Layout** — opaque ids are `openssl rand -hex 8` (16 chars, not name-derived); real
-  project names and repo URLs appear only inside the encrypted tarball.
+- **Layout** — each project is a folder `<slug>/` inside the scope tarball, where `<slug>` is
+  any simple identifier you choose (e.g. `dotfiles`, `website`); real project names and repo
+  URLs appear only inside the encrypted tarball (in `metadata.yaml`), never in tracked files.
 - **Tarball encryption** — `vault encrypt --dir` tars the scope dir and age-encrypts it, so
   the whole plaintext tree (names, URLs, structure, comments) is one opaque blob that
   round-trips byte-exactly. Plaintext metadata is JSON `{name, repo}`.
@@ -147,8 +148,9 @@ Unlike `secrets.yaml` (still on sops-nix), the project store is **age/vault**, n
   `.env` (0600) at `~/projects/<name>/.env`. The repo tarballs only change via the manual
   `vault` edit flow above. Host selection (`ANGST_PROJECTS_ONLY`) still happens in `sync`,
   not `import`.
-- **Host selection by opaque id** — each host decl lists the store ids it syncs
-  (`projects = [ "<opaque id>" ... ]`); names never appear in tracked files. Empty list =
+- **Host selection by slug** — each host decl lists the slugs it syncs
+  (`projects = [ "<slug>" ... ]`); the real name never appears in tracked files (it lives only
+  in the encrypted `metadata.yaml`). Empty list =
   nothing synced. `~/projects` persistence is derived from this list in one place
   (`lib/build/mkNixos.nix`) — hosts never declare a persist dir.
 - **Resilience** — a missing scope key, missing tarball, no network, or any decrypt error
