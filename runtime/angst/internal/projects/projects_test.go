@@ -243,6 +243,53 @@ func TestNestedDiscovery(t *testing.T) {
 	}
 }
 
+func TestSyncNestedCloneName(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	store := filepath.Join(home, "store")
+	root := filepath.Join(home, "root")
+	t.Setenv("ANGST_PROJECTS_STORE", store)
+	t.Setenv("ANGST_PROJECTS_ROOT", root)
+
+	seed := func(s scope.Scope, id, name, env string) {
+		dir := filepath.Join(store, string(s), id)
+		os.MkdirAll(dir, 0o700)
+		meta := `{"name": "` + name + `", "repo": "git@example.invalid:` + name + `.git"}
+`
+		os.WriteFile(filepath.Join(dir, "metadata.json"), []byte(meta), 0o600)
+		os.WriteFile(filepath.Join(dir, ".env"), []byte(env), 0o600)
+	}
+	seed(scope.Work, "intelligence/backend", "ezIntelligence/backend", "NESTED=yes\n")
+	seed(scope.Work, "intelligence/frontend", "ezIntelligence/frontend", "NESTED2=yes\n")
+
+	t.Setenv("ANGST_PROJECTS_ONLY", "intelligence/backend intelligence/frontend")
+	for _, name := range []string{"ezIntelligence/backend", "ezIntelligence/frontend"} {
+		clone := filepath.Join(root, name)
+		os.MkdirAll(clone, 0o755)
+		os.MkdirAll(filepath.Join(clone, ".git"), 0o755)
+	}
+	if rc := cmdSync(nil); rc != 0 {
+		t.Fatalf("cmdSync rc = %d", rc)
+	}
+
+	for name, want := range map[string]string{
+		"ezIntelligence/backend":  "NESTED=yes",
+		"ezIntelligence/frontend": "NESTED2=yes",
+	} {
+		target := filepath.Join(root, name, ".env")
+		if perm := permOf(t, target); perm != 0o600 {
+			t.Fatalf("%s/.env perm = %#o, want 600", name, perm)
+		}
+		if !contains(t, target, want) {
+			t.Fatalf("%s/.env missing %q", name, want)
+		}
+		sidecar := filepath.Join(home, ".secrets", "projects", name+".env.sha256")
+		if _, err := os.Stat(sidecar); err != nil {
+			t.Fatalf("sidecar not written at %s: %v", sidecar, err)
+		}
+	}
+}
+
 func cpDir(src, dst string) error {
 	return filepath.Walk(src, func(p string, fi os.FileInfo, err error) error {
 		if err != nil {
