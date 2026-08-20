@@ -62,10 +62,10 @@ pkgs.runCommand "check-projects-pipeline"
 
     mkdir -p "$store/personal/$personal_id" "$store/work/$work_id"
     printf '{"name": "%s", "repo": "%s"}\n' "$personal_name" "git@example.invalid:pipeline/personal.git" \
-      > "$store/personal/$personal_id/metadata.yaml"
+      > "$store/personal/$personal_id/metadata.json"
     printf 'PIPELINE_PERSONAL_KEY=secret-one\nPIPELINE_SHARED=yes\n' > "$store/personal/$personal_id/env"
     printf '{"name": "%s", "repo": "%s"}\n' "$work_name" "git@work.example.invalid:pipeline/work.git" \
-      > "$store/work/$work_id/metadata.yaml"
+      > "$store/work/$work_id/metadata.json"
     printf 'PIPELINE_WORK_KEY=secret-two-ö\n' > "$store/work/$work_id/env"
 
     cp -a "$store" "$scratch/store.orig"

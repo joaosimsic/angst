@@ -61,7 +61,7 @@ func TestSyncEnvStaleTransitions(t *testing.T) {
 	store := filepath.Join(home, "store")
 	t.Setenv("ANGST_PROJECTS_STORE", store)
 
-	envFile := filepath.Join(store, "personal", "id1", "env")
+	envFile := filepath.Join(store, "personal", "id1", ".env")
 	os.MkdirAll(filepath.Dir(envFile), 0o700)
 	os.WriteFile(envFile, []byte("A=one\nB=two\n"), 0o600)
 	name := "stale-test"
@@ -134,11 +134,12 @@ func TestVaultImportSyncRoundTrip(t *testing.T) {
 		os.MkdirAll(dir, 0o700)
 		meta := `{"name": "` + name + `", "repo": "` + repoURL + `"}
 `
-		os.WriteFile(filepath.Join(dir, "metadata.yaml"), []byte(meta), 0o600)
-		os.WriteFile(filepath.Join(dir, "env"), []byte(env), 0o600)
+		os.WriteFile(filepath.Join(dir, "metadata.json"), []byte(meta), 0o600)
+		os.WriteFile(filepath.Join(dir, ".env"), []byte(env), 0o600)
 	}
-	seed(scope.Personal, "pid", "vault-personal", "git@example.invalid:vault/personal.git", "PERSONAL_KEY=one\n")
-	seed(scope.Work, "wid", "vault-work", "git@work.example.invalid:vault/work.git", "WORK_KEY=two-ö\n")
+	seed(scope.Personal, "angst", "angst", "git@github.com:joaosimsic/angst.git", "PERSONAL_KEY=one\n")
+	seed(scope.Work, "agent", "ezAgent", "git@gitlab.ezvoice.com.br:redbox-legacy/redbox-apps/ezagent.git", "WORK_KEY=two-ö\n")
+	seed(scope.Work, "intelligence/backend", "ezbackend", "git@gitlab.ezvoice.com.br:redbox-legacy/redbox-apps/ezbackend.git", "NESTED_KEY=yes\n")
 
 	// Preserve the pristine store for the byte-exact comparison.
 	orig := filepath.Join(home, "store.orig")
@@ -175,7 +176,7 @@ func TestVaultImportSyncRoundTrip(t *testing.T) {
 	assertTreeEqual(t, orig, store)
 
 	// Sync materializes `.env` into pre-seeded clone roots.
-	for _, name := range []string{"vault-personal", "vault-work"} {
+	for _, name := range []string{"angst", "ezAgent", "ezbackend"} {
 		clone := filepath.Join(root, name)
 		os.MkdirAll(clone, 0o755)
 		os.MkdirAll(filepath.Join(clone, ".git"), 0o755)
@@ -184,8 +185,9 @@ func TestVaultImportSyncRoundTrip(t *testing.T) {
 		t.Fatalf("cmdSync rc = %d", rc)
 	}
 	for name, want := range map[string]string{
-		"vault-personal": "PERSONAL_KEY=one",
-		"vault-work":     "WORK_KEY=two-ö",
+		"angst":     "PERSONAL_KEY=one",
+		"ezAgent":   "WORK_KEY=two-ö",
+		"ezbackend": "NESTED_KEY=yes",
 	} {
 		target := filepath.Join(root, name, ".env")
 		if perm := permOf(t, target); perm != 0o600 {
@@ -194,6 +196,61 @@ func TestVaultImportSyncRoundTrip(t *testing.T) {
 		if !contains(t, target, want) {
 			t.Fatalf("%s/.env missing %q", name, want)
 		}
+	}
+}
+
+func TestNestedDiscovery(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	store := filepath.Join(home, "store")
+	root := filepath.Join(home, "root")
+	t.Setenv("ANGST_PROJECTS_STORE", store)
+	t.Setenv("ANGST_PROJECTS_ROOT", root)
+
+	seed := func(s scope.Scope, id, name, env string) {
+		dir := filepath.Join(store, string(s), id)
+		os.MkdirAll(dir, 0o700)
+		meta := `{"name": "` + name + `", "repo": "git@example.invalid:` + name + `.git"}
+`
+		os.WriteFile(filepath.Join(dir, "metadata.json"), []byte(meta), 0o600)
+		os.WriteFile(filepath.Join(dir, ".env"), []byte(env), 0o600)
+	}
+	seed(scope.Work, "intelligence/backend", "ezbackend", "NESTED=yes\n")
+	seed(scope.Work, "agent", "ezAgent", "FLAT=yes\n")
+
+	// ANGST_PROJECTS_ONLY matches the nested id (relative path under scope).
+	t.Setenv("ANGST_PROJECTS_ONLY", "intelligence/backend")
+	for name := range map[string]bool{"ezbackend": true} {
+		clone := filepath.Join(root, name)
+		os.MkdirAll(clone, 0o755)
+		os.MkdirAll(filepath.Join(clone, ".git"), 0o755)
+	}
+	if rc := cmdSync(nil); rc != 0 {
+		t.Fatalf("cmdSync rc = %d", rc)
+	}
+	if !contains(t, filepath.Join(root, "ezbackend", ".env"), "NESTED=yes") {
+		t.Fatal("nested project .env not materialized")
+	}
+	if _, err := os.Stat(filepath.Join(root, "ezAgent", ".env")); err == nil {
+		t.Fatal("non-selected flat project was synced")
+	}
+
+	// Without selection, both nested and flat are discovered.
+	os.RemoveAll(filepath.Join(root, "ezbackend", ".env"))
+	os.Unsetenv("ANGST_PROJECTS_ONLY")
+	for _, name := range []string{"ezbackend", "ezAgent"} {
+		clone := filepath.Join(root, name)
+		os.MkdirAll(clone, 0o755)
+		os.MkdirAll(filepath.Join(clone, ".git"), 0o755)
+	}
+	if rc := cmdSync(nil); rc != 0 {
+		t.Fatalf("cmdSync rc = %d", rc)
+	}
+	if !contains(t, filepath.Join(root, "ezbackend", ".env"), "NESTED=yes") {
+		t.Fatal("nested project .env not materialized without selection")
+	}
+	if !contains(t, filepath.Join(root, "ezAgent", ".env"), "FLAT=yes") {
+		t.Fatal("flat project .env not materialized without selection")
 	}
 }
 

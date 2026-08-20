@@ -1,12 +1,12 @@
 # Plan: Replace sops with vault/age (tarball store) in `angst projects` + `ftp`
 
 ## Model
-- The **public repo holds two committed, encrypted tarballs**: `projects/personal.tar.age` and `projects/work.tar.age`. Each contains the whole `<scope>/<id>/{metadata.yaml,env}` tree.
+- The **public repo holds two committed, encrypted tarballs**: `projects/personal.tar.age` and `projects/work.tar.age`. Each contains the whole `<scope>/<id>/{metadata.json,.env}` tree.
 - The **decrypted** scope directories (`projects/personal/`, `projects/work/` — produced when you decrypt in-place for editing) and the per-host working store (`~/.secrets/projects/...`) are **gitignored** and never committed.
 - The vault tar/untar preserves the full relative folder structure and files, so decrypting yields an editable tree.
 - Manual edit flow:
   1. `angst vault decrypt projects/personal.tar.age --dir --scope personal` → `projects/personal/` (structure preserved, editable by hand).
-  2. edit `projects/personal/<id>/metadata.yaml` / `env`.
+  2. edit `projects/personal/<id>/metadata.json` / `.env`.
   3. `angst vault encrypt projects/personal --dir --scope personal` → overwrites `projects/personal.tar.age`, removes `projects/personal/`.
   4. `git add projects/personal.tar.age && git commit`.
 - **ftp decrypt** → `shared.AgeDecrypt` (age); drop `sops`.
@@ -37,9 +37,9 @@
 - `lib/build/mkNixos.nix` / `mkHome.nix`: no change (`projects` persistence and the `ANGST_PROJECTS_ONLY` specialArg are untouched).
 
 ## 3. Checks
-- `checks/secrets.nix` `projectsCheck`: assert every `projects/*.tar.age` contains `BEGIN AGE ENCRYPTED FILE` (replace the `metadata.yaml`/`env` sops checks).
+- `checks/secrets.nix` `projectsCheck`: assert every `projects/*.tar.age` contains `BEGIN AGE ENCRYPTED FILE` (replace the `metadata.json`/`.env` sops checks).
 - `checks/projects-pipeline.nix`: rewrite —
-  - seed working store by hand (`personal` + `work`, with `metadata.yaml` + `env`),
+  - seed working store by hand (`personal` + `work`, with `metadata.json` + `.env`),
   - `angst vault encrypt <scope> --dir --scope <scope>`, move to `projects/<scope>.tar.age`,
   - wipe working store, run `angst projects import`, assert byte-exact round trip,
   - run `angst projects sync`, assert `.env` materialized (0600) with sidecar hash,

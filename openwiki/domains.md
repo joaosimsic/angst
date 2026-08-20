@@ -104,19 +104,19 @@ A Lua config with a pluggable backend (`config/lua/backend/`):
 Layers:
 
 - **Repo store** — `projects/{personal,work}.tar.age` (committed, **age-encrypted**). Each
-  tarball holds the whole `<scope>/<id>/{metadata.yaml,env}` tree. The transport: travels
+  tarball holds the whole `<scope>/<id>/{metadata.json,.env}` tree. The transport: travels
   with the public repo so a new machine has the metadata to clone its projects. Rewritten
   only by the manual `vault` edit flow (`angst vault decrypt --dir` → edit → `angst vault
   encrypt --dir`, then commit the `.tar.age`).
-- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.yaml,env}` (fixed
+- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.json,.env}` (fixed
   per-host, **decrypted plaintext**). Runtime ops read this directly (no age at runtime).
   Seeded from the tarballs at build time via `import`.
 - **Clone root** — `~/projects/<name>`: cloned repo + decrypted `.env`, divergent per host.
 
-Each project is a folder `<slug>/` inside the scope tarball, where `<slug>` is any simple identifier you choose (e.g. `dotfiles`, `website`); real names/URLs exist only in the encrypted tarball (in `metadata.yaml`). Scope is the tarball path; `personal` and `work` use different age keys (a `work.tar.age` never lists the personal recipient). The per-scope recipient is derived from the scope key file at encrypt/decrypt time (no repo `.sops.yaml` routing — the old `projects/{personal,work}/.*` sops rules are gone).
+Each project is a folder `<slug>/` inside the scope tarball, where `<slug>` is any identifier you choose — including nested paths (e.g. `dotfiles`, `website`, or `intelligence/backend`); the store is discovered recursively, so a project may live at any depth under the scope and its id is the relative path (e.g. `intelligence/backend`). Real names/URLs exist only in the encrypted tarball (in `metadata.json`). Scope is the tarball path; `personal` and `work` use different age keys (a `work.tar.age` never lists the personal recipient). The per-scope recipient is derived from the scope key file at encrypt/decrypt time (no repo `.sops.yaml` routing — the old `projects/{personal,work}/.*` sops rules are gone).
 
 Hosts declare **which** projects they want as a list of slugs
-(`projects = [ "<slug>" ... ]` in the host decl). The real name never appears in tracked files (it lives only in the encrypted `metadata.yaml`); an empty list
+(`projects = [ "<slug>" ... ]` in the host decl, using the nested relative path for grouped projects like `intelligence/backend`). The real name never appears in tracked files (it lives only in the encrypted `metadata.json`); an empty list
 syncs nothing. The wrapper bakes the list into `ANGST_PROJECTS_ONLY`; the same domain module
 works on `nixos` and home-only hosts (a `projects` specialArg is threaded through both
 builders).

@@ -122,18 +122,20 @@ Separate from per-host secrets, the **project store** keeps declared dev repos +
 Unlike `secrets.yaml` (still on sops-nix), the project store is **age/vault**, not sops:
 
 - **Repo store** — `projects/{personal,work}.tar.age` (committed, **age-encrypted**). Each
-  tarball holds the whole `<scope>/<id>/{metadata.yaml,env}` tree. The transport: travels
+  tarball holds the whole `<scope>/<id>/{metadata.json,.env}` tree. The transport: travels
   with the public repo so a new machine has the metadata to clone its projects. Rewritten
   only by the manual `vault` edit flow (`angst vault decrypt --dir` → edit → `angst vault
   encrypt --dir`), then committed.
-- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.yaml,env}` (fixed
+- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.json,.env}` (fixed
   per-host, **decrypted plaintext**). Runtime ops read this directly (no age at runtime).
   Seeded from the tarballs at build time via `import`.
 - **Clone root** — `~/projects/<name>`: cloned repo + decrypted `.env`, divergent per host.
 
 - **Layout** — each project is a folder `<slug>/` inside the scope tarball, where `<slug>` is
-  any simple identifier you choose (e.g. `dotfiles`, `website`); real project names and repo
-  URLs appear only inside the encrypted tarball (in `metadata.yaml`), never in tracked files.
+  any identifier you choose, including nested paths (e.g. `dotfiles`, `website`, or `intelligence/backend`);
+  the store is discovered recursively so a project may sit at any depth, and its id is the relative
+  path under the scope. Real project names and repo
+  URLs appear only inside the encrypted tarball (in `metadata.json`), never in tracked files.
 - **Tarball encryption** — `vault encrypt --dir` tars the scope dir and age-encrypts it, so
   the whole plaintext tree (names, URLs, structure, comments) is one opaque blob that
   round-trips byte-exactly. Plaintext metadata is JSON `{name, repo}`.
@@ -150,7 +152,7 @@ Unlike `secrets.yaml` (still on sops-nix), the project store is **age/vault**, n
   not `import`.
 - **Host selection by slug** — each host decl lists the slugs it syncs
   (`projects = [ "<slug>" ... ]`); the real name never appears in tracked files (it lives only
-  in the encrypted `metadata.yaml`). Empty list =
+  in the encrypted `metadata.json`). Empty list =
   nothing synced. `~/projects` persistence is derived from this list in one place
   (`lib/build/mkNixos.nix`) — hosts never declare a persist dir.
 - **Resilience** — a missing scope key, missing tarball, no network, or any decrypt error

@@ -130,10 +130,10 @@ nothing about them.
 Two layers, with the repo store as committed, age-encrypted tarballs:
 
 - **Repo store** — `projects/{personal,work}.tar.age` (committed, **age-encrypted**). Each
-  tarball holds the whole `<scope>/<id>/{metadata.yaml,env}` tree. This is the transport:
+  tarball holds the whole `<scope>/<id>/{metadata.json,.env}` tree. This is the transport:
   it travels with the public repo, so a new machine that clones the repo has all the
   metadata to clone its projects. Rewritten only by your manual `vault` edit flow (below).
-- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.yaml,env}` (fixed
+- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.json,.env}` (fixed
   per-host, **decrypted plaintext**). `sync` reads this directly — no age needed at runtime.
   Seeded from the tarballs at build time (home activation runs `import`).
 - **Clone root** — `~/projects/<name>`: the cloned repo + its decrypted `.env`. Clones
@@ -145,8 +145,9 @@ Two layers, with the repo store as committed, age-encrypted tarballs:
   `~/.config/sops/age/work-keys.txt` (static, provisioned out-of-band). The recipient is
   derived from the scope key file at encrypt/decrypt time (no repo `.sops.yaml` routing).
 - **Hosts declare *which* projects, by slug** — each host decl sets
-  `projects = [ "<slug>" ... ]`; the real name never appears in tracked files (it lives only
-  in the encrypted `metadata.yaml`). Empty list =
+  `projects = [ "<slug>" ... ]`; slugs may be nested paths (e.g. `intelligence/backend`), in which case
+  the id is the relative path under the scope (the store is discovered recursively). The real name
+  never appears in tracked files (it lives only in the encrypted `metadata.json`). Empty list =
   nothing synced. Works on NixOS **and** home-only hosts (`nixos`/`home` host types).
   `~/projects` is only persisted when the host declared at least one project.
 - **Clone if missing only** — `sync` (home activation + `systemd.user` oneshot
@@ -171,7 +172,7 @@ angst projects sync     # clone-if-missing + env materialize (working store)
 
 # Editing the repo store (run from the repo root, then commit the .tar.age):
 angst vault decrypt projects/personal.tar.age --dir --scope personal   # -> projects/personal/
-# ... edit projects/personal/<id>/metadata.yaml and/or env by hand ...
+# ... edit projects/personal/<id>/metadata.json and/or .env by hand ...
 angst vault encrypt projects/personal --dir --scope personal           # overwrites projects/personal.tar.age, removes projects/personal/
 git add projects/personal.tar.age && git commit
 ```

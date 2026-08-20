@@ -14,7 +14,7 @@ Machines are declared as plain, diffable Nix files under `hosts/` and auto-disco
 | `/profiles/` | Reusable composition units (base, desktop, development, server, vm) selected per host |
 | `/modules/` | Core modules: `home/`, `nixos/`, `vm/`, plus `secrets.nix` (sops integration) |
 | `/domains/` | Features — the unit of configuration (31 features / 17 categories), each with a `default.nix` interface + optional `home.nix`/`system.nix` sides |
-| `/projects/` | Encrypted dev-project store (age-encrypted tarballs, simple slug ids, scope-isolated age keys) synced by `angst projects` |
+| `/projects/` | Encrypted dev-project store (age-encrypted tarballs, recursively-discovered slug ids incl. nested paths, scope-isolated age keys) synced by `angst projects` |
 | `/themes/` | Color token definitions (9 themes, strict 13-token schema) |
 | `/toolchains/` | Declarative dev-language toolchains (23 languages via `mkToolchain`) |
 | `/tools/` | Standalone Rust workspaces: `shell` (env switcher), `vm` (QEMU lifecycle + MCP) |
@@ -31,7 +31,7 @@ Machines are declared as plain, diffable Nix files under `hosts/` and auto-disco
 - **Themes** — 13 color tokens (9 palette + 4 ansi). 9 themes, all validated at build time; rendered into every domain config. See [Themes](themes.md).
 - **Toolchains** — Declarative language environments (runtime, LSP, formatter, linter, treesitter grammar) for 23 languages; selected by `toolchains = "*"` or a list in the host decl.
 - **Secrets** — sops-nix + age. `secrets.yaml` per host holds `masterPassword` (+ app keys such as `opencodeGoKey`); decrypted at runtime into `~/.secrets/` and used to bootstrap login hashes. Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`. See [Secrets](secrets.md).
-- **Projects** — `angst projects` syncs declared dev repos into `~/projects/` with encrypted `.env` handling that survives a public repo: `projects/*.tar.age` holds age-encrypted `<scope>/<id>/{metadata.yaml,env}` trees, split into `personal`/`work` scopes encrypted to different age keys. `import` decrypts into a working store; `sync` clones-if-missing and materializes `.env` (0600). `sync` runs at home activation and as a `systemd.user` oneshot. See [Domains](domains.md#gitprojects--encrypted-project-store) and [Secrets](secrets.md#project-store).
+- **Projects** — `angst projects` syncs declared dev repos into `~/projects/` with encrypted `.env` handling that survives a public repo: `projects/*.tar.age` holds age-encrypted `<scope>/<id>/{metadata.json,.env}` trees, split into `personal`/`work` scopes encrypted to different age keys. `import` decrypts into a working store; `sync` clones-if-missing and materializes `.env` (0600). `sync` runs at home activation and as a `systemd.user` oneshot. See [Domains](domains.md#gitprojects--encrypted-project-store) and [Secrets](secrets.md#project-store).
 - **Hot-reload** — `angst render` / `angst watch` regenerate theme-rendered configs without a full Nix rebuild.
 
 ## Getting Started
