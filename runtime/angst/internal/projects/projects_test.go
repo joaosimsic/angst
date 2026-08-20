@@ -99,10 +99,6 @@ func TestSyncEnvStaleTransitions(t *testing.T) {
 	}
 }
 
-// TestVaultImportSyncRoundTrip seeds a synthetic working store, encrypts each
-// scope with `vault encrypt --dir`, imports the tarballs back, and asserts a
-// byte-exact round trip plus `.env` materialization on sync. Skips when the
-// real `age` / `age-keygen` binaries are not on PATH.
 func TestVaultImportSyncRoundTrip(t *testing.T) {
 	for _, bin := range []string{"age", "age-keygen"} {
 		if _, err := exec.LookPath(bin); err != nil {
@@ -141,13 +137,11 @@ func TestVaultImportSyncRoundTrip(t *testing.T) {
 	seed(scope.Work, "agent", "ezAgent", "git@gitlab.ezvoice.com.br:redbox-legacy/redbox-apps/ezagent.git", "WORK_KEY=two-ö\n")
 	seed(scope.Work, "intelligence/backend", "ezbackend", "git@gitlab.ezvoice.com.br:redbox-legacy/redbox-apps/ezbackend.git", "NESTED_KEY=yes\n")
 
-	// Preserve the pristine store for the byte-exact comparison.
 	orig := filepath.Join(home, "store.orig")
 	if err := cpDir(store, orig); err != nil {
 		t.Fatal(err)
 	}
 
-	// Encrypt each scope into its tarball and stage it in the repo store.
 	for _, s := range []scope.Scope{scope.Personal, scope.Work} {
 		if rc := vault.Run([]string{"encrypt", filepath.Join(store, string(s)), "--dir", "--scope", string(s)}); rc != 0 {
 			t.Fatalf("vault encrypt --dir %s rc = %d", s, rc)
@@ -164,7 +158,6 @@ func TestVaultImportSyncRoundTrip(t *testing.T) {
 		}
 	}
 
-	// Wipe the working store, then import from the tarballs.
 	if err := os.RemoveAll(store); err != nil {
 		t.Fatal(err)
 	}
@@ -172,10 +165,8 @@ func TestVaultImportSyncRoundTrip(t *testing.T) {
 		t.Fatalf("cmdImport rc = %d", rc)
 	}
 
-	// Byte-exact round trip of metadata + env.
 	assertTreeEqual(t, orig, store)
 
-	// Sync materializes `.env` into pre-seeded clone roots.
 	for _, name := range []string{"angst", "ezAgent", "ezbackend"} {
 		clone := filepath.Join(root, name)
 		os.MkdirAll(clone, 0o755)
@@ -218,7 +209,6 @@ func TestNestedDiscovery(t *testing.T) {
 	seed(scope.Work, "intelligence/backend", "ezbackend", "NESTED=yes\n")
 	seed(scope.Work, "agent", "ezAgent", "FLAT=yes\n")
 
-	// ANGST_PROJECTS_ONLY matches the nested id (relative path under scope).
 	t.Setenv("ANGST_PROJECTS_ONLY", "intelligence/backend")
 	for name := range map[string]bool{"ezbackend": true} {
 		clone := filepath.Join(root, name)
@@ -235,7 +225,6 @@ func TestNestedDiscovery(t *testing.T) {
 		t.Fatal("non-selected flat project was synced")
 	}
 
-	// Without selection, both nested and flat are discovered.
 	os.RemoveAll(filepath.Join(root, "ezbackend", ".env"))
 	os.Unsetenv("ANGST_PROJECTS_ONLY")
 	for _, name := range []string{"ezbackend", "ezAgent"} {

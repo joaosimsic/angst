@@ -79,10 +79,6 @@ func decryptDir(keyfile, path string, info os.FileInfo) int {
 	return shared.ExitOK
 }
 
-// DecryptTarball decrypts an age-encrypted tarball (src) and extracts its
-// contents into destDir. It is used both by the CLI (decrypt --dir) and by
-// callers that need to extract into an arbitrary directory (e.g. boot, which
-// extracts into the working store rather than the read-only nix store).
 func DecryptTarball(keyfile, src, destDir string) error {
 	tmpDir, err := os.MkdirTemp("", "vault-untar-*")
 	if err != nil {

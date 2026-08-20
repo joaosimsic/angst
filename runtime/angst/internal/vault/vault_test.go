@@ -13,10 +13,6 @@ import (
 	"angst/internal/shared"
 )
 
-// setupAgeKeys generates throwaway personal + work age identities in a temp
-// HOME and points SOPS_AGE_KEY_FILE / SOPS_WORK_AGE_KEY_FILE at them. Tests
-// that round-trip through the real `age` binary are skipped when age/age-keygen
-// are not on PATH.
 func setupAgeKeys(t *testing.T) {
 	t.Helper()
 	for _, bin := range []string{"age", "age-keygen"} {
@@ -67,8 +63,6 @@ func captureStdout(t *testing.T, fn func()) string {
 	}
 	return buf.String()
 }
-
-// --- parseArgs -----------------------------------------------------------
 
 func TestParseArgs(t *testing.T) {
 	cases := []struct {
@@ -124,8 +118,6 @@ func TestParseArgs(t *testing.T) {
 		})
 	}
 }
-
-// --- file mode round-trip ------------------------------------------------
 
 func TestEncryptDecryptFileRoundTrip(t *testing.T) {
 	setupAgeKeys(t)
@@ -205,8 +197,6 @@ func TestEncryptFileDelete(t *testing.T) {
 	}
 }
 
-// --- file mode on directories --------------------------------------------
-
 func TestEncryptDecryptDirRoundTrip(t *testing.T) {
 	setupAgeKeys(t)
 	srcDir := t.TempDir()
@@ -230,8 +220,6 @@ func TestEncryptDecryptDirRoundTrip(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(nested, "b.txt.age")); err != nil {
 		t.Fatalf("b.txt.age missing: %v", err)
 	}
-	// File-mode keeps the original plaintext (only --delete removes it); the
-	// .age ciphertext is what must be present and what gets restored on decrypt.
 	if _, err := os.Stat(filepath.Join(srcDir, "a.txt.age")); err != nil {
 		t.Fatalf("a.txt.age missing: %v", err)
 	}
@@ -305,8 +293,6 @@ func TestForceOverwrite(t *testing.T) {
 	}
 }
 
-// --- directory mode (tar + age) ------------------------------------------
-
 func TestDirModeRoundTrip(t *testing.T) {
 	setupAgeKeys(t)
 	srcDir := t.TempDir()
@@ -347,8 +333,6 @@ func TestDirModeRoundTrip(t *testing.T) {
 		t.Fatalf("dir-mode round-trip mismatch: %q / %q", gotA, gotB)
 	}
 }
-
-// --- status --------------------------------------------------------------
 
 func TestStatusFile(t *testing.T) {
 	setupAgeKeys(t)
@@ -399,8 +383,6 @@ func TestStatusDir(t *testing.T) {
 	}
 }
 
-// --- scope isolation ------------------------------------------------------
-
 func TestScopeWork(t *testing.T) {
 	setupAgeKeys(t)
 	dir := t.TempDir()
@@ -438,8 +420,6 @@ func TestScopeMismatchFails(t *testing.T) {
 		t.Fatalf("decrypt with wrong scope should fail")
 	}
 }
-
-// --- error paths ----------------------------------------------------------
 
 func TestEncryptMissingPath(t *testing.T) {
 	setupAgeKeys(t)
@@ -486,8 +466,6 @@ func TestUnknownCommand(t *testing.T) {
 		t.Fatalf("rc = %d, want ExitUsage", rc)
 	}
 }
-
-// --- edge cases -----------------------------------------------------------
 
 func TestEncryptDecryptEmpty(t *testing.T) {
 	setupAgeKeys(t)

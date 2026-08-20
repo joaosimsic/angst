@@ -25,8 +25,7 @@ func cmdImport(args []string) int {
 			return shared.ExitUsage
 		}
 	}
-	_ = all // whole-scope tarballs; host selection happens in sync
-
+	_ = all
 	store := storeRoot()
 	repo := repoRoot()
 	if _, err := os.Stat(repo); err != nil {

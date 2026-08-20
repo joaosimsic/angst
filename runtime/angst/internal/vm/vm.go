@@ -28,7 +28,6 @@ func usage() {
 `)
 }
 
-// Run dispatches `angst vm <cmd>` and returns the process exit code.
 func Run(args []string) int {
 	sub := ""
 	if len(args) > 0 {
