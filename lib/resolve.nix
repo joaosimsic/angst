@@ -78,6 +78,23 @@ in
     type = decl.type or "nixos";
     inherit domain;
 
+    scopes =
+      let
+        inWork = domain == "work";
+        inPersonal = domain == "personal";
+        isVm = (decl.hostname or "nixos") == "vm";
+      in
+      if inWork then
+        [ "work" ]
+      else if inPersonal then
+        [ "personal" "work" ]
+      else if isVm then
+        [ "personal" "work" ]
+      else
+        [ "work" ];
+
+    secrets = decl.secrets or [ ];
+
     scan = {
       domains = domainsLib;
       themes = themesLib;

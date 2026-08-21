@@ -43,6 +43,8 @@ func run(args []string) int {
 		return system.SSHAddKeys(args)
 	case "provision-ssh-key":
 		return system.ProvisionSSHKey(args)
+	case "provision-app-secret":
+		return system.ProvisionAppSecret(args)
 	case "ftp":
 		return ftp.Run(args)
 	case "vault":
@@ -69,7 +71,8 @@ func usage() {
   angst ssh-key <generate|verify> --scope personal|work
   angst login-shell --shell NAME --home DIR --user USER
   angst ssh-add-keys KEY...
-  angst provision-ssh-key --user USER --home DIR --secrets-dir DIR
+  angst provision-ssh-key --user USER --home DIR --secrets-dir DIR [--scopes work[,personal]]
+  angst provision-app-secret --secrets-dir DIR --slug NAME [--slug NAME ...] [--scopes work[,personal]] [--home DIR]
   angst set-password-hash --username USER --sops-path FILE
   angst ftp <decrypt|mount|unmount|transform> ...
   angst vm <home-manager-upgrade|ephemeral-ssh|age-key|nixos-switch|home-switch> ...
