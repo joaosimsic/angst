@@ -19,7 +19,12 @@ let
   goAngst = pkgs.runCommand "angst" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
     mkdir -p $out/bin
     makeWrapper ${goAngstUnwrapped}/bin/angst $out/bin/angst \
-      --prefix PATH : ${lib.makeBinPath [ pkgs.age pkgs.openssh ]}
+      --prefix PATH : ${
+        lib.makeBinPath [
+          pkgs.age
+          pkgs.openssh
+        ]
+      }
   '';
 
   mkScript =

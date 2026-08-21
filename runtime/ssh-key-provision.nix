@@ -7,7 +7,10 @@
   username,
   homeDirectory,
   secretsDir,
-  scopes ? [ "personal" "work" ],
+  scopes ? [
+    "personal"
+    "work"
+  ],
 }:
 mkScript {
   name = "angst-provision-ssh-key";

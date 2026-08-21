@@ -1,4 +1,11 @@
-{ lib, flakeSelf, runtime, hostScopes, hostSecrets, ... }:
+{
+  lib,
+  flakeSelf,
+  runtime,
+  hostScopes,
+  hostSecrets,
+  ...
+}:
 
 let
   enable = hostSecrets != [ ];

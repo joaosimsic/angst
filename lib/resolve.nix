@@ -87,9 +87,15 @@ in
       if inWork then
         [ "work" ]
       else if inPersonal then
-        [ "personal" "work" ]
+        [
+          "personal"
+          "work"
+        ]
       else if isVm then
-        [ "personal" "work" ]
+        [
+          "personal"
+          "work"
+        ]
       else
         [ "work" ];
 
