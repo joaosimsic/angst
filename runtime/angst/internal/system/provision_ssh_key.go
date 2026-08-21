@@ -109,7 +109,6 @@ func ProvisionSSHKey(args []string) int {
 		return shared.ExitOK
 	}
 
-	// Scope-aware: only install the scopes the host is allowed.
 	scopeTargets := map[scope.Scope]struct {
 		ageKey string
 		dest   string

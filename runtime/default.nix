@@ -12,10 +12,6 @@ let
     vendorHash = null;
   };
 
-  # Wrap the binary so it always finds the external tools it shells out to
-  # (age/age-keygen from pkgs.age, ssh-keygen from pkgs.openssh), independent of
-  # the caller's PATH. This fixes activation callers that invoke goAngst raw
-  # (e.g. app-secrets) and prevents any future caller from forgetting the dep.
   goAngst = pkgs.runCommand "angst" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
     mkdir -p $out/bin
     makeWrapper ${goAngstUnwrapped}/bin/angst $out/bin/angst \

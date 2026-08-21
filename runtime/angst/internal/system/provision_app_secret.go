@@ -17,8 +17,6 @@ func usageAppSecret() {
 `)
 }
 
-// ProvisionAppSecret decrypts app-level secrets from the unified scope store
-// and writes each to ~/.secrets/<slug> with mode 0600.
 func ProvisionAppSecret(args []string) int {
 	homeDir := ""
 	secretsDir := ""

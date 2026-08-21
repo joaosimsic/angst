@@ -56,7 +56,6 @@ func parseArgs(args []string) (string, options, error) {
 	}
 	opts.path = positional[0]
 
-	// Default file-mode encrypt deletes the source; --no-delete keeps it.
 	opts.delete = !opts.noDelete
 
 	return positional[0], opts, nil
