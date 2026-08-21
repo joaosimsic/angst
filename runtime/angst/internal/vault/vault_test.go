@@ -75,13 +75,14 @@ func TestParseArgs(t *testing.T) {
 		wantScope scope.Scope
 		wantErr   string
 	}{
-		{"path only", []string{"foo"}, "foo", false, false, false, scope.Scope(""), ""},
-		{"dir flag", []string{"--dir", "foo"}, "foo", true, false, false, scope.Scope(""), ""},
-		{"force flag", []string{"--force", "foo"}, "foo", false, true, false, scope.Scope(""), ""},
+		{"path only", []string{"foo"}, "foo", false, false, true, scope.Scope(""), ""},
+		{"dir flag", []string{"--dir", "foo"}, "foo", true, false, true, scope.Scope(""), ""},
+		{"force flag", []string{"--force", "foo"}, "foo", false, true, true, scope.Scope(""), ""},
 		{"delete flag", []string{"foo", "--delete"}, "foo", false, false, true, scope.Scope(""), ""},
-		{"scope work", []string{"--scope", "work", "foo"}, "foo", false, false, false, scope.Work, ""},
-		{"scope personal", []string{"foo", "--scope", "personal"}, "foo", false, false, false, scope.Personal, ""},
-		{"combined", []string{"--dir", "--force", "--scope", "work", "foo"}, "foo", true, true, false, scope.Work, ""},
+		{"no-delete flag", []string{"foo", "--no-delete"}, "foo", false, false, false, scope.Scope(""), ""},
+		{"scope work", []string{"--scope", "work", "foo"}, "foo", false, false, true, scope.Work, ""},
+		{"scope personal", []string{"foo", "--scope", "personal"}, "foo", false, false, true, scope.Personal, ""},
+		{"combined", []string{"--dir", "--force", "--scope", "work", "foo"}, "foo", true, true, true, scope.Work, ""},
 		{"missing path", []string{"--force"}, "", false, false, false, scope.Scope(""), "path argument required"},
 		{"invalid scope", []string{"--scope", "bogus", "foo"}, "", false, false, false, scope.Scope(""), "unknown scope"},
 		{"scope no value", []string{"--scope"}, "", false, false, false, scope.Scope(""), "requires a value"},
@@ -128,7 +129,7 @@ func TestEncryptDecryptFileRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if rc := Run([]string{"encrypt", src}); rc != shared.ExitOK {
+	if rc := Run([]string{"encrypt", src, "--no-delete"}); rc != shared.ExitOK {
 		t.Fatalf("encrypt rc = %d", rc)
 	}
 	ageFile := src + ".age"
@@ -136,7 +137,7 @@ func TestEncryptDecryptFileRoundTrip(t *testing.T) {
 		t.Fatalf("age file not created: %v", err)
 	}
 	if _, err := os.Stat(src); err != nil {
-		t.Fatalf("source removed without --delete: %v", err)
+		t.Fatalf("source removed without --no-delete: %v", err)
 	}
 	data, err := os.ReadFile(ageFile)
 	if err != nil {
@@ -247,13 +248,13 @@ func TestEncryptSkipsExisting(t *testing.T) {
 	if err := os.WriteFile(src, []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if rc := Run([]string{"encrypt", src}); rc != shared.ExitOK {
+	if rc := Run([]string{"encrypt", src, "--no-delete"}); rc != shared.ExitOK {
 		t.Fatalf("first encrypt rc = %d", rc)
 	}
 	if err := os.WriteFile(src+".age", []byte("TAMPERED"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if rc := Run([]string{"encrypt", src}); rc != shared.ExitOK {
+	if rc := Run([]string{"encrypt", src, "--no-delete"}); rc != shared.ExitOK {
 		t.Fatalf("second encrypt rc = %d, want ExitOK (skip)", rc)
 	}
 	data, err := os.ReadFile(src + ".age")
@@ -272,13 +273,13 @@ func TestForceOverwrite(t *testing.T) {
 	if err := os.WriteFile(src, []byte("original"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if rc := Run([]string{"encrypt", src}); rc != shared.ExitOK {
+	if rc := Run([]string{"encrypt", src, "--no-delete"}); rc != shared.ExitOK {
 		t.Fatalf("encrypt rc = %d", rc)
 	}
 	if err := os.WriteFile(src+".age", []byte("TAMPERED"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if rc := Run([]string{"encrypt", src, "--force"}); rc != shared.ExitOK {
+	if rc := Run([]string{"encrypt", src, "--force", "--no-delete"}); rc != shared.ExitOK {
 		t.Fatalf("force encrypt rc = %d", rc)
 	}
 	if rc := Run([]string{"decrypt", src + ".age"}); rc != shared.ExitOK {

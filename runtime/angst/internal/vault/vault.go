@@ -13,6 +13,7 @@ type options struct {
 	dirMode bool
 	force   bool
 	delete  bool
+	noDelete bool
 	sc      scope.Scope
 }
 
@@ -28,6 +29,8 @@ func parseArgs(args []string) (string, options, error) {
 			opts.force = true
 		case "--delete":
 			opts.delete = true
+		case "--no-delete":
+			opts.noDelete = true
 		case "--scope":
 			i++
 			if i >= len(args) {
@@ -52,6 +55,9 @@ func parseArgs(args []string) (string, options, error) {
 		return "", opts, fmt.Errorf("path argument required")
 	}
 	opts.path = positional[0]
+
+	// Default file-mode encrypt deletes the source; --no-delete keeps it.
+	opts.delete = !opts.noDelete
 
 	return positional[0], opts, nil
 }
@@ -159,7 +165,8 @@ Flags:
   --scope personal|work   Age key scope (default: personal)
   --dir                   Directory mode: tar + encrypt the whole directory
   --force                 Overwrite existing .age files
-  --delete                Delete source after encryption (file mode only)
+  --delete                Delete source after encryption (file mode default: delete)
+  --no-delete             Keep source after encryption (file mode only)
 
 Examples:
   angst vault encrypt secrets/              # encrypt files in-place
@@ -189,6 +196,7 @@ Flags:
   --dir                   Directory mode (tar + encrypt)
   --force                 Overwrite existing .age files
   --delete                Delete source after encryption (file mode default: delete)
+  --no-delete             Keep source after encryption (file mode only)
 `)
 }
 
