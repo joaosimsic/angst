@@ -19,8 +19,18 @@
   };
   ssh = {
     hosts = [
-      { host = "gitlab.com"; hostName = "gitlab.com"; user = "git"; identityFile = "~/.ssh/work_ed25519"; }
-      { host = "work_server"; hostName = "200.152.183.154"; user = "joao"; identityFile = "~/.ssh/work_ed25519"; }
+      {
+        host = "gitlab.com";
+        hostName = "gitlab.com";
+        user = "git";
+        identityFile = "~/.ssh/work_ed25519";
+      }
+      {
+        host = "work_server";
+        hostName = "200.152.183.154";
+        user = "joao";
+        identityFile = "~/.ssh/work_ed25519";
+      }
     ];
   };
   secrets = [ "cursor-api-key" ];
