@@ -2,7 +2,7 @@
 
 NixOS + home-manager flake for a theme-driven, hot-reloadable desktop environment.
 
-Every machine is declared as a plain, diffable Nix file under `hosts/` and auto-discovered at flake eval time — no `flake.nix` edits, no env-file hacks. Secrets live in per-host, sops-encrypted `secrets.yaml` files and are decrypted at runtime by sops-nix. A single color-theme system propagates across ~21 user-space applications.
+Every machine is declared as a plain, diffable Nix file under `hosts/` and auto-discovered at flake eval time — no `flake.nix` edits, no env-file hacks. Secrets are age-encrypted (`secrets/master/<host>.age` for the login password, `secrets/apps/<scope>/<slug>.age` for app secrets) and decrypted at runtime. A single color-theme system propagates across ~21 user-space applications.
 
 Maintained reference documentation lives in [openwiki/](openwiki/quickstart.md) (quickstart, [architecture](openwiki/architecture.md), [domains](openwiki/domains.md), [themes](openwiki/themes.md), [tools](openwiki/tools.md), [operations](openwiki/operations.md), [secrets](openwiki/secrets.md)).
 
@@ -17,7 +17,7 @@ just hm-switch host=nixos            # or: nix build .#homeConfigurations.joao.a
 
 # Development shells
 nix develop .#safe                   # editing env: neovim, parsers, LSPs, formatters
-nix develop .#dev                    # full env: angst CLI, qemu, sops, age, gitleaks, Rust, VM tools
+nix develop .#dev                    # full env: angst CLI, qemu, age, gitleaks, Rust, VM tools
 nix develop .#vm                     # Rust tooling for tools/vm
 
 # Render theme-aware configs (no Nix rebuild needed)
@@ -37,7 +37,7 @@ nix run .#lint-themes                # fast, eval-only theme check
 @domains/        features (31 domains / 17 categories) — each with a default.nix interface + optional home.nix/system.nix sides
 @projects/       encrypted, auto-synced dev-project store (age-encrypted tarballs; simple slug ids, real name only in encrypted metadata)
 @lib/            build system, domain framework, host resolution, flake outputs
-@modules/        core NixOS/home/VM modules + sops secrets integration
+@modules/        core NixOS/home/VM modules + age secrets integration
 @profiles/       reusable composition units — selected via the host decl's `profiles` list
 @runtime/        runtime tooling as Nix functions (angst CLI, login-shell, projects-sync, bootstrap-secrets, VM + app scripts)
 @themes/         color token definitions (9 themes, strict 13-token schema)
@@ -72,7 +72,7 @@ Each machine is `hosts/<domain>/<hostname>/default.nix`, a pure data decl. A dir
 }
 ```
 
-Optional siblings: `secrets.yaml` (sops-encrypted, see [Secrets](openwiki/secrets.md)) and `hardware.nix` (auto-imported by `mkNixos.nix`). Current hosts: `ci` (CI runner, user `runner`), `personal/nixos` (desktop), `personal/mint` (home-only), `vm` (disposable QEMU VM).
+Optional siblings: `secrets/master/<host>.age` and `secrets/apps/` (age-encrypted, see [Secrets](openwiki/secrets.md)) and `hardware.nix` (auto-imported by `mkNixos.nix`). Current hosts: `ci` (CI runner, user `runner`), `personal/nixos` (desktop), `personal/mint` (home-only), `vm` (disposable QEMU VM).
 
 ---
 
@@ -96,7 +96,7 @@ The domain framework (`lib/domains/`):
 
 Full 31-domain inventory: see [openwiki/domains.md](openwiki/domains.md).
 
-Domain categories: `agents/` (opencode, cursor-cli), `bar/` (i3status), `editor/` (nvim), `files/` (yazi), `git/` (lazygit, projects), `http-client/` (posting), `launcher/` (rofi), `nix/` (nh), `remote/` (ssh), `security/` (age, sops), `session/` (x11), `shell/` (nushell, starship, carapace), `sql-client/` (sqlit, rainfrog), `system/` (audio, clipboard, container, git, graphical, monitoring, network, search), `terminal/` (ghostty, zellij, tmux), `wm/` (i3).
+Domain categories: `agents/` (opencode, cursor-cli), `bar/` (i3status), `editor/` (nvim), `files/` (yazi), `git/` (lazygit, projects), `http-client/` (posting), `launcher/` (rofi), `nix/` (nh),   `remote/` (ssh), `security/` (age), `session/` (x11), `shell/` (nushell, starship, carapace), `sql-client/` (sqlit, rainfrog), `system/` (audio, clipboard, container, git, graphical, monitoring, network, search), `terminal/` (ghostty, zellij, tmux), `wm/` (i3).
 
 Domains are enabled via **profile composition**, not per-host module files.
 
@@ -113,8 +113,8 @@ Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run
 | `theme-override` | Theme override propagates into a real home config |
 | `theme-semantic-distinct` | `ansi.error/warn/info/success` mutually distinct |
 | `check-password` | Host `password` field is a valid `$6$` sha-512 hash |
-| `check-secrets-encrypted` | Every tracked `secrets.yaml` is sops-encrypted |
-| `check-secrets-encrypted` | Every tracked `secrets.yaml` is sops-encrypted |
+| `check-secrets-encrypted` | Every `secrets/master/*.age` is age-encrypted |
+| `check-secrets-encrypted` | Every `secrets/master/*.age` is age-encrypted |
 | `login-shell-valid` / `login-shell-invalid` | `shellOverride` handling |
 | `home-theme-override-test` | Builds a representative home config with an alternate theme |
 | `lint-nix` | `deadnix --fail` + `statix check .` |
@@ -141,9 +141,9 @@ Two layers, with the repo store as committed, age-encrypted tarballs:
 
 - **Scope-isolated tarballs** — `personal.tar.age` is encrypted only with the personal age
   recipient, `work.tar.age` only with the work recipient, so a work-key compromise can't
-  decrypt personal projects. Personal = `~/.config/sops/age/keys.txt`; work =
-  `~/.config/sops/age/work-keys.txt` (static, provisioned out-of-band). The recipient is
-  derived from the scope key file at encrypt/decrypt time (no repo `.sops.yaml` routing).
+  decrypt personal projects. Personal = `~/.config/age/keys.txt`; work =
+  `~/.config/age/work-keys.txt` (static, provisioned out-of-band). The recipient is
+  derived from the scope key file at encrypt/decrypt time.
 - **Hosts declare *which* projects, by slug** — each host decl sets
   `projects = [ "<slug>" ... ]`; slugs may be nested paths (e.g. `intelligence/backend`), in which case
   the id is the relative path under the scope (the store is discovered recursively). The real name
@@ -178,8 +178,7 @@ git add projects/personal.tar.age && git commit
 ```
 
 The decrypted scope dirs (`projects/personal/`, `projects/work/`) are gitignored, so an
-in-place decrypt never stages plaintext. `secrets.yaml` stays on sops (consumed by
-sops-nix), so sops is *not* fully removable.
+in-place decrypt never stages plaintext. All secrets are age-encrypted, so no sops tooling is required.
 
 ---
 
@@ -211,7 +210,7 @@ sops-nix), so sops is *not* fully removable.
 
 **`modules/vm/`** — Multi-layered VM support: internal `angst.isQemuVm` flag (declared — forced on by the `vm` profile and by `vmVariant`, never probed at eval time), conditional bootloader (`runtime.nix`), vmVariant resources (`vm-variant.nix` — tmpfs `/`, `/persist` ext4, SPICE, 9p host mount), declarative inbound auth + age-key injection (`vm-profile.nix` — `authorized_keys` baked from `secrets/ssh/*.pub`, `vm-age-key` consumes `/tmp/shared`), and host-repo symlink for live editing (`host-mount.nix`). `specialisation.nix` exists but is never imported (dead code).
 
-**`modules/secrets.nix`** — sops-nix integration per host: locates `secrets.yaml` and, when present, wires sops for `masterPassword` (system + home) and app secrets (e.g. `opencodeGoKey` → `~/.secrets/opencode-go-key`). Decryption is decided at runtime (age key at `~/.config/sops/age/keys.txt`), never at eval — pure-`nix build` hosts like the VM still get secret wiring, and `secrets-ready` starts `sops-nix.service` tolerantly. See [openwiki/secrets.md](openwiki/secrets.md).
+**`modules/secrets.nix`** — age secrets integration per host: the master password (`secrets/master/<host>.age`, decrypted by `angst set-password-hash` at boot) and app secrets (e.g. `opencode-go-key` → `~/.secrets/opencode-go-key`, provisioned by `angst provision-app-secret`). Decryption is decided at runtime (age key at `~/.config/age/keys.txt`), never at eval — pure-`nix build` hosts like the VM still get secret wiring. See [openwiki/secrets.md](openwiki/secrets.md).
 
 ---
 
@@ -221,7 +220,7 @@ Profiles replace host-specific `home.nix` / `configuration.nix` files. Each is a
 
 | Profile | Features (`enable`) |
 |---|---|
-| `base` | nushell, carapace, starship, zellij, nvim, yazi, lazygit, nh, age, sops, network, git, search, monitoring, container, **ssh** |
+| `base` | nushell, carapace, starship, zellij, nvim, yazi, lazygit, nh, age, network, git, search, monitoring, container, **ssh** |
 | `desktop` | rofi, ghostty, x11, graphical, audio, clipboard |
 | `development` | opencode, cursor-cli, sqlit, rainfrog, posting, **git.projects** |
 | `server` | ssh (sshd is driven per-host via `host.ssh.server.enable`) |
@@ -252,7 +251,7 @@ Toolchains are auto-discovered by `lib/resolve.nix` and selected via `toolchains
 ### `@tools/` — Standalone Tools
 
 **angst CLI** (`runtime/angst-cli.nix`, packaged as `angst`):
-- `angst bootstrap-secrets [--host HOST]` — interactive master-password bootstrap (sops + mkpasswd); writes `secrets.yaml` and the sha-512 hash into the host decl.
+- `angst bootstrap-master-password [--host HOST] [--scope personal|work]` — interactive master-password bootstrap; age-encrypts the password to `secrets/master/<host>.age`. The boot service derives the sha-512 hash.
 - `angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]` — batch-evals `.#lib.renderDomainOutputsFor` and writes rendered domain configs.
 - `angst watch [...]` — watchexec-based hot-reload on `themes/`, `domains/`, `hosts/`.
 - `angst projects <add|sync|status|capture|edit-env|rm> ...` — manage the encrypted dev-project store (see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)).
@@ -297,7 +296,7 @@ home-manager activation                    # xdg.configFile symlinks → ~/.conf
 
 ### Secrets (summary)
 
-Per-host `secrets.yaml` (sops + age) → decrypted at runtime into `~/.secrets/`. The `masterPassword` secret drives login-hash and SSH-key bootstrap (`angst-bootstrap-secrets` systemd service + home activation). Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`; the FTP server config lives age-encrypted in `secrets/ftp/`. The VM receives the host's age key + SSH keys via a shared dir at boot — keys are never baked into the image. The `projects/` store is age-encrypted (vault tarballs) too, with scope-isolated keys (repo tarballs travel; working store decrypted at `~/.secrets/projects`, see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets.yaml` / non-encrypted `projects/*.tar.age` / `secrets/ssh/*.age` / `secrets/ftp/*`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
+age-encrypted secrets → decrypted at runtime into `~/.secrets/`. The master password (`secrets/master/<host>.age`) drives the login-hash via the `angst-bootstrap-secrets` systemd service; app secrets (e.g. `opencode-go-key`) land at `~/.secrets/` via `angst provision-app-secret`. Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`; the FTP server config lives age-encrypted in `secrets/ftp/`. The VM receives the host's age key + SSH keys via a shared dir at boot — keys are never baked into the image. The `projects/` store is age-encrypted (vault tarballs) too, with scope-isolated keys (repo tarballs travel; working store decrypted at `~/.secrets/projects`, see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets/master/*.age` / non-encrypted `projects/*.tar.age` / `secrets/ssh/*.age` / `secrets/ftp/*`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
 
 ### CI
 

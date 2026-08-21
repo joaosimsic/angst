@@ -150,7 +150,7 @@ in
         };
 
         vm-age-key = {
-          description = "Install host age key for sops decryption";
+          description = "Install host age key for age decryption";
           wantedBy = [ "multi-user.target" ];
           before = [ "home-manager-${userConfig.username}.service" ];
           requires = [ "tmp-shared.mount" ];

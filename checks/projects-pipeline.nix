@@ -42,16 +42,16 @@ pkgs.runCommand "check-projects-pipeline"
     repo="$scratch/repo"
     root="$scratch/root"
 
-    mkdir -p "$home/.config/sops/age" "$home/.ssh" "$home/.secrets/projects" "$repo"
-    age-keygen -o "$home/.config/sops/age/keys.txt"
-    age-keygen -o "$home/.config/sops/age/work-keys.txt"
+    mkdir -p "$home/.config/age" "$home/.ssh" "$home/.secrets/projects" "$repo"
+    age-keygen -o "$home/.config/age/keys.txt"
+    age-keygen -o "$home/.config/age/work-keys.txt"
 
     export HOME="$home"
     export ANGST_PROJECTS_STORE="$store"
     export ANGST_PROJECTS_REPO="$repo"
     export ANGST_PROJECTS_ROOT="$root"
-    export SOPS_AGE_KEY_FILE="$home/.config/sops/age/keys.txt"
-    export SOPS_WORK_AGE_KEY_FILE="$home/.config/sops/age/work-keys.txt"
+    export ANGST_AGE_KEY_FILE="$home/.config/age/keys.txt"
+    export ANGST_WORK_AGE_KEY_FILE="$home/.config/age/work-keys.txt"
 
     echo "==> Seeding a synthetic working store (personal + work)..."
 

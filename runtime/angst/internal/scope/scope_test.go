@@ -9,11 +9,11 @@ import (
 func TestAgeKeyfile(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("SOPS_AGE_KEY_FILE", "")
-	t.Setenv("SOPS_WORK_AGE_KEY_FILE", "")
+	t.Setenv("ANGST_AGE_KEY_FILE", "")
+	t.Setenv("ANGST_WORK_AGE_KEY_FILE", "")
 
-	personal := filepath.Join(home, ".config", "sops", "age", "keys.txt")
-	work := filepath.Join(home, ".config", "sops", "age", "work-keys.txt")
+	personal := filepath.Join(home, ".config", "age", "keys.txt")
+	work := filepath.Join(home, ".config", "age", "work-keys.txt")
 	if got := AgeKeyfile(Personal, EnvOverride); got != personal {
 		t.Fatalf("personal = %q", got)
 	}
@@ -21,7 +21,7 @@ func TestAgeKeyfile(t *testing.T) {
 		t.Fatalf("work = %q", got)
 	}
 
-	os.Setenv("SOPS_WORK_AGE_KEY_FILE", "/env/work-keys.txt")
+	os.Setenv("ANGST_WORK_AGE_KEY_FILE", "/env/work-keys.txt")
 	if got := AgeKeyfile(Work, EnvOverride); got != "/env/work-keys.txt" {
 		t.Fatalf("work env override = %q", got)
 	}

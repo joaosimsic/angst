@@ -37,7 +37,7 @@ func defaultHost() string {
 
 func usage() {
 	fmt.Print(`Usage:
-  angst bootstrap-secrets [--host HOST]
+  angst bootstrap-master-password [--host HOST] [--scope personal|work]
   angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
   angst watch  [--repo PATH] [--host HOST] [--theme THEME]
   angst projects <add|sync|status|capture|edit-env|rm> ...

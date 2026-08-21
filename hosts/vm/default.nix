@@ -69,4 +69,5 @@
   projects = [
     "angst"
   ]; # slug ids (decrypted from projects/*.tar.age via `angst projects import`); real names stay in encrypted metadata
+  secrets = [ "opencode-go-key" ];
 }

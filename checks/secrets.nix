@@ -15,30 +15,33 @@ let
         set -euo pipefail
         cd ${repoRoot}
 
-        files=$(find . -type f \( -name 'secrets.yaml' -o -name 'secrets.yml' \))
+        files=$(find ./secrets/master -type f -name '*.age' 2>/dev/null || true)
         if [ -z "$files" ]; then
-          echo "No secrets.yaml files found; nothing to check."
+          echo "No secrets/master/*.age files found; nothing to check."
           touch $out
           exit 0
         fi
 
-        echo "==> Checking tracked secrets files are sops-encrypted..."
+        echo "==> Checking tracked master-password age files are age-encrypted..."
         failed=0
         for f in $files; do
-          if ! grep -q '^sops:' "$f" || ! grep -q 'ENC\[AES256_GCM' "$f"; then
-            echo "FAIL: $f is not sops-encrypted (missing 'sops:' block or ENC[AES256_GCM values)"
+          if ! grep -q 'age-encryption.org/v1' "$f"; then
+            echo "FAIL: $f is not age-encrypted (missing age-encryption.org/v1 envelope)"
+            failed=1
+          elif grep -qE '(password|passphrase|token|secret|api[_-]?key|access[_-]?key|client[_-]?secret)\s*[:=]' "$f"; then
+            echo "FAIL: $f contains plaintext secret-like content"
             failed=1
           else
-            echo "PASS: $f is sops-encrypted"
+            echo "PASS: $f is age-encrypted"
           fi
         done
 
         if [ "$failed" -ne 0 ]; then
-          echo "==> One or more secrets files are not sops-encrypted. Refusing to proceed."
+          echo "==> One or more master-password files are not properly encrypted. Refusing to proceed."
           exit 1
         fi
 
-        echo "==> All secrets files are sops-encrypted."
+        echo "==> All master-password files are age-encrypted."
         touch $out
       '';
 

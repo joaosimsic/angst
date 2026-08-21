@@ -167,7 +167,7 @@ let
       customModule = if home != null then home else { };
 
       configSourceModule = {
-        config = lib.mkIf enableOption {
+        config = lib.mkIf (enableOption && !hasRender) {
           xdg.configFile =
             let
               allEntries = configSourceEntries ++ xdgFileSourceEntries;

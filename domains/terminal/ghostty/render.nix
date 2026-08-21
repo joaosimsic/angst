@@ -37,7 +37,7 @@ let
 in
 [
   {
-    path = "domains/terminal/ghostty/config/config";
+    path = "domains/terminal/ghostty/config/config.ghostty";
     text = ''
       config-file = colors.conf
 

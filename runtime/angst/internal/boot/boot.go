@@ -7,11 +7,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"angst/internal/cmd"
 	"angst/internal/paths"
+	"angst/internal/scope"
 	"angst/internal/shared"
 )
 
@@ -21,16 +21,16 @@ const (
 	exitOK    = shared.ExitOK
 )
 
-func usage() {
+func usageMasterPassword() {
 	fmt.Print(`Usage:
-  angst bootstrap-secrets [--host HOST]
+  angst bootstrap-master-password [--host HOST] [--scope personal|work]
 `)
 }
 
-func BootstrapSecrets(args []string) int {
+func BootstrapMasterPassword(args []string) int {
 	repoRoot := paths.RepoRoot()
 	hostName := "nixos"
-
+	scopeFlag := ""
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--host":
@@ -38,22 +38,27 @@ func BootstrapSecrets(args []string) int {
 				hostName = args[i+1]
 				i++
 			}
+		case "--scope":
+			if i+1 < len(args) {
+				scopeFlag = args[i+1]
+				i++
+			}
 		case "-h", "--help":
-			usage()
+			usageMasterPassword()
 			return exitOK
 		default:
-			fmt.Fprintf(os.Stderr, "unknown bootstrap-secrets option: %s\n", args[i])
-			usage()
+			fmt.Fprintf(os.Stderr, "unknown bootstrap-master-password option: %s\n", args[i])
+			usageMasterPassword()
 			return exitUsage
 		}
 	}
 
-	if _, err := exec.LookPath("sops"); err != nil {
-		fmt.Fprintln(os.Stderr, "Error: sops is not available. Install it first (e.g., nix shell nixpkgs#sops)")
+	if _, err := exec.LookPath("age"); err != nil {
+		fmt.Fprintln(os.Stderr, "Error: age is not available. Install it first (e.g., nix shell nixpkgs#age)")
 		return exitError
 	}
-	if _, err := exec.LookPath("mkpasswd"); err != nil {
-		fmt.Fprintln(os.Stderr, "Error: mkpasswd is not available. Install whois or use nix environment.")
+	if _, err := exec.LookPath("age-keygen"); err != nil {
+		fmt.Fprintln(os.Stderr, "Error: age-keygen is not available. Install it first (e.g., nix shell nixpkgs#age)")
 		return exitError
 	}
 
@@ -62,11 +67,21 @@ func BootstrapSecrets(args []string) int {
 		fmt.Fprintf(os.Stderr, "Error: host config not found for '%s'\n", hostName)
 		return exitError
 	}
-	secretsFile := filepath.Join(configDir, "secrets.yaml")
 	configFile := filepath.Join(configDir, "default.nix")
 	if _, err := os.Stat(configFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: host config not found for '%s'\n", hostName)
 		return exitError
+	}
+
+	sc := scope.Personal
+	if scopeFlag != "" {
+		if !scope.Valid(scopeFlag) {
+			fmt.Fprintf(os.Stderr, "Error: invalid --scope '%s' (expected personal|work)\n", scopeFlag)
+			return exitUsage
+		}
+		sc = scope.Scope(scopeFlag)
+	} else if strings.Contains(configDir, "/work/") {
+		sc = scope.Work
 	}
 
 	master, err := readSecret("Master password: ")
@@ -86,77 +101,60 @@ func BootstrapSecrets(args []string) int {
 		return exitError
 	}
 
-	hash, err := cmd.Output("mkpasswd", "-m", "sha-512", master)
+	keyFile := scope.AgeKeyfile(sc, scope.Fixed)
+	recipient, err := scope.Recipient(keyFile)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error: failed to hash password")
+		fmt.Fprintf(os.Stderr, "Error: could not derive age recipient from %s: %v\n", keyFile, err)
 		return exitError
 	}
 
-	data := []byte(fmt.Sprintf("masterPassword: \"%s\"\n", master))
-	sc := exec.Command("sops", "--input-type", "yaml", "--output-type", "yaml", secretsFile)
-	sc.Stdin = bytes.NewReader(data)
-	sc.Stdout = os.Stdout
-	sc.Stderr = nil
-	if err := sc.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to %s %s\n", upsertWord(secretsFile), secretsFile)
+	outDir := filepath.Join(repoRoot, "secrets", "master")
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: could not create %s\n", outDir)
+		return exitError
+	}
+	outPath := filepath.Join(outDir, hostName+".age")
+
+	tmp, err := os.CreateTemp("", "angst-master-*.txt")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error: could not create temp file")
+		return exitError
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if _, err := tmp.WriteString(master); err != nil {
+		fmt.Fprintln(os.Stderr, "Error: could not write temp file")
+		return exitError
+	}
+	tmp.Close()
+
+	if err := shared.AgeEncrypt(keyFile, recipient, tmpName, outPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to encrypt master password: %v\n", err)
 		return exitError
 	}
 
-	if err := setPasswordField(configFile, hash); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to update %s\n", configFile)
-		return exitError
-	}
-
-	fmt.Printf("Secrets bootstrapped for %s:\n", hostName)
-	fmt.Printf("  secrets: %s\n", secretsFile)
-	fmt.Printf("  hash:    %s\n", configFile)
+	fmt.Printf("Master password encrypted for %s (scope %s):\n", hostName, sc)
+	fmt.Printf("  age file: %s\n", outPath)
 	fmt.Println("")
-	fmt.Println("Run 'sudo nixos-rebuild switch --flake .#" + hostName + "' to apply.")
+	fmt.Println("Rebuild the host to apply (the boot service derives the login hash).")
 	return exitOK
 }
 
-func upsertWord(path string) string {
-	if _, err := os.Stat(path); err != nil {
-		return "create"
-	}
-	return "update"
-}
-
-func setPasswordField(configFile, hash string) error {
-	data, err := os.ReadFile(configFile)
-	if err != nil {
-		return err
-	}
-	re := regexp.MustCompile(`(?m)^\s*password\s*=`)
-	if re.Match(data) {
-		repl := regexp.MustCompile(`(?m)^(\s*)password\s*=.*`)
-		out := repl.ReplaceAllString(string(data), fmt.Sprintf(`${1}password = "%s";`, hash))
-		return os.WriteFile(configFile, []byte(out), 0o644)
-	}
-	closeRe := regexp.MustCompile(`(?m)^\s*}[\s;]*$`)
-	idxs := closeRe.FindAllStringIndex(string(data), -1)
-	if len(idxs) == 0 {
-		return nil
-	}
-	at := idxs[len(idxs)-1][0]
-	line := fmt.Sprintf(`  password = "%s";`, hash)
-	var b strings.Builder
-	b.Write(data[:at])
-	b.WriteString(line)
-	b.WriteString("\n")
-	b.Write(data[at:])
-	return os.WriteFile(configFile, []byte(b.String()), 0o644)
-}
-
 func readSecret(prompt string) (string, error) {
-	fmt.Print(prompt)
-	_ = exec.Command("stty", "-echo").Run()
-	defer func() {
-		_ = exec.Command("stty", "echo").Run()
-		fmt.Println()
-	}()
-	reader := bufio.NewReader(os.Stdin)
+	tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+	if err != nil {
+		return "", fmt.Errorf("cannot open terminal to read password securely: %v", err)
+	}
+	defer tty.Close()
+
+	if err := exec.Command("stty", "-F", "/dev/tty", "-echo").Run(); err != nil {
+		fmt.Fprintln(tty, "warning: could not disable terminal echo; password may be visible")
+	}
+	fmt.Fprint(tty, prompt)
+	reader := bufio.NewReader(tty)
 	line, err := reader.ReadString('\n')
+	_ = exec.Command("stty", "-F", "/dev/tty", "echo").Run()
+	fmt.Fprintln(tty)
 	if err != nil && line == "" {
 		return "", err
 	}
@@ -165,7 +163,8 @@ func readSecret(prompt string) (string, error) {
 
 func SetPasswordHash(args []string) int {
 	username := ""
-	sopsPath := ""
+	agePath := ""
+	ageKey := ""
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--username":
@@ -173,9 +172,14 @@ func SetPasswordHash(args []string) int {
 				username = args[i+1]
 				i++
 			}
-		case "--sops-path":
+		case "--age-path":
 			if i+1 < len(args) {
-				sopsPath = args[i+1]
+				agePath = args[i+1]
+				i++
+			}
+		case "--age-key":
+			if i+1 < len(args) {
+				ageKey = args[i+1]
 				i++
 			}
 		default:
@@ -183,14 +187,26 @@ func SetPasswordHash(args []string) int {
 			return exitUsage
 		}
 	}
-	if username == "" || sopsPath == "" {
-		fmt.Fprintln(os.Stderr, "error: set-password-hash requires --username and --sops-path")
+	if username == "" || agePath == "" || ageKey == "" {
+		fmt.Fprintln(os.Stderr, "error: set-password-hash requires --username, --age-path and --age-key")
 		return exitUsage
 	}
 
-	pass, err := os.ReadFile(sopsPath)
+	tmpDir, err := os.MkdirTemp("", "angst-pwhash-")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: could not read %s\n", sopsPath)
+		fmt.Fprintln(os.Stderr, "error: could not create temp dir")
+		return exitError
+	}
+	defer os.RemoveAll(tmpDir)
+	tmpName := filepath.Join(tmpDir, "pw")
+
+	if err := shared.AgeDecrypt(ageKey, agePath, tmpName); err != nil {
+		fmt.Fprintf(os.Stderr, "error: could not decrypt %s: %v\n", agePath, err)
+		return exitError
+	}
+	pass, err := os.ReadFile(tmpName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: could not read decrypted password\n")
 		return exitError
 	}
 	feed := append(append([]byte{}, pass...), '\n')

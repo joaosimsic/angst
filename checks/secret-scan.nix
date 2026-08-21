@@ -49,22 +49,15 @@ pkgs.runCommand "secret-scan"
         sk_p2='90abcdefghij'
         printf 'API_KEY = "%s%s"\n' "$sk_p1$sk_p2" > "$work/leaks/projects-secret/projects/personal/3f9a1c2b4d7e09a2/env"
 
-        mkdir -p "$work/sops"
-        cat > "$work/sops/secrets.yaml" <<'EOF'
-    opencodeGoKey: ENC[AES256_GCM,data:i1S2sfQpxZTt38ZAJJ+oJanP2vpZmZH2J6OMKrUDIpkZ+qn+bj34o+7mOY78boMBug/qXVCVV0b1X193InxyHNGC7g==,iv:H2eKy0ne1uTUEt0g5pOK5P9TfaexcFWMBnh6RF8nUcw=,tag:g89kXSnkJO8ho2Be5Gc9dA==,type:str]
-    sops:
-        age:
-            - enc: |
-                -----BEGIN AGE ENCRYPTED FILE-----
-                YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB2Qkd1T2R6OEU2VSttSEZu
-                d2QrZEhQc1lGVUxTZVY5MkJxTVlac0tSdERZCnJrZVc0aTRjWHdRcDVzcTBWa1N1
-                -----END AGE ENCRYPTED FILE-----
-              recipient: age17yz8euqt9y33l5ypyeeg54auar65wv2wdu2sxcmtx3t8l0dzjvwq3v7zl9
-        lastmodified: "2026-08-10T17:22:12Z"
-        mac: ENC[AES256_GCM,data:2Vysxq819wZgYRefP33BacSDtmoCb/0cPMf1Xc1SIAq48EV14PjzZ99d9g/cDBtH8aFZKDQN4DTNdpONn6rpa3PFHfGg1pVkzPqnL0aPyvePkJa0uZyfE/4lsXv/l2VNPrL3pKdQTK9qrY7QdpSofeom05SWPBCaIiYrin3wLgE=,iv:B4MkKM8+qWsIv1smpRFa76+JLjNkQ3yWGCkeNOKeAB0=,tag:cO4RvzQNj7mbZkkribEBQg==,type:str]
-        unencrypted_suffix: _unencrypted
-        version: 3.13.3
-    EOF
+        mkdir -p "$work/age"
+        cat > "$work/age/opencode-go-key.age" <<'EOF'
+age-encryption.org/v1
+-> X25519 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+-----BEGIN AGE ENCRYPTED FILE-----
+YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB2Qkd1T2R6OEU2VSttSEZu
+d2QrZEhQc1lGVUxTZVY5MkJxTVlac0tSdERZCnJrZVc0aTRjWHdRcDVzcTBWa1N1
+-----END AGE ENCRYPTED FILE-----
+EOF
 
         mkdir -p "$work/report"
         expect_gitleaks_leak() {
@@ -89,9 +82,9 @@ pkgs.runCommand "secret-scan"
         expect_gitleaks_leak "$work/leaks/plain-secrets" "angst-plaintext-secret-value" ${repoRoot}/.gitleaks.toml
         expect_gitleaks_leak "$work/leaks/projects-secret" "angst-projects-plaintext-secret-value" ${repoRoot}/.gitleaks.toml
 
-        gitleaks detect --no-git --source "$work/sops" --config ${repoRoot}/.gitleaks.toml --no-banner --redact >/dev/null 2>&1 \
-            || fail "gitleaks: flagged the sops-encrypted fixture"
-        pass "gitleaks allows sops-encrypted fixture"
+        gitleaks detect --no-git --source "$work/age" --config ${repoRoot}/.gitleaks.toml --no-banner --redact >/dev/null 2>&1 \
+            || fail "gitleaks: flagged the age-encrypted fixture"
+        pass "gitleaks allows age-encrypted fixture"
 
         gitleaks detect --no-git --source ${repoRoot} --config ${repoRoot}/.gitleaks.toml --no-banner --redact >/dev/null 2>&1 \
             || fail "gitleaks: found leaks or false positives in the repository"
@@ -104,9 +97,9 @@ pkgs.runCommand "secret-scan"
         [ "$rc" -eq 183 ] || fail "trufflehog: expected detection in github fixture, got exit $rc"
         pass "trufflehog detects secrets in github fixture"
 
-        trufflehog filesystem "$work/sops" --results=verified,unverified,unknown --no-verification >/dev/null 2>&1 \
-            || fail "trufflehog: flagged the sops-encrypted fixture"
-        pass "trufflehog allows sops-encrypted fixture"
+        trufflehog filesystem "$work/age" --results=verified,unverified,unknown --no-verification >/dev/null 2>&1 \
+            || fail "trufflehog: flagged the age-encrypted fixture"
+        pass "trufflehog allows age-encrypted fixture"
 
         echo "==> All secret-scan checks passed."
         touch $out

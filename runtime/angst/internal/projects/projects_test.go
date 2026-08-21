@@ -111,16 +111,16 @@ func TestVaultImportSyncRoundTrip(t *testing.T) {
 	store := filepath.Join(home, "store")
 	repo := filepath.Join(home, "repo")
 	root := filepath.Join(home, "root")
-	os.MkdirAll(filepath.Join(home, ".config", "sops", "age"), 0o700)
-	ageKey := filepath.Join(home, ".config", "sops", "age", "keys.txt")
-	workKey := filepath.Join(home, ".config", "sops", "age", "work-keys.txt")
+	os.MkdirAll(filepath.Join(home, ".config", "age"), 0o700)
+	ageKey := filepath.Join(home, ".config", "age", "keys.txt")
+	workKey := filepath.Join(home, ".config", "age", "work-keys.txt")
 	for _, kf := range []string{ageKey, workKey} {
 		if out, err := exec.Command("age-keygen", "-o", kf).CombinedOutput(); err != nil {
 			t.Fatalf("age-keygen %s: %v (%s)", kf, err, out)
 		}
 	}
-	t.Setenv("SOPS_AGE_KEY_FILE", ageKey)
-	t.Setenv("SOPS_WORK_AGE_KEY_FILE", workKey)
+	t.Setenv("ANGST_AGE_KEY_FILE", ageKey)
+	t.Setenv("ANGST_WORK_AGE_KEY_FILE", workKey)
 	t.Setenv("ANGST_PROJECTS_STORE", store)
 	t.Setenv("ANGST_PROJECTS_REPO", repo)
 	t.Setenv("ANGST_PROJECTS_ROOT", root)

@@ -3,9 +3,9 @@ useDefault = true
 
 [[rules]]
 id = "angst-plaintext-secret-value"
-description = "Plaintext secret value in secrets.yaml (not sops-encrypted)"
+description = "Plaintext secret value in secrets.yaml or secrets/master/ (not age-encrypted)"
 regex = '''(?i)(password|passphrase|token|secret|api[_-]?key|access[_-]?key|client[_-]?secret)\s*[:=]\s*['"][^'"]{4,}['"]'''
-path = "secrets\\.ya?ml$"
+path = "(secrets\\.ya?ml|secrets/master/)"
 
 [[rules]]
 id = "angst-projects-plaintext-secret-value"
@@ -14,7 +14,7 @@ regex = '''(?i)(password|passphrase|token|secret|api[_-]?key|access[_-]?key|clie
 path = "projects/.*"
 
 [allowlist]
-description = "angst: SOPS ciphertext, age envelopes/public keys, and documented examples"
+description = "angst: age envelopes/public keys, and documented examples"
 regexes = [
   '''ENC\[AES256_GCM,''',
   '''-----BEGIN AGE ENCRYPTED FILE-----''',

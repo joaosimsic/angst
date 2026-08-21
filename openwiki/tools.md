@@ -4,7 +4,7 @@ angst ships three CLI tools and an MCP server for VM management: the **angst** s
 
 ## angst CLI (`scripts/angst.sh`)
 
-A bash script packaged via `pkgs.writeShellApplication` (runtime inputs: coreutils, findutils, git, nix, watchexec, jq, sops, age, openssl, openssh, diffutils). Exposed as `apps.angst`, `apps.render`, `apps.watch` and the `angst` package.
+A bash script packaged via `pkgs.writeShellApplication` (runtime inputs: coreutils, findutils, git, nix, watchexec, jq, age, openssl, openssh, diffutils). Exposed as `apps.angst`, `apps.render`, `apps.watch` and the `angst` package.
 
 ```
 angst bootstrap-secrets [--host HOST]
@@ -16,8 +16,8 @@ angst ssh-key <generate|verify> --scope personal|work
 
 - **`render`** — determines repo root (`--repo`/git/`pwd`), host (`--host`, default `NIX_DEFAULT_TARGET_HOST`/`ANGST_HOST`/`nixos`), theme (default from the host decl via `nix eval`), batch-evals `.#lib.renderDomainOutputsFor`, writes rendered domain configs, syncs per-dir `.gitignore`, and optionally reloads i3 (`--reload`, default on; requires `i3-msg` + `I3SOCK`).
 - **`watch`** — wraps render with `watchexec` on `themes/`, `domains/`, `hosts/` for hot-reload.
-- **`bootstrap-secrets`** — interactive master-password bootstrap: reads password twice (never echoed), writes it into `hosts/<domain>/<host>/secrets.yaml` via sops, and writes the `mkpasswd -m sha-512` hash into the host's `password` field. Requires `sops` and `mkpasswd` on PATH. See [Secrets](secrets.md).
-- **`projects`** — syncs declared dev repos into `~/projects/` from an age-encrypted tarball store. The repo holds `projects/{personal,work}.tar.age` (each a whole `<scope>/<id>/{metadata.json,.env}` tree, encrypted to that scope's age key). `import` decrypts the tarballs into the decrypted **working store** (`~/.secrets/projects`, `ANGST_PROJECTS_STORE` overrides); `sync` clones-if-missing into `~/projects/<name>` (no auto-pull, no hooks) and materializes a hash-tracked `.env` (0600) from the working store. A locally-edited `.env` is never clobbered (`sync` marks it stale + exits non-zero); missing key/tarball/network → warn + exit 0. `sync` filters to the host's declared ids when `ANGST_PROJECTS_ONLY` is set (wrapper: `projects = [...]` in the host decl; unset = all). Editing the repo tarballs is a manual `angst vault decrypt --dir` → edit → `angst vault encrypt --dir` flow. Scope key selection: personal → `~/.config/sops/age/keys.txt`, work → `~/.config/sops/age/work-keys.txt` (`SOPS_*_AGE_KEY_FILE` overrides).
+- **`bootstrap-master-password`** — interactive master-password bootstrap: reads password twice (never echoed) and age-encrypts it to `secrets/master/<host>.age` with the host's scope recipient. The boot service derives the `mkpasswd -m sha-512` hash. Requires `age`/`age-keygen` and `mkpasswd` on PATH. See [Secrets](secrets.md).
+- **`projects`** — syncs declared dev repos into `~/projects/` from an age-encrypted tarball store. The repo holds `projects/{personal,work}.tar.age` (each a whole `<scope>/<id>/{metadata.json,.env}` tree, encrypted to that scope's age key). `import` decrypts the tarballs into the decrypted **working store** (`~/.secrets/projects`, `ANGST_PROJECTS_STORE` overrides); `sync` clones-if-missing into `~/projects/<name>` (no auto-pull, no hooks) and materializes a hash-tracked `.env` (0600) from the working store. A locally-edited `.env` is never clobbered (`sync` marks it stale + exits non-zero); missing key/tarball/network → warn + exit 0. `sync` filters to the host's declared ids when `ANGST_PROJECTS_ONLY` is set (wrapper: `projects = [...]` in the host decl; unset = all). Editing the repo tarballs is a manual `angst vault decrypt --dir` → edit → `angst vault encrypt --dir` flow. Scope key selection: personal → `~/.config/age/keys.txt`, work → `~/.config/age/work-keys.txt` (`ANGST_*_AGE_KEY_FILE` overrides).
 
   | Subcommand | Behavior |
   |---|---|

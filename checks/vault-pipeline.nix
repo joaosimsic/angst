@@ -41,13 +41,13 @@ pkgs.runCommand "check-vault-pipeline"
 
     scratch="$(mktemp -d)"
     home="$scratch/home"
-    mkdir -p "$home/.config/sops/age"
-    age-keygen -o "$home/.config/sops/age/keys.txt"
-    age-keygen -o "$home/.config/sops/age/work-keys.txt"
+    mkdir -p "$home/.config/age"
+    age-keygen -o "$home/.config/age/keys.txt"
+    age-keygen -o "$home/.config/age/work-keys.txt"
 
     export HOME="$home"
-    export SOPS_AGE_KEY_FILE="$home/.config/sops/age/keys.txt"
-    export SOPS_WORK_AGE_KEY_FILE="$home/.config/sops/age/work-keys.txt"
+    export ANGST_AGE_KEY_FILE="$home/.config/age/keys.txt"
+    export ANGST_WORK_AGE_KEY_FILE="$home/.config/age/work-keys.txt"
 
     echo "==> File encrypt/decrypt round trip..."
     fdir="$scratch/file"

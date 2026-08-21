@@ -10,7 +10,6 @@ angst is a Nix flake that turns **pure data host declarations** (`hosts/<domain>
 |---|---|---|
 | `nixpkgs` | `github:nixos/nixpkgs/nixos-unstable` | Base packages |
 | `home-manager` | `nix-community/home-manager` (follows nixpkgs) | User profiles |
-| `sops-nix` | `Mic92/sops-nix` (follows nixpkgs) | Secret decryption |
 | `impermanence` | `nix-community/impermanence` | `/persist` state |
 | `vm` | `./tools/vm` (local flake, follows nixpkgs) | Rust VM toolchain + `mkOutputs` |
 | `shell` | `./tools/shell` (local flake, follows nixpkgs) | Rust shell switcher + `mkOutputs` |
@@ -29,7 +28,7 @@ The `representative` host (first NixOS host) drives shared outputs: `default` pa
 
 Assembles a `nixosSystem` from:
 - the host decl's profile modules (`nixosModules`), domain system modules (`mkNixosSystemModule` over `systemEntries`), `modules/nixos` base, per-host `hardware.nix` (auto-detected next to the decl), `host.extraNixos`, session env vars;
-- **always**: `sops-nix` NixOS module + `secrets.systemCore`, and the VM stack (`modules/vm/detect.nix`, `runtime.nix`, `vm-variant.nix`, `host-mount.nix`);
+- **always**: the VM stack (`modules/vm/detect.nix`, `runtime.nix`, `vm-variant.nix`, `host-mount.nix`);
 - **`angst-bootstrap-secrets`** systemd service (when secrets are decryptable): derives the login hash from the decrypted `masterPassword` via `mkpasswd -m sha-512` and applies it to user + root (runs before getty/display-manager). SSH keys are not part of it — shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned by the `remote/ssh` domain's `angst-provision-ssh-key` oneshot (see [Secrets](secrets.md));
 - impermanence (when `host.persist.enable`), home-manager NixOS module wiring `secrets.homeModules` into the user, and service ordering (`home-manager-<user>` before sshd/getty; getty ordering skipped on QEMU VMs).
 
@@ -43,7 +42,7 @@ Both builders receive `themeOverride`/`shellOverride` to power the representativ
 
 ## Hosts and Configuration Model
 
-There is **no** `local/config.nix` anymore: machine identity is a tracked, diffable Nix file per host. The decl shape is documented in [quickstart](quickstart.md); `lib/resolve.nix` defines every field and default. `hosts/vm/secrets.yaml` and `hosts/personal/mint/secrets.yaml` hold the sops-encrypted secrets; `hosts/personal/nixos/` currently has none.
+There is **no** `local/config.nix` anymore: machine identity is a tracked, diffable Nix file per host. The decl shape is documented in [quickstart](quickstart.md); `lib/resolve.nix` defines every field and default. The master password is age-encrypted at `secrets/master/<hostname>.age`; app secrets live in `secrets/apps/<scope>/`.
 
 > The old single-file model (`local/config.nix` + `lib/read-config.nix`) was removed in the `refac/pure` → `refac/nix-managed-home` progression (mid-2026). Rationale recorded in `pure.md`: disposability and purity — machine identity as plain, diffable Nix, auto-discovered, zero ceremony (no flake.nix edits), no `--impure`/env hacks.
 
@@ -71,14 +70,14 @@ The Rust `tools/vm` CLI drives the lifecycle (build/start/ssh/…); see [Tools](
 
 ## Impermanence
 
-When `host.persist.enable` is true (currently `personal/nixos` and `vm`), `modules/nixos/persist.nix` enables impermanence with system dirs (`/var/log`, `/var/lib/*`, `/etc/ssh`, `/etc/machine-id`) and user dirs = `persist.homeDirs` ++ secret-derived `persistDirs` (`.config/sops`, `.secrets` when decryptable). Defaults live in `lib/resolve.nix`: `persist = { root = "/persist"; homeDirs = []; enable = false; }`.
+When `host.persist.enable` is true (currently `personal/nixos` and `vm`), `modules/nixos/persist.nix` enables impermanence with system dirs (`/var/log`, `/var/lib/*`, `/etc/ssh`, `/etc/machine-id`) and user dirs = `persist.homeDirs` ++ secret-derived `persistDirs` (`.config/age`, `.secrets` when decryptable). Defaults live in `lib/resolve.nix`: `persist = { root = "/persist"; homeDirs = []; enable = false; }`.
 
 ## Dev Shells
 
 `lib/flake/devshell.nix` builds three shells from the representative host:
 
 - `safe` — neovim, git, deadnix, statix + toolchain packages (editing without dev tooling);
-- `dev` — everything in `safe` plus the angst CLI, openssh, qemu, sops, age, gitleaks, Rust toolchain, and the VM tool (`vm` wrapped); exports `VM_SSH_PORT=2222` and `NIX_DEFAULT_TARGET_HOST`, inits ssh-agent for host-side git/ssh, and hooks tree-sitter.
+- `dev` — everything in `safe` plus the angst CLI, openssh, qemu, age, gitleaks, Rust toolchain, and the VM tool (`vm` wrapped); exports `VM_SSH_PORT=2222` and `NIX_DEFAULT_TARGET_HOST`, inits ssh-agent for host-side git/ssh, and hooks tree-sitter.
 - `vm` — `inputsFrom` the vm tool's dev shell + dev packages (Rust tooling for `tools/vm`).
 
 ## Known Staleness and Dead Code
