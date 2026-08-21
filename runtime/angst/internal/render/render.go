@@ -74,7 +74,6 @@ func reloadHooks() {
 	_ = exec.Command("i3-msg", "reload").Run()
 }
 
-// Render implements `angst render`.
 func Render(args []string) int {
 	repoRoot := paths.RepoRoot()
 	hostName := defaultHost()
@@ -227,7 +226,6 @@ func unique(items []string) []string {
 	return out
 }
 
-// Watch implements `angst watch`.
 func Watch(args []string) int {
 	repoRoot := paths.RepoRoot()
 	hostName := defaultHost()

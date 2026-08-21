@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"angst/internal/cmd"
+	"angst/internal/scope"
 	"angst/internal/shared"
 )
 
@@ -14,6 +15,7 @@ func ProvisionSSHKey(args []string) int {
 	username := ""
 	homeDir := ""
 	secretsDir := ""
+	scopesFlag := ""
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--user":
@@ -29,6 +31,11 @@ func ProvisionSSHKey(args []string) int {
 		case "--secrets-dir":
 			if i+1 < len(args) {
 				secretsDir = args[i+1]
+				i++
+			}
+		case "--scopes":
+			if i+1 < len(args) {
+				scopesFlag = args[i+1]
 				i++
 			}
 		case "-h", "--help":
@@ -102,9 +109,34 @@ func ProvisionSSHKey(args []string) int {
 		return shared.ExitOK
 	}
 
-	code := provision("personal", filepath.Join(homeDir, ".config", "sops", "age", "keys.txt"), "id_ed25519")
-	if code != shared.ExitOK {
-		return code
+	scopeTargets := map[scope.Scope]struct {
+		ageKey string
+		dest   string
+	}{
+		scope.Personal: {
+			ageKey: filepath.Join(homeDir, ".config", "sops", "age", "keys.txt"),
+			dest:   "id_ed25519",
+		},
+		scope.Work: {
+			ageKey: filepath.Join(homeDir, ".config", "sops", "age", "work-keys.txt"),
+			dest:   "work_ed25519",
+		},
 	}
-	return provision("work", filepath.Join(homeDir, ".config", "sops", "age", "work-keys.txt"), "work_ed25519")
+
+	requested := scope.Split(scopesFlag)
+	if len(requested) == 0 {
+		requested = []scope.Scope{scope.Personal, scope.Work}
+	}
+
+	for _, sc := range requested {
+		t, ok := scopeTargets[sc]
+		if !ok {
+			continue
+		}
+		code := provision(string(sc), t.ageKey, t.dest)
+		if code != shared.ExitOK {
+			return code
+		}
+	}
+	return shared.ExitOK
 }

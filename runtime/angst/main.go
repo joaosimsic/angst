@@ -10,6 +10,7 @@ import (
 	"angst/internal/render"
 	"angst/internal/sshkey"
 	"angst/internal/system"
+	"angst/internal/vault"
 	"angst/internal/vm"
 )
 
@@ -42,8 +43,12 @@ func run(args []string) int {
 		return system.SSHAddKeys(args)
 	case "provision-ssh-key":
 		return system.ProvisionSSHKey(args)
+	case "provision-app-secret":
+		return system.ProvisionAppSecret(args)
 	case "ftp":
 		return ftp.Run(args)
+	case "vault":
+		return vault.Run(args)
 	case "vm":
 		return vm.Run(args)
 	case "", "-h", "--help":
@@ -62,10 +67,12 @@ func usage() {
   angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
   angst watch  [--repo PATH] [--host HOST] [--theme THEME]
   angst projects <add|sync|status|capture|edit-env|import|export|rm> ...
+  angst vault <encrypt|decrypt|status> ...
   angst ssh-key <generate|verify> --scope personal|work
   angst login-shell --shell NAME --home DIR --user USER
   angst ssh-add-keys KEY...
-  angst provision-ssh-key --user USER --home DIR --secrets-dir DIR
+  angst provision-ssh-key --user USER --home DIR --secrets-dir DIR [--scopes work[,personal]]
+  angst provision-app-secret --secrets-dir DIR --slug NAME [--slug NAME ...] [--scopes work[,personal]] [--home DIR]
   angst set-password-hash --username USER --sops-path FILE
   angst ftp <decrypt|mount|unmount|transform> ...
   angst vm <home-manager-upgrade|ephemeral-ssh|age-key|nixos-switch|home-switch> ...

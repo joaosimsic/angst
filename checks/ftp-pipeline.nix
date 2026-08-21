@@ -60,12 +60,9 @@ pkgs.runCommand "check-ftp-pipeline"
     echo "==> Encrypt a synthetic ftp rclone config to the work scope..."
         printf '%s\n' '{"remote": "angstci", "path": "/incoming", "config": {"type": "ftp", "host": "127.0.0.1", "user": "ci", "pass": "ci-secret-pass", "port": "2121"}}' >"$work/ftp.json"
         recipient="$(age-keygen -y "$WORK_KEY")"
-            printf -- '---\ncreation_rules:\n  - path_regex: .*\n    age: |\n      %s\n' "$recipient" >"$work/.sops.yaml"
-            (cd "$work" && SOPS_AGE_KEY_FILE="$WORK_KEY" sops -e \
-              --input-type binary --output-type binary \
-              --output "$CHK_FTP_AGE" "$work/ftp.json")
+        age -e -r "$recipient" -o "$CHK_FTP_AGE" "$work/ftp.json"
 
-            if grep -q 'BEGIN AGE ENCRYPTED FILE' "$CHK_FTP_AGE" && ! grep -q 'ci-secret-pass' "$CHK_FTP_AGE"; then
+            if grep -q 'age-encryption.org/v1' "$CHK_FTP_AGE" && ! grep -q 'ci-secret-pass' "$CHK_FTP_AGE"; then
               ok "sample config encrypted (age envelope, no plaintext password)"
             else
               fail "sample config not properly encrypted"

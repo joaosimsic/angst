@@ -20,6 +20,25 @@ func Valid(s string) bool {
 	return Scope(s) == Personal || Scope(s) == Work
 }
 
+func Split(s string) []Scope {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]Scope, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		switch Scope(p) {
+		case Personal, Work:
+			out = append(out, Scope(p))
+		}
+	}
+	return out
+}
+
 func home() string {
 	return shared.Home()
 }

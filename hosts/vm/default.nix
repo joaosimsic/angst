@@ -67,6 +67,6 @@
     ];
   };
   projects = [
-    "7391b51c36a7d266"
-  ]; # opaque store ids (angst projects status); names stay encrypted
+    "angst"
+  ]; # slug ids (decrypted from projects/*.tar.age via `angst projects import`); real names stay in encrypted metadata
 }

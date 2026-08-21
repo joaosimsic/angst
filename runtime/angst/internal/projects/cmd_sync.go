@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"angst/internal/shared"
 	"angst/internal/scope"
+	"angst/internal/shared"
 )
 
 func cmdSync(args []string) int {
@@ -29,9 +29,13 @@ func cmdSync(args []string) int {
 			continue
 		}
 		gitSSH := "ssh -o StrictHostKeyChecking=accept-new -i " + scope.SSHKeyfile(s)
-		metas, _ := filepath.Glob(filepath.Join(scopePath, "*", "metadata.yaml"))
+		metas := findMetadata(scopePath)
 		for _, meta := range metas {
-			id := filepath.Base(filepath.Dir(meta))
+			rel, err := filepath.Rel(scopePath, filepath.Dir(meta))
+			if err != nil {
+				continue
+			}
+			id := rel
 			if !selected(id) {
 				continue
 			}
@@ -44,6 +48,10 @@ func cmdSync(args []string) int {
 				continue
 			}
 			target := filepath.Join(root, m.Name)
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return shared.ExitError
+			}
+			_ = os.Chmod(filepath.Dir(target), 0o755)
 			if _, err := os.Stat(filepath.Join(target, ".git")); err != nil {
 				fmt.Printf("cloning %s -> %s\n", m.Repo, target)
 				if err := clone(gitSSH, m.Repo, target); err != nil {
@@ -62,14 +70,34 @@ func cmdSync(args []string) int {
 	return shared.ExitOK
 }
 
+func findMetadata(scopePath string) []string {
+	var out []string
+	_ = filepath.WalkDir(scopePath, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		if d.Name() != "metadata.json" {
+			return nil
+		}
+		rel, rerr := filepath.Rel(scopePath, filepath.Dir(path))
+		if rerr != nil || rel == "." {
+			return nil
+		}
+		out = append(out, path)
+		return nil
+	})
+	return out
+}
+
 func syncEnv(s scope.Scope, id, name string) error {
 	store := storeRoot()
-	envFile := filepath.Join(store, string(s), id, "env")
+	envFile := filepath.Join(store, string(s), id, ".env")
 	target := filepath.Join(projectsRoot(), name, ".env")
 	sd := sidecarDir()
 	sidecar := filepath.Join(sd, name+".env.sha256")
 	_ = os.MkdirAll(sd, 0o700)
 	_ = os.Chmod(sd, 0o700)
+	_ = os.MkdirAll(filepath.Dir(sidecar), 0o700)
 
 	if _, err := os.Stat(envFile); err != nil {
 		fmt.Fprintf(os.Stderr, "warn: no env in store for %s; skipping\n", name)

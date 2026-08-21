@@ -27,7 +27,6 @@ func usage() {
 `)
 }
 
-// BootstrapSecrets implements the interactive `angst bootstrap-secrets`.
 func BootstrapSecrets(args []string) int {
 	repoRoot := paths.RepoRoot()
 	hostName := "nixos"
@@ -164,7 +163,6 @@ func readSecret(prompt string) (string, error) {
 	return strings.TrimRight(line, "\r\n"), nil
 }
 
-// SetPasswordHash implements the baked `set-password-hash` service command.
 func SetPasswordHash(args []string) int {
 	username := ""
 	sopsPath := ""

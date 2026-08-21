@@ -10,7 +10,6 @@
 mkScript {
   name = "angst-ftp-secrets-home";
   runtimeInputs = with pkgs; [
-    sops
     age
     coreutils
   ];

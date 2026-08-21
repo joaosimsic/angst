@@ -5,6 +5,7 @@
   userConfig,
   flakeSelf,
   runtime,
+  hostScopes,
   ...
 }:
 
@@ -13,6 +14,7 @@ let
   prov = runtime.sshKeyProvision {
     inherit (userConfig) username homeDirectory;
     secretsDir = "${flakeSelf}/secrets/ssh";
+    scopes = hostScopes;
   };
 in
 {

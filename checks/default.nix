@@ -68,6 +68,10 @@ let
     inherit pkgs runtime;
   };
 
+  checkVaultPipeline = import ./vault-pipeline.nix {
+    inherit pkgs runtime;
+  };
+
   checkFtpPipeline = import ./ftp-pipeline.nix {
     inherit pkgs runtime;
   };
@@ -123,6 +127,7 @@ in
   check-ftp-encrypted = checkSecretsEncrypted.ftp;
   check-projects-ftp-declared = checkDeclared;
   check-projects-pipeline = checkProjectsPipeline;
+  check-vault-pipeline = checkVaultPipeline;
   check-ftp-pipeline = checkFtpPipeline;
   secret-scan = secretScan;
   secret-scan-hooks = secretScanHooks;

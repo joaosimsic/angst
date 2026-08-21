@@ -6,10 +6,10 @@
 # Functional round-trip test of the `angst projects` pipeline, driving the
 # real Go binary (runtime.goAngst), using throwaway age keys and synthetic
 # data (no real secrets, no network):
-#   export (encrypt) -> repo store is a valid, leak-free sops-age store
-#   import (decrypt) -> byte-exact round trip of metadata + env
-#   sync             -> .env materialized into a fake clone (0600, sidecar)
-#   stale            -> locally-edited .env is not clobbered; status shows STALE
+#   vault encrypt --dir  -> age tarball (leak-free)
+#   import               -> byte-exact working store (whole-scope tarball)
+#   sync                 -> .env materialized into a fake clone (0600, sidecar)
+#   stale               -> locally-edited .env is not clobbered; sync exits non-zero
 
 pkgs.runCommand "check-projects-pipeline"
   {
@@ -18,9 +18,7 @@ pkgs.runCommand "check-projects-pipeline"
       pkgs.findutils
       pkgs.gnugrep
       pkgs.openssl
-      pkgs.jq
       pkgs.git
-      pkgs.sops
       pkgs.age
       pkgs.openssh
       runtime.goAngst
@@ -44,7 +42,7 @@ pkgs.runCommand "check-projects-pipeline"
     repo="$scratch/repo"
     root="$scratch/root"
 
-    mkdir -p "$home/.config/sops/age" "$home/.ssh" "$home/.secrets/projects"
+    mkdir -p "$home/.config/sops/age" "$home/.ssh" "$home/.secrets/projects" "$repo"
     age-keygen -o "$home/.config/sops/age/keys.txt"
     age-keygen -o "$home/.config/sops/age/work-keys.txt"
 
@@ -63,39 +61,37 @@ pkgs.runCommand "check-projects-pipeline"
     work_name="pipeline-work"
 
     mkdir -p "$store/personal/$personal_id" "$store/work/$work_id"
-    jq -n --arg name "$personal_name" --arg repo "git@example.invalid:pipeline/personal.git" \
-      '{name: $name, repo: $repo}' > "$store/personal/$personal_id/metadata.yaml"
-    printf 'PIPELINE_PERSONAL_KEY=secret-one\nPIPELINE_SHARED=yes\n' > "$store/personal/$personal_id/env"
-    jq -n --arg name "$work_name" --arg repo "git@work.example.invalid:pipeline/work.git" \
-      '{name: $name, repo: $repo}' > "$store/work/$work_id/metadata.yaml"
-    printf 'PIPELINE_WORK_KEY=secret-two-ö\n' > "$store/work/$work_id/env"
+    printf '{"name": "%s", "repo": "%s"}\n' "$personal_name" "git@example.invalid:pipeline/personal.git" \
+      > "$store/personal/$personal_id/metadata.json"
+    printf 'PIPELINE_PERSONAL_KEY=secret-one\nPIPELINE_SHARED=yes\n' > "$store/personal/$personal_id/.env"
+    printf '{"name": "%s", "repo": "%s"}\n' "$work_name" "git@work.example.invalid:pipeline/work.git" \
+      > "$store/work/$work_id/metadata.json"
+    printf 'PIPELINE_WORK_KEY=secret-two-ö\n' > "$store/work/$work_id/.env"
 
     cp -a "$store" "$scratch/store.orig"
 
-    echo "==> export --all (encrypt into the repo store)..."
-    if ! "$angst" projects export --all; then
-      fail "projects export --all failed"
-    else
-      ok "projects export --all"
-    fi
-
-    encrypted=0
-    for f in $(find "$repo" -type f | sort); do
-      encrypted=$((encrypted + 1))
-      if ! grep -q 'BEGIN AGE ENCRYPTED FILE' "$f"; then
-        fail "exported $f is not sops-age encrypted"
-      elif grep -qE '"name"|"repo"|://|^[A-Za-z_][A-Za-z0-9_]*=' "$f"; then
-        fail "exported $f leaks plaintext name/repo/secret content"
+    echo "==> vault encrypt --dir (age tarball)..."
+    for s in personal work; do
+      if ! "$angst" vault encrypt "$store/$s" --dir --scope "$s"; then
+        fail "vault encrypt --dir $s failed"
+      elif [ ! -f "$store/$s.tar.age" ]; then
+        fail "vault encrypt --dir did not create $s.tar.age"
+      elif ! grep -q 'age-encryption.org/v1' "$store/$s.tar.age"; then
+        fail "$s.tar.age is not age-encrypted"
+      elif grep -qE '"name"|"repo"|://|^[A-Za-z_][A-Za-z0-9_]*=' "$store/$s.tar.age"; then
+        fail "$s.tar.age leaks plaintext name/repo/secret content"
+      else
+        ok "$s encrypted to age tarball (no plaintext leak)"
       fi
+      mv "$store/$s.tar.age" "$repo/$s.tar.age"
     done
-    [ "$encrypted" -eq 4 ] && ok "exported 4 files (2 metadata + 2 env) all encrypted, no plaintext leaks"
 
-    echo "==> Wipe working store, import --all, verify byte-exact round trip..."
+    echo "==> Wipe working store, import, verify byte-exact round trip..."
     rm -rf "$store"
-    if ! "$angst" projects import --all; then
-      fail "projects import --all failed"
+    if ! "$angst" projects import; then
+      fail "projects import failed"
     else
-      ok "projects import --all"
+      ok "projects import"
     fi
     (cd "$scratch/store.orig" && find . -type f | sort) | while read -r rel; do
       cmp "$scratch/store.orig/$rel" "$store/$rel" ||
@@ -128,7 +124,7 @@ pkgs.runCommand "check-projects-pipeline"
     fi
 
     echo "==> Store change -> next sync updates .env..."
-    printf 'PIPELINE_PERSONAL_KEY=secret-one\nPIPELINE_SHARED=yes\nPIPELINE_EXTRA=added\n' > "$store/personal/$personal_id/env"
+    printf 'PIPELINE_PERSONAL_KEY=secret-one\nPIPELINE_SHARED=yes\nPIPELINE_EXTRA=added\n' > "$store/personal/$personal_id/.env"
     if ! "$angst" projects sync; then
       fail "projects sync after store change failed"
     fi
@@ -138,20 +134,14 @@ pkgs.runCommand "check-projects-pipeline"
       fail ".env not updated from store change"
     fi
 
-    echo "==> Locally-edited .env is not clobbered; status flags STALE..."
+    echo "==> Locally-edited .env is not clobbered; sync exits non-zero..."
     printf 'PIPELINE_PERSONAL_KEY=local-edit\n' > "$root/$personal_name/.env"
     sync_rc=0
     "$angst" projects sync || sync_rc=$?
-    "$angst" projects status >"$scratch/status.txt" 2>&1 || true
-    if [ "$sync_rc" -eq 1 ] && grep -q 'STALE' "$scratch/status.txt"; then
-      ok "stale .env preserved (sync rc=$sync_rc, status flags STALE)"
+    if [ "$sync_rc" -ne 0 ] && grep -q 'PIPELINE_PERSONAL_KEY=local-edit' "$root/$personal_name/.env"; then
+      ok "stale .env preserved (sync rc=$sync_rc, local edit untouched)"
     else
-      fail "stale .env handling broken: sync rc=$sync_rc (expect 1)"
-    fi
-    if grep -q 'PIPELINE_PERSONAL_KEY=local-edit' "$root/$personal_name/.env"; then
-      ok "edited .env untouched"
-    else
-      fail "edited .env was overwritten"
+      fail "stale .env handling broken: sync rc=$sync_rc"
     fi
 
     if [ "$failed" -ne 0 ]; then

@@ -57,6 +57,7 @@ let
     (import ./home/secrets-activation.nix {
       secretDefs = homeSecretDefs;
     })
+    (import ./home/app-secrets.nix)
   ];
 in
 {

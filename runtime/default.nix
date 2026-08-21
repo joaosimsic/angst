@@ -5,12 +5,23 @@
 }:
 
 let
-  goAngst = pkgs.buildGoModule {
+  goAngstUnwrapped = pkgs.buildGoModule {
     pname = "angst";
     version = "0.1.0";
     src = ./angst;
     vendorHash = null;
   };
+
+  goAngst = pkgs.runCommand "angst" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
+    mkdir -p $out/bin
+    makeWrapper ${goAngstUnwrapped}/bin/angst $out/bin/angst \
+      --prefix PATH : ${
+        lib.makeBinPath [
+          pkgs.age
+          pkgs.openssh
+        ]
+      }
+  '';
 
   mkScript =
     {

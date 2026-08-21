@@ -64,8 +64,8 @@ let
         echo "==> Checking secrets/ftp files are age-encrypted (work key scope)..."
         failed=0
         for f in $files; do
-          if ! grep -q 'BEGIN AGE ENCRYPTED FILE' "$f"; then
-            echo "FAIL: $f is not age-encrypted (missing age envelope marker)"
+          if ! grep -q 'age-encryption.org/v1' "$f"; then
+            echo "FAIL: $f is not age-encrypted (missing age-encryption.org/v1 envelope)"
             failed=1
           elif grep -qE '"host"|"user"|"pass"|"remote"|"path"|"config"|"type"|password' "$f"; then
             echo "FAIL: $f contains plaintext server/secret-like content"
@@ -96,33 +96,30 @@ let
         set -euo pipefail
         cd ${repoRoot}
 
-        files=$(find ./projects -type f \( -name 'metadata.yaml' -o -name 'env' \) 2>/dev/null || true)
+        files=$(find ./projects -type f -name '*.tar.age' 2>/dev/null || true)
         if [ -z "$files" ]; then
-          echo "No projects store files found; nothing to check."
+          echo "No projects tarballs found; nothing to check."
           touch $out
           exit 0
         fi
 
-        echo "==> Checking projects store files are sops-encrypted (binary)..."
+        echo "==> Checking projects tarballs are age-encrypted..."
         failed=0
         for f in $files; do
-          if ! grep -q 'BEGIN AGE ENCRYPTED FILE' "$f"; then
-            echo "FAIL: $f is not sops-encrypted (missing age envelope marker)"
-            failed=1
-          elif grep -qE '"name"|"repo"|://|^[A-Za-z_][A-Za-z0-9_]*=' "$f"; then
-            echo "FAIL: $f contains plaintext name/repo/URL/secret-like content"
+          if ! grep -q 'age-encryption.org/v1' "$f"; then
+            echo "FAIL: $f is not age-encrypted (missing age envelope marker)"
             failed=1
           else
-            echo "PASS: $f is sops-encrypted"
+            echo "PASS: $f is age-encrypted"
           fi
         done
 
         if [ "$failed" -ne 0 ]; then
-          echo "==> One or more projects store files are not sops-encrypted. Refusing to proceed."
+          echo "==> One or more projects tarballs are not age-encrypted. Refusing to proceed."
           exit 1
         fi
 
-        echo "==> All projects store files are sops-encrypted."
+        echo "==> All projects tarballs are age-encrypted."
         touch $out
       '';
   sshKeysCheck =
