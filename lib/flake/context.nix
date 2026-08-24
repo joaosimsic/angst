@@ -51,7 +51,7 @@ let
       ;
   };
 
-  hmSwitchTool = runtime.hmSwitchTool;
+  inherit (runtime) hmSwitchTool;
 
   fallbackHost = {
     scan = {

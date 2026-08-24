@@ -34,7 +34,12 @@ let
   hmSwitchTool = pkgs.runCommand "angst-hm-switch" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
     mkdir -p $out/bin
     makeWrapper ${goLoggerUnwrapped}/bin/hm-switch $out/bin/hm-switch \
-      --prefix PATH : ${lib.makeBinPath [ pkgs.bash pkgs.coreutils ]} \
+      --prefix PATH : ${
+        lib.makeBinPath [
+          pkgs.bash
+          pkgs.coreutils
+        ]
+      } \
       --set-default ANGST_LOG_LEVEL info
   '';
 
