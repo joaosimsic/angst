@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"logger"
+	"github.com/joaosimsic/angst/runtime/logger"
 )
 
 func main() {
@@ -35,7 +35,6 @@ func run(args []string) int {
 
 	fmt.Printf("%s── angst hm-switch ──%s %s%s  %s@%s%s\n", logger.GreenBold(), logger.Reset(), logger.Green(), stamp, user, host, logger.Reset())
 	fmt.Printf("%s%s%s\n", logger.DarkGray(), cmdline, logger.Reset())
-
 
 	header := fmt.Sprintf("── angst hm-switch ── %s  %s@%s\ncmd: %s\n", stamp, user, host, cmdline)
 	if err := os.WriteFile(logPath, []byte(header), 0o644); err != nil {
@@ -91,7 +90,6 @@ func run(args []string) int {
 	if err := cmd.Wait(); err != nil {
 		_ = err
 	}
-
 
 	exitCode := 1
 	data, err := os.ReadFile(exitFile)
