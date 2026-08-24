@@ -14,9 +14,11 @@ let
     "colors.nu"
     "ssh-agent.nu"
   ];
-  filesList = lib.concatMapStringsSep " " (f: "'${f}'") files;
+  filesList = lib.concatMapStringsSep " " (f: "\"${f}\"") files;
+  q = "'";
+  code = "for f in [${filesList}] { let p = (\"${dir}\" | path join ${"$"}f); if (${"$"}p | path exists) and ((nu-check ${"$"}p) == false) { print (\"invalid nushell config: \" + ${"$"}p); exit 1 } }";
 in
 {
-  cmd = ''${nu} --no-config-file -c "for f in [${filesList}] { let p = ('${dir}' | path join $f); if ($p | path exists) and ((nu-check $p) == false) { print ('invalid nushell config: ' + $p); exit 1 } }"'';
+  cmd = "${nu} --no-config-file -c ${q}${code}${q}";
   fatal = true;
 }
