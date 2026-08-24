@@ -23,7 +23,28 @@ $env.config = ($env.config | merge {
 
         external: {
             enable: true
-            completer: $carapace_completer
+            completer: {|spans|
+                if ($spans | length) == 0 {
+                    return []
+                }
+                if ($spans | first) == "just" {
+                    just-completions
+                } else {
+                    load-env {
+                        CARAPACE_SHELL_BUILTINS: (help commands | where category != "" | get name | each { split row " " | first } | uniq | str join "\n")
+                        CARAPACE_SHELL_FUNCTIONS: (help commands | where category == "" | get name | each { split row " " | first } | uniq | str join "\n")
+                    }
+                    let expanded_alias = (scope aliases | where name == $spans.0 | $in.0?.expansion?)
+                    let spans = (
+                        if $expanded_alias != null {
+                            $spans | skip 1 | prepend ($expanded_alias | split row " " | take 1)
+                        } else {
+                            $spans | skip 1 | prepend ($spans.0)
+                        }
+                    )
+                    ^carapace $spans.0 nushell ...$spans | from json
+                }
+            }
         }
     }
 
@@ -114,6 +135,16 @@ def --wrapped agent [...rest] {
     } else {
         error make { msg: "cursor-agent is not installed" }
     }
+}
+
+# carapace's `just` spec is broken under nushell (emits `variable cmd not defined`),
+# so route `just` to a native recipe lister via the external-completer wrapper above.
+def just-completions [] {
+    try { ^just --summary } catch { return [] }
+    | split row ' '
+    | str trim
+    | where { |r| $r != "" }
+    | each { |r| { value: $r, display: $r } }
 }
 
 
