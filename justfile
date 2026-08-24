@@ -19,8 +19,8 @@ switch host="nixos":
 hm host="nixos" user="joao":
     nix build .#homeConfigurations."{{user}}@{{host}}".activationPackage
 
-hm-switch host="nixos" user="joao":
-    nix build .#homeConfigurations."{{user}}@{{host}}".activationPackage && ./result/activate
+hm-switch host="":
+    @if [ -n "{{host}}" ]; then nix run .#hm-switch -- switch --flake .#{{host}}; else nix run .#hm-switch -- switch --flake .; fi
 
 analyze:
     python3 -m tools.analyze_flake --output analysis.md
