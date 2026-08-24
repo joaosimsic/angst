@@ -128,7 +128,7 @@ One of two features with a `system.nix` (alongside `remote/ssh`): `system.nix` e
 
 ## Toolchains (`/toolchains/`)
 
-23 language toolchains (+ `toolchains/default.nix` aggregator): bash, blade, c, clojure, conf, css, docker, go, html, java, javascript, json, just, lua, markdown, nix, php, python, rust, terraform, toml, xml, yaml.
+24 language toolchains (+ `toolchains/default.nix` aggregator): bash, blade, c, clojure, conf, css, docker, go, haskell, html, java, javascript, json, just, lua, markdown, nix, php, python, rust, terraform, toml, xml, yaml.
 
 Each file calls `mkToolchain` (`lib/toolchain.nix`) with `{ runtime, lsp, formatter, linter, tools, packageManager, treesitter }`; the builder unions them into `home.packages` and collects `treesitterGrammars`. Examples: `rust.nix` (rustc/cargo + rust-analyzer + clippy/rustfmt + tree-sitter-rust); `nix.nix` (nil+nixd, nixfmt, statix+deadnix, nix-output-monitor+nix-tree); `javascript.nix` (nodejs+bun, 5 LSPs incl. vue/angular/prisma, prettierd, eslint_d).
 
