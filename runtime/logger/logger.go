@@ -20,10 +20,8 @@ var (
 	reStep  = regexp.MustCompile(`(?i)(starting home manager|activating|symlinking|setting up|creating|installing|healthcheck)`)
 )
 
-// LevelOf classifies a line, matching switch.nu level-of.
 func LevelOf(line string) Level {
 	l := strings.ToLower(line)
-	// Use regex on lowercased line for case-insensitive match.
 	if reError.MatchString(l) {
 		return ERROR
 	}
@@ -36,7 +34,6 @@ func LevelOf(line string) Level {
 	return INFO
 }
 
-// ANSI color badges, matching switch.nu color-badge.
 const (
 	ansiReset      = "\033[0m"
 	ansiRedBold    = "\033[1;31m"
