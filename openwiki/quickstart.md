@@ -16,7 +16,7 @@ Machines are declared as plain, diffable Nix files under `hosts/` and auto-disco
 | `/domains/` | Features — the unit of configuration (31 features / 17 categories), each with a `default.nix` interface + optional `home.nix`/`system.nix` sides |
 | `/projects/` | Encrypted dev-project store (age-encrypted tarballs, recursively-discovered slug ids incl. nested paths, scope-isolated age keys) synced by `angst projects` |
 | `/themes/` | Color token definitions (9 themes, strict 13-token schema) |
-| `/toolchains/` | Declarative dev-language toolchains (23 languages via `mkToolchain`) |
+| `/toolchains/` | Declarative dev-language toolchains (24 languages via `mkToolchain`) |
 | `/tools/` | Standalone Rust workspaces: `shell` (env switcher), `vm` (QEMU lifecycle + MCP) |
 | `/lib/` | Build system: `discover.nix`, `resolve.nix`, `build/`, `domains/`, `flake/`, `render.nix`, `treesitter.nix` |
 | `/checks/` | Build-time validation (theme lint, rendered configs, password, secrets, login-shell, Nix lint) |
@@ -29,7 +29,7 @@ Machines are declared as plain, diffable Nix files under `hosts/` and auto-disco
 - **Profiles** — Composition units (`profiles/*.nix`), each a pure feature list `{ enable = [...]; }` (+ optional NixOS-only `modules`). Hosts select via `profiles = ["base" "desktop" ...]`. `profiles/default.nix` validates feature names at build time and the builder splits them into home/system sides by feature sides + host type.
 - **Domains** — The unit of configuration: `domains/<category>/<name>/` with a `default.nix` interface (package + XDG target + description, validated by `mkDomain`), optional `home.nix` (home-manager), `system.nix` (NixOS), `render.nix` (theme-aware config generator), and `config/`. A feature may be user-space, system-space, or both. Auto-discovered and turned into modules by `lib/domains/`.
 - **Themes** — 13 color tokens (9 palette + 4 ansi). 9 themes, all validated at build time; rendered into every domain config. See [Themes](themes.md).
-- **Toolchains** — Declarative language environments (runtime, LSP, formatter, linter, treesitter grammar) for 23 languages; selected by `toolchains = "*"` or a list in the host decl.
+- **Toolchains** — Declarative language environments (runtime, LSP, formatter, linter, treesitter grammar) for 24 languages; selected by `toolchains = "*"` or a list in the host decl.
 - **Secrets** — age. `secrets/master/<host>.age` holds the master password; app secrets (e.g. `opencode-go-key`) live in `secrets/apps/<scope>/` and are provisioned to `~/.secrets/`. Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`. See [Secrets](secrets.md).
 - **Projects** — `angst projects` syncs declared dev repos into `~/projects/` with encrypted `.env` handling that survives a public repo: `projects/*.tar.age` holds age-encrypted `<scope>/<id>/{metadata.json,.env}` trees, split into `personal`/`work` scopes encrypted to different age keys. `import` decrypts into a working store; `sync` clones-if-missing and materializes `.env` (0600). `sync` runs at home activation and as a `systemd.user` oneshot. See [Domains](domains.md#gitprojects--encrypted-project-store) and [Secrets](secrets.md#project-store).
 - **Hot-reload** — `angst render` / `angst watch` regenerate theme-rendered configs without a full Nix rebuild.
@@ -100,7 +100,7 @@ nix run .#lint-shell               # starship + nushell per theme
 
 - [Architecture](architecture.md) — flake inputs/outputs, host discovery + resolution, build pipeline, VM support, impermanence, dead code
 - [Secrets](secrets.md) — age architecture, master-password bootstrap, VM key forwarding, secret scanning
-- [Domains](domains.md) — domain framework, full 21-domain table, toolchains (23 langs), tree-sitter
+- [Domains](domains.md) — domain framework, full 21-domain table, toolchains (24 langs), tree-sitter
 - [Themes](themes.md) — 13-token schema, 9 themes, normalization/validation, rendering
 - [Tools](tools.md) — angst CLI, shell CLI, VM tool + MCP server, analysis script
 - [Operations](operations.md) — dev shells, checks/CI, hooks, justfile recipes, VM workflow, runbook
