@@ -41,7 +41,7 @@ nix run .#lint-themes                # fast, eval-only theme check
 @profiles/       reusable composition units — selected via the host decl's `profiles` list
 @runtime/        runtime tooling as Nix functions (angst CLI, login-shell, projects-sync, bootstrap-secrets, VM + app scripts)
 @themes/         color token definitions (9 themes, strict 13-token schema)
-@toolchains/     language-domain tooling (23 languages: runtime/LSP/formatter/linter/grammar)
+@toolchains/     language-domain tooling (24 languages: runtime/LSP/formatter/linter/grammar)
 @tools/vm/       standalone Rust workspace for NixOS VM lifecycle (vm-core, vm-cli, vm-mcp)
 @tools/shell/    standalone Rust env switcher (dev/safe shells, no nix at runtime)
 @tools/analyze_flake/  Python flake-analysis report generator (analysis.md)
@@ -62,7 +62,7 @@ Each machine is `hosts/<domain>/<hostname>/default.nix`, a pure data decl. A dir
   username = "joao";
   theme = "miasma";
   profiles = ["base" "desktop" "development"];   # validated against profiles/default.nix
-  toolchains = "*";                   # all 23 languages, or a list (unknown names throw)
+  toolchains = "*";                   # all 24 languages, or a list (unknown names throw)
   monitors = { primary = { name = "DP-1"; resolution = "1920x1080"; refreshRate = 144; }; };
   db.connections = { };               # sql-client credentials
   nixos = { keyboardLayout = "br-abnt2"; };      # per-machine extras (extraNixos)
@@ -240,7 +240,7 @@ Profiles replace host-specific `home.nix` / `configuration.nix` files. Each is a
 
 ### `@toolchains/` — Language-Domain Tooling
 
-23 language toolchains defined via `mkToolchain` (`lib/toolchain.nix`), each providing runtime, LSP, formatter, linter, tools, and tree-sitter grammar entries.
+24 language toolchains defined via `mkToolchain` (`lib/toolchain.nix`), each providing runtime, LSP, formatter, linter, tools, and tree-sitter grammar entries.
 
 Supported: `bash`, `blade`, `c`, `clojure`, `conf`, `css`, `docker`, `go`, `html`, `java`, `javascript`, `json`, `just`, `lua`, `markdown`, `nix`, `php`, `python`, `rust`, `terraform`, `toml`, `xml`, `yaml`.
 
