@@ -6,6 +6,7 @@
   vmTool,
   shellTool,
   runtime,
+  hmSwitchTool,
   themeOverride ? null,
   shellOverride ? null,
 }:
@@ -78,6 +79,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
         vmTool
         shellTool
         runtime.angstCli
+        hmSwitchTool
       ];
     })
   ]

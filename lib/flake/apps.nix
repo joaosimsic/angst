@@ -9,6 +9,7 @@ let
     runtime
     vmOutputs
     shellTool
+    hmSwitchTool
     ;
 
   mkApp = program: {
@@ -20,6 +21,7 @@ in
   apps.${defaultSystem} = {
     vm = mkApp "${vmOutputs.packages.${defaultSystem}.wrapped}/bin/vm";
     shell = mkApp "${shellTool}/bin/shell";
+    hm-switch = mkApp "${hmSwitchTool}/bin/hm-switch";
     angst = mkApp "${runtime.angstCli.bin}";
     render = mkApp "${runtime.apps.render}";
     watch = mkApp "${runtime.apps.watch}";

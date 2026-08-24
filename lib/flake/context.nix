@@ -51,6 +51,23 @@ let
       ;
   };
 
+  hmSwitchTool = pkgs.stdenvNoCC.mkDerivation {
+    pname = "angst-hm-switch";
+    version = "0.1.0";
+    src = ../../tools/hm-switch;
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    installPhase = ''
+      mkdir -p $out/bin
+      install -D -m755 switch.nu $out/bin/hm-switch
+      wrapProgram $out/bin/hm-switch --prefix PATH : ${
+        lib.makeBinPath [
+          pkgs.nushell
+          pkgs.coreutils
+        ]
+      }
+    '';
+  };
+
   fallbackHost = {
     scan = {
       domains.homeEntries = [ ];
@@ -82,6 +99,7 @@ let
         vmTool
         shellTool
         runtime
+        hmSwitchTool
         hmModules
         themeOverride
         shellOverride
@@ -201,6 +219,7 @@ in
     vmTool
     shellTool
     runtime
+    hmSwitchTool
     render
     mkHomeCfg
     mkHostFor

@@ -4,6 +4,7 @@
   imports = [
     ./treesitter.nix
     ./login-shell.nix
+    ./healthcheck.nix
   ];
 
   programs.home-manager.enable = true;
