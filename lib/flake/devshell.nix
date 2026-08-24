@@ -30,7 +30,6 @@ let
       runtime.angstCli
       openssh
       qemu
-      sops
       age
       gitleaks
       cargo

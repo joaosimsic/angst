@@ -50,7 +50,7 @@ There is **no** `lib/domains/activation.nix` (README is stale); activation happe
 | Category | Name | Package | XDG | Render | home | system | Purpose |
 |---|---|---|---|---|---|---|---|
 | agents | cursor-cli | cursor-cli | — | — | — | — | Cursor AI CLI (package-only) |
-| agents | opencode | opencode | opencode | ✅ | ✅ | — | AI coding agent: 22 LSPs, themed TUI, API key from sops |
+| agents | opencode | opencode | opencode | ✅ | ✅ | — | AI coding agent: 22 LSPs, themed TUI, API key from age-encrypted app secret |
 | bar | i3status | *(none)* | i3status | ✅ | ✅ | — | i3 status bar (themed blocks) |
 | editor | nvim | *(pkgs.neovim in home)* | nvim | ✅ | ✅ | — | Neovim: backend adapters/engines, treesitter, Lua tests |
 | files | yazi | *(none)* | yazi | ✅ | ✅ | — | Terminal file manager |
@@ -61,7 +61,6 @@ There is **no** `lib/domains/activation.nix` (README is stale); activation happe
 | nix | nh | nh | — | — | — | — | Nix CLI helper (package-only) |
 | remote | ssh | openssh | custom | — | ✅ | ✅ | SSH client+agent (home) and sshd (system, per-host opt-in) |
 | security | age | age | — | — | — | — | age encryption (package-only) |
-| security | sops | sops | — | — | — | — | sops+age secrets (package-only) |
 | session | x11 | *(none)* | custom | ✅ | ✅ | — | X11 autostart/session |
 | shell | carapace | carapace | custom | — | ✅ | — | Shell completion engine |
 | shell | nushell | nushell | nushell | ✅ | ✅ | — | Nushell config (themed) |
@@ -87,7 +86,7 @@ Note: the `home`/`system` columns mark which optional sides a feature ships. Dom
 
 ### `agents/opencode`
 
-The most complex domain. `home.nix` + `config/opencode.jsonc` wire the opencode agent with **22 LSP servers** (nixd, lua-ls, rust-analyzer, gopls, pyright, ts/js, html/css/json, yaml, bash, marksman, jdtls, phpactor, docker, terraform-ls, clojure-lsp, lemminx, clangd, vue, taplo; intelephense disabled). The provider API key comes from sops via `{file:~/.secrets/opencode-go-key}` (see [Secrets](secrets.md)). `render.nix` emits a themed `tui.json` + `themes/angst.json`. Git history: `50e80de` added the API key, `84b7ab8` fixed decryption, `e117d52` added LSPs, `b622a81` enabled the experimental feature.
+The most complex domain. `home.nix` + `config/opencode.jsonc` wire the opencode agent with **22 LSP servers** (nixd, lua-ls, rust-analyzer, gopls, pyright, ts/js, html/css/json, yaml, bash, marksman, jdtls, phpactor, docker, terraform-ls, clojure-lsp, lemminx, clangd, vue, taplo; intelephense disabled). The provider API key comes from an age-encrypted app secret via `{file:~/.secrets/opencode-go-key}` (see [Secrets](secrets.md)). `render.nix` emits a themed `tui.json` + `themes/angst.json`. Git history: `50e80de` added the API key, `84b7ab8` fixed decryption, `e117d52` added LSPs, `b622a81` enabled the experimental feature.
 
 ### `editor/nvim`
 

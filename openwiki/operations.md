@@ -7,7 +7,7 @@ Runbook and operational notes: dev shells, checks/CI, git hooks, justfile recipe
 | Shell | Use | Includes |
 |---|---|---|
 | `nix develop .#safe` | Editing configs | neovim, git, deadnix, statix + toolchain packages |
-| `nix develop .#dev` | Full development | `safe` + angst CLI, openssh, qemu, sops, age, gitleaks, Rust toolchain, VM tools; exports `VM_SSH_PORT=2222`, `NIX_DEFAULT_TARGET_HOST`; ssh-agent init |
+| `nix develop .#dev` | Full development | `safe` + angst CLI, openssh, qemu, age, gitleaks, Rust toolchain, VM tools; exports `VM_SSH_PORT=2222`, `NIX_DEFAULT_TARGET_HOST`; ssh-agent init |
 | `nix develop .#vm` | Rust VM workspace | `inputsFrom` vm dev shell + dev packages |
 
 Standalone: `nix run .#shell -- dev` / `nix profile install .#shell && shell dev` (see [Tools](tools.md)).
@@ -25,7 +25,7 @@ Standalone: `nix run .#shell -- dev` / `nix profile install .#shell && shell dev
 | `theme-override` | Theme override propagates into a real home config (`home-theme-override-test`) |
 | `theme-semantic-distinct` | `ansi.error/warn/info/success` mutually distinct |
 | `check-password` | Host `password` field is a valid `$6$` sha-512 hash (skips home-only/`!` hosts) |
-| `check-secrets-encrypted` | Every tracked `secrets.yaml` is sops-encrypted (`sops:` + `ENC[AES256_GCM`) |
+| `check-secrets-encrypted` | Every `secrets/master/*.age` is age-encrypted (`age-encryption.org/v1` envelope) |
 | `check-ftp-encrypted` | Every `secrets/ftp/*` is age-encrypted (age envelope, no plaintext server fields) |
 | `check-projects-ftp-declared` | Host-declared `projects` ids exist in the encrypted store; host-declared ftp `configFile`s exist + are encrypted + use a safe `mountPoint` |
 | `check-projects-pipeline` | Functional round trip with throwaway age keys: export → leak-free encrypted store → byte-exact import; sync materializes `.env` (0600), store-change updates it, local edits are never clobbered (status `STALE`) |
@@ -54,7 +54,7 @@ Nix CI uses DeterminateSystems `nix-installer-action` + `magic-nix-cache-action`
 - Install: `just install-hooks` (sets `core.hooksPath githooks`).
 - `githooks/pre-commit` — `gitleaks git --pre-commit --staged --redact` (host binary or `nix run nixpkgs#gitleaks`).
 - `githooks/pre-push` — scans each pushed ref range with gitleaks (`<remote_oid>..<local_oid>`, or `--not --remotes` for brand-new refs).
-- `.gitleaks.toml` allowlists SOPS ciphertext and age public keys, and excludes `README.md`/`pure.md`/`analysis.md`/`openwiki/`; a custom rule flags plaintext secrets inside `secrets.yaml`.
+- `.gitleaks.toml` allowlists age ciphertext and public keys, and excludes `README.md`/`pure.md`/`analysis.md`/`openwiki/`; a custom rule flags plaintext secrets inside `secrets.yaml` and `secrets/master/`.
 - `*.dec`, `*.agekey`, `node_modules`, `result*`, `*.qcow2` are gitignored.
 - See [Secrets](secrets.md) for the full scanning story.
 
@@ -87,7 +87,7 @@ nix run .#vm -- status / health     # verify QEMU + port + SSH
 nix run .#vm -- mcp start           # expose MCP server for AI agents (port 8765)
 ```
 
-Inside the VM: `~/.config/angst` is symlinked to the host repo (`modules/vm/host-mount.nix`), the host age keys are injected via `/tmp/shared` (`vm-age-key`), inbound SSH auth is the declarative `authorized_keys` baked from `secrets/ssh/*.pub`, and `/persist` keeps `.config/sops`, `.secrets`, `.ssh`, and configured home dirs. Use `angst watch` on the host to hot-reload configs into both machines.
+Inside the VM: `~/.config/angst` is symlinked to the host repo (`modules/vm/host-mount.nix`), the host age keys are injected via `/tmp/shared` (`vm-age-key`), inbound SSH auth is the declarative `authorized_keys` baked from `secrets/ssh/*.pub`, and `/persist` keeps `.config/age`, `.secrets`, `.ssh`, and configured home dirs. Use `angst watch` on the host to hot-reload configs into both machines.
 
 VM gotchas:
 - `vm start` refuses to run if the target host's decl doesn't include the `vm` profile (`ensure_vm_profile`).
@@ -111,6 +111,6 @@ just switch host=<hostname>          # deploy
 
 **Home-only machine (e.g. `personal/mint`, `type = "home"`):** create the decl, then `just hm-switch host=<hostname>` — no NixOS rebuild needed; secrets optional.
 
-**Recovery / unseeded boot:** without an age key the host builds and boots with the fallback password hash (default "changeme" from `lib/resolve.nix`); run `angst bootstrap-secrets --host <host>` and re-switch once the key is present at `~/.config/sops/age/keys.txt`.
+**Recovery / unseeded boot:** without an age key the host builds and boots with the fallback password hash (default "changeme" from `lib/resolve.nix`); run `angst bootstrap-master-password --host <host>` and re-switch once the key is present at `~/.config/age/keys.txt`.
 
 **Maintenance:** `nix flake lock`/`nix flake update` for inputs; `nix-collect-garbage -d` after switches; `just analyze` to refresh `analysis.md`.

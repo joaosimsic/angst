@@ -33,5 +33,8 @@
       }
     ];
   };
-  secrets = [ "cursor-api-key" ];
+  secrets = [
+    "cursor-api-key"
+    "opencode-go-key"
+  ];
 }

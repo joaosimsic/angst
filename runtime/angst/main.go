@@ -29,8 +29,8 @@ func run(args []string) int {
 		return render.Render(args)
 	case "watch":
 		return render.Watch(args)
-	case "bootstrap-secrets":
-		return boot.BootstrapSecrets(args)
+	case "bootstrap-master-password":
+		return boot.BootstrapMasterPassword(args)
 	case "set-password-hash":
 		return boot.SetPasswordHash(args)
 	case "projects":
@@ -63,7 +63,7 @@ func run(args []string) int {
 
 func usage() {
 	fmt.Print(`Usage:
-  angst bootstrap-secrets [--host HOST]
+  angst bootstrap-master-password [--host HOST] [--scope personal|work]
   angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
   angst watch  [--repo PATH] [--host HOST] [--theme THEME]
   angst projects <add|sync|status|capture|edit-env|import|export|rm> ...
@@ -73,7 +73,7 @@ func usage() {
   angst ssh-add-keys KEY...
   angst provision-ssh-key --user USER --home DIR --secrets-dir DIR [--scopes work[,personal]]
   angst provision-app-secret --secrets-dir DIR --slug NAME [--slug NAME ...] [--scopes work[,personal]] [--home DIR]
-  angst set-password-hash --username USER --sops-path FILE
+  angst set-password-hash --username USER --age-path FILE --age-key FILE
   angst ftp <decrypt|mount|unmount|transform> ...
   angst vm <home-manager-upgrade|ephemeral-ssh|age-key|nixos-switch|home-switch> ...
 `)

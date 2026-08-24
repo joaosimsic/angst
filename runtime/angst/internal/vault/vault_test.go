@@ -32,8 +32,8 @@ func setupAgeKeys(t *testing.T) {
 		}
 	}
 
-	t.Setenv("SOPS_AGE_KEY_FILE", personal)
-	t.Setenv("SOPS_WORK_AGE_KEY_FILE", work)
+	t.Setenv("ANGST_AGE_KEY_FILE", personal)
+	t.Setenv("ANGST_WORK_AGE_KEY_FILE", work)
 }
 
 func permOf(t *testing.T, p string) os.FileMode {

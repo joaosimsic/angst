@@ -33,22 +33,46 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.enable && cfg.shell != "") {
-    assertions = [
+  config = {
+    assertions = lib.optionals (cfg.enable && cfg.shell != "") [
       {
         assertion = shellFound;
         message = "angst: login shell '${cfg.shell}' not found (checked ${lib.concatStringsSep ", " candidates}). Install it via home packages or a system package.";
       }
     ];
 
-    home.activation.setLoginShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      VERBOSE_ECHO="$VERBOSE_ECHO" DRY_RUN_CMD="$DRY_RUN_CMD" \
-        ${(runtime.loginShell {
-          inherit (cfg) shell;
-          homeDirectory = config.home.homeDirectory;
-          username = config.home.username;
-        }).bin
-        }
+    home.activation.setLoginShell = lib.mkIf (cfg.enable && cfg.shell != "") (
+      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        VERBOSE_ECHO="$VERBOSE_ECHO" DRY_RUN_CMD="$DRY_RUN_CMD" \
+          ${(runtime.loginShell {
+            inherit (cfg) shell;
+            homeDirectory = config.home.homeDirectory;
+            username = config.home.username;
+          }).bin
+          }
+      ''
+    );
+
+    # Link home-files early so dotfiles are deployed even if installPackages
+    # aborts the activation before the built-in linkGeneration step runs.
+    # Must run before 'linkGeneration' so the symlinks it creates already
+    # match what linkGeneration expects (avoiding "would be clobbered").
+    home.activation.angstLinkHomeFilesEarly = lib.hm.dag.entryBefore [ "linkGeneration" ] ''
+      if [ -n "''${newGenPath:-}" ] && [ -e "$newGenPath/home-files" ]; then
+        NEWFILES="$(readlink -e "$newGenPath/home-files")"
+        find "$NEWFILES" -type l -print0 | while IFS= read -r -d "" src; do
+          rel="$(echo "$src" | sed "s|^$NEWFILES/||")"
+          target="$HOME/$rel"
+          mkdir -p "$(dirname "$target")"
+          ln -Tsf "$src" "$target"
+        done
+        find "$NEWFILES" -type f -print0 | while IFS= read -r -d "" src; do
+          rel="$(echo "$src" | sed "s|^$NEWFILES/||")"
+          target="$HOME/$rel"
+          mkdir -p "$(dirname "$target")"
+          cp -f "$src" "$target"
+        done
+      fi
     '';
   };
 }

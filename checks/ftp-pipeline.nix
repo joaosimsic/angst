@@ -26,7 +26,6 @@ pkgs.runCommand "check-ftp-pipeline"
       pkgs.coreutils
       pkgs.findutils
       pkgs.gnugrep
-      pkgs.sops
       pkgs.age
       pkgs.rclone
       secretsHome
@@ -53,7 +52,7 @@ pkgs.runCommand "check-ftp-pipeline"
             export CHK_FTP_HOME="$scratch/home"
             export CHK_FTP_AGE="$scratch/ftp-server.conf.age"
             export WORK_KEY="$scratch/work-keys.txt"
-            export SOPS_WORK_AGE_KEY_FILE="$WORK_KEY"
+            export ANGST_WORK_AGE_KEY_FILE="$WORK_KEY"
 
             age-keygen -o "$WORK_KEY"
 

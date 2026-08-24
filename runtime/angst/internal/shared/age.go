@@ -8,7 +8,7 @@ import (
 
 func AgeEncrypt(keyfile, recipient, in, out string) error {
 	c := exec.Command("age", "-r", recipient, "-o", out, in)
-	c.Env = append(c.Environ(), "SOPS_AGE_KEY_FILE="+keyfile)
+	c.Env = append(c.Environ(), "ANGST_AGE_KEY_FILE="+keyfile)
 	if b, err := c.CombinedOutput(); err != nil {
 		return fmt.Errorf("age encrypt failed: %w: %s", err, strings.TrimSpace(string(b)))
 	}

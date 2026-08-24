@@ -9,7 +9,6 @@
     "git.lazygit"
     "nix.nh"
     "security.age"
-    "security.sops"
     "system.network"
     "system.git"
     "system.search"

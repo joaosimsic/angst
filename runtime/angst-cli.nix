@@ -8,7 +8,6 @@ mkScript {
   name = "angst";
   runtimeInputs = with pkgs; [
     nix
-    sops
     age
     git
     openssh

@@ -43,25 +43,25 @@ func home() string {
 	return shared.Home()
 }
 
-type RespectSopsEnv bool
+type RespectEnv bool
 
 const (
-	EnvOverride RespectSopsEnv = true
-	Fixed       RespectSopsEnv = false
+	EnvOverride RespectEnv = true
+	Fixed       RespectEnv = false
 )
 
-func AgeKeyfile(s Scope, env RespectSopsEnv) string {
+func AgeKeyfile(s Scope, env RespectEnv) string {
 	switch s {
 	case Work:
-		if env && os.Getenv("SOPS_WORK_AGE_KEY_FILE") != "" {
-			return os.Getenv("SOPS_WORK_AGE_KEY_FILE")
+		if env && os.Getenv("ANGST_WORK_AGE_KEY_FILE") != "" {
+			return os.Getenv("ANGST_WORK_AGE_KEY_FILE")
 		}
-		return filepath.Join(home(), ".config", "sops", "age", "work-keys.txt")
+		return filepath.Join(home(), ".config", "age", "work-keys.txt")
 	default:
-		if env && os.Getenv("SOPS_AGE_KEY_FILE") != "" {
-			return os.Getenv("SOPS_AGE_KEY_FILE")
+		if env && os.Getenv("ANGST_AGE_KEY_FILE") != "" {
+			return os.Getenv("ANGST_AGE_KEY_FILE")
 		}
-		return filepath.Join(home(), ".config", "sops", "age", "keys.txt")
+		return filepath.Join(home(), ".config", "age", "keys.txt")
 	}
 }
 
@@ -91,7 +91,7 @@ func Recipient(keyfile string) (string, error) {
 	return strings.TrimRight(string(out), "\n"), nil
 }
 
-func RecipientFor(s Scope, env RespectSopsEnv) (string, error) {
+func RecipientFor(s Scope, env RespectEnv) (string, error) {
 	return Recipient(AgeKeyfile(s, env))
 }
 

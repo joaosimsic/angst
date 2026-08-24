@@ -42,12 +42,13 @@ let
 
   secrets = import ../../modules/secrets.nix {
     inherit
-      inputs
       self
       host
       lib
       ;
   };
+
+  masterAgePath = self + "/secrets/master/${host.hostname}.age";
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
@@ -79,16 +80,11 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if host.extraNixos != { } then [ host.extraNixos ] else [ ])
   ++ (if host.env != { } then [ { environment.sessionVariables = host.env; } ] else [ ])
   ++ [
-    inputs.sops-nix.nixosModules.sops
-    secrets.systemCore
-  ]
-  ++ [
     ../../modules/vm/runtime.nix
     ../../modules/vm/vm-variant.nix
     ../../modules/vm/host-mount.nix
     (
       {
-        config,
         lib,
         runtime,
         ...
@@ -97,7 +93,7 @@ inputs.nixpkgs.lib.nixosSystem {
         users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
         users.users.root.hashedPassword = lib.mkDefault host.password;
 
-        systemd.services.angst-bootstrap-secrets = lib.mkIf secrets.canDecrypt {
+        systemd.services.angst-bootstrap-secrets = lib.mkIf (builtins.pathExists masterAgePath) {
           description = "angst: set login password hash from secrets";
           wantedBy = [ "multi-user.target" ];
           before = [
@@ -106,17 +102,14 @@ inputs.nixpkgs.lib.nixosSystem {
             "display-manager.service"
           ];
 
-          unitConfig = {
-            ConditionPathExists = config.sops.secrets.masterPassword.path;
-          };
-
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
             ExecStart =
               (runtime.bootstrapSecrets {
                 inherit (host) username;
-                sopsPath = config.sops.secrets.masterPassword.path;
+                agePath = masterAgePath;
+                ageKey = "/home/${host.username}/.config/age/keys.txt";
               }).bin;
           };
         };

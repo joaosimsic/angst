@@ -52,12 +52,10 @@ test-secrets:
     nix build '.#checks.x86_64-linux.secret-scan-hooks' --no-link --print-build-logs
 
 vault-encrypt path scope="personal" dir="":
-    @cmd="angst vault encrypt {{path}} --scope {{scope}}"
-    {{cmd}} {{ if dir != "" { "--dir" } else { "" } }}
+    @angst vault encrypt {{path}} --scope {{scope}} {{ if dir != "" { "--dir" } else { "" } }}
 
 vault-decrypt path scope="personal" dir="":
-    @cmd="angst vault decrypt {{path}} --scope {{scope}}"
-    {{cmd}} {{ if dir != "" { "--dir" } else { "" } }}
+    @angst vault decrypt {{path}} --scope {{scope}} {{ if dir != "" { "--dir" } else { "" } }}
 
 vault-status path=".":
     angst vault status {{path}}

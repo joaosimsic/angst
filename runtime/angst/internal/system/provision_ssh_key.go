@@ -114,11 +114,11 @@ func ProvisionSSHKey(args []string) int {
 		dest   string
 	}{
 		scope.Personal: {
-			ageKey: filepath.Join(homeDir, ".config", "sops", "age", "keys.txt"),
+			ageKey: scope.AgeKeyfile(scope.Personal, scope.EnvOverride),
 			dest:   "id_ed25519",
 		},
 		scope.Work: {
-			ageKey: filepath.Join(homeDir, ".config", "sops", "age", "work-keys.txt"),
+			ageKey: scope.AgeKeyfile(scope.Work, scope.EnvOverride),
 			dest:   "work_ed25519",
 		},
 	}

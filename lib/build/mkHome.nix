@@ -33,7 +33,6 @@ let
 
   secrets = import ../../modules/secrets.nix {
     inherit
-      inputs
       self
       host
       lib

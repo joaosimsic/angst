@@ -92,11 +92,11 @@ func ageKey(args []string) int {
 		fmt.Fprintln(os.Stdout, "No host age key found at /tmp/shared/age-keys.txt; secrets will be unavailable.")
 		return exitOK
 	}
-	sopsDir := filepath.Join(homeDir, ".config", "sops", "age")
-	if err := cmd.Run("install", "-d", "-m", "700", "-o", username, "-g", "users", sopsDir); err != nil {
+	ageDir := filepath.Join(homeDir, ".config", "age")
+	if err := cmd.Run("install", "-d", "-m", "700", "-o", username, "-g", "users", ageDir); err != nil {
 		return exitError
 	}
-	if err := cmd.Run("install", "-m", "600", "-o", username, "-g", "users", keyFile, filepath.Join(sopsDir, "keys.txt")); err != nil {
+	if err := cmd.Run("install", "-m", "600", "-o", username, "-g", "users", keyFile, filepath.Join(ageDir, "keys.txt")); err != nil {
 		return exitError
 	}
 	if inject {
@@ -104,7 +104,7 @@ func ageKey(args []string) int {
 		if st, err := os.Stat(workKey); err != nil || st.Size() == 0 {
 			fmt.Fprintln(os.Stderr, "warn: work age key requested but not found at /tmp/shared/work-keys.txt")
 		} else {
-			if err := cmd.Run("install", "-m", "600", "-o", username, "-g", "users", workKey, filepath.Join(sopsDir, "work-keys.txt")); err != nil {
+			if err := cmd.Run("install", "-m", "600", "-o", username, "-g", "users", workKey, filepath.Join(ageDir, "work-keys.txt")); err != nil {
 				return exitError
 			}
 		}

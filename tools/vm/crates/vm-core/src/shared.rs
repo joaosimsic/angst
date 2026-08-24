@@ -5,8 +5,8 @@ use std::{
 };
 
 const AGE_KEY_SOURCES: &[(&str, &str)] = &[
-    ("~/.config/sops/age/keys.txt", "age-keys.txt"),
-    ("~/.config/sops/age/work-keys.txt", "work-keys.txt"),
+    ("~/.config/age/keys.txt", "age-keys.txt"),
+    ("~/.config/age/work-keys.txt", "work-keys.txt"),
 ];
 
 fn expand_home(path: &str) -> PathBuf {
@@ -56,7 +56,7 @@ pub fn prepare_shared_dir(host: &str) -> Result<PathBuf, String> {
 
     if !found {
         return Err(format!(
-            "No host age key found (~/.config/sops/age/keys.txt). The VM cannot decrypt secrets without it."
+            "No host age key found (~/.config/age/keys.txt). The VM cannot decrypt secrets without it."
         ));
     }
 
@@ -82,8 +82,8 @@ mod tests {
         }
 
         assert_eq!(
-            expand_home("~/.config/sops/age/keys.txt"),
-            PathBuf::from("/home/test/.config/sops/age/keys.txt")
+            expand_home("~/.config/age/keys.txt"),
+            PathBuf::from("/home/test/.config/age/keys.txt")
         );
 
         unsafe {
