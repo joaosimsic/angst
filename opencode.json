@@ -110,6 +110,10 @@
     "toml": {
       "command": ["taplo", "lsp", "stdio"],
       "extensions": [".toml"]
+    },
+    "hls": {
+      "command": ["haskell-language-server"],
+      "extensions": [".hs", ".lhs"]
     }
   }
 }
