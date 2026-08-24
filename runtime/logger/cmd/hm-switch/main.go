@@ -46,7 +46,7 @@ func run(args []string) int {
 		fmt.Fprintf(os.Stderr, "error: could not open log %s: %v\n", logPath, err)
 		return 1
 	}
-	defer logFile.Close()
+	defer func() { _ = logFile.Close() }()
 
 	bashScript := `home-manager "$@" 2>&1; echo $? > "$0"`
 	bashArgs := append([]string{"-c", bashScript, exitFile}, hmArgs...)
@@ -81,7 +81,7 @@ func run(args []string) int {
 		ts := logger.Timestamp()
 		badge := logger.ColorBadge(lvl)
 		fmt.Printf("%s[%s]%s %s %s\n", badge, lvl, logger.Reset(), ts, line)
-		fmt.Fprintf(logFile, "[%s] %s %s\n", lvl, ts, line)
+		_, _ = fmt.Fprintf(logFile, "[%s] %s %s\n", lvl, ts, line)
 	}
 	if err := reader.Err(); err != nil && err != io.EOF {
 		fmt.Fprintf(os.Stderr, "error reading home-manager output: %v\n", err)
@@ -129,7 +129,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 	_, err = io.Copy(out, in)
 	return err
 }
