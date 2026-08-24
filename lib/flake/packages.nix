@@ -10,6 +10,7 @@ let
     runtime
     vmOutputs
     shellTool
+    hmSwitchTool
     ;
 in
 {
@@ -35,5 +36,5 @@ in
         else
           { };
     in
-    extra // hmPkgs;
+    { hm-switch = hmSwitchTool; } // extra // hmPkgs;
 }

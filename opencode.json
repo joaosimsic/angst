@@ -112,7 +112,7 @@
       "extensions": [".toml"]
     },
     "hls": {
-      "command": ["haskell-language-server"],
+      "command": ["haskell-language-server-wrapper", "--lsp"],
       "extensions": [".hs", ".lhs"]
     }
   }

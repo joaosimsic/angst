@@ -59,6 +59,7 @@
   };
   projects = [
     "angst"
+    "advent-of-code"
     "agent"
     "intelligence/backend"
     "intelligence/frontend"

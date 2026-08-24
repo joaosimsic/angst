@@ -2,9 +2,9 @@
 return {
 	filetypes = { "haskell" },
 	lsp = "hls",
-	lsp_cmd = { "haskell-language-server" },
-	formatter = "ormolu",
-	formatter_cmd = { "ormolu" },
+	lsp_cmd = { "haskell-language-server-wrapper", "--lsp" },
+	formatter = "fourmolu",
+	formatter_cmd = { "fourmolu" },
 	linter = "hlint",
 	linter_cmd = { "hlint" },
 	treesitter = "haskell",

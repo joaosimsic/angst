@@ -51,6 +51,8 @@ let
       ;
   };
 
+  inherit (runtime) hmSwitchTool;
+
   fallbackHost = {
     scan = {
       domains.homeEntries = [ ];
@@ -82,6 +84,7 @@ let
         vmTool
         shellTool
         runtime
+        hmSwitchTool
         hmModules
         themeOverride
         shellOverride
@@ -201,6 +204,7 @@ in
     vmTool
     shellTool
     runtime
+    hmSwitchTool
     render
     mkHomeCfg
     mkHostFor

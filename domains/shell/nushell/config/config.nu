@@ -123,6 +123,8 @@ alias v = nvim
 alias vi = nvim
 alias vim = nvim
 
+alias hms = hm-switch
+
 alias z = zellij
 
 alias c = clear
