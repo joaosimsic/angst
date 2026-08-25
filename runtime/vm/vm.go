@@ -25,9 +25,9 @@ func usage() {
   vm home-manager-upgrade --user USER
   vm nixos-switch [FLAKE_REF]
   vm home-switch [FLAKE_REF]
-  vm start [--headless]
+  vm start [--headless|--gtk]
   vm stop
-  vm restart [--headless]
+  vm restart [--headless|--gtk]
   vm status
   vm health
   vm logs [-n LINES]

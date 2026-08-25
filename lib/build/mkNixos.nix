@@ -61,6 +61,8 @@ inputs.nixpkgs.lib.nixosSystem {
       shell
       ;
     hostType = host.type;
+    hostScopes = host.scopes;
+    hostSecrets = host.secrets;
     hostName = host.hostname;
     inherit (host.scan) themes;
     themesLib = host.scan.themes;
@@ -149,6 +151,8 @@ inputs.nixpkgs.lib.nixosSystem {
             projects
             ;
           hostType = host.type;
+          hostScopes = host.scopes;
+          hostSecrets = host.secrets;
           hostName = host.hostname;
           inherit (host.scan) themes;
           themesLib = host.scan.themes;

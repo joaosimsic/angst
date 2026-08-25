@@ -2,8 +2,8 @@
   lib,
   flakeSelf,
   runtime,
-  hostScopes,
-  hostSecrets,
+  hostScopes ? [ ],
+  hostSecrets ? [ ],
   ...
 }:
 

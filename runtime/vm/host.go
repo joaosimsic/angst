@@ -213,6 +213,7 @@ func prepareSharedDir(host string) (string, error) {
 	found := false
 	for _, s := range sources {
 		if _, err := os.Stat(s.src); err != nil {
+			_ = os.Remove(filepath.Join(dir, s.dest))
 			continue
 		}
 		data, err := os.ReadFile(s.src)
@@ -226,7 +227,7 @@ func prepareSharedDir(host string) (string, error) {
 		found = true
 	}
 	if !found {
-		return "", fmt.Errorf("No host age key found (~/.config/age/keys.txt). The VM cannot decrypt secrets without it.")
+		fmt.Fprintln(os.Stderr, "warn: No host age key found (~/.config/age/keys.txt). VM will boot without secrets.")
 	}
 	return dir, nil
 }
@@ -234,11 +235,18 @@ func prepareSharedDir(host string) (string, error) {
 
 
 func start(args []string) int {
-	headless := false
+	headless := true
+	gtk := false
 	for _, a := range args {
 		if a == "--headless" {
 			headless = true
 		}
+		if a == "--gtk" || a == "--display" {
+			gtk = true
+		}
+	}
+	if gtk {
+		headless = false
 	}
 	host := targetHost()
 	if err := ensureVmProfile(host); err != nil {
@@ -248,7 +256,11 @@ func start(args []string) int {
 	disk := fmt.Sprintf("%s.qcow2", host)
 	killStaleQemu(disk)
 
-	effectiveHeadless := headless || !detectDisplay()
+	effectiveHeadless := headless && !gtk
+	if !effectiveHeadless && !detectDisplay() {
+		fmt.Fprintln(os.Stderr, "warn: --gtk requested but no DISPLAY/WAYLAND_DISPLAY; falling back to headless")
+		effectiveHeadless = true
+	}
 
 	runner := findRunner(host)
 	if runner == "" {
