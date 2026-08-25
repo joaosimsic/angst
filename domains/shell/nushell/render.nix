@@ -49,10 +49,13 @@ let
         for key in [ ${toString (map lib.escapeShellArg sshKeys)} ] {
             let k = ($key | path expand)
             if ($k | path exists) {
-                let fp = (^ssh-keygen -lf $k | lines | get 0 | split row ' ' | get 1)
-                let loaded = (try { ^ssh-add -l | lines } catch { [] })
-                if (not ($loaded | any {|line| $line | str contains $fp })) {
-                    ^ssh-add $k
+                let out = (try { ^ssh-keygen -lf $k | lines } catch { [] })
+                if ($out | is-not-empty) {
+                    let fp = ($out | get 0 | split row ' ' | get 1)
+                    let loaded = (try { ^ssh-add -l | lines } catch { [] })
+                    if (not ($loaded | any {|line| $line | str contains $fp })) {
+                        try { ^ssh-add $k } catch { null }
+                    }
                 }
             }
         }

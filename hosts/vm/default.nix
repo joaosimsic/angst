@@ -67,7 +67,11 @@
     ];
   };
   projects = [
+    "advent-of-code"
     "angst"
+    "agent"
+    "intelligence/backend"
+    "intelligence/frontend"
   ]; 
   secrets = [ "opencode-go-key" ];
 }

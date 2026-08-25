@@ -61,6 +61,10 @@ in
           PrivateTmp = true;
           ProtectSystem = "strict";
           ProtectHome = "read-only";
+          ReadOnlyPaths = [
+            "${homeDirectory}/.config/age"
+            "${flakeSelf}/secrets/ssh"
+          ];
           ReadWritePaths = [ "${homeDirectory}/.ssh" ];
           NoNewPrivileges = true;
           UMask = "0077";
