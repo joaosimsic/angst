@@ -8,8 +8,8 @@ import (
 	"strings"
 	"syscall"
 
-	"angst/internal/cmd"
-	"angst/internal/shared"
+	"vm/internal/cmd"
+	"vm/internal/shared"
 )
 
 const (
@@ -20,22 +20,22 @@ const (
 
 func usage() {
 	fmt.Print(`Usage:
-  angst vm age-key --user USER --home DIR [--inject-work-key]
-  angst vm ephemeral-ssh --mountpoint-bin P --mount-bin P --rm-bin P --cp-bin P --mkdir-bin P
-  angst vm home-manager-upgrade --user USER
-  angst vm nixos-switch [FLAKE_REF]
-  angst vm home-switch [FLAKE_REF]
-  angst vm start [--headless]
-  angst vm stop
-  angst vm restart [--headless]
-  angst vm status
-  angst vm health
-  angst vm logs [-n LINES]
-  angst vm ssh [--auto-start] [-t] [-- COMMAND...]
-  angst vm exec -- COMMAND...
-  angst vm copy-to <src> <dest>
-  angst vm copy-from <src> <dest>
-  angst vm mcp <start|stop|restart|status|logs|run-server>
+  vm age-key --user USER --home DIR [--inject-work-key]
+  vm ephemeral-ssh --mountpoint-bin P --mount-bin P --rm-bin P --cp-bin P --mkdir-bin P
+  vm home-manager-upgrade --user USER
+  vm nixos-switch [FLAKE_REF]
+  vm home-switch [FLAKE_REF]
+  vm start [--headless]
+  vm stop
+  vm restart [--headless]
+  vm status
+  vm health
+  vm logs [-n LINES]
+  vm ssh [--auto-start] [-t] [-- COMMAND...]
+  vm exec -- COMMAND...
+  vm copy-to <src> <dest>
+  vm copy-from <src> <dest>
+  vm mcp <start|stop|restart|status|logs|run-server>
 `)
 }
 

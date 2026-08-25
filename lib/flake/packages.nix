@@ -27,6 +27,9 @@ in
           {
             default = homeConfigurations.${representative.username}.activationPackage;
             angst = runtime.angstCli;
+            vm-tool = runtime.vmTool;
+            angst-shell = runtime.goShell;
+            analyze = runtime.goAnalyze;
           }
         else
           { };

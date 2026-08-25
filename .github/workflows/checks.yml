@@ -110,9 +110,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Check runtime/angst Go
+      - name: Check runtime Go
         run: |
           nix develop .#dev --command bash -lc \
-            'cd runtime/angst && gofmt -l . && go vet ./... && go test ./...'
+            'for d in angst vm shell analyze; do echo "=== $d ==="; (cd runtime/$d && gofmt -l . && go vet ./... && go test ./...); done'
 
 

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"angst/internal/paths"
+	"vm/internal/paths"
 )
 
 // ---- env / config helpers (port vm-core config.rs / runner.rs) ----

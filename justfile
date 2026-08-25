@@ -32,11 +32,10 @@ verify:
     nix flake check --no-build
 
 go-fmt:
-    cd runtime/angst && gofmt -l .
-    cd runtime/angst && go vet ./...
+    for d in angst vm shell analyze; do echo "=== $$d ==="; (cd runtime/$$d && gofmt -l . && go vet ./...); done
 
 go-test:
-    cd runtime/angst && go test ./...
+    for d in angst vm shell analyze; do echo "=== $$d ==="; (cd runtime/$$d && go test ./...); done
 
 vault-test:
     cd runtime/angst && go test ./internal/vault/... -v

@@ -21,7 +21,7 @@ let
     name = "vm";
     runtimeInputs = [ runtime.vmTool ];
     text = ''
-      exec ${runtime.vmTool}/bin/angst vm "$@"
+      exec ${runtime.vmTool}/bin/vm "$@"
     '';
   };
 in

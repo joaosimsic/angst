@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"angst/internal/paths"
+	"analyze/internal/paths"
 )
 
 var rgExcludes = []string{

@@ -1,7 +1,7 @@
 {
   mkScript,
   pkgs,
-  goAngst,
+  goVm,
 }:
 {
   username,
@@ -14,7 +14,7 @@ mkScript {
     coreutils
   ];
   text = ''
-    exec ${goAngst}/bin/angst vm age-key --user "${username}" --home "${homeDirectory}"${
+    exec ${goVm}/bin/vm age-key --user "${username}" --home "${homeDirectory}"${
       if injectWorkKey then " --inject-work-key" else ""
     }
   '';

@@ -1,7 +1,7 @@
 {
   mkScript,
   pkgs,
-  goAngst,
+  goAnalyze,
 }:
 mkScript {
   name = "analyze-to-file";
@@ -11,6 +11,6 @@ mkScript {
     statix
   ];
   text = ''
-    cd "$(git rev-parse --show-toplevel)" && exec ${goAngst}/bin/angst analyze --output analysis.md "$@"
+    cd "$(git rev-parse --show-toplevel)" && exec ${goAnalyze}/bin/analyze --output analysis.md "$@"
   '';
 }

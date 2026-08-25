@@ -1,7 +1,7 @@
 {
   mkScript,
   pkgs,
-  goAngst,
+  goVm,
 }:
 
 mkScript {
@@ -11,6 +11,6 @@ mkScript {
     coreutils
   ];
   text = ''
-    exec ${goAngst}/bin/angst vm nixos-switch "$@"
+    exec ${goVm}/bin/vm nixos-switch "$@"
   '';
 }

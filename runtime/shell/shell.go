@@ -7,17 +7,17 @@ import (
 	"strings"
 	"syscall"
 
-	"angst/internal/shared"
+	"shell/internal/shared"
 )
 
 func usage() {
 	fmt.Print(`Usage:
-  angst shell dev
-  angst shell safe
+  angst-shell dev
+  angst-shell safe
 `)
 }
 
-// Run dispatches `angst shell dev|safe`.
+// Run dispatches `angst-shell dev|safe`.
 func Run(args []string) int {
 	mode := ""
 	if len(args) > 0 {

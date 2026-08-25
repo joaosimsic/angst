@@ -31,7 +31,7 @@ func Run(args []string) int {
 				i++
 			}
 		case "-h", "--help":
-			fmt.Print("Usage: angst analyze [--no-eval-cost] [--no-graph] [-o FILE]\n")
+			fmt.Print("Usage: analyze [--no-eval-cost] [--no-graph] [-o FILE]\n")
 			return 0
 		}
 	}

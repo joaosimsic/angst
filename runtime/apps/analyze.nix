@@ -1,7 +1,7 @@
 {
   mkScript,
   pkgs,
-  goAngst,
+  goAnalyze,
 }:
 mkScript {
   name = "analyze";
@@ -11,6 +11,6 @@ mkScript {
     statix
   ];
   text = ''
-    exec ${goAngst}/bin/angst analyze "$@"
+    exec ${goAnalyze}/bin/analyze "$@"
   '';
 }
