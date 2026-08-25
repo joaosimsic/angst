@@ -7,7 +7,7 @@ import (
 )
 
 func TestPrepareShellPrependsPathAndSetsEnv(t *testing.T) {
-	// isolate HOME so tree-sitter symlink lands in a temp dir
+	
 	tmp := t.TempDir()
 	oldHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmp)
@@ -60,7 +60,7 @@ func TestPrepareShellPrependsPathAndSetsEnv(t *testing.T) {
 		t.Fatalf("ORIGINAL_SHELL=%q", envMap["ORIGINAL_SHELL"])
 	}
 
-	// tree-sitter symlinks created
+	
 	parserLink := filepath.Join(tmp, ".local", "share", "tree-sitter", "parser")
 	if link, err := os.Readlink(parserLink); err != nil || link != parsers {
 		t.Fatalf("parser symlink wrong: %q err %v", link, err)

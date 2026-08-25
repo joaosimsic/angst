@@ -13,7 +13,7 @@ import (
 	"vm/internal/paths"
 )
 
-// ---- env / config helpers (port vm-core config.rs / runner.rs) ----
+
 
 func envOr(key, def string) string {
 	if v := os.Getenv(key); v != "" {
@@ -75,10 +75,10 @@ func detectDisplay() bool {
 	return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
 }
 
-// ---- ssh / scp ----
 
-// sshExec runs `command` inside the guest over the host `ssh` client and
-// returns (exitCode, stdout, stderr). It replaces the dropped Rust ssh2 dep.
+
+
+
 func sshExec(command string) (int, string, string) {
 	port := envOr("VM_SSH_PORT", "2222")
 	user := resolveUsername()
@@ -127,7 +127,7 @@ func scpOpts() []string {
 	}
 }
 
-// ---- profile / build / runner ----
+
 
 func ensureVmProfile(host string) error {
 	repo := repoRoot()
@@ -231,7 +231,7 @@ func prepareSharedDir(host string) (string, error) {
 	return dir, nil
 }
 
-// ---- host subcommands ----
+
 
 func start(args []string) int {
 	headless := false

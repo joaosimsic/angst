@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// gitChurn counts commits touching each file over the last year (nix/sh/rs).
+
 func gitChurn() map[string]int {
 	out := gitLog([]string{"*.nix", "*.sh", "*.rs"}, "1 year ago")
 	churn := map[string]int{}
@@ -24,8 +24,8 @@ func gitChurn() map[string]int {
 
 var commitHashRe = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
 
-// gitStability returns per-file churn and last-change date from two years of
-// history (mirrors the Python stability index).
+
+
 func gitStability() (churn map[string]int, fileLastDate map[string]string) {
 	churn = map[string]int{}
 	fileLastDate = map[string]string{}

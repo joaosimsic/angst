@@ -28,7 +28,7 @@ func hasCmd(name string) bool {
 	return err == nil
 }
 
-// runExec runs a command in the repo root and returns (rc, stdout, stderr).
+
 func runExec(args []string, timeout time.Duration) (int, string, string) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -72,7 +72,7 @@ func rgExec(args []string, timeout time.Duration) (int, string, error) {
 	return rc, out.String(), err
 }
 
-// rgCount returns the total number of matches for pat across .nix files.
+
 func rgCount(pat string, fixed bool) int {
 	args := []string{}
 	if fixed {
@@ -99,7 +99,7 @@ func rgCount(pat string, fixed bool) int {
 	return total
 }
 
-// rgList returns the files that contain pat.
+
 func rgList(pat string, fixed bool) []string {
 	args := []string{}
 	if fixed {
@@ -120,7 +120,7 @@ func rgList(pat string, fixed bool) []string {
 	return files
 }
 
-// rgOnly returns the matching substrings (with -o).
+
 func rgOnly(pat string) []string {
 	rc, out, _ := rgExec([]string{"-o", "--no-filename", pat}, 15*time.Second)
 	if rc != 0 && rc != 1 {
@@ -204,7 +204,7 @@ func gitLog(patterns []string, since string) []string {
 	return res
 }
 
-// ---- markdown helpers ----
+
 
 func mdEscape(s string) string { return strings.ReplaceAll(s, "|", "\\|") }
 

@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-// TestVMGuestDispatch ensures the guest-side subcommands still resolve after
-// the host/mcp branch was added to Run (systemd units depend on them). Only
-// the fast, non-building commands are exercised here to keep the unit test
-// hermetic.
+
+
+
+
 func TestVMGuestDispatch(t *testing.T) {
 	cases := [][]string{
 		{"age-key"},
@@ -25,7 +25,7 @@ func TestVMGuestDispatch(t *testing.T) {
 }
 
 func TestVMUnknownCommand(t *testing.T) {
-	// capture stderr to ensure the unknown path is hit
+	
 	r, w, _ := os.Pipe()
 	old := os.Stderr
 	os.Stderr = w

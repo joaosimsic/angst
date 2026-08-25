@@ -16,8 +16,8 @@ const (
 	mcpPort    = 8765
 )
 
-// ServiceState is the on-disk JSON state for a managed background service
-// (mirrors the schema defined in rm-tools.md).
+
+
 type ServiceState struct {
 	Service   string   `json:"service"`
 	PID       int      `json:"pid"`
@@ -28,8 +28,8 @@ type ServiceState struct {
 	Log       string   `json:"log"`
 }
 
-// Controller manages JSON state files and background process lifecycle under
-// VM_STATE_DIR. It is the Go port of the Rust `VmProcessController`.
+
+
 type Controller struct {
 	StateDir string
 }
@@ -89,7 +89,7 @@ func (c *Controller) clear(name string) {
 	_ = os.Remove(c.stateFile(name))
 }
 
-// isActive reports whether the tracked PID is a live process.
+
 func (c *Controller) isActive(name string) bool {
 	st, ok := c.read(name)
 	if !ok {
@@ -102,8 +102,8 @@ func (c *Controller) isActive(name string) bool {
 	return proc.Signal(syscall.Signal(0)) == nil
 }
 
-// Start spawns `program args` detached in the background, redirecting output
-// to logs/<name>.log, and records JSON state.
+
+
 func (c *Controller) Start(name, program string, args, env []string, headless bool) (int, error) {
 	logDir := filepath.Join(c.stateDir(), "logs")
 	if err := os.MkdirAll(logDir, 0o755); err != nil {
@@ -148,12 +148,12 @@ func (c *Controller) Start(name, program string, args, env []string, headless bo
 	return pid, nil
 }
 
-// StartCommand is a convenience wrapper for launching an arbitrary command.
+
 func (c *Controller) StartCommand(name, program string, args, env []string) (int, error) {
 	return c.Start(name, program, args, env, false)
 }
 
-// Stop terminates the tracked process (SIGTERM) and clears its state.
+
 func (c *Controller) Stop(name string) error {
 	st, ok := c.read(name)
 	if !ok {
@@ -170,7 +170,7 @@ func (c *Controller) Stop(name string) error {
 	return nil
 }
 
-// Logs tails the service's log file (streaming).
+
 func (c *Controller) Logs(name string, lines uint32) error {
 	logPath := filepath.Join(c.stateDir(), "logs", name+".log")
 	if _, err := os.Stat(logPath); err != nil {

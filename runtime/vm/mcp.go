@@ -46,7 +46,7 @@ func acceptsJSON(r *http.Request) bool {
 	return strings.Contains(accept, "application/json") || strings.Contains(accept, "*/*")
 }
 
-// ---- handlers ----
+
 
 func handleRPC(w http.ResponseWriter, r *http.Request) {
 	if !acceptsJSON(r) {
@@ -173,7 +173,7 @@ func runVmRestart(headless bool) map[string]any {
 		return toolContent("VM restart failed", true)
 	}
 	if !headless {
-		// start() defaults to headless when no DISPLAY; nothing extra to do.
+		
 	}
 	return toolContent("VM restarting", false)
 }
@@ -211,7 +211,7 @@ func toolsList() map[string]any {
 	}
 }
 
-// ---- HTTP endpoints ----
+
 
 func handleStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -252,7 +252,7 @@ func runServer(port int) error {
 	return http.ListenAndServe(addr, mux)
 }
 
-// ---- `angst vm mcp` subdispatch ----
+
 
 func mcpDispatch(args []string) int {
 	sub := ""

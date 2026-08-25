@@ -17,7 +17,7 @@ func usage() {
 `)
 }
 
-// Run dispatches `angst-shell dev|safe`.
+
 func Run(args []string) int {
 	mode := ""
 	if len(args) > 0 {
@@ -102,10 +102,10 @@ func resolveHostShell() string {
 	return "/bin/bash"
 }
 
-// prepareShell performs all of the shell-switch setup (env read, PATH prepend,
-// tree-sitter symlink) and returns the command to exec plus the augmented
-// environment. It is separated from enter so it can be unit-tested without
-// replacing the test process.
+
+
+
+
 func prepareShell(mode string) (cmdPath string, env []string, err error) {
 	var pathKey string
 	switch mode {

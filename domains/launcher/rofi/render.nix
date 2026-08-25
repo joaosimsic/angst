@@ -28,10 +28,10 @@ in
     path = "domains/launcher/rofi/config/theme.rasi";
     text = ''
       * {
-          bg:       #${p.background.variant};
-          fg:       #${p.foreground.variant};
-          accent:   #${p.foreground.variant};
-          subtle:   #${p.accent.base};
+          bg:       
+          fg:       
+          accent:   
+          subtle:   
 
           background-color: transparent;
           text-color:       @fg;

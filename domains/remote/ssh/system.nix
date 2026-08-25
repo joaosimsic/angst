@@ -38,9 +38,9 @@ in
           PasswordAuthentication = cfg.server.passwordAuthentication;
           PermitRootLogin = "no";
           AllowAgentForwarding = false;
-          # The vm tool polls a new SSH connection every couple of seconds
-          # while the guest boots; a low MaxStartups makes sshd throttle those
-          # pre-auth connections into a self-sustaining rejection loop.
+          
+          
+          
           MaxStartups = "100:30:200";
         };
       };

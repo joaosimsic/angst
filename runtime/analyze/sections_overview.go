@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// ---- shared helpers ----
+
 
 func walkLOC(root, ext string, skip map[string]bool) int {
 	total := 0
@@ -93,7 +93,7 @@ func globNix(dir string) []string {
 	return out
 }
 
-// ---- complexity helpers ----
+
 
 func nixDepthAndInterp(text string) (int, int) {
 	depth := 0
@@ -348,7 +348,7 @@ func complexityLabel(text string) (string, int, string) {
 	return label, score, strings.Join(reasons, ", ")
 }
 
-// ---- sections ----
+
 
 func sectionOverview(noEvalCost bool) string {
 	lines := []string{mdSection(1, "Overview")}

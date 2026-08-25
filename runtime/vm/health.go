@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// HealthReport summarizes VM reachability, ported from vm-cli health.rs.
+
 type HealthReport struct {
 	QemuRunning   bool
 	QemuPID       int
@@ -88,8 +88,8 @@ func pidHasHostfwd(pid int) bool {
 	return strings.Contains(string(b), "hostfwd")
 }
 
-// portListens reports whether `port` appears as a listening socket in
-// /proc/net/tcp (port encoded as 4-digit uppercase hex, e.g. 2222 -> 08AE).
+
+
 func portListens(port uint16) bool {
 	hex := fmt.Sprintf("%04X", port)
 	b, err := os.ReadFile("/proc/net/tcp")
@@ -104,7 +104,7 @@ func portListens(port uint16) bool {
 	return false
 }
 
-// checkHealth assembles a HealthReport. sshExec returns (exitCode, stdout, stderr).
+
 func checkHealth(sshExec func(string) (int, string, string)) HealthReport {
 	var r HealthReport
 	r.QemuRunning = anyQemuRunning()
