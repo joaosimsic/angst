@@ -8,8 +8,6 @@ let
     representative
     defaultSystem
     runtime
-    vmOutputs
-    shellTool
     hmSwitchTool
     ;
 in
@@ -29,9 +27,6 @@ in
           {
             default = homeConfigurations.${representative.username}.activationPackage;
             angst = runtime.angstCli;
-            vm-cli = vmOutputs.packages.${defaultSystem}.wrapped;
-            vm = vmOutputs.packages.${defaultSystem}.wrapped;
-            shell = shellTool;
           }
         else
           { };

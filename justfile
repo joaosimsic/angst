@@ -23,7 +23,7 @@ hm-switch host="":
     @if [ -n "{{host}}" ]; then nix run .#hm-switch -- switch --flake .#{{host}}; else nix run .#hm-switch -- switch --flake .; fi
 
 analyze:
-    python3 -m tools.analyze_flake --output analysis.md
+    nix run .#analyze -- --output analysis.md
 
 check:
     nix flake check
@@ -61,7 +61,7 @@ vault-status path=".":
     angst vault status {{path}}
 
 vm host="nixos":
-    @NIX_DEFAULT_TARGET_HOST={{host}} nix shell ./tools/vm#wrapped -c vm start
+    @NIX_DEFAULT_TARGET_HOST={{host}} nix run .#vm -- start
 
 vm-ssh host="nixos":
-    @NIX_DEFAULT_TARGET_HOST={{host}} nix shell ./tools/vm#wrapped -c vm ssh --auto-start
+    @NIX_DEFAULT_TARGET_HOST={{host}} nix run .#vm -- ssh --auto-start

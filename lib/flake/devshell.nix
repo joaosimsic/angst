@@ -1,25 +1,23 @@
 {
   pkgs,
   host,
-  inputs,
   runtime,
-  vmOutputs,
 }:
 
 let
-  allToolchainPkgs = host.scan.allToolchainPackages;
-  treesitter = host.scan.treesitter;
+  allToolchainPkgs = if host != null then host.scan.allToolchainPackages else [ ];
+  treesitter = if host != null then host.scan.treesitter else null;
 
   treesitterShellHook = ''
     mkdir -p ~/.local/share/tree-sitter
     rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
-    ln -sf ${treesitter.treesitterParsers} ~/.local/share/tree-sitter/parser
-    ln -sf ${treesitter.treesitterQueries} ~/.local/share/tree-sitter/queries
+    ln -sf ${if treesitter != null then treesitter.treesitterParsers else "/dev/null"} ~/.local/share/tree-sitter/parser
+    ln -sf ${if treesitter != null then treesitter.treesitterQueries else "/dev/null"} ~/.local/share/tree-sitter/queries
     export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
   '';
 
   shellDevHook = runtime.devshellHook {
-    defaultVmHost = inputs.vm.defaultVmHost;
+    defaultVmHost = "vm";
   };
 
   fullDevPackages =
@@ -31,6 +29,7 @@ let
       openssh
       qemu
       age
+      runtime.vmTool
       gitleaks
       cargo
       rustc
@@ -40,10 +39,7 @@ let
       deadnix
       statix
     ]
-    ++ allToolchainPkgs
-    ++ [
-      vmOutputs.packages.${host.system}.wrapped
-    ];
+    ++ allToolchainPkgs;
 in
 {
   shells = {
@@ -66,7 +62,6 @@ in
     };
 
     vm = pkgs.mkShell {
-      inputsFrom = [ inputs.vm.devShells.${host.system}.default ];
       packages = fullDevPackages;
       shellHook = "${treesitterShellHook}\n. ${shellDevHook}";
     };

@@ -3,8 +3,7 @@
   self,
   host,
   hmModules,
-  vmTool,
-  shellTool,
+  angstShell,
   runtime,
   hmSwitchTool,
   themeOverride ? null,
@@ -76,8 +75,8 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ++ [
     (_: {
       home.packages = [
-        vmTool
-        shellTool
+        runtime.vmTool
+        angstShell
         runtime.angstCli
         hmSwitchTool
       ];

@@ -9,6 +9,8 @@ import (
 	"angst/internal/projects"
 	"angst/internal/render"
 	"angst/internal/sshkey"
+	"angst/internal/analyze"
+	"angst/internal/shell"
 	"angst/internal/system"
 	"angst/internal/vault"
 	"angst/internal/vm"
@@ -51,6 +53,10 @@ func run(args []string) int {
 		return vault.Run(args)
 	case "vm":
 		return vm.Run(args)
+	case "shell":
+		return shell.Run(args)
+	case "analyze":
+		return analyze.Run(args)
 	case "", "-h", "--help":
 		usage()
 		return 0
@@ -76,5 +82,7 @@ func usage() {
   angst set-password-hash --username USER --age-path FILE --age-key FILE
   angst ftp <decrypt|mount|unmount|transform> ...
   angst vm <home-manager-upgrade|ephemeral-ssh|age-key|nixos-switch|home-switch> ...
+  angst shell <dev|safe>
+  angst analyze [--no-eval-cost] [--no-graph] [-o FILE]
 `)
 }

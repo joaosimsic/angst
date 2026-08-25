@@ -18,7 +18,7 @@ just hm-switch host=nixos            # or: nix build .#homeConfigurations.joao.a
 # Development shells
 nix develop .#safe                   # editing env: neovim, parsers, LSPs, formatters
 nix develop .#dev                    # full env: angst CLI, qemu, age, gitleaks, Rust, VM tools
-nix develop .#vm                     # Rust tooling for tools/vm
+nix develop .#vm                     # QEMU VM (Go angst tooling)
 
 # Render theme-aware configs (no Nix rebuild needed)
 angst render                         # write all rendered domain configs
@@ -42,9 +42,7 @@ nix run .#lint-themes                # fast, eval-only theme check
 @runtime/        runtime tooling as Nix functions (angst CLI, login-shell, projects-sync, bootstrap-secrets, VM + app scripts)
 @themes/         color token definitions (9 themes, strict 13-token schema)
 @toolchains/     language-domain tooling (24 languages: runtime/LSP/formatter/linter/grammar)
-@tools/vm/       standalone Rust workspace for NixOS VM lifecycle (vm-core, vm-cli, vm-mcp)
-@tools/shell/    standalone Rust env switcher (dev/safe shells, no nix at runtime)
-@tools/analyze_flake/  Python flake-analysis report generator (analysis.md)
+@runtime/angst/  Go CLI (`angst vm` unified guest+host + MCP, `angst shell dev|safe`, `angst analyze`) — single `angst` binary replaces the former Rust/Python tooling
 @githooks/       gitleaks pre-commit / pre-push hooks (install via `just install-hooks`)
 ```
 
@@ -257,14 +255,14 @@ Toolchains are auto-discovered by `lib/resolve.nix` and selected via `toolchains
 - `angst projects <add|sync|status|capture|edit-env|rm> ...` — manage the encrypted dev-project store (see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)).
 - `angst ssh-key <generate|verify> --scope personal|work` — generate/verify the shared, age-encrypted scope SSH keys in `secrets/ssh/` (see [`@secrets/`](#secrets-summary)).
 
-**shell CLI** (`tools/shell`, Rust) — standalone env switcher (no nix at runtime): `nix run .#shell -- dev` or `shell safe` after `nix profile install .#shell`.
+**shell CLI** (`angst shell`, Go) — env switcher (`angst shell dev|safe`) with tree-sitter setup; Nix wrapper `angst-shell` supplies `SHELL_*` env and `PATH`.
 
-**vm tool** (`tools/vm`, Rust workspace: `vm-core`, `vm-cli`, `vm-mcp`) — QEMU VM lifecycle with SSH (port 2222 → guest 22), headless mode for CI, automatic SSH key + age key injection, and an MCP server (port 8765, tools `vm_exec`/`vm_status`/`vm_restart`) for AI agent integration.
+**vm tool** (`angst vm`, Go — unified guest+host) — QEMU VM lifecycle with SSH (port 2222 → guest 22), headless mode for CI, automatic SSH key + age key injection, and an MCP server (port 8765, tools `vm_exec`/`vm_status`/`vm_restart`) for AI agent integration. Guest-side helpers (`age-key`, `ephemeral-ssh`, `home-manager-upgrade`, `nixos-switch`, `home-switch`) remain `angst vm` subcommands.
 
 Commands: `start [--headless]`, `stop`, `restart`, `status`, `logs [-n]`, `ssh [--auto-start] [--tty]`, `exec -- <cmd>`, `copy-to`, `copy-from`, `health`, `mcp {start|stop|restart|status|logs|run-server [--port]}`.
 
 ```bash
-nix run .#vm -- --headless          # or: just vm; DISPLAY set → gtk UI
+nix run .#vm -- start --headless    # or: just vm; DISPLAY set → gtk UI
 nix run .#vm -- ssh                 # connect
 nix run .#vm -- health              # QEMU + port + SSH check
 ```
@@ -322,5 +320,5 @@ just hardware host=nixos            # regenerate hardware.nix next to the decl
 just bootstrap-secrets host=nixos   # create/rotate secrets.yaml + password hash
 just analyze                        # regenerate analysis.md
 just install-hooks                  # enable gitleaks git hooks
-just vm host=vm / just vm-ssh host=vm   # VM start / ssh via tools/vm#wrapped
+just vm host=vm / just vm-ssh host=vm   # VM start / ssh via angst vm
 ```

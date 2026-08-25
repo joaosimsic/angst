@@ -23,6 +23,51 @@ let
       }
   '';
 
+  # Wrapper with the full PATH needed by the host-side VM workflow
+  # (qemu/openssh/coreutils/procps/bash/nix) — mirrors the old Rust `wrapped`
+  # binary without pulling in the Rust toolchain.
+  vmTool = pkgs.runCommand "angst-vm" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
+    mkdir -p $out/bin
+    makeWrapper ${goAngst}/bin/angst $out/bin/angst \
+      --prefix PATH : ${
+        lib.makeBinPath [
+          pkgs.qemu
+          pkgs.openssh
+          pkgs.coreutils
+          pkgs.procps
+          pkgs.bash
+          pkgs.nix
+          pkgs.age
+        ]
+      }
+  '';
+
+  # Builds the `angst shell` wrapper that bakes the dev/safe environment paths
+  # (the Nix wrapper that was never actually built for the Rust `shell` tool).
+  mkAngstShell =
+    {
+      devShell,
+      safeShell,
+      treesitter ? null,
+      enabledShells ? "/bin/bash",
+    }:
+    let
+      treesitterParsers = if treesitter != null then treesitter.treesitterParsers else "";
+      treesitterQueries = if treesitter != null then treesitter.treesitterQueries else "";
+    in
+    pkgs.writeShellApplication {
+      name = "angst-shell";
+      runtimeInputs = [ goAngst ];
+      text = ''
+        export SHELL_DEV_PATH=${devShell}/bin
+        export SHELL_SAFE_PATH=${safeShell}/bin
+        export SHELL_ENABLED_SHELLS=${enabledShells}
+        export SHELL_TS_PARSERS=${treesitterParsers}
+        export SHELL_TS_QUERIES=${treesitterQueries}
+        exec ${goAngst}/bin/angst shell "$@"
+      '';
+    };
+
   goLoggerUnwrapped = pkgs.buildGoModule {
     pname = "angst-logger";
     version = "0.1.0";
@@ -122,6 +167,8 @@ in
     goLoggerUnwrapped
     hmSwitchTool
     mkScript
+    vmTool
+    mkAngstShell
     loginShell
     sshAddKeys
     sshKeyProvision

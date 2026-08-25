@@ -1,11 +1,16 @@
 {
   mkScript,
   pkgs,
+  goAngst,
 }:
 mkScript {
   name = "analyze";
-  runtimeInputs = [ pkgs.python3 ];
+  runtimeInputs = with pkgs; [
+    git
+    deadnix
+    statix
+  ];
   text = ''
-    exec python3 -m tools.analyze_flake "$@"
+    exec ${goAngst}/bin/angst analyze "$@"
   '';
 }

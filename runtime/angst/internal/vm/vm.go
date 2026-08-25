@@ -25,6 +25,17 @@ func usage() {
   angst vm home-manager-upgrade --user USER
   angst vm nixos-switch [FLAKE_REF]
   angst vm home-switch [FLAKE_REF]
+  angst vm start [--headless]
+  angst vm stop
+  angst vm restart [--headless]
+  angst vm status
+  angst vm health
+  angst vm logs [-n LINES]
+  angst vm ssh [--auto-start] [-t] [-- COMMAND...]
+  angst vm exec -- COMMAND...
+  angst vm copy-to <src> <dest>
+  angst vm copy-from <src> <dest>
+  angst vm mcp <start|stop|restart|status|logs|run-server>
 `)
 }
 
@@ -45,6 +56,28 @@ func Run(args []string) int {
 		return nixosSwitch(args)
 	case "home-switch":
 		return homeSwitch(args)
+	case "start":
+		return start(args)
+	case "stop":
+		return stop(args)
+	case "restart":
+		return restart(args)
+	case "status":
+		return status(args)
+	case "health":
+		return health(args)
+	case "logs":
+		return logsCmd(args)
+	case "ssh":
+		return sshCmd(args)
+	case "exec":
+		return execCmd(args)
+	case "copy-to":
+		return copyToCmd(args)
+	case "copy-from":
+		return copyFromCmd(args)
+	case "mcp":
+		return mcpDispatch(args)
 	case "", "-h", "--help":
 		usage()
 		return exitOK

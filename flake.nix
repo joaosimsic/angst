@@ -8,16 +8,6 @@
     };
 
     impermanence.url = "github:nix-community/impermanence";
-
-    vm = {
-      url = "./tools/vm";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    shell = {
-      url = "./tools/shell";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =

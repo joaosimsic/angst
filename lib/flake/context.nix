@@ -38,11 +38,6 @@ let
   mkHome = import ../build/mkHome.nix;
   mkHost = import ../build/mkNixos.nix;
 
-  vmOutputs = inputs.vm.mkOutputs self;
-  shellOutputs = inputs.shell.mkOutputs self;
-  vmTool = vmOutputs.packages.${defaultSystem}.default or vmOutputs.packages.${defaultSystem}.vm;
-  shellTool = shellOutputs.packages.${defaultSystem}.default;
-
   runtime = import ../../runtime {
     inherit
       pkgs
@@ -81,10 +76,9 @@ let
         self
         inputs
         host
-        vmTool
-        shellTool
         runtime
         hmSwitchTool
+        angstShell
         hmModules
         themeOverride
         shellOverride
@@ -110,11 +104,15 @@ let
   devshell = import ./devshell.nix {
     inherit
       pkgs
-      inputs
-      vmOutputs
       runtime
       ;
     host = representative;
+  };
+
+  angstShell = runtime.mkAngstShell {
+    devShell = devshell.shells.dev;
+    safeShell = devshell.shells.safe;
+    treesitter = if representative != null then representative.scan.treesitter else null;
   };
 
   mkChecks = import ../../checks/default.nix {
@@ -199,12 +197,9 @@ in
     pkgs
     profilesFor
     enableModule
-    vmOutputs
-    shellOutputs
-    vmTool
-    shellTool
     runtime
     hmSwitchTool
+    angstShell
     render
     mkHomeCfg
     mkHostFor
