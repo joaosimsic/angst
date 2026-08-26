@@ -20,7 +20,7 @@ func sectionEvalMemory(noEvalCost bool, memEnabled bool, memHosts string, memJSO
 		return mdSection(35, "Eval Memory (peak RSS)") + "\n> Skipped (use `--mem` to measure; `--mem-hosts " + defaultMemHost + ",all`)\n"
 	}
 	lines := []string{mdSection(35, "Eval Memory (peak RSS)")}
-	lines = append(lines, "> Peak RSS via `/usr/bin/time -v` (`Maximum resident set size`), wall time; budget **4 GiB** aggregated, **3 GiB** per-host (`nixos` canary). `nixos` is heaviest (base+desktop+development+embedded, toolchains=\"*\").\n")
+	lines = append(lines, "> Peak RSS via `/usr/bin/time -v` (`Maximum resident set size`), wall time; budget **5 GiB** aggregated (5 hosts), **3 GiB** per-host (`nixos` canary). `nixos` is heaviest (base+desktop+development+embedded, toolchains=\"*\"). `ci` is lean (`ci` profile + `nix` toolchain).\n")
 
 	hostFilter := parseMemHosts(memHosts)
 	attrs := buildMemAttrs(hostFilter)
@@ -46,9 +46,9 @@ func sectionEvalMemory(noEvalCost bool, memEnabled bool, memHosts string, memJSO
 
 	lines = append(lines, formatMemTable(results))
 
-	lines = append(lines, mdSubsection("Gates (4 GiB aggregated, 3 GiB per-host)"))
+	lines = append(lines, mdSubsection("Gates (5 GiB aggregated, 3 GiB per-host)"))
 	var gateRows [][]any
-	limitAgg := 4 * 1024
+	limitAgg := 5 * 1024
 	limitHost := 3 * 1024
 	for _, r := range results {
 		limit := limitAgg

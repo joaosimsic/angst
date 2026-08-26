@@ -4,6 +4,6 @@
   hostname = "ci";
   username = "runner";
   theme = "monochrome";
-  profiles = [ "base" ];
+  profiles = [ "ci" ];
   toolchains = [ "nix" ];
 }

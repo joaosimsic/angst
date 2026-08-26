@@ -11,10 +11,14 @@
 }:
 
 let
-  pkgs = import inputs.nixpkgs {
-    inherit (host) system;
-    config = import ../nixpkgs-config.nix;
-  };
+  pkgs =
+    if host ? pkgs then
+      host.pkgs
+    else
+      import inputs.nixpkgs {
+        inherit (host) system;
+        config = import ../nixpkgs-config.nix;
+      };
   inherit (pkgs) lib;
 
   effectiveTheme = if themeOverride != null then themeOverride else host.theme;
