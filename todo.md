@@ -50,7 +50,7 @@
 
 # encryption
 
-- [ ] stardand way to encrypt files and dirs
+- [x] stardand way to encrypt files and dirs
 - [ ] validate projects and ftp pipelines
 
 # miscellaneous
