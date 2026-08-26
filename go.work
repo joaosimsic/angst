@@ -3,4 +3,7 @@ go 1.22
 use (
 	./runtime/angst
 	./runtime/logger
+	./runtime/vm
+	./runtime/shell
+	./runtime/analyze
 )

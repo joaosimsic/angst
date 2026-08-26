@@ -55,7 +55,7 @@ func cmdSync(args []string) int {
 			if _, err := os.Stat(filepath.Join(target, ".git")); err != nil {
 				fmt.Printf("cloning %s -> %s\n", m.Repo, target)
 				if err := clone(gitSSH, m.Repo, target); err != nil {
-					fmt.Fprintf(os.Stderr, "warn: clone failed for '%s'; skipping (network down?)\n", m.Name)
+					fmt.Fprintf(os.Stderr, "warn: clone failed for '%s': %v; skipping (network down or missing SSH key?)\n", m.Name, err)
 					continue
 				}
 			}

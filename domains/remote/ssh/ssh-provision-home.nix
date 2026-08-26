@@ -5,7 +5,7 @@
   userConfig,
   flakeSelf,
   runtime,
-  hostScopes,
+  hostScopes ? [ ],
   ...
 }:
 

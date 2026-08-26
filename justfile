@@ -23,7 +23,7 @@ hm-switch host="":
     @if [ -n "{{host}}" ]; then nix run .#hm-switch -- switch --flake .#{{host}}; else nix run .#hm-switch -- switch --flake .; fi
 
 analyze:
-    python3 -m tools.analyze_flake --output analysis.md
+    nix run .#analyze -- --output analysis.md
 
 check:
     nix flake check
@@ -32,11 +32,10 @@ verify:
     nix flake check --no-build
 
 go-fmt:
-    cd runtime/angst && gofmt -l .
-    cd runtime/angst && go vet ./...
+    for d in angst vm shell analyze; do echo "=== $$d ==="; (cd runtime/$$d && gofmt -l . && go vet ./...); done
 
 go-test:
-    cd runtime/angst && go test ./...
+    for d in angst vm shell analyze; do echo "=== $$d ==="; (cd runtime/$$d && go test ./...); done
 
 vault-test:
     cd runtime/angst && go test ./internal/vault/... -v
@@ -61,7 +60,7 @@ vault-status path=".":
     angst vault status {{path}}
 
 vm host="nixos":
-    @NIX_DEFAULT_TARGET_HOST={{host}} nix shell ./tools/vm#wrapped -c vm start
+    @NIX_DEFAULT_TARGET_HOST={{host}} nix run .#vm -- start
 
 vm-ssh host="nixos":
-    @NIX_DEFAULT_TARGET_HOST={{host}} nix shell ./tools/vm#wrapped -c vm ssh --auto-start
+    @NIX_DEFAULT_TARGET_HOST={{host}} nix run .#vm -- ssh --auto-start

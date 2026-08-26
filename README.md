@@ -18,7 +18,7 @@ just hm-switch host=nixos            # or: nix build .#homeConfigurations.joao.a
 # Development shells
 nix develop .#safe                   # editing env: neovim, parsers, LSPs, formatters
 nix develop .#dev                    # full env: angst CLI, qemu, age, gitleaks, Rust, VM tools
-nix develop .#vm                     # Rust tooling for tools/vm
+nix develop .#vm                     # QEMU VM (Go angst tooling)
 
 # Render theme-aware configs (no Nix rebuild needed)
 angst render                         # write all rendered domain configs
@@ -39,12 +39,13 @@ nix run .#lint-themes                # fast, eval-only theme check
 @lib/            build system, domain framework, host resolution, flake outputs
 @modules/        core NixOS/home/VM modules + age secrets integration
 @profiles/       reusable composition units — selected via the host decl's `profiles` list
-@runtime/        runtime tooling as Nix functions (angst CLI, login-shell, projects-sync, bootstrap-secrets, VM + app scripts)
+@runtime/        runtime tooling as Nix functions + Go CLIs (angst, vm, angst-shell, analyze)
 @themes/         color token definitions (9 themes, strict 13-token schema)
 @toolchains/     language-domain tooling (24 languages: runtime/LSP/formatter/linter/grammar)
-@tools/vm/       standalone Rust workspace for NixOS VM lifecycle (vm-core, vm-cli, vm-mcp)
-@tools/shell/    standalone Rust env switcher (dev/safe shells, no nix at runtime)
-@tools/analyze_flake/  Python flake-analysis report generator (analysis.md)
+@runtime/angst/  Go CLI `angst` (render, watch, projects, vault, ftp, ssh-key, system, boot) — core host orchestration
+@runtime/vm/     Go CLI `vm` (unified guest+host + MCP) — QEMU VM lifecycle; guest scripts in `runtime/vm/*.nix`
+@runtime/shell/  Go CLI `angst-shell` (dev|safe env switcher)
+@runtime/analyze/ Go CLI `analyze` (flake analysis report → analysis.md)
 @githooks/       gitleaks pre-commit / pre-push hooks (install via `just install-hooks`)
 ```
 
@@ -250,24 +251,26 @@ Toolchains are auto-discovered by `lib/resolve.nix` and selected via `toolchains
 
 ### `@tools/` — Standalone Tools
 
-**angst CLI** (`runtime/angst-cli.nix`, packaged as `angst`):
+**angst CLI** (`runtime/angst`, packaged as `angst`):
 - `angst bootstrap-master-password [--host HOST] [--scope personal|work]` — interactive master-password bootstrap; age-encrypts the password to `secrets/master/<host>.age`. The boot service derives the sha-512 hash.
 - `angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]` — batch-evals `.#lib.renderDomainOutputsFor` and writes rendered domain configs.
 - `angst watch [...]` — watchexec-based hot-reload on `themes/`, `domains/`, `hosts/`.
 - `angst projects <add|sync|status|capture|edit-env|rm> ...` — manage the encrypted dev-project store (see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)).
 - `angst ssh-key <generate|verify> --scope personal|work` — generate/verify the shared, age-encrypted scope SSH keys in `secrets/ssh/` (see [`@secrets/`](#secrets-summary)).
 
-**shell CLI** (`tools/shell`, Rust) — standalone env switcher (no nix at runtime): `nix run .#shell -- dev` or `shell safe` after `nix profile install .#shell`.
-
-**vm tool** (`tools/vm`, Rust workspace: `vm-core`, `vm-cli`, `vm-mcp`) — QEMU VM lifecycle with SSH (port 2222 → guest 22), headless mode for CI, automatic SSH key + age key injection, and an MCP server (port 8765, tools `vm_exec`/`vm_status`/`vm_restart`) for AI agent integration.
+**vm CLI** (`runtime/vm`, packaged as `vm` / `vm-tool`) — QEMU VM lifecycle with SSH (port 2222 → guest 22), headless mode for CI, automatic SSH key + age key injection, and an MCP server (port 8765, tools `vm_exec`/`vm_status`/`vm_restart`) for AI agent integration. Guest-side helpers (`age-key`, `ephemeral-ssh`, `home-manager-upgrade`, `nixos-switch`, `home-switch`) are `vm` subcommands (`runtime/vm/*.nix` wrappers).
 
 Commands: `start [--headless]`, `stop`, `restart`, `status`, `logs [-n]`, `ssh [--auto-start] [--tty]`, `exec -- <cmd>`, `copy-to`, `copy-from`, `health`, `mcp {start|stop|restart|status|logs|run-server [--port]}`.
 
 ```bash
-nix run .#vm -- --headless          # or: just vm; DISPLAY set → gtk UI
+nix run .#vm -- start --headless    # or: just vm; DISPLAY set → gtk UI
 nix run .#vm -- ssh                 # connect
 nix run .#vm -- health              # QEMU + port + SSH check
 ```
+
+**shell CLI** (`runtime/shell`, packaged as `angst-shell`) — env switcher (`angst-shell dev|safe`) with tree-sitter setup; Nix wrapper supplies `SHELL_*` env and `PATH`.
+
+**analyze CLI** (`runtime/analyze`, packaged as `analyze`) — flake analysis report (`nix run .#analyze -- --output analysis.md`).
 
 See [openwiki/tools.md](openwiki/tools.md) and [openwiki/operations.md](openwiki/operations.md).
 
@@ -304,7 +307,7 @@ age-encrypted secrets → decrypted at runtime into `~/.secrets/`. The master pa
 
 | Workflow | Runs |
 |---|---|
-| `checks.yml` | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the 10 flake checks + nixfmt + shellfmt + `shell-rust-fmt` + `vm-tests` (`cargo fmt --check && cargo test --workspace --locked`) |
+| `checks.yml` | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the flake checks + nixfmt + shellfmt + Go (`gofmt`/`go vet`/`go test` across `runtime/{angst,vm,shell,analyze}`) |
 | `nvim-tests.yml` | Links `domains/editor/nvim/config` → `~/.config/nvim`, lazy-syncs plugins, runs the plenary adapter test suite |
 | `secret-scan.yml` | gitleaks-action (fetch-depth 0) + trufflehog (`--results=verified,unknown`) |
 | `openwiki-update.yml` | Daily cron + manual: runs `openwiki code --update --print`, opens a PR with `openwiki/` + agent doc changes |
@@ -322,5 +325,5 @@ just hardware host=nixos            # regenerate hardware.nix next to the decl
 just bootstrap-secrets host=nixos   # create/rotate secrets.yaml + password hash
 just analyze                        # regenerate analysis.md
 just install-hooks                  # enable gitleaks git hooks
-just vm host=vm / just vm-ssh host=vm   # VM start / ssh via tools/vm#wrapped
+just vm host=vm / just vm-ssh host=vm   # VM start / ssh via vm CLI
 ```

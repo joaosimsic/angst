@@ -27,7 +27,10 @@ in
     systemd.user.services.angst-projects-sync = {
       Unit = {
         Description = "Sync declared dev projects";
-        After = [ "network-online.target" ];
+        After = [
+          "network-online.target"
+          "angst-provision-ssh-key.service"
+        ];
         Wants = [ "network-online.target" ];
       };
       Service = {

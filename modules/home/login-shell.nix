@@ -53,10 +53,6 @@ in
       ''
     );
 
-    # Link home-files early so dotfiles are deployed even if installPackages
-    # aborts the activation before the built-in linkGeneration step runs.
-    # Must run before 'linkGeneration' so the symlinks it creates already
-    # match what linkGeneration expects (avoiding "would be clobbered").
     home.activation.angstLinkHomeFilesEarly = lib.hm.dag.entryBefore [ "linkGeneration" ] ''
       if [ -n "''${newGenPath:-}" ] && [ -e "$newGenPath/home-files" ]; then
         NEWFILES="$(readlink -e "$newGenPath/home-files")"

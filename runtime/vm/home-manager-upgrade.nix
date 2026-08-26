@@ -1,7 +1,7 @@
 {
   mkScript,
   pkgs,
-  goAngst,
+  goVm,
 }:
 { username }:
 mkScript {
@@ -10,6 +10,6 @@ mkScript {
     systemd
   ];
   text = ''
-    exec ${goAngst}/bin/angst vm home-manager-upgrade --user "${username}"
+    exec ${goVm}/bin/vm home-manager-upgrade --user "${username}"
   '';
 }

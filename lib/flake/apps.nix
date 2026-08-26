@@ -7,20 +7,28 @@ let
     representative
     defaultSystem
     runtime
-    vmOutputs
-    shellTool
+    angstShell
     hmSwitchTool
+    pkgs
     ;
 
   mkApp = program: {
     type = "app";
     inherit program;
   };
+
+  vmApp = pkgs.writeShellApplication {
+    name = "vm";
+    runtimeInputs = [ runtime.vmTool ];
+    text = ''
+      exec ${runtime.vmTool}/bin/vm "$@"
+    '';
+  };
 in
 {
   apps.${defaultSystem} = {
-    vm = mkApp "${vmOutputs.packages.${defaultSystem}.wrapped}/bin/vm";
-    shell = mkApp "${shellTool}/bin/shell";
+    vm = mkApp "${vmApp}/bin/vm";
+    shell = mkApp "${angstShell}/bin/angst-shell";
     hm-switch = mkApp "${hmSwitchTool}/bin/hm-switch";
     angst = mkApp "${runtime.angstCli.bin}";
     render = mkApp "${runtime.apps.render}";

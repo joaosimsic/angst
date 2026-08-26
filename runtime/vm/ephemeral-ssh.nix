@@ -1,13 +1,13 @@
 {
   mkScript,
   pkgs,
-  goAngst,
+  goVm,
 }:
 mkScript {
   name = "angst-vm-ephemeral-ssh";
   runtimeInputs = [ ];
   text = ''
-    exec ${goAngst}/bin/angst vm ephemeral-ssh \
+    exec ${goVm}/bin/vm ephemeral-ssh \
       --mountpoint-bin ${pkgs.util-linux}/bin/mountpoint \
       --mount-bin ${pkgs.util-linux}/bin/mount \
       --rm-bin ${pkgs.coreutils}/bin/rm \

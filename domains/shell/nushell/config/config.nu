@@ -139,8 +139,8 @@ def --wrapped agent [...rest] {
     }
 }
 
-# carapace's `just` spec is broken under nushell (emits `variable cmd not defined`),
-# so route `just` to a native recipe lister via the external-completer wrapper above.
+
+
 def just-completions [] {
     try { ^just --summary } catch { return [] }
     | split row ' '

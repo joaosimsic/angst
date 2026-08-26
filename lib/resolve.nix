@@ -53,7 +53,7 @@ in
     hostname = decl.hostname or "nixos";
     username = decl.username or "user";
     theme = decl.theme or "monochrome";
-    # Default password for unseeded (no age key) systems: "changeme"
+
     password =
       decl.password
         or "$6$7BqkEtUqOq/ylZb5$0dij1Cb/ykQJ8Vqt7SEJ7MMD77gn/ZW0LuLGo6tjU4e3rQcIyoH7q878EU2xXB9Suwh2bV/d/kpWeVl/nbsoe.";

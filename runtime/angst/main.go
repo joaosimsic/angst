@@ -11,7 +11,6 @@ import (
 	"angst/internal/sshkey"
 	"angst/internal/system"
 	"angst/internal/vault"
-	"angst/internal/vm"
 )
 
 func main() {
@@ -49,8 +48,6 @@ func run(args []string) int {
 		return ftp.Run(args)
 	case "vault":
 		return vault.Run(args)
-	case "vm":
-		return vm.Run(args)
 	case "", "-h", "--help":
 		usage()
 		return 0
@@ -75,6 +72,5 @@ func usage() {
   angst provision-app-secret --secrets-dir DIR --slug NAME [--slug NAME ...] [--scopes work[,personal]] [--home DIR]
   angst set-password-hash --username USER --age-path FILE --age-key FILE
   angst ftp <decrypt|mount|unmount|transform> ...
-  angst vm <home-manager-upgrade|ephemeral-ssh|age-key|nixos-switch|home-switch> ...
 `)
 }

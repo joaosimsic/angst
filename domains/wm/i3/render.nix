@@ -41,16 +41,15 @@ in
   {
     path = "domains/wm/i3/config/config";
     text = ''
-      # i3 config - colors from angst theme tokens
+
 
       font pango:${fontFamily} 10
 
-      # Window borders
+
       default_border pixel 2
       default_floating_border pixel 2
       hide_edge_borders smart
 
-      # Theme colors: border, background, text, indicator, child_border
       client.focused          #${t.ansi.info} #${p.background.base} #${p.foreground.base} #${t.ansi.info} #${t.ansi.info}
       client.focused_inactive #${p.dim} #${p.background.base} #${p.accent.base} #${p.dim} #${p.dim}
       client.unfocused        #${p.background.base} #${p.background.base} #${p.accent.base} #${p.background.base} #${p.background.base}

@@ -91,9 +91,14 @@ func clone(gitSSH, remote, target string) error {
 	defer cancel()
 	c := exec.CommandContext(ctx, "git", "clone", remote, target)
 	c.Env = append(os.Environ(), "GIT_SSH_COMMAND="+gitSSH)
-	c.Stdout = nil
-	c.Stderr = nil
-	return c.Run()
+	out, err := c.CombinedOutput()
+	if err != nil {
+		if len(out) > 0 {
+			return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		}
+		return err
+	}
+	return nil
 }
 
 func envKeyDiff(storePath, localPath string) {

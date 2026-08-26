@@ -67,7 +67,11 @@
     ];
   };
   projects = [
+    "advent-of-code"
     "angst"
-  ]; # slug ids (decrypted from projects/*.tar.age via `angst projects import`); real names stay in encrypted metadata
+    "agent"
+    "intelligence/backend"
+    "intelligence/frontend"
+  ];
   secrets = [ "opencode-go-key" ];
 }

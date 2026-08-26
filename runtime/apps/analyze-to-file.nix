@@ -1,14 +1,16 @@
 {
   mkScript,
   pkgs,
+  goAnalyze,
 }:
 mkScript {
   name = "analyze-to-file";
-  runtimeInputs = [
-    pkgs.python3
-    pkgs.git
+  runtimeInputs = with pkgs; [
+    git
+    deadnix
+    statix
   ];
   text = ''
-    cd "$(git rev-parse --show-toplevel)" && exec python3 -m tools.analyze_flake --output analysis.md "$@"
+    cd "$(git rev-parse --show-toplevel)" && exec ${goAnalyze}/bin/analyze --output analysis.md "$@"
   '';
 }
