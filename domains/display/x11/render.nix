@@ -12,7 +12,7 @@ let
 in
 [
   {
-    path = "domains/session/x11/config/xinitrc";
+    path = "domains/display/x11/config/xinitrc";
     text = ''
       #!/bin/sh
 
