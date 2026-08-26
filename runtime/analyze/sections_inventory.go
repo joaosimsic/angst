@@ -124,19 +124,31 @@ func sectionThemeInventory() string {
 func sectionCapabilitiesInventory() string {
 	lines := []string{mdSection(14, "System Feature Inventory")}
 	lines = append(lines, "> **See `nix flake show` for the full list.**\n")
-	sysDir := filepath.Join(repoRoot(), "domains", "system")
-	if !dirExists(sysDir) {
-		return lines[0] + "\n(no domains/system/)"
-	}
-	caps := sortedDirs(sysDir)
+	var caps []string
+	var locs []int
 	total := 0
-	for _, c := range caps {
-		total += len(strings.Split(readNix(filepath.Join(sysDir, c, "system.nix")), "\n"))
+	for _, cat := range []string{"system", "display"} {
+		catDir := filepath.Join(repoRoot(), "domains", cat)
+		if !dirExists(catDir) {
+			continue
+		}
+		for _, name := range sortedDirs(catDir) {
+			p := filepath.Join(catDir, name, "system.nix")
+			if !fileExists(p) {
+				continue
+			}
+			caps = append(caps, cat+"/"+name)
+			loc := len(strings.Split(readNix(p), "\n"))
+			locs = append(locs, loc)
+			total += loc
+		}
+	}
+	if len(caps) == 0 {
+		return lines[0] + "\n(no system/display features)"
 	}
 	lines = append(lines, fmt.Sprintf("- **%d system features**, %d total LOC\n", len(caps), total))
-	for _, c := range caps {
-		loc := len(strings.Split(readNix(filepath.Join(sysDir, c, "system.nix")), "\n"))
-		lines = append(lines, fmt.Sprintf("  - `%s` — %d LOC", c, loc))
+	for i, c := range caps {
+		lines = append(lines, fmt.Sprintf("  - `%s` — %d LOC", c, locs[i]))
 	}
 	return strings.Join(lines, "\n")
 }
@@ -167,21 +179,53 @@ func sectionToolchainInventory() string {
 	return strings.Join(lines, "\n")
 }
 
+func discoverHostDirs() []string {
+	var out []string
+	hostRoot := filepath.Join(repoRoot(), "hosts")
+	if !dirExists(hostRoot) {
+		return out
+	}
+	var walk func(dir string)
+	walk = func(dir string) {
+		if fileExists(filepath.Join(dir, "default.nix")) {
+			rel, _ := filepath.Rel(hostRoot, dir)
+			out = append(out, rel)
+			return
+		}
+		for _, e := range sortedDirs(dir) {
+			sub := filepath.Join(dir, e)
+			if dirExists(sub) {
+				walk(sub)
+			}
+		}
+	}
+	for _, top := range sortedDirs(hostRoot) {
+		walk(filepath.Join(hostRoot, top))
+	}
+	sort.Strings(out)
+	return out
+}
+
 func sectionHostInventory() string {
 	lines := []string{mdSection(16, "Host Inventory")}
 	hostDir := filepath.Join(repoRoot(), "hosts")
 	if !dirExists(hostDir) {
 		return lines[0] + "\n(no hosts/)"
 	}
-	for _, host := range sortedDirs(hostDir) {
-		hPath := filepath.Join(hostDir, host)
-		if !dirExists(hPath) {
-			continue
-		}
-		lines = append(lines, fmt.Sprintf("\n- **%s/**", host))
+	hosts := discoverHostDirs()
+	if len(hosts) == 0 {
+		return lines[0] + "\n(no hosts found)"
+	}
+	for _, rel := range hosts {
+		hPath := filepath.Join(hostDir, rel)
+		lines = append(lines, fmt.Sprintf("\n- **%s/**", rel))
 		for _, f := range globNix(hPath) {
 			loc := len(strings.Split(readNix(f), "\n"))
 			lines = append(lines, fmt.Sprintf("  - `%s` — %d LOC", filepath.Base(f), loc))
+		}
+		if fileExists(filepath.Join(hPath, "hardware.nix")) {
+			loc := len(strings.Split(readNix(filepath.Join(hPath, "hardware.nix")), "\n"))
+			lines = append(lines, fmt.Sprintf("  - `hardware.nix` — %d LOC", loc))
 		}
 	}
 	return strings.Join(lines, "\n")
