@@ -40,6 +40,9 @@ func Run(args []string) int {
 		case "--mem-format":
 			if i+1 < len(args) {
 				memFormat = args[i+1]
+				if memFormat == "json" {
+					memEnabled = true
+				}
 				i++
 			}
 		case "--mem-json":
@@ -60,13 +63,13 @@ func Run(args []string) int {
 	}
 	if memFormat == "json" && memJSONPath == "" {
 		memJSONPath = "analysis-memory.json"
+		memEnabled = true
 	}
 
 	type sec struct {
 		heading string
 		content string
 	}
-	_ = memFormat
 	defs := []struct {
 		heading string
 		fn      func() string

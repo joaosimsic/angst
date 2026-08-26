@@ -59,7 +59,9 @@ func runWithMem(args []string, timeout time.Duration) (int, string, string, int6
 			}
 		}
 		errb = strings.TrimSpace(rssRe.ReplaceAllString(errStr, ""))
-		if errb == "" && rc != 0 {
+		if rc == 0 {
+			errb = ""
+		} else if errb == "" {
 			errb = strings.TrimSpace(errStr)
 		}
 	} else {

@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+var (
+	recRe  = regexp.MustCompile(`\brec\b`)
+	withRe = regexp.MustCompile(`\bwith\b`)
+)
+
 func sectionOptionInventory() string {
 	lines := []string{mdSection(17, "Option Inventory")}
 	mkopt := rgCount("mkOption", true)
@@ -22,8 +27,9 @@ func sectionOptionInventory() string {
 	lines = append(lines, mdSubsection("Option namespace references"))
 	matches := rgOnly(`options\.\w+`)
 	namespaces := map[string]int{}
+	nsRe := regexp.MustCompile(`options\.(\w+)`)
 	for _, m := range matches {
-		sm := regexp.MustCompile(`options\.(\w+)`).FindStringSubmatch(m)
+		sm := nsRe.FindStringSubmatch(m)
 		if sm != nil {
 			namespaces[sm[1]]++
 		}
@@ -201,28 +207,24 @@ func sectionInterestingComplexity() string {
 		}
 		topByMetric["Deepest attrset nesting"] = append(topByMetric["Deepest attrset nesting"], kv{rel, maxBrace})
 
-		recCount := len(regexp.MustCompile(`\brec\b`).FindAllString(text, -1))
+		recCount := len(recRe.FindAllString(text, -1))
 		topByMetric["Most rec blocks"] = append(topByMetric["Most rec blocks"], kv{rel, recCount})
 
-		withCount := len(regexp.MustCompile(`\bwith\b`).FindAllString(text, -1))
+		withCount := len(withRe.FindAllString(text, -1))
 		topByMetric["Most with blocks"] = append(topByMetric["Most with blocks"], kv{rel, withCount})
 
 		maxMkif := 0
-		for _, m := range regexp.MustCompile(`mkIf\s*\(`).FindAllStringIndex(text, -1) {
-			pos := m[1]
-			paren := 0
-			for i := pos; i < pos+200 && i < len(text); i++ {
-				if text[i] == '(' {
-					paren++
-				} else if text[i] == ')' {
-					if paren == 0 {
-						break
-					}
-					paren--
-				}
+		mkIfRe2 := regexp.MustCompile(`\bmkIf\b`)
+		for _, m := range mkIfRe2.FindAllStringIndex(text, -1) {
+			pos := m[0]
+			end := pos + 500
+			if end > len(text) {
+				end = len(text)
 			}
-			if paren > maxMkif {
-				maxMkif = paren
+			window := text[pos:end]
+			cnt := len(mkIfRe2.FindAllString(window, -1))
+			if cnt > maxMkif {
+				maxMkif = cnt
 			}
 		}
 		topByMetric["Deepest mkIf nesting"] = append(topByMetric["Deepest mkIf nesting"], kv{rel, maxMkif})
@@ -279,24 +281,54 @@ func estimateAttrsetSize(text string) int {
 }
 
 func estimateListEntries(text string) int {
-	entries := 0
-	inBracket := 0
+	maxEntries := 0
+	curEntries := 0
+	depth := 0
 	for _, line := range strings.Split(text, "\n") {
 		stripped := strings.TrimSpace(line)
-		if strings.Contains(stripped, "[") {
-			inBracket++
+		if stripped == "" || strings.HasPrefix(stripped, "#") {
 			continue
 		}
-		if inBracket > 0 {
-			if strings.HasSuffix(stripped, "]") && !strings.HasPrefix(stripped, "]") {
-				entries++
+		open := strings.Count(line, "[")
+		close := strings.Count(line, "]")
+		if depth > 0 {
+			if close == 0 {
+				curEntries++
+			} else {
+				if idx := strings.Index(stripped, "]"); idx > 0 {
+					before := strings.TrimSpace(stripped[:idx])
+					if before != "" && before != "[" {
+						curEntries++
+					}
+				}
+				if depth+open-close <= 0 {
+					if curEntries > maxEntries {
+						maxEntries = curEntries
+					}
+					curEntries = 0
+				}
 			}
-			inBracket--
-		} else {
-			entries++
+		} else if open > 0 && close == 0 {
+			curEntries = 0
+		} else if open > 0 && close > 0 && open == close {
+			inside := strings.TrimSpace(line[strings.Index(line, "[")+1 : strings.LastIndex(line, "]")])
+			if inside != "" {
+				parts := strings.Fields(inside)
+				if len(parts) > maxEntries {
+					maxEntries = len(parts)
+				}
+			}
+		}
+		depth += open - close
+		if depth < 0 {
+			depth = 0
+			curEntries = 0
 		}
 	}
-	return entries
+	if curEntries > maxEntries {
+		maxEntries = curEntries
+	}
+	return maxEntries
 }
 
 func longestString(text string) int {

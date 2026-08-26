@@ -19,6 +19,8 @@ import (
 var rgExcludes = []string{
 	"-g", "!.git",
 	"-g", "!result",
+	"-g", "!result-*",
+	"-g", "!.direnv",
 }
 
 func repoRoot() string { return paths.RepoRoot() }
@@ -153,7 +155,7 @@ func findNixFiles() []string {
 		}
 		if info.IsDir() {
 			base := filepath.Base(p)
-			if base == ".git" || base == "result" {
+			if base == ".git" || base == "result" || strings.HasPrefix(base, "result-") || base == ".direnv" {
 				return filepath.SkipDir
 			}
 			rel, _ := filepath.Rel(root, p)

@@ -1,0 +1,74 @@
+[
+  {
+    "attr": "checks.x86_64-linux.build-all",
+    "rc": 0,
+    "maxRSSKiB": 6438684,
+    "wallSeconds": 90.509582297
+  },
+  {
+    "attr": "checks.x86_64-linux.eval-all",
+    "rc": 0,
+    "maxRSSKiB": 4071728,
+    "wallSeconds": 68.210482506
+  },
+  {
+    "attr": "homeConfigurations.ci.activationPackage",
+    "rc": 0,
+    "maxRSSKiB": 974208,
+    "wallSeconds": 14.443073838
+  },
+  {
+    "attr": "homeConfigurations.home.activationPackage",
+    "rc": 0,
+    "maxRSSKiB": 1402440,
+    "wallSeconds": 22.228308099
+  },
+  {
+    "attr": "homeConfigurations.mint.activationPackage",
+    "rc": 0,
+    "maxRSSKiB": 1421844,
+    "wallSeconds": 23.121939033
+  },
+  {
+    "attr": "homeConfigurations.nixos.activationPackage",
+    "rc": 0,
+    "maxRSSKiB": 1421588,
+    "wallSeconds": 22.912498842
+  },
+  {
+    "attr": "homeConfigurations.runner-theme-override-test.activationPackage",
+    "rc": 0,
+    "maxRSSKiB": 973816,
+    "wallSeconds": 14.073027305
+  },
+  {
+    "attr": "homeConfigurations.runner.activationPackage",
+    "rc": 0,
+    "maxRSSKiB": 973924,
+    "wallSeconds": 12.942564444
+  },
+  {
+    "attr": "homeConfigurations.vm.activationPackage",
+    "rc": 0,
+    "maxRSSKiB": 1421820,
+    "wallSeconds": 21.704051354
+  },
+  {
+    "attr": "nixosConfigurations.ci.config.system.build.toplevel",
+    "rc": 0,
+    "maxRSSKiB": 1106120,
+    "wallSeconds": 11.175733337
+  },
+  {
+    "attr": "nixosConfigurations.nixos.config.system.build.toplevel",
+    "rc": 0,
+    "maxRSSKiB": 1457180,
+    "wallSeconds": 19.804139201
+  },
+  {
+    "attr": "nixosConfigurations.vm.config.system.build.toplevel",
+    "rc": 0,
+    "maxRSSKiB": 1456536,
+    "wallSeconds": 18.89487703
+  }
+]

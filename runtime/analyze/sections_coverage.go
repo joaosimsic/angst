@@ -13,6 +13,10 @@ import (
 
 var domainRenderPathRe = regexp.MustCompile(`domains/([^/]+/[^/]+)/`)
 
+var renderStartRe = regexp.MustCompile(`=\s*''\s*$`)
+var renderEndRe = regexp.MustCompile(`''\s*[;\]})@]?\s*$`)
+var renderPathRe = regexp.MustCompile(`path\s*=\s*"[^"]+"`)
+
 func sectionThemeDomainCoverage(noEvalCost bool) string {
 	lines := []string{mdSection(29, "Theme \u00d7 Domain Coverage")}
 	lines = append(lines, "> \u2713 = render produces output, \u2717 = render throws, \u2014 = no render.nix\n")
@@ -78,8 +82,10 @@ func sectionThemeDomainCoverage(noEvalCost bool) string {
 			for dn := range renderDomainNames {
 				if failing != "" && dn == failing {
 					matrix[theme][dn] = "\u2717"
-				} else {
-					matrix[theme][dn] = ""
+				} else if failing == "" {
+					matrix[theme][dn] = "?"
+				} else if matrix[theme][dn] == "" {
+					matrix[theme][dn] = "?"
 				}
 			}
 			fmt.Fprintf(os.Stderr, "  [%d/%d] theme coverage: %s done    \n", ti+1, len(themes), theme)
@@ -188,21 +194,20 @@ func sectionCheckResults(noEvalCost bool) string {
 
 func countRenderOutputLines(renderPath string) (int, int) {
 	text := readNix(renderPath)
-	fileCount := 0
 	totalLines := 0
 	inBlock := false
 	blockLines := 0
 	for _, line := range strings.Split(text, "\n") {
 		stripped := strings.TrimSpace(line)
 		if !inBlock {
-			if matched, _ := regexp.MatchString(`=\s*''\s*$`, stripped); matched {
+			if renderStartRe.MatchString(stripped) {
 				inBlock = true
 				blockLines = 0
 				continue
 			}
 		}
 		if inBlock {
-			if matched, _ := regexp.MatchString(`''\s*[;\]})@]?\s*$`, stripped); matched {
+			if renderEndRe.MatchString(stripped) {
 				inBlock = false
 				totalLines += blockLines
 				continue
@@ -210,7 +215,7 @@ func countRenderOutputLines(renderPath string) (int, int) {
 			blockLines++
 		}
 	}
-	fileCount = len(regexp.MustCompile(`path\s*=\s*"[^"]+"`).FindAllString(text, -1))
+	fileCount := len(renderPathRe.FindAllString(text, -1))
 	return fileCount, totalLines
 }
 
@@ -257,7 +262,7 @@ func sectionGrowthVelocity() string {
 		added, removed, commits int
 	}
 	monthly := map[string]*monthStat{}
-	var currentMonth *string
+	var currentMonth string
 	for _, line := range strings.Split(out, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -265,17 +270,17 @@ func sectionGrowthVelocity() string {
 		}
 		if strings.HasPrefix(line, "COMMIT ") {
 			parts := strings.SplitN(line, " ", 2)
-			if len(parts) == 2 {
+			if len(parts) == 2 && len(parts[1]) >= 7 {
 				m := parts[1][:7]
 				if _, ok := monthly[m]; !ok {
 					monthly[m] = &monthStat{}
 				}
 				monthly[m].commits++
-				currentMonth = &m
+				currentMonth = m
 			}
 			continue
 		}
-		if currentMonth != nil && strings.Contains(line, "\t") {
+		if currentMonth != "" && strings.Contains(line, "\t") {
 			parts := strings.Split(line, "\t")
 			if len(parts) >= 2 {
 				added := 0
@@ -286,8 +291,8 @@ func sectionGrowthVelocity() string {
 				if parts[1] != "-" {
 					removed, _ = strconv.Atoi(parts[1])
 				}
-				monthly[*currentMonth].added += added
-				monthly[*currentMonth].removed += removed
+				monthly[currentMonth].added += added
+				monthly[currentMonth].removed += removed
 			}
 		}
 	}

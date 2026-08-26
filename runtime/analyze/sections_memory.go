@@ -36,10 +36,7 @@ func sectionEvalMemory(noEvalCost bool, memEnabled bool, memHosts string, memJSO
 	for i, attr := range attrs {
 		fmt.Fprintf(os.Stderr, "  [%d/%d] mem: %s...\n", i+1, len(attrs), attr)
 		args := []string{"nix", "eval", ".#" + attr, "--json", "--no-warn-dirty"}
-		if strings.HasPrefix(attr, "checks.") {
-			args = []string{"nix", "build", "--no-link", ".#" + attr, "--no-warn-dirty"}
-		}
-		rc, _, errStr, mem, wall := runWithMem(args, 120*time.Second)
+		rc, _, errStr, mem, wall := runWithMem(args, 180*time.Second)
 		if errStr != "" && len(errStr) > 400 {
 			errStr = errStr[:400]
 		}
@@ -102,7 +99,6 @@ func buildMemAttrs(filter map[string]bool) []string {
 	var attrs []string
 
 	var allNixos, allHome, allChecks []string
-	needNixos := wantAll || filter[defaultMemHost] || filter["vm"] || filter["ci"]
 	if wantAll {
 		allNixos = nixEvalAttrNames("nixosConfigurations")
 		allHome = nixEvalAttrNames("homeConfigurations")
@@ -135,19 +131,28 @@ func buildMemAttrs(filter map[string]bool) []string {
 				attrs[i] = a + ".activationPackage"
 			}
 		}
-		choose(allChecks, "checks.x86_64-linux.")
+		for _, c := range []string{"eval-all", "build-all"} {
+			for _, n := range allChecks {
+				if n == c {
+					attrs = append(attrs, "checks.x86_64-linux."+c)
+				}
+			}
+		}
 	} else if len(filter) > 0 {
+		checkSet := map[string]bool{}
+		for _, n := range allChecks {
+			checkSet[n] = true
+		}
 		for h := range filter {
 			if h == "checks" || h == "all" {
 				continue
 			}
-			if h == "nixos" || h == "vm" || h == "ci" || h == defaultMemHost {
-				attrs = append(attrs, "nixosConfigurations."+h+".config.system.build.toplevel")
-				if h == defaultMemHost {
-					attrs = append(attrs, "homeConfigurations."+h+".activationPackage")
-				}
+			if checkSet[h] {
+				continue
 			}
-			if len(allChecks) > 0 && filter[h] {
+			attrs = append(attrs, "nixosConfigurations."+h+".config.system.build.toplevel")
+			if h == defaultMemHost {
+				attrs = append(attrs, "homeConfigurations."+h+".activationPackage")
 			}
 		}
 		if len(allChecks) > 0 {
@@ -157,7 +162,6 @@ func buildMemAttrs(filter map[string]bool) []string {
 			allChecks = nixEvalAttrNames("checks.x86_64-linux")
 			choose(allChecks, "checks.x86_64-linux.")
 		}
-		_ = needNixos
 	}
 	seen := map[string]bool{}
 	var uniq []string

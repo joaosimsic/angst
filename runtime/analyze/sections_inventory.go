@@ -10,15 +10,19 @@ import (
 
 func sectionDuplication() string {
 	lines := []string{mdSection(10, "Duplication Hotspots")}
-	patterns := map[string]string{
-		"userEnv parsing (parseEnv.nix)": `parseEnv\.nix|userEnv\s*=|builtins\.pathExists.*user\.env`,
-		`"x86_64-linux" hardcoded`:        `x86_64-linux`,
-		`"proj/angst" hardcoded`:          `proj/angst`,
-		`"allowUnfree" hardcoded`:         `allowUnfree`,
+	patterns := []struct {
+		label string
+		pat   string
+	}{
+		{"userEnv parsing (parseEnv.nix)", `parseEnv\.nix|userEnv\s*=|builtins\.pathExists.*user\.env`},
+		{`"x86_64-linux" hardcoded`, `x86_64-linux`},
+		{`"proj/angst" hardcoded`, `proj/angst`},
+		{`"allowUnfree" hardcoded`, `allowUnfree`},
 	}
-	for label, pat := range patterns {
-		lines = append(lines, mdSubsection(label))
-		files := rgList(pat, false)
+	for _, p := range patterns {
+		lines = append(lines, mdSubsection(p.label))
+		files := rgList(p.pat, false)
+		sort.Strings(files)
 		if len(files) > 0 {
 			for _, f := range files {
 				lines = append(lines, fmt.Sprintf("- `%s`", f))
@@ -219,11 +223,17 @@ func sectionHostInventory() string {
 	for _, rel := range hosts {
 		hPath := filepath.Join(hostDir, rel)
 		lines = append(lines, fmt.Sprintf("\n- **%s/**", rel))
+		seen := map[string]bool{}
 		for _, f := range globNix(hPath) {
+			base := filepath.Base(f)
+			if seen[base] {
+				continue
+			}
+			seen[base] = true
 			loc := len(strings.Split(readNix(f), "\n"))
-			lines = append(lines, fmt.Sprintf("  - `%s` — %d LOC", filepath.Base(f), loc))
+			lines = append(lines, fmt.Sprintf("  - `%s` — %d LOC", base, loc))
 		}
-		if fileExists(filepath.Join(hPath, "hardware.nix")) {
+		if !seen["hardware.nix"] && fileExists(filepath.Join(hPath, "hardware.nix")) {
 			loc := len(strings.Split(readNix(filepath.Join(hPath, "hardware.nix")), "\n"))
 			lines = append(lines, fmt.Sprintf("  - `hardware.nix` — %d LOC", loc))
 		}
