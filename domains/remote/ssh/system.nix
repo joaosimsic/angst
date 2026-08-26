@@ -38,9 +38,7 @@ in
           PasswordAuthentication = cfg.server.passwordAuthentication;
           PermitRootLogin = "no";
           AllowAgentForwarding = false;
-          
-          
-          
+
           MaxStartups = "100:30:200";
         };
       };

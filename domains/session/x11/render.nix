@@ -16,7 +16,7 @@ in
     text = ''
       #!/bin/sh
 
-      
+
 
       ${lib.optionalString (m ? name && m ? resolution) ''
         xrandr --output ${m.name} \

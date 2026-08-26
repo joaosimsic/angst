@@ -13,7 +13,7 @@ in
   {
     path = "domains/terminal/tmux/config/tmux.conf";
     text = ''
-      
+
 
       set -g default-terminal "tmux-256color"
       set -ga terminal-overrides ",*256col*:Tc"

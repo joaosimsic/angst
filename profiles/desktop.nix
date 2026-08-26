@@ -1,7 +1,6 @@
 {
   enable = [
-    
-    
+
     "launcher.rofi"
     "terminal.ghostty"
     "session.x11"

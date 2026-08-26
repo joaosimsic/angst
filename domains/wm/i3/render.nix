@@ -41,20 +41,19 @@ in
   {
     path = "domains/wm/i3/config/config";
     text = ''
-      
+
 
       font pango:${fontFamily} 10
 
-      
+
       default_border pixel 2
       default_floating_border pixel 2
       hide_edge_borders smart
 
-      
-      client.focused          
-      client.focused_inactive 
-      client.unfocused        
-      client.urgent           
+      client.focused          #${t.ansi.info} #${p.background.base} #${p.foreground.base} #${t.ansi.info} #${t.ansi.info}
+      client.focused_inactive #${p.dim} #${p.background.base} #${p.accent.base} #${p.dim} #${p.dim}
+      client.unfocused        #${p.background.base} #${p.background.base} #${p.accent.base} #${p.background.base} #${p.background.base}
+      client.urgent           #${t.ansi.error} #${p.background.base} #${t.ansi.error} #${t.ansi.warn} #${t.ansi.warn}
 
       set $mod Mod4
 
@@ -132,13 +131,13 @@ in
           position top
           font pango:${fontFamily} 10
           colors {
-              background 
-              statusline 
-              separator  
-              focused_workspace  
-              active_workspace   
-              inactive_workspace 
-              urgent_workspace   
+              background #${p.background.base}
+              statusline #${p.foreground.base}
+              separator  #${p.accent.base}
+              focused_workspace  #${p.background.base} #${p.background.base} #${p.foreground.base}
+              active_workspace   #${p.background.base} #${p.background.base} #${p.foreground.variant}
+              inactive_workspace #${p.background.base} #${p.background.base} #${p.accent.base}
+              urgent_workspace   #${t.ansi.error} #${p.background.base} #${p.foreground.base}
           }
       }
     '';

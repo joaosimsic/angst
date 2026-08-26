@@ -41,10 +41,10 @@ let
           mkdir -p "$out/${lang}"
           cp -r ${grammar}/queries/* "$out/${lang}/"
         fi
-        
-        
-        
-        
+
+
+
+
         if [ -d "$out/${lang}/${lang}" ] && ! compgen -G "$out/${lang}/*.scm" >/dev/null; then
           cp -r "$out/${lang}/${lang}"/. "$out/${lang}/"
           chmod -R u+w "$out/${lang}/${lang}"
@@ -52,16 +52,16 @@ let
         fi
       ''
     ) grammars}
-    
-    
-    
+
+
+
     if [ -f "$out/cpp/highlights.scm" ] && ! head -1 "$out/cpp/highlights.scm" | grep -q 'inherits: c'; then
       printf '; inherits: c\n\n' | cat - "$out/cpp/highlights.scm" > "$out/cpp/highlights.scm.tmp"
       mv "$out/cpp/highlights.scm.tmp" "$out/cpp/highlights.scm"
     fi
-    
-    
-    
+
+
+
     for d in "$out"/*/; do
       lang=$(basename "$d")
       if [ -d "$d/$lang" ]; then

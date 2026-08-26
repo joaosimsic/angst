@@ -53,10 +53,6 @@ in
       ''
     );
 
-    
-    
-    
-    
     home.activation.angstLinkHomeFilesEarly = lib.hm.dag.entryBefore [ "linkGeneration" ] ''
       if [ -n "''${newGenPath:-}" ] && [ -e "$newGenPath/home-files" ]; then
         NEWFILES="$(readlink -e "$newGenPath/home-files")"
