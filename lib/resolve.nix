@@ -55,10 +55,7 @@ let
       };
   domainsModule = import ./domains/module.nix { };
   domainsLib =
-    if domainsLibOverride != null then
-      domainsLibOverride
-    else
-      domainsScan // domainsModule;
+    if domainsLibOverride != null then domainsLibOverride else domainsScan // domainsModule;
 
   _toolchains = decl.toolchains or "*";
   _bareNames = builtins.attrNames _tcIndex;
