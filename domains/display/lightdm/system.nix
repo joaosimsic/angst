@@ -15,6 +15,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    environment.etc."angst-lightdm-marker".text = "marker";
     assertions = [
       {
         assertion = config.domains.system.graphical.enable;
@@ -37,6 +38,7 @@ in
           enable = true;
           extraConfig = ''
             user-background = false
+            session=angst-x11
           '';
         };
       }
