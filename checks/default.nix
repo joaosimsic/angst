@@ -109,15 +109,9 @@ let
           builtins.removeAttrs self.homeConfigurations excludedHomes
         )
       );
+      allDrvs = nixosDrvs ++ homeDrvs;
     in
-    pkgs.runCommand "build-all-configs"
-      {
-        nativeBuildInputs = nixosDrvs ++ homeDrvs;
-      }
-      ''
-        mkdir -p "$out"
-        echo "built all configurations" > "$out/ok"
-      '';
+    pkgs.writeText "build-all-configs" (builtins.concatStringsSep "\n" (map (d: "${d}") allDrvs));
 in
 {
   check-password = checkPassword;

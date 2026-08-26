@@ -7,6 +7,10 @@ import (
 )
 
 
+var commitHashRe = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
+
+var onelineCommitRe = regexp.MustCompile(`^[0-9a-f]{7,40}(\s|$)`)
+
 func gitChurn() map[string]int {
 	out := gitLog([]string{"*.nix", "*.sh", "*.rs"}, "1 year ago")
 	churn := map[string]int{}
@@ -14,15 +18,13 @@ func gitChurn() map[string]int {
 		if line == "" {
 			continue
 		}
-		if line[0] >= '0' && line[0] <= '9' || strings.HasPrefix(line, "commit ") {
+		if commitHashRe.MatchString(line) || onelineCommitRe.MatchString(line) || strings.HasPrefix(line, "commit ") {
 			continue
 		}
 		churn[line]++
 	}
 	return churn
 }
-
-var commitHashRe = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
 
 
 

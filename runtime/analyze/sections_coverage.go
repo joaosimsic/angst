@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -11,6 +12,10 @@ import (
 )
 
 var domainRenderPathRe = regexp.MustCompile(`domains/([^/]+/[^/]+)/`)
+
+var renderStartRe = regexp.MustCompile(`=\s*''\s*$`)
+var renderEndRe = regexp.MustCompile(`''\s*[;\]})@]?\s*$`)
+var renderPathRe = regexp.MustCompile(`path\s*=\s*"[^"]+"`)
 
 func sectionThemeDomainCoverage(noEvalCost bool) string {
 	lines := []string{mdSection(29, "Theme \u00d7 Domain Coverage")}
@@ -40,7 +45,8 @@ func sectionThemeDomainCoverage(noEvalCost bool) string {
 		return strings.Join(lines, "\n")
 	}
 	matrix := map[string]map[string]string{}
-	for _, theme := range themes {
+	for ti, theme := range themes {
+		fmt.Fprintf(os.Stderr, "  [%d/%d] theme coverage: %s...\n", ti+1, len(themes), theme)
 		matrix[theme] = map[string]string{}
 		for _, dn := range domainNames {
 			if renderDomainNames[dn] {
@@ -50,8 +56,8 @@ func sectionThemeDomainCoverage(noEvalCost bool) string {
 			}
 		}
 		rc, out, errStr := runExec([]string{
-			"nix", "eval", "--apply", fmt.Sprintf(`f: f "generic" "%s"`, theme),
-			"--raw", ".#lib.renderDomainOutputPathsFor", "--no-warn-dirty",
+			"nix", "eval", "--apply", fmt.Sprintf(`f: builtins.concatStringsSep "\n" (map (o: o.path) (f "%s"))`, theme),
+			"--raw", ".#lib.renderDomainOutputsFor", "--no-warn-dirty",
 		}, 30*time.Second)
 		if rc == 0 && strings.TrimSpace(out) != "" {
 			covered := map[string]bool{}
@@ -67,6 +73,7 @@ func sectionThemeDomainCoverage(noEvalCost bool) string {
 					matrix[theme][dn] = "\u2717"
 				}
 			}
+			fmt.Fprintf(os.Stderr, "  [%d/%d] theme coverage: %s done    \n", ti+1, len(themes), theme)
 		} else {
 			failing := ""
 			if m := domainRenderPathRe.FindStringSubmatch(errStr); m != nil {
@@ -75,10 +82,13 @@ func sectionThemeDomainCoverage(noEvalCost bool) string {
 			for dn := range renderDomainNames {
 				if failing != "" && dn == failing {
 					matrix[theme][dn] = "\u2717"
-				} else {
-					matrix[theme][dn] = ""
+				} else if failing == "" {
+					matrix[theme][dn] = "?"
+				} else if matrix[theme][dn] == "" {
+					matrix[theme][dn] = "?"
 				}
 			}
+			fmt.Fprintf(os.Stderr, "  [%d/%d] theme coverage: %s done    \n", ti+1, len(themes), theme)
 		}
 	}
 	headers := append([]string{"Theme"}, domainNames...)
@@ -113,13 +123,13 @@ func sectionDomainFeatures() string {
 		rows = append(rows, []any{
 			dn,
 			checkMark(fileExists(filepath.Join(d, "render.nix"))),
-			checkMark(fileExists(filepath.Join(d, "nixos.nix"))),
+			checkMark(fileExists(filepath.Join(d, "system.nix")) || fileExists(filepath.Join(d, "home.nix"))),
 			checkMark(dirExists(filepath.Join(d, "config"))),
-			checkMark(fileExists(filepath.Join(d, "module.nix"))),
+			checkMark(fileExists(filepath.Join(d, "render.nix")) || fileExists(filepath.Join(d, "home.nix")) || fileExists(filepath.Join(d, "system.nix"))),
 		})
 	}
 	sort.Slice(rows, func(i, j int) bool { return fmt.Sprintf("%v", rows[i][0]) < fmt.Sprintf("%v", rows[j][0]) })
-	lines = append(lines, mdTable([]string{"Domain", "render", "nixos", "config/", "module"}, rows))
+	lines = append(lines, mdTable([]string{"Domain", "render", "system/home", "config/", "module"}, rows))
 	return strings.Join(lines, "\n")
 }
 
@@ -144,7 +154,8 @@ func sectionCheckResults(noEvalCost bool) string {
 	sort.Strings(checkNames)
 	passCount, failCount := 0, 0
 	rows := [][]any{}
-	for _, name := range checkNames {
+	for ci, name := range checkNames {
+		fmt.Fprintf(os.Stderr, "  [%d/%d] checks: %s...\n", ci+1, len(checkNames), name)
 		start := time.Now()
 		rc, out, errStr := runExec([]string{"nix", "build", "--no-link", ".#checks.x86_64-linux." + name, "--no-warn-dirty"}, 90*time.Second)
 		elapsed := time.Since(start).Seconds()
@@ -165,6 +176,7 @@ func sectionCheckResults(noEvalCost bool) string {
 			passCount++
 		}
 		rows = append(rows, []any{fmt.Sprintf("`%s`", name), status, fmt.Sprintf("%.2fs", elapsed), detail})
+		fmt.Fprintf(os.Stderr, "  [%d/%d] checks: %s done %s    \n", ci+1, len(checkNames), name, status)
 	}
 	lines = append(lines, mdTable([]string{"Check", "Result", "Time", "Details"}, rows))
 	lines = append(lines, fmt.Sprintf("\n**%d passed, %d failed**\n", passCount, failCount))
@@ -182,21 +194,20 @@ func sectionCheckResults(noEvalCost bool) string {
 
 func countRenderOutputLines(renderPath string) (int, int) {
 	text := readNix(renderPath)
-	fileCount := 0
 	totalLines := 0
 	inBlock := false
 	blockLines := 0
 	for _, line := range strings.Split(text, "\n") {
 		stripped := strings.TrimSpace(line)
 		if !inBlock {
-			if matched, _ := regexp.MatchString(`=\s*''\s*$`, stripped); matched {
+			if renderStartRe.MatchString(stripped) {
 				inBlock = true
 				blockLines = 0
 				continue
 			}
 		}
 		if inBlock {
-			if matched, _ := regexp.MatchString(`''\s*[;\]})@]?\s*$`, stripped); matched {
+			if renderEndRe.MatchString(stripped) {
 				inBlock = false
 				totalLines += blockLines
 				continue
@@ -204,7 +215,7 @@ func countRenderOutputLines(renderPath string) (int, int) {
 			blockLines++
 		}
 	}
-	fileCount = len(regexp.MustCompile(`path\s*=\s*"[^"]+"`).FindAllString(text, -1))
+	fileCount := len(renderPathRe.FindAllString(text, -1))
 	return fileCount, totalLines
 }
 
@@ -251,7 +262,7 @@ func sectionGrowthVelocity() string {
 		added, removed, commits int
 	}
 	monthly := map[string]*monthStat{}
-	var currentMonth *string
+	var currentMonth string
 	for _, line := range strings.Split(out, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -259,17 +270,17 @@ func sectionGrowthVelocity() string {
 		}
 		if strings.HasPrefix(line, "COMMIT ") {
 			parts := strings.SplitN(line, " ", 2)
-			if len(parts) == 2 {
+			if len(parts) == 2 && len(parts[1]) >= 7 {
 				m := parts[1][:7]
 				if _, ok := monthly[m]; !ok {
 					monthly[m] = &monthStat{}
 				}
 				monthly[m].commits++
-				currentMonth = &m
+				currentMonth = m
 			}
 			continue
 		}
-		if currentMonth != nil && strings.Contains(line, "\t") {
+		if currentMonth != "" && strings.Contains(line, "\t") {
 			parts := strings.Split(line, "\t")
 			if len(parts) >= 2 {
 				added := 0
@@ -280,8 +291,8 @@ func sectionGrowthVelocity() string {
 				if parts[1] != "-" {
 					removed, _ = strconv.Atoi(parts[1])
 				}
-				monthly[*currentMonth].added += added
-				monthly[*currentMonth].removed += removed
+				monthly[currentMonth].added += added
+				monthly[currentMonth].removed += removed
 			}
 		}
 	}

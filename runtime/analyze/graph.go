@@ -24,7 +24,7 @@ func parseImports(text, baseDir string) []string {
 			continue
 		}
 		full := filepath.Clean(filepath.Join(baseDir, raw))
-		for _, candidate := range []string{full, full + ".nix"} {
+		for _, candidate := range []string{full, full + ".nix", filepath.Join(full, "default.nix")} {
 			if filepath.Ext(candidate) != ".nix" {
 				continue
 			}
@@ -64,28 +64,27 @@ func transitiveDependents(fanOut map[string][]string) map[string]int {
 			allNodes[d] = true
 		}
 	}
-	memo := map[string]int{}
-	var closure func(node string, visiting map[string]bool) int
-	closure = func(node string, visiting map[string]bool) int {
-		if v, ok := memo[node]; ok {
-			return v
-		}
-		if visiting[node] {
-			return 0
-		}
-		visiting[node] = true
-		result := 0
-		for dep := range reverse[node] {
-			result++
-			result += closure(dep, visiting)
-		}
-		memo[node] = result
-		delete(visiting, node)
-		return result
-	}
 	out := map[string]int{}
 	for node := range allNodes {
-		out[node] = closure(node, map[string]bool{})
+		visited := map[string]bool{}
+		queue := []string{}
+		for dep := range reverse[node] {
+			queue = append(queue, dep)
+		}
+		for len(queue) > 0 {
+			cur := queue[0]
+			queue = queue[1:]
+			if visited[cur] {
+				continue
+			}
+			visited[cur] = true
+			for nxt := range reverse[cur] {
+				if !visited[nxt] {
+					queue = append(queue, nxt)
+				}
+			}
+		}
+		out[node] = len(visited)
 	}
 	return out
 }
@@ -183,7 +182,7 @@ func fileLayer(abs string) int {
 			}
 		}
 	}
-	return 5
+	return len(layerOrder)
 }
 
 func checkLayerViolations(fanOut map[string][]string) [][2]string {

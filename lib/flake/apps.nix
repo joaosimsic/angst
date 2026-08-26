@@ -31,14 +31,14 @@ in
     shell = mkApp "${angstShell}/bin/angst-shell";
     hm-switch = mkApp "${hmSwitchTool}/bin/hm-switch";
     angst = mkApp "${runtime.angstCli.bin}";
-    render = mkApp "${runtime.apps.render}";
-    watch = mkApp "${runtime.apps.watch}";
-    check = mkApp "${runtime.apps.check}";
-    lint-themes = mkApp "${runtime.apps.lint-themes}";
-    lint-desktop = mkApp "${runtime.apps.lint-desktop { system = defaultSystem; }}";
-    lint-shell = mkApp "${runtime.apps.lint-shell { system = defaultSystem; }}";
-    analyze = mkApp "${runtime.apps.analyze}";
-    analyze-to-file = mkApp "${runtime.apps.analyze-to-file}";
+    render = mkApp "${runtime.apps.render.bin}";
+    watch = mkApp "${runtime.apps.watch.bin}";
+    check = mkApp "${runtime.apps.check.bin}";
+    lint-themes = mkApp "${runtime.apps.lint-themes.bin}";
+    lint-desktop = mkApp "${(runtime.apps.lint-desktop { system = defaultSystem; }).bin}";
+    lint-shell = mkApp "${(runtime.apps.lint-shell { system = defaultSystem; }).bin}";
+    analyze = mkApp "${runtime.apps.analyze.bin}";
+    analyze-to-file = mkApp "${runtime.apps.analyze-to-file.bin}";
   }
   // (
     if representative != null then
@@ -47,7 +47,7 @@ in
           let
             target = representative.username;
           in
-          mkApp "${runtime.apps.ssh-deploy { username = target; }}";
+          mkApp "${(runtime.apps.ssh-deploy { username = target; }).bin}";
       }
     else
       { }

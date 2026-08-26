@@ -19,10 +19,14 @@ let
       null;
   defaultSystem = if representative != null then representative.system else "x86_64-linux";
 
-  pkgs = import inputs.nixpkgs {
-    system = defaultSystem;
-    config = import ../nixpkgs-config.nix;
-  };
+  pkgs =
+    if representative != null && representative ? pkgs then
+      representative.pkgs
+    else
+      import inputs.nixpkgs {
+        system = defaultSystem;
+        config = import ../nixpkgs-config.nix;
+      };
 
   profilesFor =
     host:

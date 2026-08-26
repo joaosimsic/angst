@@ -43,6 +43,7 @@ var expectedHeadings = []string{
 	"32. Rendered Output Sizes",
 	"33. Growth Velocity",
 	"34. Theme Token Usage Audit",
+	"35. Eval Memory (peak RSS)",
 }
 
 func TestAnalyzeHeadings(t *testing.T) {
@@ -58,8 +59,8 @@ func TestAnalyzeHeadings(t *testing.T) {
 	text := string(data)
 	re := regexp.MustCompile(`(?m)^## \d+\. .+`)
 	matches := re.FindAllString(text, -1)
-	if len(matches) != 34 {
-		t.Fatalf("expected 34 sections, got %d: %v", len(matches), matches)
+	if len(matches) != 35 {
+		t.Fatalf("expected 35 sections, got %d: %v", len(matches), matches)
 	}
 	for i, h := range expectedHeadings {
 		want := "## " + h

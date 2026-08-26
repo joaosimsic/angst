@@ -483,17 +483,7 @@ func min(a, b int) int {
 
 func sectionConfigMatrix() string {
 	lines := []string{mdSection(5, "Configuration Matrix")}
-	hostsDir := filepath.Join(repoRoot(), "hosts")
-	var hosts []string
-	if dirExists(hostsDir) {
-		entries, _ := os.ReadDir(hostsDir)
-		for _, e := range entries {
-			if e.IsDir() {
-				hosts = append(hosts, e.Name())
-			}
-		}
-	}
-	sort.Strings(hosts)
+	hosts := discoverHostDirs()
 
 	themes := discoverThemes()
 	domains := discoverDomains()
@@ -554,7 +544,7 @@ func sectionRenderCoverage() string {
 	}
 	labels := map[string]string{
 		"render":  "render.nix",
-		"nixos":   "nixos.nix",
+		"nixos":   "system.nix",
 		"checks":   "domain checks",
 	}
 	rows := [][]any{}

@@ -21,6 +21,7 @@ let
 
   profileMap = {
     base = import ./base.nix;
+    ci = import ./ci.nix;
     desktop = import ./desktop.nix;
     development = import ./development.nix;
     embedded = import ./embedded.nix;
