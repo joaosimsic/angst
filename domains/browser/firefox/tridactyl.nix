@@ -296,6 +296,24 @@ let
     unbind <C-l>
     bind <C-h> tabprev
     bind <C-l> tabnext
+    bind <C-1> tabnext_gt 1
+    bind <C-2> tabnext_gt 2
+    bind <C-3> tabnext_gt 3
+    bind <C-4> tabnext_gt 4
+    bind <C-5> tabnext_gt 5
+    bind <C-6> tabnext_gt 6
+    bind <C-7> tabnext_gt 7
+    bind <C-8> tabnext_gt 8
+    bind <C-9> tabnext_gt 9
+    bind --mode=browser <C-1> tabnext_gt 1
+    bind --mode=browser <C-2> tabnext_gt 2
+    bind --mode=browser <C-3> tabnext_gt 3
+    bind --mode=browser <C-4> tabnext_gt 4
+    bind --mode=browser <C-5> tabnext_gt 5
+    bind --mode=browser <C-6> tabnext_gt 6
+    bind --mode=browser <C-7> tabnext_gt 7
+    bind --mode=browser <C-8> tabnext_gt 8
+    bind --mode=browser <C-9> tabnext_gt 9
     bind gi focusinput -l
     bind --mode insert <C-c> mode normal
     bind --mode input <C-c> mode normal
