@@ -3,6 +3,7 @@
   themesLib,
   domain,
   decl,
+  self ? null,
   pkgsOverride ? null,
   tcIndexOverride ? null,
   domainsLibOverride ? null,
@@ -51,7 +52,7 @@ let
     else
       import ./domains/scan.nix {
         inherit lib pkgs;
-        domainsPath = ../domains;
+        domainsPath = if self != null then self + "/domains" else ../domains;
       };
   domainsModule = import ./domains/module.nix { };
   domainsLib =

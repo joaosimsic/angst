@@ -67,6 +67,7 @@
         in
         (resolve {
           inherit
+            self
             inputs
             themesLib
             domain

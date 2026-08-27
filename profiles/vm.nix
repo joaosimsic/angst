@@ -1,6 +1,7 @@
 {
   enable = [
     "remote.ssh"
+    "display.ly"
   ];
   modules = [
     ../modules/vm/runtime.nix
@@ -9,6 +10,7 @@
     ../modules/vm/host-mount.nix
     ({ lib, ... }: {
       config.angst.isQemuVm = lib.mkForce true;
+      config.domains.display.lightdm.enable = lib.mkForce false;
     })
   ];
 }

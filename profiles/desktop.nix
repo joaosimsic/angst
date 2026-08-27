@@ -3,7 +3,10 @@
 
     "launcher.rofi"
     "terminal.ghostty"
-    "session.x11"
+    "display.x11"
+    "display.lightdm"
+    "wm.i3"
+    "bar.i3status"
     "system.graphical"
     "system.audio"
     "system.clipboard"

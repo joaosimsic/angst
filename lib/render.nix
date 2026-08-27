@@ -13,7 +13,7 @@ rec {
         theme = themesLib.get themeName;
         inherit themeName;
       };
-      domainRendererPaths = map (e: "${e.path}/render.nix") (
+      domainRendererPaths = map (e: e.path + "/render.nix") (
         lib.filter (e: e.hasRender or false) host.scan.domains.homeEntries
       );
     in
