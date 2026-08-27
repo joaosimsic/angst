@@ -21,6 +21,10 @@ in
         message = "domains.display.ly requires domains.system.graphical to be enabled";
       }
       {
+        assertion = config.domains.display.x11.enable;
+        message = "domains.display.ly requires domains.display.x11 to be enabled";
+      }
+      {
         assertion = !config.domains.display.lightdm.enable;
         message = "Only one display manager can be enabled: display.lightdm or display.ly";
       }

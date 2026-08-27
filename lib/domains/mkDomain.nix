@@ -37,11 +37,11 @@ let
     builtins.isString v && !(lib.hasPrefix "/" v) && !(lib.hasPrefix "~" v) && !(lib.hasPrefix ".." v);
   isBasename = v: builtins.isString v && v != "" && !(lib.hasInfix "/" v);
 
-  hasHomeFile = builtins.pathExists "${path}/home.nix";
-  hasSystemFile = builtins.pathExists "${path}/system.nix";
-  hasRenderFile = builtins.pathExists "${path}/render.nix";
-  hasConfigDir = builtins.pathExists "${path}/config";
-  hasHealthcheck = builtins.pathExists "${path}/healthcheck.nix";
+  hasHomeFile = builtins.pathExists (path + "/home.nix");
+  hasSystemFile = builtins.pathExists (path + "/system.nix");
+  hasRenderFile = builtins.pathExists (path + "/render.nix");
+  hasConfigDir = builtins.pathExists (path + "/config");
+  hasHealthcheck = builtins.pathExists (path + "/healthcheck.nix");
 
   checkModule =
     kind: file:
@@ -144,15 +144,15 @@ let
         ;
     };
     hasHome = hasHomeFile;
-    home = if hasHomeFile then checkModule "home" "${path}/home.nix" else null;
+    home = if hasHomeFile then checkModule "home" (path + "/home.nix") else null;
     hasSystem = hasSystemFile;
-    system = if hasSystemFile then checkModule "system" "${path}/system.nix" else null;
+    system = if hasSystemFile then checkModule "system" (path + "/system.nix") else null;
     hasRender = hasRenderFile;
-    render = if hasRenderFile then checkModule "render" "${path}/render.nix" else null;
+    render = if hasRenderFile then checkModule "render" (path + "/render.nix") else null;
     inherit hasConfigDir;
-    config = if hasConfigDir then "${path}/config" else null;
+    config = if hasConfigDir then path + "/config" else null;
     inherit hasHealthcheck;
-    healthcheck = if hasHealthcheck then checkModule "healthcheck" "${path}/healthcheck.nix" else null;
+    healthcheck = if hasHealthcheck then checkModule "healthcheck" (path + "/healthcheck.nix") else null;
   };
 in
 if firstError != null then err firstError else body

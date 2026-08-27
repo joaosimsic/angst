@@ -26,7 +26,7 @@
           hostDecl = import (./hosts + "/${dir}");
         in
         (resolve {
-          inherit inputs themesLib domain;
+          inherit self inputs themesLib domain;
           decl = hostDecl;
         }).host;
 

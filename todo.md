@@ -55,6 +55,6 @@
 
 # miscellaneous
 
-- [ ] login screen
+- [x] login screen
 - [ ] firefox
 - [ ] persistent and not persistent prints

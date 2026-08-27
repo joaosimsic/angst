@@ -3,16 +3,24 @@
   themesLib,
   domain,
   decl,
+  self ? null,
+  pkgsOverride ? null,
+  tcIndexOverride ? null,
+  domainsLibOverride ? null,
 }:
 
 let
   lib = inputs.nixpkgs.lib;
 
   system = decl.system or "x86_64-linux";
-  pkgs = import inputs.nixpkgs {
-    inherit system;
-    config = import ./nixpkgs-config.nix;
-  };
+  pkgs =
+    if pkgsOverride != null then
+      pkgsOverride
+    else
+      import inputs.nixpkgs {
+        inherit system;
+        config = import ./nixpkgs-config.nix;
+      };
 
   _toolchainDir = ../toolchains;
   _rawFiles = builtins.attrNames (
@@ -20,36 +28,58 @@ let
       builtins.readDir _toolchainDir
     )
   );
-  _tcIndex = lib.listToAttrs (
-    map (
-      f:
-      let
-        name = lib.removeSuffix ".nix" f;
-      in
-      {
-        inherit name;
-        value = import (_toolchainDir + "/${f}") { inherit lib pkgs; };
-      }
-    ) _rawFiles
-  );
+  _tcIndex =
+    if tcIndexOverride != null then
+      tcIndexOverride
+    else
+      lib.listToAttrs (
+        map (
+          f:
+          let
+            name = lib.removeSuffix ".nix" f;
+          in
+          {
+            inherit name;
+            value = import (_toolchainDir + "/${f}") { inherit lib pkgs; };
+          }
+        ) _rawFiles
+      );
   _allTCs = builtins.attrValues _tcIndex;
 
-  domainsScan = import ./domains/scan.nix {
-    inherit lib pkgs;
-    domainsPath = ../domains;
-  };
+  domainsScan =
+    if domainsLibOverride != null then
+      null
+    else
+      import ./domains/scan.nix {
+        inherit lib pkgs;
+        domainsPath = if self != null then self + "/domains" else ../domains;
+      };
   domainsModule = import ./domains/module.nix { };
-  domainsLib = domainsScan // domainsModule;
+  domainsLib =
+    if domainsLibOverride != null then domainsLibOverride else domainsScan // domainsModule;
 
   _toolchains = decl.toolchains or "*";
   _bareNames = builtins.attrNames _tcIndex;
+  _selectedTCs =
+    if _toolchains == "*" then
+      _allTCs
+    else if builtins.isList _toolchains then
+      let
+        unknown = builtins.filter (n: !builtins.elem n _bareNames) _toolchains;
+      in
+      if unknown != [ ] then
+        throw "Unknown toolchains: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " _bareNames}"
+      else
+        map (n: _tcIndex.${n}) _toolchains
+    else
+      throw "toolchains must be \"*\" or a list";
 in
 
 {
-  inherit _tcIndex _allTCs;
+  inherit _tcIndex _allTCs _selectedTCs;
 
   host = {
-    inherit system;
+    inherit system pkgs;
     hostname = decl.hostname or "nixos";
     username = decl.username or "user";
     theme = decl.theme or "monochrome";
@@ -101,28 +131,16 @@ in
 
     secrets = decl.secrets or [ ];
 
+    toolchainModules = _selectedTCs;
+
     scan = {
       domains = domainsLib;
       themes = themesLib;
-      allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or [ ]) _allTCs);
+      allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or [ ]) _selectedTCs);
       treesitter = import ./treesitter.nix {
         inherit lib pkgs;
-        grammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or [ ]) _allTCs);
+        grammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or [ ]) _selectedTCs);
       };
     };
-
-    toolchainModules =
-      if _toolchains == "*" then
-        _allTCs
-      else if builtins.isList _toolchains then
-        let
-          unknown = builtins.filter (n: !builtins.elem n _bareNames) _toolchains;
-        in
-        if unknown != [ ] then
-          throw "Unknown toolchains: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " _bareNames}"
-        else
-          map (n: _tcIndex.${n}) _toolchains
-      else
-        throw "toolchains must be \"*\" or a list";
   };
 }

@@ -15,11 +15,14 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    environment.etc."angst-lightdm-marker".text = "marker";
     assertions = [
       {
         assertion = config.domains.system.graphical.enable;
         message = "domains.display.lightdm requires domains.system.graphical to be enabled";
+      }
+      {
+        assertion = config.domains.display.x11.enable;
+        message = "domains.display.lightdm requires domains.display.x11 to be enabled";
       }
       {
         assertion = !config.domains.display.ly.enable;

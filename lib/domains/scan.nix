@@ -15,7 +15,7 @@ let
         [ ]
       else
         let
-          categoryPath = "${domainsPath}/${category}";
+          categoryPath = domainsPath + "/${category}";
         in
         concatLists (
           mapAttrsToList (
@@ -24,8 +24,8 @@ let
               [ ]
             else
               let
-                domainPath = "${categoryPath}/${name}";
-                defaultPath = "${domainPath}/default.nix";
+                domainPath = categoryPath + "/${name}";
+                defaultPath = domainPath + "/default.nix";
               in
               if !(builtins.pathExists defaultPath) then
                 builtins.throw "domains/${category}/${name}: missing default.nix"
