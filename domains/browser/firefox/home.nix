@@ -101,6 +101,13 @@ let
       --tab-selected-bgcolor: var(--angst-active-bg) !important;
       --tab-selected-textcolor: var(--angst-fg) !important;
       --lwt-selected-tab-background-color: var(--angst-active-bg) !important;
+      --tab-background-color: var(--angst-bg) !important;
+      --tab-background-color-selected: var(--angst-active-bg) !important;
+      --tab-background-color-hover: var(--angst-hover-bg) !important;
+      --tab-text-color: var(--angst-fg) !important;
+      --tab-text-color-selected: var(--angst-fg) !important;
+      --tab-text-color-hover: var(--angst-fg) !important;
+      --tab-border-color: transparent !important;
       --chrome-content-separator-color: transparent !important;
       --sidebar-background-color: var(--angst-bg) !important;
       --sidebar-text-color: var(--angst-fg) !important;
