@@ -152,7 +152,8 @@ let
     inherit hasConfigDir;
     config = if hasConfigDir then path + "/config" else null;
     inherit hasHealthcheck;
-    healthcheck = if hasHealthcheck then checkModule "healthcheck" (path + "/healthcheck.nix") else null;
+    healthcheck =
+      if hasHealthcheck then checkModule "healthcheck" (path + "/healthcheck.nix") else null;
   };
 in
 if firstError != null then err firstError else body

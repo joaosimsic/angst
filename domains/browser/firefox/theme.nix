@@ -28,9 +28,10 @@ rec {
   hoverBgHex = "color-mix(in srgb, ${fg} 10%, ${bg})";
   activeBgHex = "color-mix(in srgb, ${fg} 16%, ${bg})";
 
-  mkVar = name: value: important:
+  mkVar =
+    name: value: important:
     "  --${name}: ${value}${if important then " !important" else ""};";
 
-  mkVars = vars: important:
-    builtins.concatStringsSep "\n" (map (v: mkVar v.name v.value important) vars);
+  mkVars =
+    vars: important: builtins.concatStringsSep "\n" (map (v: mkVar v.name v.value important) vars);
 }
