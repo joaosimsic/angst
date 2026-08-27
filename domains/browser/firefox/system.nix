@@ -16,7 +16,7 @@ in
         DisableFirefoxStudies = true;
         DontCheckDefaultBrowser = true;
         DisableAppUpdate = true;
-        DisplayBookmarksToolbar = "never";
+        DisplayBookmarksToolbar = "always";
       };
     };
   };

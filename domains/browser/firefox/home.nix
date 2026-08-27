@@ -30,59 +30,129 @@ let
       --lwt-accent-color: var(--angst-bg) !important;
       --lwt-text-color: var(--angst-fg) !important;
       --toolbar-bgcolor: var(--angst-bg) !important;
-      --toolbar-color: var(--angst-fg-variant) !important;
+      --toolbar-color: var(--angst-fg) !important;
       --toolbarbutton-icon-fill: var(--angst-fg) !important;
+      --toolbarbutton-hover-background: var(--angst-surface) !important;
+      --toolbarbutton-active-background: var(--angst-surface-variant) !important;
+      --lwt-toolbarbutton-icon-fill: var(--angst-fg) !important;
+      --lwt-toolbarbutton-hover-background: var(--angst-surface) !important;
+      --lwt-toolbarbutton-active-background: var(--angst-surface-variant) !important;
       --arrowpanel-background: var(--angst-bg-variant) !important;
-      --arrowpanel-color: var(--angst-fg-variant) !important;
-      --arrowpanel-border-color: var(--angst-surface) !important;
-      --panel-background: var(--angst-bg) !important;
-      --panel-color: var(--angst-fg-variant) !important;
+      --arrowpanel-color: var(--angst-fg) !important;
+      --arrowpanel-border-color: transparent !important;
+      --arrowpanel-dimmed: var(--angst-surface) !important;
+      --arrowpanel-dimmed-further: var(--angst-surface-variant) !important;
+      --panel-background: var(--angst-bg-variant) !important;
+      --panel-color: var(--angst-fg) !important;
+      --panel-border-color: transparent !important;
+      --panel-item-hover-bgcolor: var(--angst-surface) !important;
+      --panel-item-active-bgcolor: var(--angst-accent) !important;
+      --panel-item-active-color: var(--angst-bg) !important;
+      --panel-separator-color: transparent !important;
       --urlbarView-result-color: var(--angst-fg) !important;
-      --urlbarView-highlight-background: var(--angst-surface) !important;
-      --urlbarView-highlight-color: var(--angst-fg-variant) !important;
-      --urlbarView-hover-background: var(--angst-surface-variant) !important;
+      --urlbarView-highlight-background: var(--angst-accent) !important;
+      --urlbarView-highlight-color: var(--angst-bg) !important;
+      --urlbarView-hover-background: var(--angst-surface) !important;
+      --urlbarView-background-color: var(--angst-bg) !important;
+      --urlbarView-border-color: transparent !important;
+      --urlbarView-separator-color: transparent !important;
+      --urlbar-box-bgcolor: transparent !important;
+      --urlbar-box-background-color: transparent !important;
+      --urlbar-box-text-color: var(--angst-fg) !important;
+      --urlbar-box-hover-bgcolor: transparent !important;
+      --urlbar-box-hover-background-color: transparent !important;
+      --urlbar-box-hover-text-color: var(--angst-fg-variant) !important;
+      --urlbar-box-focus-bgcolor: transparent !important;
+      --urlbar-box-focus-background-color: transparent !important;
+      --urlbar-box-focus-text-color: var(--angst-fg-variant) !important;
+      --urlbar-box-border-color: transparent !important;
       --toolbar-field-background-color: var(--angst-bg-variant) !important;
-      --toolbar-field-color: var(--angst-fg-variant) !important;
-      --toolbar-field-border-color: var(--angst-surface) !important;
-      --toolbar-field-focus-background-color: var(--angst-bg-variant) !important;
+      --toolbar-field-color: var(--angst-fg) !important;
+      --toolbar-field-border-color: transparent !important;
+      --toolbar-field-focus-background-color: var(--angst-bg) !important;
       --toolbar-field-focus-color: var(--angst-fg-variant) !important;
-      --toolbar-field-focus-border-color: var(--angst-accent) !important;
+      --toolbar-field-focus-border-color: transparent !important;
       --lwt-toolbar-field-background-color: var(--angst-bg-variant) !important;
-      --lwt-toolbar-field-color: var(--angst-fg-variant) !important;
-      --lwt-toolbar-field-focus: var(--angst-bg-variant) !important;
+      --lwt-toolbar-field-color: var(--angst-fg) !important;
+      --lwt-toolbar-field-focus: var(--angst-bg) !important;
       --lwt-toolbar-field-focus-color: var(--angst-fg-variant) !important;
       --toolbar-field-highlight: var(--angst-accent) !important;
       --toolbar-field-highlight-text: var(--angst-bg) !important;
+      --tabpanel-background-color: var(--angst-bg) !important;
+      --lwt-tab-text: var(--angst-fg) !important;
+      --tab-selected-bgcolor: var(--angst-accent) !important;
+      --tab-selected-textcolor: var(--angst-bg) !important;
+      --lwt-selected-tab-background-color: var(--angst-accent) !important;
+      --chrome-content-separator-color: transparent !important;
+      --sidebar-background-color: var(--angst-bg) !important;
+      --sidebar-text-color: var(--angst-fg) !important;
+      --sidebar-border-color: transparent !important;
+      --toolbox-border-bottom-color: transparent !important;
+      --titlebar-color: var(--angst-fg) !important;
+      --titlebar-background-color: var(--angst-bg) !important;
+      --background-color-canvas: var(--angst-bg) !important;
+      --background-color-content: var(--angst-bg) !important;
+      --card-background-color: var(--angst-bg-variant) !important;
+      --card-text-color: var(--angst-fg) !important;
+      --card-border-color: transparent !important;
+      --panel-background-color: var(--angst-bg-variant) !important;
+      --panel-text-color: var(--angst-fg) !important;
+      --in-content-page-background: var(--angst-bg) !important;
+      --in-content-page-color: var(--angst-fg) !important;
+      --in-content-text-color: var(--angst-fg) !important;
+      --in-content-box-background: var(--angst-surface) !important;
+      --in-content-box-text-color: var(--angst-bg) !important;
+      --in-content-box-border-color: transparent !important;
+      --in-content-border-color: transparent !important;
+      --in-content-item-hover: var(--angst-surface) !important;
+      --in-content-item-hover-text: var(--angst-fg-variant) !important;
+      --in-content-item-selected: var(--angst-accent) !important;
+      --in-content-item-selected-text: var(--angst-bg) !important;
+      --in-content-primary-button-background: var(--angst-accent) !important;
+      --in-content-primary-button-text-color: var(--angst-bg) !important;
+      --in-content-primary-button-background-hover: var(--angst-accent-variant) !important;
+      --in-content-primary-button-background-active: var(--angst-accent-variant) !important;
+      --color-accent-primary: var(--angst-accent) !important;
+      --color-accent-primary-hover: var(--angst-accent-variant) !important;
+      --color-accent-primary-active: var(--angst-accent-variant) !important;
+      --button-background-color: var(--angst-surface) !important;
+      --button-background-color-hover: var(--angst-surface-variant) !important;
+      --button-background-color-active: var(--angst-accent) !important;
+      --button-text-color: var(--angst-fg) !important;
+      --button-text-color-hover: var(--angst-fg-variant) !important;
+      --button-text-color-active: var(--angst-bg) !important;
+      --input-background-color: var(--angst-bg-variant) !important;
+      --input-color: var(--angst-fg) !important;
+      --input-border-color: transparent !important;
     }
     #navigator-toolbox {
       background-color: var(--angst-bg) !important;
       color: var(--angst-fg) !important;
-      border-bottom: 1px solid var(--angst-surface) !important;
+      border: none !important;
     }
     #TabsToolbar {
       visibility: collapse !important;
     }
+    #PersonalToolbar {
+      background: var(--angst-bg) !important;
+      color: var(--angst-fg) !important;
+      border: none !important;
+    }
     #nav-bar {
       background: var(--angst-bg) !important;
-    }
-    .tabbrowser-tab[selected="true"] .tab-background {
-      background: var(--angst-surface) !important;
-    }
-    .tabbrowser-tab[selected="true"] .tab-label {
-      color: var(--angst-fg-variant) !important;
+      box-shadow: none !important;
+      border: none !important;
     }
     #urlbar, #urlbar * {
       --toolbar-field-background-color: var(--angst-bg-variant) !important;
-      --toolbar-field-focus-background-color: var(--angst-bg-variant) !important;
+      --toolbar-field-focus-background-color: var(--angst-bg) !important;
     }
-    /* unfocused bar */
     #urlbar-background, #searchbar {
       background-color: var(--angst-bg-variant) !important;
       background: var(--angst-bg-variant) !important;
-      border-color: var(--angst-surface) !important;
+      border-color: transparent !important;
       box-shadow: none !important;
     }
-    /* focused/breakout – the single .urlbar-background paints both input and dropdown */
     #urlbar[focused] > #urlbar-background,
     #urlbar[open] > #urlbar-background,
     #urlbar[breakout][breakout-extend] > #urlbar-background,
@@ -90,20 +160,18 @@ let
     .urlbar-background, #searchbar:focus-within {
       background-color: var(--angst-bg) !important;
       background: var(--angst-bg) !important;
-      border-color: var(--angst-surface) !important;
+      border-color: transparent !important;
       box-shadow: none !important;
     }
-    #urlbar[focused] > #urlbar-background { border-color: var(--angst-accent) !important; }
     #urlbar[breakout][breakout-extend] { background: transparent !important; }
     #urlbar-input, #urlbar-input::placeholder, .urlbar-input, #searchbar input {
-      color: var(--angst-fg-variant) !important;
+      color: var(--angst-fg) !important;
     }
     #urlbarView, .urlbarView-body-inner, #urlbar-results {
       background: var(--angst-bg) !important;
       background-color: var(--angst-bg) !important;
       color: var(--angst-fg) !important;
-      border: 1px solid var(--angst-surface) !important;
-      border-top: none !important;
+      border: none !important;
     }
     .urlbarView-row-inner, .urlbarView-no-wrap, .urlbarView-title, .urlbarView-url, .urlbarView-action, .urlbarView-type-icon {
       color: var(--angst-fg) !important;
@@ -116,24 +184,70 @@ let
     .urlbarView-row[selected] .urlbarView-action {
       color: var(--urlbarView-highlight-color) !important;
     }
-    #sidebar-box {
-      background-color: var(--angst-bg) !important;
-      border-right: 1px solid var(--angst-surface) !important;
-    }
-    #sidebar {
-      background-color: var(--angst-bg) !important;
+    #sidebar-box, #sidebar {
+      background: var(--angst-bg) !important;
+      border: none !important;
     }
     panel, menupopup, .panel-arrowcontent {
+      --panel-background: var(--angst-bg-variant) !important;
+      --panel-color: var(--angst-fg) !important;
+      --panel-border-color: transparent !important;
       background: var(--angst-bg-variant) !important;
-      color: var(--angst-fg-variant) !important;
+      color: var(--angst-fg) !important;
+      border: none !important;
+    }
+    menupopup {
+      --panel-background: var(--angst-bg-variant) !important;
+      --panel-color: var(--angst-fg) !important;
+      --panel-border-color: transparent !important;
+      border: none !important;
+    }
+    #appMenu-popup, #unified-extensions-panel, #downloadsPanel, #identity-popup, #permission-popup, #protections-popup {
+      --panel-background: var(--angst-bg-variant) !important;
+      --panel-color: var(--angst-fg) !important;
     }
     #findbar {
       background: var(--angst-bg-variant) !important;
-      border-top: 1px solid var(--angst-surface) !important;
+      border-top: none !important;
+      border-color: transparent !important;
+    }
+    html, body, #main-window, #browser, #appcontent, #tabbrowser-tabpanels {
+      background: var(--tabpanel-background-color) !important;
     }
   '';
   userContent = ''
     @-moz-document url-prefix("about:") {
+      :root {
+        --background-color-canvas: #${p.background.base} !important;
+        --background-color-content: #${p.background.base} !important;
+        --card-background-color: #${p.background.variant} !important;
+        --card-text-color: #${p.foreground.base} !important;
+        --card-border-color: transparent !important;
+        --panel-background-color: #${p.background.variant} !important;
+        --panel-text-color: #${p.foreground.base} !important;
+        --panel-border-color: transparent !important;
+        --in-content-page-background: #${p.background.base} !important;
+        --in-content-page-color: #${p.foreground.base} !important;
+        --in-content-text-color: #${p.foreground.base} !important;
+        --in-content-box-background: #${p.surface.base} !important;
+        --in-content-box-text-color: #${p.background.base} !important;
+        --in-content-box-border-color: transparent !important;
+        --in-content-border-color: transparent !important;
+        --in-content-item-hover: #${p.surface.base} !important;
+        --in-content-item-hover-text: #${p.foreground.variant} !important;
+        --in-content-item-selected: #${p.accent.base} !important;
+        --in-content-item-selected-text: #${p.background.base} !important;
+        --in-content-primary-button-background: #${p.accent.base} !important;
+        --in-content-primary-button-text-color: #${p.background.base} !important;
+        --in-content-primary-button-background-hover: #${p.accent.variant} !important;
+        --color-accent-primary: #${p.accent.base} !important;
+        --color-accent-primary-hover: #${p.accent.variant} !important;
+        --button-background-color: #${p.surface.base} !important;
+        --button-text-color: #${p.foreground.base} !important;
+        --input-background-color: #${p.background.variant} !important;
+        --input-color: #${p.foreground.base} !important;
+        --input-border-color: transparent !important;
+      }
       html {
         color-scheme: ${colorScheme} !important;
       }
@@ -144,6 +258,12 @@ let
       a { color: #${p.accent.base} !important; }
     }
     @-moz-document url("about:blank"), url("about:home"), url("about:newtab") {
+      :root {
+        --background-color-canvas: #${p.background.base} !important;
+        --card-background-color: #${p.background.variant} !important;
+        --panel-background-color: #${p.background.variant} !important;
+        --panel-text-color: #${p.foreground.base} !important;
+      }
       body {
         background-color: #${p.background.base} !important;
         color: #${p.foreground.base} !important;
@@ -164,13 +284,13 @@ let
         --tridactyl-cmdl-bg: #${p.background.variant} !important;
         --tridactyl-cmplt-bg: #${p.background.base} !important;
         --tridactyl-cmplt-fg: #${p.foreground.base} !important;
-        --tridactyl-cmplt-border-top: 1px solid #${p.surface.base} !important;
+        --tridactyl-cmplt-border-top: none !important;
         --tridactyl-status-fg: #${p.foreground.base} !important;
         --tridactyl-status-bg: #${p.background.base} !important;
-        --tridactyl-status-border: 1px solid #${p.surface.base} !important;
+        --tridactyl-status-border: none !important;
         --tridactyl-hint-fg: #${p.background.base} !important;
         --tridactyl-hint-bg: #${p.accent.base} !important;
-        --tridactyl-hint-outline: 1px solid #${p.accent.variant} !important;
+        --tridactyl-hint-outline: none !important;
         --tridactyl-hint-active-fg: #${p.background.base} !important;
         --tridactyl-hint-active-bg: #${p.accent.variant} !important;
         --tridactyl-hintspan-fg: #${p.background.base} !important;
@@ -183,11 +303,11 @@ let
         --tridactyl-photon-colours-cm-background: #${p.background.variant} !important;
         --tridactyl-photon-colours-cm-selection: #${p.surface.base} !important;
       }
-      #command-line-holder { border: 1px solid #${p.surface.base} !important; background: var(--tridactyl-cmdl-bg) !important; }
+      #command-line-holder { border: none !important; background: var(--tridactyl-cmdl-bg) !important; }
       #tridactyl-input { color: var(--tridactyl-cmdl-fg) !important; background: var(--tridactyl-cmdl-bg) !important; }
-      #completions { color: var(--tridactyl-cmplt-fg) !important; background: var(--tridactyl-cmplt-bg) !important; border-top: var(--tridactyl-cmplt-border-top) !important; }
+      #completions { color: var(--tridactyl-cmplt-fg) !important; background: var(--tridactyl-cmplt-bg) !important; border: none !important; }
       #completions .focused, #completions .focused .url { background: #${p.accent.base} !important; color: #${p.background.base} !important; }
-      .TridactylStatusIndicator { background: var(--tridactyl-status-bg) !important; color: var(--tridactyl-status-fg) !important; border: var(--tridactyl-status-border) !important; }
+      .TridactylStatusIndicator { background: var(--tridactyl-status-bg) !important; color: var(--tridactyl-status-fg) !important; border: none !important; }
     }
     @-moz-document url-prefix("moz-extension://f9eff719-c9ce-4ccb-9625-be5b8f1aec81/") {
       :root {
@@ -250,27 +370,27 @@ let
       --tridactyl-cmplt-font-family: monospace;
       --tridactyl-cmplt-font-size: calc(12pt * 9/12);
       --tridactyl-cmplt-option-height: 1.4em;
-      --tridactyl-cmplt-border-top: 1px solid #${p.surface.base};
+      --tridactyl-cmplt-border-top: none;
       --tridactyl-status-fg: #${p.foreground.base};
       --tridactyl-status-bg: #${p.background.base};
-      --tridactyl-status-border: 1px solid #${p.surface.base};
+      --tridactyl-status-border: none;
       --tridactyl-status-border-radius: 2px;
       --tridactyl-status-font-family: monospace;
       --tridactyl-status-font-size: calc(12pt * 0.75);
       --tridactyl-hint-fg: #${p.background.base};
       --tridactyl-hint-bg: #${p.accent.base};
-      --tridactyl-hint-outline: 1px solid #${p.accent.variant};
+      --tridactyl-hint-outline: none;
       --tridactyl-hint-active-fg: #${p.background.base};
       --tridactyl-hint-active-bg: #${p.accent.variant};
-      --tridactyl-hint-active-outline: 1px solid #${p.foreground.variant};
+      --tridactyl-hint-active-outline: none;
       --tridactyl-hintspan-fg: #${p.background.base} !important;
       --tridactyl-hintspan-bg: #${p.accent.base} !important;
       --tridactyl-hintspan-font-family: sans-serif;
       --tridactyl-hintspan-font-size: calc(12pt * 0.75);
       --tridactyl-hintspan-font-weight: bold;
-      --tridactyl-hintspan-border-color: #${p.accent.variant};
+      --tridactyl-hintspan-border-color: transparent;
       --tridactyl-hintspan-border-width: 0px;
-      --tridactyl-hintspan-border-style: solid;
+      --tridactyl-hintspan-border-style: none;
       --tridactyl-scrollbar-color: #${p.surface.base} #${p.background.base};
       --tridactyl-photon-colours-accent-1: #${p.accent.base};
       --tridactyl-photon-colours-accent-2: #${p.accent.variant};
@@ -283,12 +403,12 @@ let
       --tridactyl-photon-colours-cm-background: #${p.background.variant};
       --tridactyl-photon-colours-cm-selection: #${p.surface.base};
     }
-    #command-line-holder { order: 1; border: 1px solid #${p.surface.base} !important; background: var(--tridactyl-cmdl-bg) !important; }
+    #command-line-holder { order: 1; border: none !important; background: var(--tridactyl-cmdl-bg) !important; }
     #tridactyl-input { color: var(--tridactyl-cmdl-fg) !important; background: var(--tridactyl-cmdl-bg) !important; }
-    #completions { --option-height: var(--tridactyl-cmplt-option-height); color: var(--tridactyl-cmplt-fg) !important; background: var(--tridactyl-cmplt-bg) !important; border-top: var(--tridactyl-cmplt-border-top) !important; }
+    #completions { --option-height: var(--tridactyl-cmplt-option-height); color: var(--tridactyl-cmplt-fg) !important; background: var(--tridactyl-cmplt-bg) !important; border: none !important; }
     #completions .focused { background: #${p.accent.base} !important; color: #${p.background.base} !important; }
     #completions .focused .url { background: #${p.accent.base} !important; color: #${p.background.base} !important; }
-    .TridactylStatusIndicator { background: var(--tridactyl-status-bg) !important; color: var(--tridactyl-status-fg) !important; border: var(--tridactyl-status-border) !important; }
+    .TridactylStatusIndicator { background: var(--tridactyl-status-bg) !important; color: var(--tridactyl-status-fg) !important; border: none !important; }
   '';
   tridactylrc = ''
     set smoothscroll true
@@ -364,12 +484,11 @@ in
         DisableFirefoxStudies = true;
         DontCheckDefaultBrowser = true;
         DisableAppUpdate = true;
-        DisplayBookmarksToolbar = "never";
+        DisplayBookmarksToolbar = "always";
         OfferToSaveLogins = false;
         ExtensionSettings = {
           "treestyletab@piro.sakura.ne.jp" = {
-            installation_mode = "force_installed";
-            install_url = "https://addons.mozilla.org/firefox/downloads/latest/tree-style-tab/latest.xpi";
+            installation_mode = "blocked";
           };
           "tridactyl.vim@cmcaine.co.uk" = {
             installation_mode = "force_installed";
@@ -387,7 +506,7 @@ in
         isDefault = true;
         settings = {
           "browser.startup.homepage" = "about:blank";
-          "browser.toolbars.bookmarks.visibility" = "never";
+          "browser.toolbars.bookmarks.visibility" = "always";
           "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
           "browser.uidensity" = 0;
           "browser.theme.toolbar-theme" = toolbarThemeVal;
@@ -396,6 +515,9 @@ in
           "layout.css.prefers-color-scheme.content-override" = contentOverrideVal;
           "ui.systemUsesDarkTheme" = systemDarkVal;
           "extensions.autoDisableScopes" = 0;
+          "sidebar.revamp" = true;
+          "sidebar.verticalTabs" = true;
+          "sidebar.visibility" = "always-show";
         };
         inherit userChrome;
         inherit userContent;
