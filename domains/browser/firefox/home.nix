@@ -15,74 +15,92 @@ let
   contentThemeVal = if isDark then 1 else 0;
   contentOverrideVal = if isDark then 0 else 1;
   systemDarkVal = if isDark then 1 else 0;
+  # Centralized palette - all theme colors initialized here, referenced via interpolation
+  bg = "#${p.background.base}";
+  bgVariant = "#${p.background.variant}";
+  surface = "#${p.surface.base}";
+  surfaceVariant = "#${p.surface.variant}";
+  fg = "#${p.foreground.base}";
+  fgVariant = "#${p.foreground.variant}";
+  accent = "#${p.accent.base}";
+  accentVariant = "#${p.accent.variant}";
+  dim = "#${p.dim}";
+  # Centralized derived UI states - unified hover/active for all classes
+  # Uses subtle fg mix over bg so fg base text (used by most elements) keeps contrast
+  hoverBg = "color-mix(in srgb, var(--angst-fg) 10%, var(--angst-bg))";
+  activeBg = "color-mix(in srgb, var(--angst-fg) 16%, var(--angst-bg))";
+  hoverBgHex = "color-mix(in srgb, ${fg} 10%, ${bg})";
+  activeBgHex = "color-mix(in srgb, ${fg} 16%, ${bg})";
   userChrome = ''
     :root {
       color-scheme: ${colorScheme} !important;
-      --angst-bg: #${p.background.base};
-      --angst-bg-variant: #${p.background.variant};
-      --angst-surface: #${p.surface.base};
-      --angst-surface-variant: #${p.surface.variant};
-      --angst-fg: #${p.foreground.base};
-      --angst-fg-variant: #${p.foreground.variant};
-      --angst-accent: #${p.accent.base};
-      --angst-accent-variant: #${p.accent.variant};
-      --angst-dim: #${p.dim};
+      --angst-bg: ${bg};
+      --angst-bg-variant: ${bgVariant};
+      --angst-surface: ${surface};
+      --angst-surface-variant: ${surfaceVariant};
+      --angst-fg: ${fg};
+      --angst-fg-variant: ${fgVariant};
+      --angst-accent: ${accent};
+      --angst-accent-variant: ${accentVariant};
+      --angst-dim: ${dim};
+      --angst-hover-bg: ${hoverBg} !important;
+      --angst-active-bg: ${activeBg} !important;
       --lwt-accent-color: var(--angst-bg) !important;
       --lwt-text-color: var(--angst-fg) !important;
       --toolbar-bgcolor: var(--angst-bg) !important;
       --toolbar-color: var(--angst-fg) !important;
       --toolbarbutton-icon-fill: var(--angst-fg) !important;
-      --toolbarbutton-hover-background: var(--angst-surface) !important;
-      --toolbarbutton-active-background: var(--angst-surface-variant) !important;
+      --toolbarbutton-hover-background: var(--angst-hover-bg) !important;
+      --toolbarbutton-active-background: var(--angst-active-bg) !important;
       --lwt-toolbarbutton-icon-fill: var(--angst-fg) !important;
-      --lwt-toolbarbutton-hover-background: var(--angst-surface) !important;
-      --lwt-toolbarbutton-active-background: var(--angst-surface-variant) !important;
+      --lwt-toolbarbutton-hover-background: var(--angst-hover-bg) !important;
+      --lwt-toolbarbutton-active-background: var(--angst-active-bg) !important;
       --arrowpanel-background: var(--angst-bg-variant) !important;
       --arrowpanel-color: var(--angst-fg) !important;
       --arrowpanel-border-color: transparent !important;
-      --arrowpanel-dimmed: var(--angst-surface) !important;
-      --arrowpanel-dimmed-further: var(--angst-surface-variant) !important;
+      --arrowpanel-dimmed: var(--angst-hover-bg) !important;
+      --arrowpanel-dimmed-further: var(--angst-active-bg) !important;
       --panel-background: var(--angst-bg-variant) !important;
       --panel-color: var(--angst-fg) !important;
       --panel-border-color: transparent !important;
-      --panel-item-hover-bgcolor: var(--angst-surface) !important;
-      --panel-item-active-bgcolor: var(--angst-accent) !important;
-      --panel-item-active-color: var(--angst-bg) !important;
+      --panel-item-hover-bgcolor: var(--angst-hover-bg) !important;
+      --panel-item-active-bgcolor: var(--angst-active-bg) !important;
+      --panel-item-active-color: var(--angst-fg) !important;
       --panel-separator-color: transparent !important;
       --urlbarView-result-color: var(--angst-fg) !important;
-      --urlbarView-highlight-background: var(--angst-accent) !important;
-      --urlbarView-highlight-color: var(--angst-bg) !important;
-      --urlbarView-hover-background: var(--angst-surface) !important;
+      --urlbarView-highlight-background: var(--angst-active-bg) !important;
+      --urlbarView-highlight-color: var(--angst-fg) !important;
+      --urlbarView-hover-background: var(--angst-hover-bg) !important;
       --urlbarView-background-color: var(--angst-bg) !important;
       --urlbarView-border-color: transparent !important;
       --urlbarView-separator-color: transparent !important;
       --urlbar-box-bgcolor: transparent !important;
       --urlbar-box-background-color: transparent !important;
       --urlbar-box-text-color: var(--angst-fg) !important;
-      --urlbar-box-hover-bgcolor: transparent !important;
-      --urlbar-box-hover-background-color: transparent !important;
-      --urlbar-box-hover-text-color: var(--angst-fg-variant) !important;
-      --urlbar-box-focus-bgcolor: transparent !important;
-      --urlbar-box-focus-background-color: transparent !important;
-      --urlbar-box-focus-text-color: var(--angst-fg-variant) !important;
+      --urlbar-box-hover-bgcolor: var(--angst-hover-bg) !important;
+      --urlbar-box-hover-background-color: var(--angst-hover-bg) !important;
+      --urlbar-box-hover-text-color: var(--angst-fg) !important;
+      --urlbar-box-focus-bgcolor: var(--angst-active-bg) !important;
+      --urlbar-box-focus-background-color: var(--angst-active-bg) !important;
+      --urlbar-box-focus-text-color: var(--angst-fg) !important;
       --urlbar-box-border-color: transparent !important;
       --toolbar-field-background-color: var(--angst-bg-variant) !important;
       --toolbar-field-color: var(--angst-fg) !important;
       --toolbar-field-border-color: transparent !important;
       --toolbar-field-focus-background-color: var(--angst-bg) !important;
-      --toolbar-field-focus-color: var(--angst-fg-variant) !important;
+      --toolbar-field-focus-color: var(--angst-fg) !important;
       --toolbar-field-focus-border-color: transparent !important;
       --lwt-toolbar-field-background-color: var(--angst-bg-variant) !important;
       --lwt-toolbar-field-color: var(--angst-fg) !important;
       --lwt-toolbar-field-focus: var(--angst-bg) !important;
-      --lwt-toolbar-field-focus-color: var(--angst-fg-variant) !important;
+      --lwt-toolbar-field-focus-color: var(--angst-fg) !important;
       --toolbar-field-highlight: var(--angst-accent) !important;
       --toolbar-field-highlight-text: var(--angst-bg) !important;
       --tabpanel-background-color: var(--angst-bg) !important;
       --lwt-tab-text: var(--angst-fg) !important;
-      --tab-selected-bgcolor: var(--angst-accent) !important;
-      --tab-selected-textcolor: var(--angst-bg) !important;
-      --lwt-selected-tab-background-color: var(--angst-accent) !important;
+      --tab-selected-bgcolor: var(--angst-active-bg) !important;
+      --tab-selected-textcolor: var(--angst-fg) !important;
+      --lwt-selected-tab-background-color: var(--angst-active-bg) !important;
       --chrome-content-separator-color: transparent !important;
       --sidebar-background-color: var(--angst-bg) !important;
       --sidebar-text-color: var(--angst-fg) !important;
@@ -100,14 +118,14 @@ let
       --in-content-page-background: var(--angst-bg) !important;
       --in-content-page-color: var(--angst-fg) !important;
       --in-content-text-color: var(--angst-fg) !important;
-      --in-content-box-background: var(--angst-surface) !important;
-      --in-content-box-text-color: var(--angst-bg) !important;
+      --in-content-box-background: var(--angst-active-bg) !important;
+      --in-content-box-text-color: var(--angst-fg) !important;
       --in-content-box-border-color: transparent !important;
       --in-content-border-color: transparent !important;
-      --in-content-item-hover: var(--angst-surface) !important;
-      --in-content-item-hover-text: var(--angst-fg-variant) !important;
-      --in-content-item-selected: var(--angst-accent) !important;
-      --in-content-item-selected-text: var(--angst-bg) !important;
+      --in-content-item-hover: var(--angst-hover-bg) !important;
+      --in-content-item-hover-text: var(--angst-fg) !important;
+      --in-content-item-selected: var(--angst-active-bg) !important;
+      --in-content-item-selected-text: var(--angst-fg) !important;
       --in-content-primary-button-background: var(--angst-accent) !important;
       --in-content-primary-button-text-color: var(--angst-bg) !important;
       --in-content-primary-button-background-hover: var(--angst-accent-variant) !important;
@@ -115,12 +133,12 @@ let
       --color-accent-primary: var(--angst-accent) !important;
       --color-accent-primary-hover: var(--angst-accent-variant) !important;
       --color-accent-primary-active: var(--angst-accent-variant) !important;
-      --button-background-color: var(--angst-surface) !important;
-      --button-background-color-hover: var(--angst-surface-variant) !important;
-      --button-background-color-active: var(--angst-accent) !important;
+      --button-background-color: var(--angst-bg-variant) !important;
+      --button-background-color-hover: var(--angst-hover-bg) !important;
+      --button-background-color-active: var(--angst-active-bg) !important;
       --button-text-color: var(--angst-fg) !important;
-      --button-text-color-hover: var(--angst-fg-variant) !important;
-      --button-text-color-active: var(--angst-bg) !important;
+      --button-text-color-hover: var(--angst-fg) !important;
+      --button-text-color-active: var(--angst-fg) !important;
       --input-background-color: var(--angst-bg-variant) !important;
       --input-color: var(--angst-fg) !important;
       --input-border-color: transparent !important;
@@ -218,196 +236,200 @@ let
   userContent = ''
     @-moz-document url-prefix("about:") {
       :root {
-        --background-color-canvas: #${p.background.base} !important;
-        --background-color-content: #${p.background.base} !important;
-        --card-background-color: #${p.background.variant} !important;
-        --card-text-color: #${p.foreground.base} !important;
+        --background-color-canvas: ${bg} !important;
+        --background-color-content: ${bg} !important;
+        --card-background-color: ${bgVariant} !important;
+        --card-text-color: ${fg} !important;
         --card-border-color: transparent !important;
-        --panel-background-color: #${p.background.variant} !important;
-        --panel-text-color: #${p.foreground.base} !important;
+        --panel-background-color: ${bgVariant} !important;
+        --panel-text-color: ${fg} !important;
         --panel-border-color: transparent !important;
-        --in-content-page-background: #${p.background.base} !important;
-        --in-content-page-color: #${p.foreground.base} !important;
-        --in-content-text-color: #${p.foreground.base} !important;
-        --in-content-box-background: #${p.surface.base} !important;
-        --in-content-box-text-color: #${p.background.base} !important;
+        --in-content-page-background: ${bg} !important;
+        --in-content-page-color: ${fg} !important;
+        --in-content-text-color: ${fg} !important;
+        --in-content-box-background: ${hoverBgHex} !important;
+        --in-content-box-text-color: ${fg} !important;
         --in-content-box-border-color: transparent !important;
         --in-content-border-color: transparent !important;
-        --in-content-item-hover: #${p.surface.base} !important;
-        --in-content-item-hover-text: #${p.foreground.variant} !important;
-        --in-content-item-selected: #${p.accent.base} !important;
-        --in-content-item-selected-text: #${p.background.base} !important;
-        --in-content-primary-button-background: #${p.accent.base} !important;
-        --in-content-primary-button-text-color: #${p.background.base} !important;
-        --in-content-primary-button-background-hover: #${p.accent.variant} !important;
-        --color-accent-primary: #${p.accent.base} !important;
-        --color-accent-primary-hover: #${p.accent.variant} !important;
-        --button-background-color: #${p.surface.base} !important;
-        --button-text-color: #${p.foreground.base} !important;
-        --input-background-color: #${p.background.variant} !important;
-        --input-color: #${p.foreground.base} !important;
+        --in-content-item-hover: ${hoverBgHex} !important;
+        --in-content-item-hover-text: ${fg} !important;
+        --in-content-item-selected: ${activeBgHex} !important;
+        --in-content-item-selected-text: ${fg} !important;
+        --in-content-primary-button-background: ${accent} !important;
+        --in-content-primary-button-text-color: ${bg} !important;
+        --in-content-primary-button-background-hover: ${accentVariant} !important;
+        --color-accent-primary: ${accent} !important;
+        --color-accent-primary-hover: ${accentVariant} !important;
+        --button-background-color: ${bgVariant} !important;
+        --button-background-color-hover: ${hoverBgHex} !important;
+        --button-background-color-active: ${activeBgHex} !important;
+        --button-text-color: ${fg} !important;
+        --button-text-color-hover: ${fg} !important;
+        --button-text-color-active: ${fg} !important;
+        --input-background-color: ${bgVariant} !important;
+        --input-color: ${fg} !important;
         --input-border-color: transparent !important;
       }
       html {
         color-scheme: ${colorScheme} !important;
       }
       body {
-        background-color: #${p.background.base} !important;
-        color: #${p.foreground.base} !important;
+        background-color: ${bg} !important;
+        color: ${fg} !important;
       }
-      a { color: #${p.accent.base} !important; }
+      a { color: ${accent} !important; }
     }
     @-moz-document url("about:blank"), url("about:home"), url("about:newtab") {
       :root {
-        --background-color-canvas: #${p.background.base} !important;
-        --card-background-color: #${p.background.variant} !important;
-        --panel-background-color: #${p.background.variant} !important;
-        --panel-text-color: #${p.foreground.base} !important;
+        --background-color-canvas: ${bg} !important;
+        --card-background-color: ${bgVariant} !important;
+        --panel-background-color: ${bgVariant} !important;
+        --panel-text-color: ${fg} !important;
       }
       body {
-        background-color: #${p.background.base} !important;
-        color: #${p.foreground.base} !important;
+        background-color: ${bg} !important;
+        color: ${fg} !important;
       }
-      a { color: #${p.accent.base} !important; }
+      a { color: ${accent} !important; }
     }
     @-moz-document url-prefix("moz-extension://") {
       :root {
-        --tridactyl-fg: #${p.foreground.base} !important;
-        --tridactyl-bg: #${p.background.base} !important;
-        --tridactyl-url-fg: #${p.accent.base} !important;
-        --tridactyl-url-bg: #${p.background.base} !important;
-        --tridactyl-highlight-box-bg: #${p.surface.base} !important;
-        --tridactyl-highlight-box-fg: #${p.foreground.variant} !important;
-        --tridactyl-of-fg: #${p.foreground.variant} !important;
-        --tridactyl-of-bg: #${p.surface.variant} !important;
-        --tridactyl-cmdl-fg: #${p.foreground.variant} !important;
-        --tridactyl-cmdl-bg: #${p.background.variant} !important;
-        --tridactyl-cmplt-bg: #${p.background.base} !important;
-        --tridactyl-cmplt-fg: #${p.foreground.base} !important;
+        --tridactyl-fg: ${fg} !important;
+        --tridactyl-bg: ${bg} !important;
+        --tridactyl-url-fg: ${accent} !important;
+        --tridactyl-url-bg: ${bg} !important;
+        --tridactyl-highlight-box-bg: ${surface} !important;
+        --tridactyl-highlight-box-fg: ${fgVariant} !important;
+        --tridactyl-of-fg: ${fgVariant} !important;
+        --tridactyl-of-bg: ${surfaceVariant} !important;
+        --tridactyl-cmdl-fg: ${fgVariant} !important;
+        --tridactyl-cmdl-bg: ${bgVariant} !important;
+        --tridactyl-cmplt-bg: ${bg} !important;
+        --tridactyl-cmplt-fg: ${fg} !important;
         --tridactyl-cmplt-border-top: none !important;
-        --tridactyl-status-fg: #${p.foreground.base} !important;
-        --tridactyl-status-bg: #${p.background.base} !important;
+        --tridactyl-status-fg: ${fg} !important;
+        --tridactyl-status-bg: ${bg} !important;
         --tridactyl-status-border: none !important;
-        --tridactyl-hint-fg: #${p.background.base} !important;
-        --tridactyl-hint-bg: #${p.accent.base} !important;
+        --tridactyl-hint-fg: ${bg} !important;
+        --tridactyl-hint-bg: ${accent} !important;
         --tridactyl-hint-outline: none !important;
-        --tridactyl-hint-active-fg: #${p.background.base} !important;
-        --tridactyl-hint-active-bg: #${p.accent.variant} !important;
-        --tridactyl-hintspan-fg: #${p.background.base} !important;
-        --tridactyl-hintspan-bg: #${p.accent.base} !important;
-        --tridactyl-scrollbar-color: #${p.surface.base} #${p.background.base} !important;
-        --tridactyl-photon-colours-accent-1: #${p.accent.base} !important;
-        --tridactyl-photon-colours-accent-2: #${p.accent.variant} !important;
-        --tridactyl-photon-colours-in-content-page-background: #${p.background.base} !important;
-        --tridactyl-photon-colours-in-content-page-color: #${p.foreground.base} !important;
-        --tridactyl-photon-colours-cm-background: #${p.background.variant} !important;
-        --tridactyl-photon-colours-cm-selection: #${p.surface.base} !important;
+        --tridactyl-hint-active-fg: ${bg} !important;
+        --tridactyl-hint-active-bg: ${accentVariant} !important;
+        --tridactyl-hintspan-fg: ${bg} !important;
+        --tridactyl-hintspan-bg: ${accent} !important;
+        --tridactyl-scrollbar-color: ${surface} ${bg} !important;
+        --tridactyl-photon-colours-accent-1: ${accent} !important;
+        --tridactyl-photon-colours-accent-2: ${accentVariant} !important;
+        --tridactyl-photon-colours-in-content-page-background: ${bg} !important;
+        --tridactyl-photon-colours-in-content-page-color: ${fg} !important;
+        --tridactyl-photon-colours-cm-background: ${bgVariant} !important;
+        --tridactyl-photon-colours-cm-selection: ${surface} !important;
       }
       #command-line-holder { border: none !important; background: var(--tridactyl-cmdl-bg) !important; }
       #tridactyl-input { color: var(--tridactyl-cmdl-fg) !important; background: var(--tridactyl-cmdl-bg) !important; }
       #completions { color: var(--tridactyl-cmplt-fg) !important; background: var(--tridactyl-cmplt-bg) !important; border: none !important; }
-      #completions .focused, #completions .focused .url { background: #${p.accent.base} !important; color: #${p.background.base} !important; }
+      #completions .focused, #completions .focused .url { background: ${accent} !important; color: ${bg} !important; }
       .TridactylStatusIndicator { background: var(--tridactyl-status-bg) !important; color: var(--tridactyl-status-fg) !important; border: none !important; }
     }
     @-moz-document url-prefix("moz-extension://f9eff719-c9ce-4ccb-9625-be5b8f1aec81/") {
       :root {
-        --in-content-page-background: #${p.background.base} !important;
-        --in-content-page-color: #${p.foreground.base} !important;
-        --in-content-box-background: #${p.background.base} !important;
-        --in-content-box-background-hover: #${p.surface.base} !important;
-        --in-content-box-background-active: #${p.surface.variant} !important;
-        --in-content-text-color: #${p.foreground.base} !important;
-        --in-content-selected-text: #${p.background.base} !important;
-        --in-content-item-selected: #${p.accent.base} !important;
-        --browser-bg: #${p.background.base} !important;
-        --browser-text: #${p.foreground.base} !important;
-        --tab-surface: #${p.background.base} !important;
-        --tab-text: #${p.foreground.base} !important;
-        --tab-surface-active: #${p.surface.base} !important;
-        --tab-text-active: #${p.foreground.variant} !important;
-        --tab-highlighted-base: #${p.accent.base} !important;
-        --sidebar-background-color: #${p.background.base} !important;
+        --in-content-page-background: ${bg} !important;
+        --in-content-page-color: ${fg} !important;
+        --in-content-box-background: ${bg} !important;
+        --in-content-box-background-hover: ${hoverBgHex} !important;
+        --in-content-box-background-active: ${activeBgHex} !important;
+        --in-content-text-color: ${fg} !important;
+        --in-content-selected-text: ${bg} !important;
+        --in-content-item-selected: ${accent} !important;
+        --browser-bg: ${bg} !important;
+        --browser-text: ${fg} !important;
+        --tab-surface: ${bg} !important;
+        --tab-text: ${fg} !important;
+        --tab-surface-active: ${surface} !important;
+        --tab-text-active: ${fgVariant} !important;
+        --tab-highlighted-base: ${accent} !important;
+        --sidebar-background-color: ${bg} !important;
       }
       html, body, #tabbar, #tabbar-container, #normal-tabs-container, .virtual-scroll-container {
-        background: #${p.background.base} !important;
-        color: #${p.foreground.base} !important;
+        background: ${bg} !important;
+        color: ${fg} !important;
       }
       tab-item, tab-item-substance {
         background: transparent !important;
-        --tab-surface: #${p.background.base} !important;
-        --tab-text: #${p.foreground.base} !important;
+        --tab-surface: ${bg} !important;
+        --tab-text: ${fg} !important;
       }
       tab-item.active, tab-item[data-active="true"] {
-        --tab-surface: #${p.surface.base} !important;
-        --tab-text: #${p.foreground.variant} !important;
+        --tab-surface: ${surface} !important;
+        --tab-text: ${fgVariant} !important;
       }
-      tab-item:hover { --tab-surface: #${p.surface.variant} !important; }
+      tab-item:hover { --tab-surface: ${hoverBgHex} !important; }
       tab-item.active tab-item-substance, tab-item[data-active="true"] tab-item-substance {
-        background: #${p.surface.base} !important;
-        color: #${p.foreground.variant} !important;
+        background: ${surface} !important;
+        color: ${fgVariant} !important;
       }
-      .newtab-button, #tabbar .newtab-button-box { background: #${p.background.base} !important; color: #${p.foreground.base} !important; }
-      .newtab-button:hover { background: #${p.surface.base} !important; }
+      .newtab-button, #tabbar .newtab-button-box { background: ${bg} !important; color: ${fg} !important; }
+      .newtab-button:hover { background: ${hoverBgHex} !important; }
     }
   '';
   tridactylCss = ''
     :root {
-      --tridactyl-fg: #${p.foreground.base};
-      --tridactyl-bg: #${p.background.base};
-      --tridactyl-url-fg: #${p.accent.base};
-      --tridactyl-url-bg: #${p.background.base};
-      --tridactyl-highlight-box-bg: #${p.surface.base};
-      --tridactyl-highlight-box-fg: #${p.foreground.variant};
-      --tridactyl-of-fg: #${p.foreground.variant};
-      --tridactyl-of-bg: #${p.surface.variant};
-      --tridactyl-cmdl-fg: #${p.foreground.variant};
-      --tridactyl-cmdl-bg: #${p.background.variant};
+      --tridactyl-fg: ${fg};
+      --tridactyl-bg: ${bg};
+      --tridactyl-url-fg: ${accent};
+      --tridactyl-url-bg: ${bg};
+      --tridactyl-highlight-box-bg: ${surface};
+      --tridactyl-highlight-box-fg: ${fgVariant};
+      --tridactyl-of-fg: ${fgVariant};
+      --tridactyl-of-bg: ${surfaceVariant};
+      --tridactyl-cmdl-fg: ${fgVariant};
+      --tridactyl-cmdl-bg: ${bgVariant};
       --tridactyl-cmdl-font-family: monospace;
       --tridactyl-cmdl-font-size: calc(12pt * 0.75);
       --tridactyl-cmdl-line-height: 1.5;
-      --tridactyl-cmplt-bg: #${p.background.base};
-      --tridactyl-cmplt-fg: #${p.foreground.base};
+      --tridactyl-cmplt-bg: ${bg};
+      --tridactyl-cmplt-fg: ${fg};
       --tridactyl-cmplt-font-family: monospace;
       --tridactyl-cmplt-font-size: calc(12pt * 9/12);
       --tridactyl-cmplt-option-height: 1.4em;
       --tridactyl-cmplt-border-top: none;
-      --tridactyl-status-fg: #${p.foreground.base};
-      --tridactyl-status-bg: #${p.background.base};
+      --tridactyl-status-fg: ${fg};
+      --tridactyl-status-bg: ${bg};
       --tridactyl-status-border: none;
       --tridactyl-status-border-radius: 2px;
       --tridactyl-status-font-family: monospace;
       --tridactyl-status-font-size: calc(12pt * 0.75);
-      --tridactyl-hint-fg: #${p.background.base};
-      --tridactyl-hint-bg: #${p.accent.base};
+      --tridactyl-hint-fg: ${bg};
+      --tridactyl-hint-bg: ${accent};
       --tridactyl-hint-outline: none;
-      --tridactyl-hint-active-fg: #${p.background.base};
-      --tridactyl-hint-active-bg: #${p.accent.variant};
+      --tridactyl-hint-active-fg: ${bg};
+      --tridactyl-hint-active-bg: ${accentVariant};
       --tridactyl-hint-active-outline: none;
-      --tridactyl-hintspan-fg: #${p.background.base} !important;
-      --tridactyl-hintspan-bg: #${p.accent.base} !important;
+      --tridactyl-hintspan-fg: ${bg} !important;
+      --tridactyl-hintspan-bg: ${accent} !important;
       --tridactyl-hintspan-font-family: sans-serif;
       --tridactyl-hintspan-font-size: calc(12pt * 0.75);
       --tridactyl-hintspan-font-weight: bold;
       --tridactyl-hintspan-border-color: transparent;
       --tridactyl-hintspan-border-width: 0px;
       --tridactyl-hintspan-border-style: none;
-      --tridactyl-scrollbar-color: #${p.surface.base} #${p.background.base};
-      --tridactyl-photon-colours-accent-1: #${p.accent.base};
-      --tridactyl-photon-colours-accent-2: #${p.accent.variant};
-      --tridactyl-photon-colours-accent-3: #${p.accent.variant};
-      --tridactyl-photon-colours-in-content-page-background: #${p.background.base};
-      --tridactyl-photon-colours-in-content-page-color: #${p.foreground.base};
-      --tridactyl-photon-colours-in-content-box-background: #${p.surface.base};
-      --tridactyl-photon-colours-in-content-link-color: #${p.accent.base};
-      --tridactyl-photon-colours-in-content-text-color: #${p.foreground.variant};
-      --tridactyl-photon-colours-cm-background: #${p.background.variant};
-      --tridactyl-photon-colours-cm-selection: #${p.surface.base};
+      --tridactyl-scrollbar-color: ${surface} ${bg};
+      --tridactyl-photon-colours-accent-1: ${accent};
+      --tridactyl-photon-colours-accent-2: ${accentVariant};
+      --tridactyl-photon-colours-accent-3: ${accentVariant};
+      --tridactyl-photon-colours-in-content-page-background: ${bg};
+      --tridactyl-photon-colours-in-content-page-color: ${fg};
+      --tridactyl-photon-colours-in-content-box-background: ${surface};
+      --tridactyl-photon-colours-in-content-link-color: ${accent};
+      --tridactyl-photon-colours-in-content-text-color: ${fgVariant};
+      --tridactyl-photon-colours-cm-background: ${bgVariant};
+      --tridactyl-photon-colours-cm-selection: ${surface};
     }
     #command-line-holder { order: 1; border: none !important; background: var(--tridactyl-cmdl-bg) !important; }
     #tridactyl-input { color: var(--tridactyl-cmdl-fg) !important; background: var(--tridactyl-cmdl-bg) !important; }
     #completions { --option-height: var(--tridactyl-cmplt-option-height); color: var(--tridactyl-cmplt-fg) !important; background: var(--tridactyl-cmplt-bg) !important; border: none !important; }
-    #completions .focused { background: #${p.accent.base} !important; color: #${p.background.base} !important; }
-    #completions .focused .url { background: #${p.accent.base} !important; color: #${p.background.base} !important; }
+    #completions .focused { background: ${accent} !important; color: ${bg} !important; }
+    #completions .focused .url { background: ${accent} !important; color: ${bg} !important; }
     .TridactylStatusIndicator { background: var(--tridactyl-status-bg) !important; color: var(--tridactyl-status-fg) !important; border: none !important; }
   '';
   tridactylrc = ''
@@ -439,10 +461,10 @@ let
     bind gi focusinput -l
     bind --mode insert <C-c> mode normal
     bind --mode input <C-c> mode normal
-    colours statusfg #${p.foreground.base}
-    colours statusbg #${p.background.base}
-    colours hintfg #${p.background.base}
-    colours hintbg #${p.accent.base}
+    colours statusfg ${fg}
+    colours statusbg ${bg}
+    colours hintfg ${bg}
+    colours hintbg ${accent}
     colourscheme --url file://${config.home.homeDirectory}/.config/tridactyl/themes/angst.css angst
   '';
 in
