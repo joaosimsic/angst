@@ -12,6 +12,10 @@ in
   config = lib.mkIf cfg.enable {
     programs.firefox = {
       enable = true;
+      languagePacks = [
+        "en-US"
+        "pt-BR"
+      ];
       policies = policies.common;
     };
   };

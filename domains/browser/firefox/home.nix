@@ -18,6 +18,10 @@ in
   config = lib.mkIf cfg.enable {
     programs.firefox = {
       enable = true;
+      languagePacks = [
+        "en-US"
+        "pt-BR"
+      ];
       package = pkgs.firefox.override {
         extraPrefs = builtins.readFile ./extra-prefs.js;
       };
@@ -29,6 +33,15 @@ in
         isDefault = true;
         inherit settings;
         inherit userChrome userContent;
+        extensions.settings."addon@darkreader.org" = {
+          force = true;
+          settings = {
+            enabledByDefault = true;
+            enabledFor = [ ];
+            disabledFor = [ "github.com" ];
+            syncSettings = false;
+          };
+        };
       };
     };
     home.file.".mozilla/firefox/default/tridactylrc".text = tridactyl.rc;

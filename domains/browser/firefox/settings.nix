@@ -25,4 +25,7 @@
   "sidebar.revamp" = true;
   "sidebar.verticalTabs" = true;
   "sidebar.visibility" = "always-show";
+  "intl.accept_languages" = "en-US, en, pt-BR";
+  "intl.locale.requested" = "en-US,pt-BR";
+  "spellchecker.dictionary" = "en-US";
 }
