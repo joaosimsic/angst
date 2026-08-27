@@ -205,7 +205,7 @@ let
 in
 {
   inherit themes schema;
-  inherit ensureContrast contrastRatio;
+  inherit ensureContrast contrastRatio relativeLuminance;
 
   default = "monochrome";
 
