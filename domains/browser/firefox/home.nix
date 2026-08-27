@@ -276,6 +276,13 @@ let
         --input-background-color: ${bgVariant} !important;
         --input-color: ${fg} !important;
         --input-border-color: transparent !important;
+        --newtab-background-color: ${bg} !important;
+        --newtab-background-color-secondary: ${bgVariant} !important;
+        --newtab-background-card: color-mix(in srgb, ${bgVariant} 85%, transparent) !important;
+        --newtab-text-primary-color: ${fg} !important;
+        --newtab-text-secondary-color: ${fgVariant} !important;
+        --content-search-handoff-ui-background-color: ${bgVariant} !important;
+        --content-search-handoff-ui-color: ${fg} !important;
       }
       html {
         color-scheme: ${colorScheme} !important;
@@ -292,12 +299,45 @@ let
         --card-background-color: ${bgVariant} !important;
         --panel-background-color: ${bgVariant} !important;
         --panel-text-color: ${fg} !important;
+        --newtab-background-color: ${bg} !important;
+        --newtab-background-color-secondary: ${bgVariant} !important;
+        --newtab-background-card: color-mix(in srgb, ${bgVariant} 85%, transparent) !important;
+        --newtab-text-primary-color: ${fg} !important;
+        --newtab-text-secondary-color: ${fgVariant} !important;
+        --newtab-element-hover-color: ${hoverBgHex} !important;
+        --newtab-element-active-color: ${activeBgHex} !important;
+        --newtab-element-secondary-color: ${hoverBgHex} !important;
+        --newtab-element-secondary-hover-color: ${activeBgHex} !important;
+        --newtab-element-secondary-active-color: ${activeBgHex} !important;
+        --content-search-handoff-ui-background-color: ${bgVariant} !important;
+        --content-search-handoff-ui-color: ${fg} !important;
+        --content-search-handoff-ui-fill: ${fgVariant} !important;
+        --content-search-handoff-ui-caret-color: ${fg} !important;
+        --content-search-handoff-ui-engine-icon: ${fg} !important;
+        --newtab-primary-action-background: ${accent} !important;
+        --newtab-primary-action-background-dimmed: color-mix(in srgb, ${accent} 25%, transparent) !important;
+        --newtab-primary-element-text-color: ${bg} !important;
+        --newtab-wordmark-color: ${fg} !important;
+        --newtab-overlay-color: color-mix(in srgb, ${bg} 85%, transparent) !important;
+        --newtab-button-background: ${bgVariant} !important;
+        --newtab-button-hover-background: ${hoverBgHex} !important;
+        --newtab-button-active-background: ${activeBgHex} !important;
+        --newtab-button-text: ${fg} !important;
+        --newtab-border-color: transparent !important;
       }
       body {
         background-color: ${bg} !important;
         color: ${fg} !important;
       }
       a { color: ${accent} !important; }
+      .search-handoff-button, .search-wrapper .search-handoff-button, .contentSearchHeader, .search-inner-wrapper {
+        background-color: var(--content-search-handoff-ui-background-color) !important;
+        color: var(--content-search-handoff-ui-color) !important;
+        border-color: transparent !important;
+      }
+      .search-handoff-button .fake-textbox, .search-handoff-button .fake-caret {
+        color: var(--content-search-handoff-ui-color) !important;
+      }
     }
     @-moz-document url-prefix("moz-extension://") {
       :root {
@@ -515,6 +555,24 @@ in
         DisableAppUpdate = true;
         DisplayBookmarksToolbar = "always";
         OfferToSaveLogins = false;
+        NoDefaultBookmarks = true;
+        Homepage = {
+          URL = "about:home";
+          StartPage = "homepage";
+        };
+        NewTabPage = true;
+        FirefoxHome = {
+          Search = true;
+          TopSites = true;
+          SponsoredTopSites = false;
+          Highlights = true;
+          Pocket = false;
+          SponsoredPocket = false;
+          Snippets = false;
+          Locked = false;
+        };
+        OverrideFirstRunPage = "";
+        OverridePostUpdatePage = "";
         ExtensionSettings = {
           "treestyletab@piro.sakura.ne.jp" = {
             installation_mode = "blocked";
@@ -534,8 +592,20 @@ in
         name = "default";
         isDefault = true;
         settings = {
-          "browser.startup.homepage" = "about:blank";
+          "browser.startup.homepage" = "about:home";
+          "browser.startup.page" = 1;
+          "browser.newtabpage.enabled" = true;
+          "browser.startup.homepage_override.mstone" = "ignore";
           "browser.toolbars.bookmarks.visibility" = "always";
+          "devtools.chrome.enabled" = true;
+          "devtools.debugger.remote-enabled" = true;
+          "devtools.debugger.prompt-connection" = false;
+          "browser.bookmarks.restore_default_bookmarks" = false;
+          "browser.bookmarks.addedImportButton" = true;
+          "browser.sessionstore.resume_from_crash" = true;
+          "browser.warnOnQuit" = true;
+          "browser.tabs.warnOnClose" = true;
+          "browser.tabs.warnOnCloseOtherTabs" = true;
           "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
           "browser.uidensity" = 0;
           "browser.theme.toolbar-theme" = toolbarThemeVal;
