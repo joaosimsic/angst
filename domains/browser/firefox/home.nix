@@ -44,8 +44,18 @@ in
         };
       };
     };
-    home.file.".mozilla/firefox/default/tridactylrc".text = tridactyl.rc;
-    home.file.".mozilla/firefox/default/tridactyl/themes/angst.css".text = tridactyl.css;
-    xdg.configFile."tridactyl/themes/angst.css".text = tridactyl.css;
+    home = {
+      packages = [ pkgs.tridactyl-native ];
+      file = {
+        ".mozilla/native-messaging-hosts/tridactyl.json".source =
+          "${pkgs.tridactyl-native}/lib/mozilla/native-messaging-hosts/tridactyl.json";
+        ".mozilla/firefox/default/tridactylrc".text = tridactyl.rc;
+        ".mozilla/firefox/default/tridactyl/themes/angst.css".text = tridactyl.css;
+      };
+    };
+    xdg.configFile = {
+      "tridactyl/tridactylrc".text = tridactyl.rc;
+      "tridactyl/themes/angst.css".text = tridactyl.css;
+    };
   };
 }

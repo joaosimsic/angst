@@ -292,6 +292,8 @@ let
     bind N findnext -1
     bind gt tabnext
     bind gT tabprev
+    unbind <C-h>
+    unbind <C-l>
     bind <C-h> tabprev
     bind <C-l> tabnext
     bind gi focusinput -l
