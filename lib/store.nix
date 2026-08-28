@@ -1,6 +1,5 @@
 {
   enabled,
-  ...
 }:
 
 let

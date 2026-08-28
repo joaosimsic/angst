@@ -2,16 +2,13 @@
   config,
   lib,
   runtime,
-  store ? null,
-  hostStore ? null,
+  store,
   ...
 }:
 
 let
   cfg = config.domains.capture.screenshot;
-  effectiveStore = if store != null then store else hostStore;
-  hasWayland = if effectiveStore != null then effectiveStore.hasWayland else false;
-  hasX11 = if effectiveStore != null then effectiveStore.hasX11 else true;
+  inherit (store) hasWayland hasX11;
   picturesDir = "$HOME/Pictures";
   captureBackend = "auto";
   captureInteractive = false;

@@ -1,16 +1,14 @@
 {
   config,
   lib,
-  store ? null,
-  hostStore ? null,
+  store,
   ...
 }:
 
 let
   cfg = config.domains.wm.i3;
   cap = config.domains.capture.screenshot or { enable = false; };
-  effectiveStore = if store != null then store else hostStore;
-  hasX11 = if effectiveStore != null then effectiveStore.hasX11 else true;
+  inherit (store) hasX11;
   shouldBind = cfg.enable && (cap.enable or false) && hasX11;
 in
 {

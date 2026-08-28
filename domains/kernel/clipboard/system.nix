@@ -2,16 +2,13 @@
   config,
   lib,
   pkgs,
-  store ? null,
-  hostStore ? null,
+  store,
   ...
 }:
 
 let
   cfg = config.domains.kernel.clipboard;
-  effectiveStore = if store != null then store else hostStore;
-  hasWayland = if effectiveStore != null then effectiveStore.hasWayland else false;
-  hasX11 = if effectiveStore != null then effectiveStore.hasX11 else true;
+  inherit (store) hasWayland hasX11;
 in
 {
   options.domains.kernel.clipboard = {

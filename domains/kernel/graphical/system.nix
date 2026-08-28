@@ -2,15 +2,13 @@
   config,
   lib,
   pkgs,
-  store ? null,
-  hostStore ? null,
+  store,
   ...
 }:
 
 let
   cfg = config.domains.kernel.graphical;
-  effectiveStore = if store != null then store else hostStore;
-  hasWayland = if effectiveStore != null then effectiveStore.hasWayland else false;
+  inherit (store) hasWayland;
 in
 {
   options.domains.kernel.graphical = {
