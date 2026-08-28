@@ -7,7 +7,9 @@
     "display.lightdm"
     "wm.i3"
     "bar.i3status"
+    "browser.firefox"
     "system.graphical"
+    "system.cursor"
     "system.audio"
     "system.clipboard"
   ];

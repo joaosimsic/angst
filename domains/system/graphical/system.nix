@@ -2,8 +2,6 @@
   config,
   lib,
   pkgs,
-  theme,
-  themesLib,
   ...
 }:
 
