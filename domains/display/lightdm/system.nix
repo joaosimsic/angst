@@ -41,7 +41,7 @@ in
           enable = true;
           extraConfig = ''
             user-background = false
-            session=angst-x11
+            session=i3
           '';
         };
       }

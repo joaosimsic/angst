@@ -1,24 +1,34 @@
 {
   pkgs,
   host,
+  vmHost,
   runtime,
 }:
 
 let
-  allToolchainPkgs = if host != null then host.scan.allToolchainPackages else [ ];
-  treesitter = if host != null then host.scan.treesitter else null;
+  allToolchainPkgsFor = h: if h != null then h.scan.allToolchainPackages else [ ];
+  treesitterFor = h: if h != null then h.scan.treesitter else null;
 
-  treesitterShellHook = ''
+  allToolchainPkgs = allToolchainPkgsFor host;
+  treesitter = treesitterFor host;
+
+  vmAllToolchainPkgs = allToolchainPkgsFor (if vmHost != null then vmHost else host);
+  vmTreesitter = treesitterFor (if vmHost != null then vmHost else host);
+
+  treesitterShellHookFor = t: ''
     mkdir -p ~/.local/share/tree-sitter
     rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
     ln -sf ${
-      if treesitter != null then treesitter.treesitterParsers else "/dev/null"
+      if t != null then t.treesitterParsers else "/dev/null"
     } ~/.local/share/tree-sitter/parser
     ln -sf ${
-      if treesitter != null then treesitter.treesitterQueries else "/dev/null"
+      if t != null then t.treesitterQueries else "/dev/null"
     } ~/.local/share/tree-sitter/queries
     export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
   '';
+
+  treesitterShellHook = treesitterShellHookFor treesitter;
+  vmTreesitterShellHook = treesitterShellHookFor vmTreesitter;
 
   shellDevHook = runtime.devshell-hook {
     defaultVmHost = "vm";
@@ -44,6 +54,27 @@ let
       statix
     ]
     ++ allToolchainPkgs;
+
+  fullVmPackages =
+    with pkgs;
+    [
+      neovim
+      git
+      runtime.angst-cli
+      openssh
+      qemu
+      age
+      runtime.vmTool
+      gitleaks
+      cargo
+      rustc
+      rust-analyzer
+      go
+      gofumpt
+      deadnix
+      statix
+    ]
+    ++ vmAllToolchainPkgs;
 in
 {
   shells = {
@@ -66,8 +97,8 @@ in
     };
 
     vm = pkgs.mkShell {
-      packages = fullDevPackages;
-      shellHook = "${treesitterShellHook}\n. ${shellDevHook}";
+      packages = fullVmPackages;
+      shellHook = "${vmTreesitterShellHook}\n. ${shellDevHook}";
     };
   };
 }

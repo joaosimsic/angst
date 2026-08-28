@@ -64,6 +64,10 @@ let
     inherit pkgs lib hostList;
   };
 
+  checkTreesitter = import ./treesitter.nix {
+    inherit pkgs lib hostList self;
+  };
+
   checkProjectsPipeline = import ./projects-pipeline.nix {
     inherit pkgs runtime;
   };
@@ -136,6 +140,7 @@ in
   secret-scan = secretScan;
   secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;
+  check-treesitter = checkTreesitter;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop = lintDesktop;
   lint-shell = lintShell;
