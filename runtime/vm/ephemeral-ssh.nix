@@ -2,7 +2,6 @@
   mkScript,
   pkgs,
   goVm,
- ...
 }:
 mkScript {
   name = "angst-vm-ephemeral-ssh";

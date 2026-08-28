@@ -2,7 +2,6 @@
   mkScript,
   pkgs,
   self,
- ...
 }:
 mkScript {
   name = "lint-themes";

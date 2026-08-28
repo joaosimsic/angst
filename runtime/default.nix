@@ -163,6 +163,42 @@ let
     in
     drv // { bin = "${drv}/bin/${name}"; };
 
+  # Import a script passing exactly the arguments it declares. This avoids
+  # every script needing a `...` rest attribute while still sharing one pool
+  # of available dependencies.
+  callWith =
+    pool: path:
+    let
+      f = import path;
+    in
+    f (builtins.intersectAttrs (builtins.functionArgs f) pool);
+
+  # Full pool of dependencies a script may reference. Each script receives
+  # only the subset it actually declares (via builtins.functionArgs).
+  allArgs = {
+    inherit
+      mkScript
+      pkgs
+      lib
+      goAngst
+      goVm
+      goShell
+      goAnalyze
+      goLoggerUnwrapped
+      self
+      vmTool
+      hmSwitchTool
+      ;
+  };
+
+  # angst-cli is imported first because other scripts depend on it as the
+  # `angstCli` argument.
+  angstCli = callWith allArgs ./angst-cli.nix;
+
+  allArgsWithAngstCli = allArgs // {
+    inherit angstCli;
+  };
+
   goSourceDirs = [
     "angst"
     "shell"
@@ -171,27 +207,6 @@ let
     "cmd"
     "internal"
   ];
-
-  angstCli = import ./angst-cli.nix {
-    inherit
-      mkScript
-      pkgs
-      goAngst
-      ;
-  };
-
-  specialArgs = {
-    inherit
-      mkScript
-      pkgs
-      lib
-      goAngst
-      goVm
-      goAnalyze
-      angstCli
-      self
-      ;
-  };
 
   discover =
     dir:
@@ -218,7 +233,7 @@ let
         then
           {
             name = lib.removeSuffix ".nix" name;
-            value = import path specialArgs;
+            value = callWith allArgsWithAngstCli path;
           }
         else
           null;

@@ -2,7 +2,6 @@
   mkScript,
   pkgs,
   goVm,
- ...
 }:
 { username }:
 mkScript {
