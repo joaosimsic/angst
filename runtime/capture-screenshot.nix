@@ -4,14 +4,15 @@
   lib,
 }:
 {
-  backend ? "auto",
-  targetDir ? "$HOME/Pictures/Screenshots",
-  copyToClipboard ? true,
-  saveToFile ? true,
-  interactive ? false,
+  backend,
+  targetDir,
+  copyToClipboard,
+  saveToFile,
+  interactive,
+  name,
 }:
 mkScript {
-  name = "angst-screenshot";
+  name = name;
   runtimeInputs =
     with pkgs;
     [

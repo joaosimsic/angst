@@ -19,10 +19,10 @@ in
       if shouldBind then
         ''
           # angst capture/screenshot — i3 adapter (store-gated, hasX11=${if hasX11 then "1" else "0"})
-          bindsym Print exec --no-startup-id angst-screenshot fullscreen
-          bindsym Shift+Print exec --no-startup-id angst-screenshot region
-          bindsym $mod+Shift+s exec --no-startup-id angst-screenshot region
-          bindsym $mod+Print exec --no-startup-id angst-screenshot window
+          bindsym Print exec --no-startup-id angst-screenshot-save fullscreen
+          bindsym Shift+Print exec --no-startup-id angst-screenshot-copy region
+          bindsym $mod+Shift+s exec --no-startup-id angst-screenshot-copy region
+          bindsym $mod+Print exec --no-startup-id angst-screenshot-save window
         ''
       else
         ''

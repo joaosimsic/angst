@@ -13,8 +13,11 @@ let
   effectiveStore = if store != null then store else hostStore;
   hasWayland = if effectiveStore != null then effectiveStore.hasWayland else false;
   hasX11 = if effectiveStore != null then effectiveStore.hasX11 else true;
+  picturesDir = "$HOME/Pictures";
+  captureBackend = "auto";
+  captureInteractive = false;
   effectiveBackend =
-    if cfg.backend == "auto" then
+    if captureBackend == "auto" then
       if hasWayland && !hasX11 then
         "grim"
       else if hasWayland && hasX11 then
@@ -22,15 +25,22 @@ let
       else
         "maim"
     else
-      cfg.backend;
-  angstScreenshot = runtime.capture-screenshot {
+      captureBackend;
+  angstScreenshotSave = runtime.capture-screenshot {
+    name = "angst-screenshot-save";
     backend = effectiveBackend;
-    inherit (cfg)
-      targetDir
-      copyToClipboard
-      saveToFile
-      interactive
-      ;
+    targetDir = picturesDir;
+    copyToClipboard = false;
+    saveToFile = true;
+    interactive = captureInteractive;
+  };
+  angstScreenshotCopy = runtime.capture-screenshot {
+    name = "angst-screenshot-copy";
+    backend = effectiveBackend;
+    targetDir = picturesDir;
+    copyToClipboard = true;
+    saveToFile = false;
+    interactive = captureInteractive;
   };
 in
 {
@@ -42,31 +52,16 @@ in
         "maim"
         "grim"
       ];
-      default = "auto";
       description = "Capture backend. auto=detect $XDG_SESSION_TYPE/$WAYLAND_DISPLAY, portal=xdg-desktop-portal (X11+Wayland), maim=X11, grim=Wayland";
-    };
-
-    copyToClipboard = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Copy screenshot to clipboard (xclip/wl-copy)";
-    };
-
-    saveToFile = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Save screenshot to file";
     };
 
     targetDir = lib.mkOption {
       type = lib.types.str;
-      default = "$HOME/Pictures/Screenshots";
       description = "Directory to save screenshots (supports $HOME)";
     };
 
     interactive = lib.mkOption {
       type = lib.types.bool;
-      default = false;
       description = "Use portal interactive dialog vs silent fullscreen";
     };
   };
@@ -79,6 +74,13 @@ in
       }
     ];
 
-    home.packages = [ angstScreenshot ];
+    domains.capture.screenshot.backend = captureBackend;
+    domains.capture.screenshot.targetDir = picturesDir;
+    domains.capture.screenshot.interactive = captureInteractive;
+
+    home.packages = [
+      angstScreenshotSave
+      angstScreenshotCopy
+    ];
   };
 }
