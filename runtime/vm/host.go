@@ -13,8 +13,6 @@ import (
 	"vm/internal/paths"
 )
 
-
-
 func envOr(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -75,10 +73,6 @@ func detectDisplay() bool {
 	return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
 }
 
-
-
-
-
 func sshExec(command string) (int, string, string) {
 	port := envOr("VM_SSH_PORT", "2222")
 	user := resolveUsername()
@@ -126,8 +120,6 @@ func scpOpts() []string {
 		"-i", identity,
 	}
 }
-
-
 
 func ensureVmProfile(host string) error {
 	repo := repoRoot()
@@ -231,8 +223,6 @@ func prepareSharedDir(host string) (string, error) {
 	}
 	return dir, nil
 }
-
-
 
 func start(args []string) int {
 	headless := true

@@ -30,7 +30,6 @@ func hasCmd(name string) bool {
 	return err == nil
 }
 
-
 func runExec(args []string, timeout time.Duration) (int, string, string) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -74,7 +73,6 @@ func rgExec(args []string, timeout time.Duration) (int, string, error) {
 	return rc, out.String(), err
 }
 
-
 func rgCount(pat string, fixed bool) int {
 	args := []string{}
 	if fixed {
@@ -101,7 +99,6 @@ func rgCount(pat string, fixed bool) int {
 	return total
 }
 
-
 func rgList(pat string, fixed bool) []string {
 	args := []string{}
 	if fixed {
@@ -121,7 +118,6 @@ func rgList(pat string, fixed bool) []string {
 	}
 	return files
 }
-
 
 func rgOnly(pat string) []string {
 	rc, out, _ := rgExec([]string{"-o", "--no-filename", pat}, 15*time.Second)
@@ -205,8 +201,6 @@ func gitLog(patterns []string, since string) []string {
 	}
 	return res
 }
-
-
 
 func mdEscape(s string) string { return strings.ReplaceAll(s, "|", "\\|") }
 

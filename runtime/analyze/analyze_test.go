@@ -22,7 +22,7 @@ var expectedHeadings = []string{
 	"11. Hardcoded Strings Inventory",
 	"12. Domain Inventory",
 	"13. Theme Inventory",
-	"14. System Feature Inventory",
+	"14. Kernel Feature Inventory",
 	"15. Toolchain Inventory",
 	"16. Host Inventory",
 	"17. Option Inventory",

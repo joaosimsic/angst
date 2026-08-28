@@ -1,8 +1,8 @@
 package main
 
 import (
-	"os"
 	"analyze"
+	"os"
 )
 
 func main() {

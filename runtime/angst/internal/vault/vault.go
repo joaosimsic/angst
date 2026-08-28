@@ -9,12 +9,12 @@ import (
 )
 
 type options struct {
-	path    string
-	dirMode bool
-	force   bool
-	delete  bool
+	path     string
+	dirMode  bool
+	force    bool
+	delete   bool
 	noDelete bool
-	sc      scope.Scope
+	sc       scope.Scope
 }
 
 func parseArgs(args []string) (string, options, error) {

@@ -6,10 +6,6 @@ import (
 	"testing"
 )
 
-
-
-
-
 func TestVMGuestDispatch(t *testing.T) {
 	cases := [][]string{
 		{"age-key"},
@@ -25,7 +21,7 @@ func TestVMGuestDispatch(t *testing.T) {
 }
 
 func TestVMUnknownCommand(t *testing.T) {
-	
+
 	r, w, _ := os.Pipe()
 	old := os.Stderr
 	os.Stderr = w

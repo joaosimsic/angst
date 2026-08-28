@@ -1,7 +1,6 @@
 {
   config,
   lib,
-  pkgs,
   runtime,
   store ? null,
   hostStore ? null,
@@ -74,9 +73,11 @@ in
       }
     ];
 
-    domains.capture.screenshot.backend = captureBackend;
-    domains.capture.screenshot.targetDir = picturesDir;
-    domains.capture.screenshot.interactive = captureInteractive;
+    domains.capture.screenshot = {
+      backend = captureBackend;
+      targetDir = picturesDir;
+      interactive = captureInteractive;
+    };
 
     home.packages = [
       angstScreenshotSave

@@ -17,7 +17,6 @@ func usage() {
 `)
 }
 
-
 func Run(args []string) int {
 	mode := ""
 	if len(args) > 0 {
@@ -101,10 +100,6 @@ func resolveHostShell() string {
 	}
 	return "/bin/bash"
 }
-
-
-
-
 
 func prepareShell(mode string) (cmdPath string, env []string, err error) {
 	var pathKey string

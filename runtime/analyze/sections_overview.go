@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-
-
 func walkLOC(root, ext string, skip map[string]bool) int {
 	total := 0
 	_ = filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
@@ -92,8 +90,6 @@ func globNix(dir string) []string {
 	}
 	return out
 }
-
-
 
 func nixDepthAndInterp(text string) (int, int) {
 	depth := 0
@@ -269,8 +265,8 @@ func complexityScoreRaw(text string) (int, int, int, int, int) {
 }
 
 var (
-	mkIfRe       = regexp.MustCompile(`mkIf|mkDefault|mkForce`)
-	interpRe     = regexp.MustCompile(`\$\{`)
+	mkIfRe         = regexp.MustCompile(`mkIf|mkDefault|mkForce`)
+	interpRe       = regexp.MustCompile(`\$\{`)
 	domainRenderRe = regexp.MustCompile(`domains/([^/]+/[^/]+)/`)
 )
 
@@ -347,8 +343,6 @@ func complexityLabel(text string) (string, int, string) {
 	}
 	return label, score, strings.Join(reasons, ", ")
 }
-
-
 
 func sectionOverview(noEvalCost bool) string {
 	lines := []string{mdSection(1, "Overview")}
@@ -543,9 +537,9 @@ func sectionRenderCoverage() string {
 		}
 	}
 	labels := map[string]string{
-		"render":  "render.nix",
-		"nixos":   "system.nix",
-		"checks":   "domain checks",
+		"render": "render.nix",
+		"nixos":  "system.nix",
+		"checks": "domain checks",
 	}
 	rows := [][]any{}
 	for _, k := range []string{"render", "nixos", "checks"} {

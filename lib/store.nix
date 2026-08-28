@@ -1,6 +1,6 @@
 {
-  lib,
   enabled,
+  ...
 }:
 
 let
@@ -15,7 +15,14 @@ let
   hasAudio = has "kernel.audio";
 in
 {
-  inherit hasX11 hasWayland hasPortal isGraphical hasClipboard hasAudio;
+  inherit
+    hasX11
+    hasWayland
+    hasPortal
+    isGraphical
+    hasClipboard
+    hasAudio
+    ;
   enabledNames = names;
   isX11Only = hasX11 && !hasWayland;
   isWaylandOnly = hasWayland && !hasX11;

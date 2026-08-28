@@ -28,8 +28,7 @@ in
       enable = true;
       extraPortals =
         with pkgs;
-        [ xdg-desktop-portal-gtk ]
-        ++ lib.optionals hasWayland [ xdg-desktop-portal-wlr ];
+        [ xdg-desktop-portal-gtk ] ++ lib.optionals hasWayland [ xdg-desktop-portal-wlr ];
       config.common.default = "*";
     };
 

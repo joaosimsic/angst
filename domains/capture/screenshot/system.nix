@@ -11,7 +11,6 @@ let
   cfg = config.domains.capture.screenshot;
   effectiveStore = if store != null then store else hostStore;
   hasWayland = if effectiveStore != null then effectiveStore.hasWayland else false;
-  hasX11 = if effectiveStore != null then effectiveStore.hasX11 else true;
 in
 {
   options.domains.capture.screenshot = {
@@ -32,14 +31,16 @@ in
       enable = true;
       extraPortals =
         with pkgs;
-        [ xdg-desktop-portal-gtk ]
-        ++ lib.optionals hasWayland [ xdg-desktop-portal-wlr ];
+        [ xdg-desktop-portal-gtk ] ++ lib.optionals hasWayland [ xdg-desktop-portal-wlr ];
       config.common.default = lib.mkDefault "*";
     };
 
     environment.systemPackages =
       with pkgs;
-      [ xdg-desktop-portal xdg-desktop-portal-gtk ]
+      [
+        xdg-desktop-portal
+        xdg-desktop-portal-gtk
+      ]
       ++ lib.optionals hasWayland [ xdg-desktop-portal-wlr ];
   };
 }

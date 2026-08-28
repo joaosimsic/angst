@@ -12,7 +12,7 @@
   name,
 }:
 mkScript {
-  name = name;
+  inherit name;
   runtimeInputs =
     with pkgs;
     [

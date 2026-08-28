@@ -74,7 +74,7 @@ let
     inherit lib;
   };
 
-  mkStore = enabled: import ../store.nix { inherit lib enabled; };
+  mkStore = enabled: import ../store.nix { inherit enabled; };
 
   mkHomeCfg =
     {
@@ -86,7 +86,9 @@ let
     let
       p = profilesFor host;
       store = mkStore p.enabled;
-      hostWithStore = host // { inherit store; };
+      hostWithStore = host // {
+        inherit store;
+      };
     in
     mkHome {
       inherit
@@ -98,9 +100,9 @@ let
         hmModules
         themeOverride
         shellOverride
+        store
         ;
       host = hostWithStore;
-      store = store;
     };
 
   mkHostFor =
@@ -108,16 +110,18 @@ let
     let
       p = profilesFor host;
       store = mkStore p.enabled;
-      hostWithStore = host // { inherit store; };
+      hostWithStore = host // {
+        inherit store;
+      };
     in
     mkHost {
       inherit
         self
         inputs
         runtime
+        store
         ;
       host = hostWithStore;
-      store = store;
       hmModules = map enableModule p.enabled;
       nixosModules = map enableModule (builtins.filter (e: e.hasSystem) p.enabled) ++ p.modules;
     };
@@ -128,9 +132,9 @@ let
     inherit
       pkgs
       runtime
+      vmHost
       ;
     host = representative;
-    vmHost = vmHost;
   };
 
   angstShell = runtime.mkAngstShell {
