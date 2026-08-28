@@ -46,6 +46,8 @@ in
           border_fg = hex p.accent.base;
           error_bg = hex p.background.base;
           error_fg = hexBold themeColors.ansi.error;
+          session = "angst-x11";
+          user = "joao";
         };
       }
     );
