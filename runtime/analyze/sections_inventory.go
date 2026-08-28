@@ -125,10 +125,10 @@ func sectionThemeInventory() string {
 	return strings.Join(lines, "\n")
 }
 
-func sectionCapabilitiesInventory() string {
+func sectionKernelInventory() string {
 	lines := []string{mdSection(14, "Kernel Feature Inventory")}
 	lines = append(lines, "> **See `nix flake show` for the full list.**\n")
-	var caps []string
+	var feats []string
 	var locs []int
 	total := 0
 	for _, cat := range []string{"kernel", "display"} {
@@ -141,17 +141,17 @@ func sectionCapabilitiesInventory() string {
 			if !fileExists(p) {
 				continue
 			}
-			caps = append(caps, cat+"/"+name)
+			feats = append(feats, cat+"/"+name)
 			loc := len(strings.Split(readNix(p), "\n"))
 			locs = append(locs, loc)
 			total += loc
 		}
 	}
-	if len(caps) == 0 {
+	if len(feats) == 0 {
 		return lines[0] + "\n(no kernel/display features)"
 	}
-	lines = append(lines, fmt.Sprintf("- **%d kernel features**, %d total LOC\n", len(caps), total))
-	for i, c := range caps {
+	lines = append(lines, fmt.Sprintf("- **%d kernel features**, %d total LOC\n", len(feats), total))
+	for i, c := range feats {
 		lines = append(lines, fmt.Sprintf("  - `%s` — %d LOC", c, locs[i]))
 	}
 	return strings.Join(lines, "\n")
