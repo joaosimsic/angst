@@ -14,6 +14,10 @@
         domains.display.lightdm.enable = lib.mkForce false;
         services.xserver.windowManager.i3.enable = lib.mkForce false;
         environment.systemPackages = [ pkgs.i3 ];
+        services.displayManager.autoLogin = {
+          enable = lib.mkForce true;
+          user = lib.mkForce "joao";
+        };
       };
     })
   ];
