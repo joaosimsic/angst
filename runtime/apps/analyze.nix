@@ -2,6 +2,7 @@
   mkScript,
   pkgs,
   goAnalyze,
+ ...
 }:
 mkScript {
   name = "analyze";

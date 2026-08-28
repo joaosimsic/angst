@@ -2,6 +2,7 @@
   mkScript,
   pkgs,
   goAngst,
+ ...
 }:
 
 mkScript {

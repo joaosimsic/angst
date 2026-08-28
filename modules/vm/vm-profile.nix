@@ -93,9 +93,9 @@ in
         spice-vdagent
         pkg-config
         openssl.dev
-        runtime.angstCli
-        runtime.vm.nixosSwitch
-        runtime.vm.homeSwitch
+        runtime.angst-cli
+        runtime.vm.nixos-switch
+        runtime.vm.home-switch
       ];
       sessionVariables = {
         ANGST_REPO = hostAngstPath;
@@ -131,7 +131,7 @@ in
             Type = "oneshot";
             RemainAfterExit = true;
             User = userConfig.username;
-            ExecStart = (runtime.vm.homeManagerUpgrade { inherit (userConfig) username; }).bin;
+            ExecStart = (runtime.vm.home-manager-upgrade { inherit (userConfig) username; }).bin;
           };
         };
 
@@ -145,7 +145,7 @@ in
           after = [ "local-fs.target" ];
           serviceConfig = {
             Type = "oneshot";
-            ExecStart = runtime.vm.ephemeralSsh.bin;
+            ExecStart = runtime.vm.ephemeral-ssh.bin;
           };
         };
 
@@ -160,7 +160,7 @@ in
             Type = "oneshot";
             RemainAfterExit = true;
             ExecStart =
-              (runtime.vm.ageKey {
+              (runtime.vm.age-key {
                 inherit (userConfig) username homeDirectory;
                 injectWorkKey = config.angst.vm.injectWorkAgeKey;
               }).bin;

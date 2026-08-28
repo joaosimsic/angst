@@ -44,7 +44,7 @@ in
     home.activation.setLoginShell = lib.mkIf (cfg.enable && cfg.shell != "") (
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         VERBOSE_ECHO="$VERBOSE_ECHO" DRY_RUN_CMD="$DRY_RUN_CMD" \
-          ${(runtime.loginShell {
+          ${(runtime.login-shell {
             inherit (cfg) shell;
             homeDirectory = config.home.homeDirectory;
             username = config.home.username;

@@ -1,6 +1,7 @@
 {
   mkScript,
   angstCli,
+ ...
 }:
 mkScript {
   name = "angst-watch";

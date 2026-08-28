@@ -26,7 +26,7 @@ in
         if representative != null then
           {
             default = homeConfigurations.${representative.username}.activationPackage;
-            angst = runtime.angstCli;
+            angst = runtime.angst-cli;
             vm-tool = runtime.vmTool;
             angst-shell = runtime.goShell;
             analyze = runtime.goAnalyze;

@@ -163,55 +163,77 @@ let
     in
     drv // { bin = "${drv}/bin/${name}"; };
 
-  loginShell = import ./login-shell.nix { inherit mkScript pkgs goAngst; };
-  sshAddKeys = import ./ssh-add-keys.nix {
+  # --- Dynamic discovery -------------------------------------------------
+  # Every *.nix file under runtime/ (mirroring the apps/ and vm/
+  # subdirectories) is imported with a shared specialArgs set, so adding a
+  # new script file requires no manual registration here.
+  #
+  # These directories hold Go sources, not script modules.
+  goSourceDirs = [
+    "angst"
+    "shell"
+    "logger"
+    "analyze"
+    "cmd"
+    "internal"
+  ];
+
+  # angst-cli is imported first because other scripts depend on it as the
+  # `angstCli` argument.
+  angstCli = import ./angst-cli.nix {
     inherit
       mkScript
       pkgs
       goAngst
-      lib
       ;
   };
-  sshKeyProvision = import ./ssh-key-provision.nix { inherit mkScript pkgs goAngst; };
-  bootstrapSecrets = import ./bootstrap-secrets.nix { inherit mkScript pkgs goAngst; };
-  projectsSync = import ./projects-sync.nix {
+
+  specialArgs = {
     inherit
       mkScript
       pkgs
-      goAngst
       lib
+      goAngst
+      goVm
+      goAnalyze
+      angstCli
+      self
       ;
   };
-  ftpMount = import ./ftp-mount.nix { inherit mkScript pkgs goAngst; };
-  ftpSecretsHome = import ./ftp-secrets-home.nix { inherit mkScript pkgs goAngst; };
-  devshellHook = import ./devshell-hook.nix { inherit pkgs; };
-  angstCli = import ./angst-cli.nix { inherit mkScript pkgs goAngst; };
 
-  apps = {
-    render = import ./apps/render.nix {
-      inherit mkScript;
-      inherit angstCli;
-    };
-    watch = import ./apps/watch.nix {
-      inherit mkScript;
-      inherit angstCli;
-    };
-    check = import ./apps/check.nix { inherit mkScript pkgs; };
-    lint-themes = import ./apps/lint-themes.nix { inherit mkScript pkgs self; };
-    lint-desktop = import ./apps/lint-desktop.nix { inherit mkScript pkgs self; };
-    lint-shell = import ./apps/lint-shell.nix { inherit mkScript pkgs self; };
-    analyze = import ./apps/analyze.nix { inherit mkScript pkgs goAnalyze; };
-    analyze-to-file = import ./apps/analyze-to-file.nix { inherit mkScript pkgs goAnalyze; };
-    ssh-deploy = import ./apps/ssh-deploy.nix { inherit mkScript pkgs self; };
-  };
+  discover =
+    dir:
+    let
+      entries = builtins.readDir dir;
+      names = builtins.attrNames entries;
 
-  vm = {
-    homeManagerUpgrade = import ./vm/home-manager-upgrade.nix { inherit mkScript pkgs goVm; };
-    ephemeralSsh = import ./vm/ephemeral-ssh.nix { inherit mkScript pkgs goVm; };
-    ageKey = import ./vm/age-key.nix { inherit mkScript pkgs goVm; };
-    nixosSwitch = import ./vm/nixos-switch.nix { inherit mkScript pkgs goVm; };
-    homeSwitch = import ./vm/home-switch.nix { inherit mkScript pkgs goVm; };
-  };
+      process =
+        name:
+        let
+          path = dir + "/${name}";
+          type = entries.${name};
+        in
+        if type == "directory" then
+          if builtins.elem name goSourceDirs then
+            null
+          else
+            {
+              inherit name;
+              value = discover path;
+            }
+        else if type == "regular" && name != "default.nix" && name != "angst-cli.nix" && lib.hasSuffix ".nix" name then
+          {
+            name = lib.removeSuffix ".nix" name;
+            value = import path specialArgs;
+          }
+        else
+          null;
+
+      handled = builtins.filter (x: x != null) (map process names);
+    in
+    builtins.listToAttrs handled;
+
+  scripts = discover ./.;
 in
 {
   inherit
@@ -227,16 +249,7 @@ in
     mkScript
     vmTool
     mkAngstShell
-    loginShell
-    sshAddKeys
-    sshKeyProvision
-    bootstrapSecrets
-    projectsSync
-    ftpMount
-    ftpSecretsHome
-    devshellHook
-    angstCli
-    apps
-    vm
     ;
-}
+
+  # Auto-discovered scripts (keyed by filename, directories mirrored).
+} // scripts // { angst-cli = angstCli; }

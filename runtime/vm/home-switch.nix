@@ -2,6 +2,7 @@
   mkScript,
   pkgs,
   goVm,
+ ...
 }:
 
 mkScript {

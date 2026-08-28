@@ -1,6 +1,7 @@
 {
   mkScript,
   pkgs,
+ ...
 }:
 mkScript {
   name = "check";

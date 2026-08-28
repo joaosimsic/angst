@@ -2,6 +2,7 @@
   mkScript,
   pkgs,
   self,
+ ...
 }:
 {
   username,

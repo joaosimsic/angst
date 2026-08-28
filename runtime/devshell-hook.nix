@@ -1,5 +1,6 @@
 {
   pkgs,
+ ...
 }:
 { defaultVmHost }:
 pkgs.writeText "shell-dev-hook" ''
