@@ -315,14 +315,14 @@ let
     bind --mode=browser <C-8> tabnext_gt 8
     bind --mode=browser <C-9> tabnext_gt 9
     bind gi focusinput -l
-    bind --mode insert <C-c> composite unfocus | mode normal
-    bind --mode input <C-c> composite unfocus | mode normal
-    bind --mode ex <C-c> ex.hide_and_clear
-    bind --mode hint <C-c> hint.reset
-    bind --mode visual <C-c> composite js tri.dom.getSelection().empty(); mode normal; hidecmdline
-    bind --mode ignore <C-c> mode normal
-    bind --mode browser <C-c> mode normal
-    bind <C-c> composite mode normal; hidecmdline
+    bind --mode=normal <C-c> composite mode normal; hidecmdline
+    bind --mode=insert <C-c> composite js document.activeElement.blur(); mode normal; hidecmdline
+    bind --mode=input <C-c> composite js document.activeElement.blur(); mode normal; hidecmdline
+    bind --mode=ex <C-c> ex.hide_and_clear
+    bind --mode=hint <C-c> composite hint.reset; mode normal; hidecmdline
+    bind --mode=visual <C-c> composite js window.getSelection().empty(); mode normal; hidecmdline
+    bind --mode=ignore <C-c> composite mode normal; hidecmdline
+    bind --mode=browser <C-c> composite mode normal; hidecmdline
     colours statusfg ${theme.fg}
     colours statusbg ${theme.bg}
     colours hintfg ${theme.bg}
