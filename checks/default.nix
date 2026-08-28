@@ -81,7 +81,13 @@ let
   secretScanHooks = import ./secret-scan-hooks.nix { inherit pkgs; };
 
   domainHealth = import ./health {
-    inherit lib pkgs themesLib render host;
+    inherit
+      lib
+      pkgs
+      themesLib
+      render
+      host
+      ;
   };
 
   excludedHomes = [
@@ -142,4 +148,5 @@ in
   login-shell-invalid = loginShell.invalid;
   eval-all = evalAllConfigs;
   build-all = buildAllConfigs;
-} // domainHealth
+}
+// domainHealth
