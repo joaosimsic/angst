@@ -163,12 +163,6 @@ let
     in
     drv // { bin = "${drv}/bin/${name}"; };
 
-  # --- Dynamic discovery -------------------------------------------------
-  # Every *.nix file under runtime/ (mirroring the apps/ and vm/
-  # subdirectories) is imported with a shared specialArgs set, so adding a
-  # new script file requires no manual registration here.
-  #
-  # These directories hold Go sources, not script modules.
   goSourceDirs = [
     "angst"
     "shell"
@@ -178,8 +172,6 @@ let
     "internal"
   ];
 
-  # angst-cli is imported first because other scripts depend on it as the
-  # `angstCli` argument.
   angstCli = import ./angst-cli.nix {
     inherit
       mkScript
@@ -221,7 +213,9 @@ let
               inherit name;
               value = discover path;
             }
-        else if type == "regular" && name != "default.nix" && name != "angst-cli.nix" && lib.hasSuffix ".nix" name then
+        else if
+          type == "regular" && name != "default.nix" && name != "angst-cli.nix" && lib.hasSuffix ".nix" name
+        then
           {
             name = lib.removeSuffix ".nix" name;
             value = import path specialArgs;
@@ -251,5 +245,8 @@ in
     mkAngstShell
     ;
 
-  # Auto-discovered scripts (keyed by filename, directories mirrored).
-} // scripts // { angst-cli = angstCli; }
+}
+// scripts
+// {
+  angst-cli = angstCli;
+}
