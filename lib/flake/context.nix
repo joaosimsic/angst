@@ -11,7 +11,12 @@ let
   hostList = builtins.attrValues hostDefs;
   nixosHosts = builtins.filter (h: h.type == "nixos") hostList;
   representative =
-    if nixosHosts != [ ] then
+    let
+      preferred = lib.findFirst (h: h.hostname == "nixos") null nixosHosts;
+    in
+    if preferred != null then
+      preferred
+    else if nixosHosts != [ ] then
       builtins.head nixosHosts
     else if hostList != [ ] then
       builtins.head hostList
@@ -105,12 +110,15 @@ let
       nixosModules = map enableModule (builtins.filter (e: e.hasSystem) p.enabled) ++ p.modules;
     };
 
+  vmHost = lib.findFirst (h: h.hostname == "vm") null hostList;
+
   devshell = import ./devshell.nix {
     inherit
       pkgs
       runtime
       ;
     host = representative;
+    vmHost = vmHost;
   };
 
   angstShell = runtime.mkAngstShell {
