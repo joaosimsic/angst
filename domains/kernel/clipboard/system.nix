@@ -6,10 +6,10 @@
 }:
 
 let
-  cfg = config.domains.system.clipboard;
+  cfg = config.domains.kernel.clipboard;
 in
 {
-  options.domains.system.clipboard = {
+  options.domains.kernel.clipboard = {
     enable = lib.mkEnableOption "Clipboard tools";
   };
 
@@ -17,6 +17,7 @@ in
     environment.systemPackages = with pkgs; [
       xclip
       xsel
+      wl-clipboard
     ];
   };
 }

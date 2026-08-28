@@ -17,8 +17,8 @@ in
   config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = config.domains.system.graphical.enable;
-        message = "domains.display.lightdm requires domains.system.graphical to be enabled";
+        assertion = config.domains.kernel.graphical.enable;
+        message = "domains.display.lightdm requires domains.kernel.graphical to be enabled";
       }
       {
         assertion = config.domains.display.x11.enable;
@@ -30,7 +30,7 @@ in
       }
     ];
 
-    services.xserver.displayManager.lightdm = lib.mkIf config.domains.system.graphical.enable (
+    services.xserver.displayManager.lightdm = lib.mkIf config.domains.kernel.graphical.enable (
       let
         themeColors = themesLib.get theme;
       in

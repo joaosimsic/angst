@@ -2,6 +2,8 @@
   pkgs,
   lib,
   hostList,
+  self ? null,
+  ...
 }:
 
 let

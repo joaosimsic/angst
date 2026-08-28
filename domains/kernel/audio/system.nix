@@ -6,10 +6,10 @@
 }:
 
 let
-  cfg = config.domains.system.audio;
+  cfg = config.domains.kernel.audio;
 in
 {
-  options.domains.system.audio = {
+  options.domains.kernel.audio = {
     enable = lib.mkEnableOption "System audio processing via Pipewire";
   };
 

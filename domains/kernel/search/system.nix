@@ -6,10 +6,10 @@
 }:
 
 let
-  cfg = config.domains.system.search;
+  cfg = config.domains.kernel.search;
 in
 {
-  options.domains.system.search = {
+  options.domains.kernel.search = {
     enable = lib.mkEnableOption "Search tools";
   };
 

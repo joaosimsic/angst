@@ -1,1 +1,0 @@
-{ description = "Git version control"; }

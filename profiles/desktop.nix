@@ -8,9 +8,10 @@
     "wm.i3"
     "bar.i3status"
     "browser.firefox"
-    "system.graphical"
-    "system.cursor"
-    "system.audio"
-    "system.clipboard"
+    "kernel.graphical"
+    "kernel.cursor"
+    "kernel.audio"
+    "kernel.clipboard"
+    "capture.screenshot"
   ];
 }

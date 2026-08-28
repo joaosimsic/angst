@@ -58,6 +58,7 @@ in
       set $mod Mod4
 
       include ~/.config/i3/monitors.conf
+      include ~/.config/i3/screenshot.conf
 
       bindsym $mod+q kill
       bindsym $mod+Shift+q kill

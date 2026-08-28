@@ -126,12 +126,12 @@ func sectionThemeInventory() string {
 }
 
 func sectionCapabilitiesInventory() string {
-	lines := []string{mdSection(14, "System Feature Inventory")}
+	lines := []string{mdSection(14, "Kernel Feature Inventory")}
 	lines = append(lines, "> **See `nix flake show` for the full list.**\n")
 	var caps []string
 	var locs []int
 	total := 0
-	for _, cat := range []string{"system", "display"} {
+	for _, cat := range []string{"kernel", "display"} {
 		catDir := filepath.Join(repoRoot(), "domains", cat)
 		if !dirExists(catDir) {
 			continue
@@ -148,9 +148,9 @@ func sectionCapabilitiesInventory() string {
 		}
 	}
 	if len(caps) == 0 {
-		return lines[0] + "\n(no system/display features)"
+		return lines[0] + "\n(no kernel/display features)"
 	}
-	lines = append(lines, fmt.Sprintf("- **%d system features**, %d total LOC\n", len(caps), total))
+	lines = append(lines, fmt.Sprintf("- **%d kernel features**, %d total LOC\n", len(caps), total))
 	for i, c := range caps {
 		lines = append(lines, fmt.Sprintf("  - `%s` — %d LOC", c, locs[i]))
 	}

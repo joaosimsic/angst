@@ -14,8 +14,17 @@ let
   };
 in
 {
-  config = lib.mkIf config.domains.git.projects.enable {
-    home.packages = [ sync ];
+  config = lib.mkMerge [
+    {
+      assertions = [
+        {
+          assertion = !config.domains.git.projects.enable || config.domains.git.code.enable;
+          message = "domains.git.projects requires domains.git.code to be enabled";
+        }
+      ];
+    }
+    (lib.mkIf config.domains.git.projects.enable {
+      home.packages = [ sync ];
 
     home.activation.angstProjectsSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       mkdir -p "$HOME/.secrets/projects"
@@ -39,5 +48,6 @@ in
       };
       Install.WantedBy = [ "default.target" ];
     };
-  };
+    })
+  ];
 }
