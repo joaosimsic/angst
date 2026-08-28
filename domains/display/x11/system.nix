@@ -42,7 +42,7 @@ in
     services.xserver.displayManager.session = [
       {
         manage = "desktop";
-        name = "angst-x11";
+        name = "i3";
         start = ''
           #!${pkgs.bash}/bin/sh
 
