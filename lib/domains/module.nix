@@ -22,7 +22,6 @@ let
         hasRender
         render
         hasConfigDir
-        healthcheck
         ;
       configDir = entry.config;
       mutableBaseNames = meta.mutable or [ ];
@@ -167,34 +166,6 @@ let
 
       customModule = if home != null then home else { };
 
-      healthcheckModule =
-        if healthcheck == null then
-          { }
-        else
-          {
-            config = lib.mkIf (enableOption && config.angst.healthcheck.enable) (
-              let
-                hc = healthcheck { inherit lib pkgs config; };
-              in
-              if hc == null then
-                { }
-              else
-                {
-                  home.activation."angst-healthcheck-${category}-${name}" =
-                    lib.hm.dag.entryAfter [ "linkGeneration" ]
-                      ''
-                        echo "healthcheck: running ${category}.${name}"
-                        if ! ${hc.cmd}; then
-                          echo "error: healthcheck FAILED: ${category}.${name}"
-                          ${lib.optionalString (hc.fatal or false) "exit 1"}
-                        else
-                          echo "ok: healthcheck passed: ${category}.${name}"
-                        fi
-                      '';
-                }
-            );
-          };
-
       configSourceModule = {
         config = lib.mkIf enableOption {
           xdg.configFile =
@@ -224,7 +195,6 @@ let
         configSourceModule
         renderOverrideModule
         customModule
-        healthcheckModule
       ];
     };
 

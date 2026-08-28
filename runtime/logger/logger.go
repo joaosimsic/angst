@@ -17,7 +17,7 @@ const (
 var (
 	reError = regexp.MustCompile(`(?i)(error|panic|failed|fatal|invalid nushell)`)
 	reWarn  = regexp.MustCompile(`(?i)warn`)
-	reStep  = regexp.MustCompile(`(?i)(starting home manager|activating|symlinking|setting up|creating|installing|healthcheck)`)
+	reStep  = regexp.MustCompile(`(?i)(starting home manager|activating|symlinking|setting up|creating|installing)`)
 )
 
 func LevelOf(line string) Level {

@@ -41,7 +41,6 @@ let
   hasSystemFile = builtins.pathExists (path + "/system.nix");
   hasRenderFile = builtins.pathExists (path + "/render.nix");
   hasConfigDir = builtins.pathExists (path + "/config");
-  hasHealthcheck = builtins.pathExists (path + "/healthcheck.nix");
 
   checkModule =
     kind: file:
@@ -151,9 +150,6 @@ let
     render = if hasRenderFile then checkModule "render" (path + "/render.nix") else null;
     inherit hasConfigDir;
     config = if hasConfigDir then path + "/config" else null;
-    inherit hasHealthcheck;
-    healthcheck =
-      if hasHealthcheck then checkModule "healthcheck" (path + "/healthcheck.nix") else null;
   };
 in
 if firstError != null then err firstError else body
