@@ -11,7 +11,7 @@
 
 let
   sshEnabled = config.domains.remote.ssh.enable;
-  prov = runtime.sshKeyProvision {
+  prov = runtime.ssh-key-provision {
     inherit (userConfig) username homeDirectory;
     secretsDir = "${flakeSelf}/secrets/ssh";
     scopes = hostScopes;

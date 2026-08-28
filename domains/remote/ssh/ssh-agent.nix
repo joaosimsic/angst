@@ -59,7 +59,7 @@ in
             "SSH_ASKPASS_REQUIRE=force"
             "SSH_ASKPASS=${pkgs.x11_ssh_askpass}/libexec/x11-ssh-askpass"
           ];
-          ExecStart = (runtime.sshAddKeys { inherit keys; }).bin;
+          ExecStart = (runtime.ssh-add-keys { inherit keys; }).bin;
         };
 
         Install.WantedBy = [ "graphical-session.target" ];

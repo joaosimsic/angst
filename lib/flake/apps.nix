@@ -30,7 +30,7 @@ in
     vm = mkApp "${vmApp}/bin/vm";
     shell = mkApp "${angstShell}/bin/angst-shell";
     hm-switch = mkApp "${hmSwitchTool}/bin/hm-switch";
-    angst = mkApp "${runtime.angstCli.bin}";
+    angst = mkApp "${runtime.angst-cli.bin}";
     render = mkApp "${runtime.apps.render.bin}";
     watch = mkApp "${runtime.apps.watch.bin}";
     check = mkApp "${runtime.apps.check.bin}";

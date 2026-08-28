@@ -9,7 +9,7 @@
 }:
 
 let
-  sync = runtime.projectsSync {
+  sync = runtime.projects-sync {
     inherit projects flakeSelf;
   };
 in

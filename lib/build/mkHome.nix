@@ -78,7 +78,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
       home.packages = [
         runtime.vmTool
         angstShell
-        runtime.angstCli
+        runtime.angst-cli
         hmSwitchTool
       ];
     })

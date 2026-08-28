@@ -16,7 +16,7 @@ let
     m:
     ".secrets/ftp/${lib.removeSuffix ".conf" (lib.removeSuffix ".age" (baseNameOf m.configFile))}.conf";
 
-  secretsDecrypt = runtime.ftpSecretsHome {
+  secretsDecrypt = runtime.ftp-secrets-home {
     inherit (userConfig) homeDirectory;
     configs = map (m: {
       source = "${flakeSelf}/${m.configFile}";
@@ -28,7 +28,7 @@ let
     m:
     let
       name = lib.removeSuffix ".conf" (lib.removeSuffix ".age" (baseNameOf m.configFile));
-      mount = runtime.ftpMount {
+      mount = runtime.ftp-mount {
         inherit (m) mountPoint remotePath;
         configFile = secretPath m;
       };

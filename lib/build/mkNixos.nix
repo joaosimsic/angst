@@ -109,7 +109,7 @@ inputs.nixpkgs.lib.nixosSystem {
             Type = "oneshot";
             RemainAfterExit = true;
             ExecStart =
-              (runtime.bootstrapSecrets {
+              (runtime.bootstrap-secrets {
                 inherit (host) username;
                 agePath = masterAgePath;
                 ageKey = "/home/${host.username}/.config/age/keys.txt";

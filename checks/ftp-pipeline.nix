@@ -6,11 +6,11 @@
 # Functional test of the `angst ftp` pipeline, using a throwaway work key and a
 # synthetic rclone FTP config (no real secrets, no network):
 #   encrypt sample JSON -> *.age (work-key scope)
-#   decrypt via the real runtime.ftpSecretsHome wrapper -> ~/.secrets/ftp/*.conf
+#   decrypt via the real runtime.ftp-secrets-home wrapper -> ~/.secrets/ftp/*.conf
 #   transform via the real `angst ftp transform` -> rclone INI (parseable offline)
 
 let
-  secretsHome = runtime.ftpSecretsHome {
+  secretsHome = runtime.ftp-secrets-home {
     homeDirectory = "$CHK_FTP_HOME";
     configs = [
       {
@@ -67,7 +67,7 @@ pkgs.runCommand "check-ftp-pipeline"
               fail "sample config not properly encrypted"
             fi
 
-            echo "==> Decrypt via the real runtime.ftpSecretsHome wrapper..."
+            echo "==> Decrypt via the real runtime.ftp-secrets-home wrapper..."
             "${secretsHome}/bin/angst-ftp-secrets-home"
 
             conf="$CHK_FTP_HOME/.secrets/ftp/ftp-server.conf"

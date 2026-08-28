@@ -68,7 +68,7 @@ in
           UMask = "0077";
           RestrictAddressFamilies = [ "AF_UNIX" ];
           ExecStart =
-            (runtime.sshKeyProvision {
+            (runtime.ssh-key-provision {
               inherit (userConfig) username homeDirectory;
               secretsDir = "${flakeSelf}/secrets/ssh";
             }).bin;

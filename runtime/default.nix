@@ -163,55 +163,86 @@ let
     in
     drv // { bin = "${drv}/bin/${name}"; };
 
-  loginShell = import ./login-shell.nix { inherit mkScript pkgs goAngst; };
-  sshAddKeys = import ./ssh-add-keys.nix {
+  # Import a script passing exactly the arguments it declares. This avoids
+  # every script needing a `...` rest attribute while still sharing one pool
+  # of available dependencies.
+  callWith =
+    pool: path:
+    let
+      f = import path;
+    in
+    f (builtins.intersectAttrs (builtins.functionArgs f) pool);
+
+  # Full pool of dependencies a script may reference. Each script receives
+  # only the subset it actually declares (via builtins.functionArgs).
+  allArgs = {
     inherit
       mkScript
       pkgs
-      goAngst
       lib
+      goAngst
+      goVm
+      goShell
+      goAnalyze
+      goLoggerUnwrapped
+      self
+      vmTool
+      hmSwitchTool
       ;
   };
-  sshKeyProvision = import ./ssh-key-provision.nix { inherit mkScript pkgs goAngst; };
-  bootstrapSecrets = import ./bootstrap-secrets.nix { inherit mkScript pkgs goAngst; };
-  projectsSync = import ./projects-sync.nix {
-    inherit
-      mkScript
-      pkgs
-      goAngst
-      lib
-      ;
-  };
-  ftpMount = import ./ftp-mount.nix { inherit mkScript pkgs goAngst; };
-  ftpSecretsHome = import ./ftp-secrets-home.nix { inherit mkScript pkgs goAngst; };
-  devshellHook = import ./devshell-hook.nix { inherit pkgs; };
-  angstCli = import ./angst-cli.nix { inherit mkScript pkgs goAngst; };
 
-  apps = {
-    render = import ./apps/render.nix {
-      inherit mkScript;
-      inherit angstCli;
-    };
-    watch = import ./apps/watch.nix {
-      inherit mkScript;
-      inherit angstCli;
-    };
-    check = import ./apps/check.nix { inherit mkScript pkgs; };
-    lint-themes = import ./apps/lint-themes.nix { inherit mkScript pkgs self; };
-    lint-desktop = import ./apps/lint-desktop.nix { inherit mkScript pkgs self; };
-    lint-shell = import ./apps/lint-shell.nix { inherit mkScript pkgs self; };
-    analyze = import ./apps/analyze.nix { inherit mkScript pkgs goAnalyze; };
-    analyze-to-file = import ./apps/analyze-to-file.nix { inherit mkScript pkgs goAnalyze; };
-    ssh-deploy = import ./apps/ssh-deploy.nix { inherit mkScript pkgs self; };
+  # angst-cli is imported first because other scripts depend on it as the
+  # `angstCli` argument.
+  angstCli = callWith allArgs ./angst-cli.nix;
+
+  allArgsWithAngstCli = allArgs // {
+    inherit angstCli;
   };
 
-  vm = {
-    homeManagerUpgrade = import ./vm/home-manager-upgrade.nix { inherit mkScript pkgs goVm; };
-    ephemeralSsh = import ./vm/ephemeral-ssh.nix { inherit mkScript pkgs goVm; };
-    ageKey = import ./vm/age-key.nix { inherit mkScript pkgs goVm; };
-    nixosSwitch = import ./vm/nixos-switch.nix { inherit mkScript pkgs goVm; };
-    homeSwitch = import ./vm/home-switch.nix { inherit mkScript pkgs goVm; };
-  };
+  goSourceDirs = [
+    "angst"
+    "shell"
+    "logger"
+    "analyze"
+    "cmd"
+    "internal"
+  ];
+
+  discover =
+    dir:
+    let
+      entries = builtins.readDir dir;
+      names = builtins.attrNames entries;
+
+      process =
+        name:
+        let
+          path = dir + "/${name}";
+          type = entries.${name};
+        in
+        if type == "directory" then
+          if builtins.elem name goSourceDirs then
+            null
+          else
+            {
+              inherit name;
+              value = discover path;
+            }
+        else if
+          type == "regular" && name != "default.nix" && name != "angst-cli.nix" && lib.hasSuffix ".nix" name
+        then
+          {
+            name = lib.removeSuffix ".nix" name;
+            value = callWith allArgsWithAngstCli path;
+          }
+        else
+          null;
+
+      handled = builtins.filter (x: x != null) (map process names);
+    in
+    builtins.listToAttrs handled;
+
+  scripts = discover ./.;
 in
 {
   inherit
@@ -227,16 +258,10 @@ in
     mkScript
     vmTool
     mkAngstShell
-    loginShell
-    sshAddKeys
-    sshKeyProvision
-    bootstrapSecrets
-    projectsSync
-    ftpMount
-    ftpSecretsHome
-    devshellHook
-    angstCli
-    apps
-    vm
     ;
+
+}
+// scripts
+// {
+  angst-cli = angstCli;
 }
