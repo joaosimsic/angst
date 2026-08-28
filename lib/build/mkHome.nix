@@ -8,6 +8,7 @@
   hmSwitchTool,
   themeOverride ? null,
   shellOverride ? null,
+  store ? host.store or null,
 }:
 
 let
@@ -63,6 +64,8 @@ inputs.home-manager.lib.homeManagerConfiguration {
     theme = effectiveTheme;
     flakeSelf = self;
     inherit runtime;
+    store = if store != null then store else host.store or null;
+    hostStore = if store != null then store else host.store or null;
   };
 
   modules = [

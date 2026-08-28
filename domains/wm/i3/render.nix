@@ -59,6 +59,7 @@ in
 
       include ~/.config/i3/monitors.conf
       include ~/.config/i3/screenshot.conf
+      include ~/.config/i3/screenshot.local.conf
 
       bindsym $mod+q kill
       bindsym $mod+Shift+q kill

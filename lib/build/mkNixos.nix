@@ -6,6 +6,7 @@
   nixosModules,
   runtime,
   themeOverride ? null,
+  store ? host.store or null,
 }:
 
 let
@@ -71,6 +72,8 @@ inputs.nixpkgs.lib.nixosSystem {
     theme = effectiveTheme;
     flakeSelf = self;
     inherit runtime;
+    store = if store != null then store else host.store or null;
+    hostStore = if store != null then store else host.store or null;
   };
 
   modules = [
@@ -161,6 +164,8 @@ inputs.nixpkgs.lib.nixosSystem {
           theme = effectiveTheme;
           flakeSelf = self;
           inherit runtime;
+          store = if store != null then store else host.store or null;
+          hostStore = if store != null then store else host.store or null;
         };
 
         users.${host.username} = {

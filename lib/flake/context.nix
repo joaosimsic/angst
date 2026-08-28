@@ -66,12 +66,15 @@ let
     db = { };
     sshAgent = { };
     username = "user";
+    store = mkStore [ ];
   };
 
   render = import ../render.nix {
     host = if representative != null then representative else fallbackHost;
     inherit lib;
   };
+
+  mkStore = enabled: import ../store.nix { inherit lib enabled; };
 
   mkHomeCfg =
     {
@@ -80,11 +83,15 @@ let
       themeOverride ? null,
       shellOverride ? null,
     }:
+    let
+      p = profilesFor host;
+      store = mkStore p.enabled;
+      hostWithStore = host // { inherit store; };
+    in
     mkHome {
       inherit
         self
         inputs
-        host
         runtime
         hmSwitchTool
         angstShell
@@ -92,20 +99,25 @@ let
         themeOverride
         shellOverride
         ;
+      host = hostWithStore;
+      store = store;
     };
 
   mkHostFor =
     host:
     let
       p = profilesFor host;
+      store = mkStore p.enabled;
+      hostWithStore = host // { inherit store; };
     in
     mkHost {
       inherit
         self
         inputs
-        host
         runtime
         ;
+      host = hostWithStore;
+      store = store;
       hmModules = map enableModule p.enabled;
       nixosModules = map enableModule (builtins.filter (e: e.hasSystem) p.enabled) ++ p.modules;
     };

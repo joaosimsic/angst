@@ -2,11 +2,15 @@
   config,
   lib,
   pkgs,
+  store ? null,
+  hostStore ? null,
   ...
 }:
 
 let
   cfg = config.domains.kernel.graphical;
+  effectiveStore = if store != null then store else hostStore;
+  hasWayland = if effectiveStore != null then effectiveStore.hasWayland else false;
 in
 {
   options.domains.kernel.graphical = {
@@ -22,7 +26,10 @@ in
 
     xdg.portal = {
       enable = true;
-      extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+      extraPortals =
+        with pkgs;
+        [ xdg-desktop-portal-gtk ]
+        ++ lib.optionals hasWayland [ xdg-desktop-portal-wlr ];
       config.common.default = "*";
     };
 
