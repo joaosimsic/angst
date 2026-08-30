@@ -7,14 +7,15 @@
 let
   entries = scan.domains.entries;
 
+  domainId = e: if e.category == e.name then e.category else "${e.category}.${e.name}";
   entryFor =
     name:
     let
-      entry = lib.findFirst (e: "${e.category}.${e.name}" == name) null entries;
+      entry = lib.findFirst (e: domainId e == name) null entries;
     in
     if entry == null then
       throw "Unknown domain '${name}'. Available: ${
-        builtins.concatStringsSep ", " (map (e: "${e.category}.${e.name}") entries)
+        builtins.concatStringsSep ", " (map domainId entries)
       }"
     else
       entry;

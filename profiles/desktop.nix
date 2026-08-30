@@ -13,5 +13,6 @@
     "kernel.audio"
     "kernel.clipboard"
     "capture.screenshot"
+    "notifications"
   ];
 }

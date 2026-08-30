@@ -40,7 +40,9 @@ let
       inherit lib;
     };
 
-  enableModule = e: {
+  enableModule = e: if e.category == e.name then {
+    domains.${e.category}.enable = true;
+  } else {
     domains.${e.category}.${e.name}.enable = true;
   };
 
