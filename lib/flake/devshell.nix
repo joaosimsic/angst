@@ -30,6 +30,9 @@ let
     defaultVmHost = "vm";
   };
 
+  hostHasVm = host != null && builtins.elem "vm" (host.profiles or [ ]);
+  vmHostHasVm = vmHost != null && builtins.elem "vm" (vmHost.profiles or [ ]);
+
   fullDevPackages =
     with pkgs;
     [
@@ -37,9 +40,7 @@ let
       git
       runtime.angst-cli
       openssh
-      qemu
       age
-      runtime.vmTool
       gitleaks
       cargo
       rustc
@@ -48,6 +49,10 @@ let
       gofumpt
       deadnix
       statix
+    ]
+    ++ lib.optionals hostHasVm [
+      qemu
+      runtime.vmTool
     ]
     ++ allToolchainPkgs;
 
@@ -58,9 +63,7 @@ let
       git
       runtime.angst-cli
       openssh
-      qemu
       age
-      runtime.vmTool
       gitleaks
       cargo
       rustc
@@ -69,6 +72,10 @@ let
       gofumpt
       deadnix
       statix
+    ]
+    ++ lib.optionals vmHostHasVm [
+      qemu
+      runtime.vmTool
     ]
     ++ vmAllToolchainPkgs;
 in

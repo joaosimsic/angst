@@ -76,12 +76,13 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ++ secrets.homeModules
   ++ [
     (_: {
-      home.packages = [
-        runtime.vmTool
-        angstShell
-        runtime.angst-cli
-        hmSwitchTool
-      ];
+      home.packages =
+        lib.optionals (builtins.elem "vm" host.profiles) [ runtime.vmTool ]
+        ++ [
+          angstShell
+          runtime.angst-cli
+          hmSwitchTool
+        ];
     })
   ]
   ++ (if host.extraHome != { } then [ host.extraHome ] else [ ])

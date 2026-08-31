@@ -10,8 +10,8 @@
 
   config = {
     boot.loader = {
-      systemd-boot.enable = lib.mkIf (!config.angst.isQemuVm) true;
-      efi.canTouchEfiVariables = lib.mkIf (!config.angst.isQemuVm) true;
+      systemd-boot.enable = lib.mkForce (!config.angst.isQemuVm);
+      efi.canTouchEfiVariables = lib.mkForce (!config.angst.isQemuVm);
       grub.enable = lib.mkIf config.angst.isQemuVm (lib.mkForce false);
     };
   };

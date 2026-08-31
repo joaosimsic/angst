@@ -84,9 +84,6 @@ inputs.nixpkgs.lib.nixosSystem {
   ++ (if host.extraNixos != { } then [ host.extraNixos ] else [ ])
   ++ (if host.env != { } then [ { environment.sessionVariables = host.env; } ] else [ ])
   ++ [
-    ../../modules/vm/runtime.nix
-    ../../modules/vm/vm-variant.nix
-    ../../modules/vm/host-mount.nix
     (
       {
         lib,
@@ -176,11 +173,11 @@ inputs.nixpkgs.lib.nixosSystem {
         };
       };
     }
-    ({ config, lib, ... }: {
-      systemd.services."home-manager-${host.username}".before = lib.optionals (!config.angst.isQemuVm) [
+    {
+      systemd.services."home-manager-${host.username}".before = lib.optionals (!(builtins.elem "vm" host.profiles)) [
         "getty@.service"
         "serial-getty@.service"
       ];
-    })
+    }
   ];
 }
