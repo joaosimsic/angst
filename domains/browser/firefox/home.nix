@@ -25,12 +25,14 @@ in
             let
               isIntelX86 = pkgs.stdenv.hostPlatform.isx86_64;
               patchedNixGL = builtins.toFile "nixGL-patched.nix" (
-                builtins.replaceStrings [ "kernel = null;" ] [ "" ] (builtins.readFile "${inputs.nixGL.outPath}/nixGL.nix")
+                builtins.replaceStrings [ "kernel = null;" ] [ "" ] (
+                  builtins.readFile "${inputs.nixGL.outPath}/nixGL.nix"
+                )
               );
             in
             pkgs.callPackage patchedNixGL (
               {
-                nvidiaVersion = null;
+                nvidiaVersion = "470.256.02";
                 nvidiaHash = null;
                 nvidiaVersionFile = null;
                 enable32bits = isIntelX86;
