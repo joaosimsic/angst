@@ -26,6 +26,11 @@ in
   config = {
     system.stateVersion = "25.11";
 
+    boot.loader = {
+      systemd-boot.enable = lib.mkDefault true;
+      efi.canTouchEfiVariables = lib.mkDefault true;
+    };
+
     console.keyMap = lib.mkDefault config.angst.keyboardLayout;
 
     services.xserver.xkb = {

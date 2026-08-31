@@ -11,13 +11,13 @@ bootstrap-disk host="nixos": disko hardware
     @echo "Disk and hardware bootstrapped for {{host}}."
 
 build host="nixos":
-    nix build .#nixosConfigurations.{{host}}
+    NIXPKGS_ALLOW_UNFREE=1 nix build .#nixosConfigurations.{{host}} --impure
 
 switch host="nixos":
     sudo nixos-rebuild switch --flake .#{{host}}
 
 hm host="nixos" user="joao":
-    nix build .#homeConfigurations."{{user}}@{{host}}".activationPackage
+    NIXPKGS_ALLOW_UNFREE=1 nix build .#homeConfigurations."{{user}}@{{host}}".activationPackage --impure
 
 hm-switch host="":
     @if [ -n "{{host}}" ]; then NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake .#{{host}} --impure; else NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake . --impure; fi
@@ -26,10 +26,10 @@ analyze:
     nix run .#analyze -- --output analysis.md
 
 check:
-    nix flake check
+    NIXPKGS_ALLOW_UNFREE=1 nix flake check --impure
 
 verify:
-    nix flake check --no-build
+    NIXPKGS_ALLOW_UNFREE=1 nix flake check --no-build --impure
 
 go-fmt:
     for d in angst vm shell analyze; do echo "=== $$d ==="; (cd runtime/$$d && gofmt -l . && go vet ./...); done
