@@ -174,10 +174,12 @@ inputs.nixpkgs.lib.nixosSystem {
       };
     }
     {
-      systemd.services."home-manager-${host.username}".before = lib.optionals (!(builtins.elem "vm" host.profiles)) [
-        "getty@.service"
-        "serial-getty@.service"
-      ];
+      systemd.services."home-manager-${host.username}".before =
+        lib.optionals (!(builtins.elem "vm" host.profiles))
+          [
+            "getty@.service"
+            "serial-getty@.service"
+          ];
     }
   ];
 }
