@@ -8,7 +8,18 @@
     "base"
     "development"
   ];
-  toolchains = "*";
+  toolchains = [
+    "javascript"
+    "php"
+    "python"
+    "bash"
+    "nix"
+    "go"
+    "lua"
+    "yaml"
+    "docker"
+    "toml"
+  ];
   env = {
     EDITOR = "nvim";
   };
