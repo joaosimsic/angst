@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-
 var commitHashRe = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
 
 var onelineCommitRe = regexp.MustCompile(`^[0-9a-f]{7,40}(\s|$)`)
@@ -25,8 +24,6 @@ func gitChurn() map[string]int {
 	}
 	return churn
 }
-
-
 
 func gitStability() (churn map[string]int, fileLastDate map[string]string) {
 	churn = map[string]int{}

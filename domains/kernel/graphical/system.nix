@@ -2,14 +2,16 @@
   config,
   lib,
   pkgs,
+  store,
   ...
 }:
 
 let
-  cfg = config.domains.system.graphical;
+  cfg = config.domains.kernel.graphical;
+  inherit (store) hasWayland;
 in
 {
-  options.domains.system.graphical = {
+  options.domains.kernel.graphical = {
     enable = lib.mkEnableOption "Graphical desktop with X11";
   };
 
@@ -22,7 +24,9 @@ in
 
     xdg.portal = {
       enable = true;
-      extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+      extraPortals =
+        with pkgs;
+        [ xdg-desktop-portal-gtk ] ++ lib.optionals hasWayland [ xdg-desktop-portal-wlr ];
       config.common.default = "*";
     };
 

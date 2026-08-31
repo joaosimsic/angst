@@ -16,8 +16,6 @@ const (
 	mcpPort    = 8765
 )
 
-
-
 type ServiceState struct {
 	Service   string   `json:"service"`
 	PID       int      `json:"pid"`
@@ -27,8 +25,6 @@ type ServiceState struct {
 	Cmd       []string `json:"cmd"`
 	Log       string   `json:"log"`
 }
-
-
 
 type Controller struct {
 	StateDir string
@@ -89,7 +85,6 @@ func (c *Controller) clear(name string) {
 	_ = os.Remove(c.stateFile(name))
 }
 
-
 func (c *Controller) isActive(name string) bool {
 	st, ok := c.read(name)
 	if !ok {
@@ -101,8 +96,6 @@ func (c *Controller) isActive(name string) bool {
 	}
 	return proc.Signal(syscall.Signal(0)) == nil
 }
-
-
 
 func (c *Controller) Start(name, program string, args, env []string, headless bool) (int, error) {
 	logDir := filepath.Join(c.stateDir(), "logs")
@@ -148,11 +141,9 @@ func (c *Controller) Start(name, program string, args, env []string, headless bo
 	return pid, nil
 }
 
-
 func (c *Controller) StartCommand(name, program string, args, env []string) (int, error) {
 	return c.Start(name, program, args, env, false)
 }
-
 
 func (c *Controller) Stop(name string) error {
 	st, ok := c.read(name)
@@ -169,7 +160,6 @@ func (c *Controller) Stop(name string) error {
 	c.clear(name)
 	return nil
 }
-
 
 func (c *Controller) Logs(name string, lines uint32) error {
 	logPath := filepath.Join(c.stateDir(), "logs", name+".log")

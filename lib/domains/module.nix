@@ -23,14 +23,17 @@ let
         render
         hasConfigDir
         ;
+      isSingle = category == name;
+      domainPathStr = if isSingle then "domains/${category}" else "domains/${category}/${name}";
       configDir = entry.config;
       mutableBaseNames = meta.mutable or [ ];
       isCustomXdg = meta.customXdg or false;
       hasXdg = meta.xdg != null;
       hasXdgFile = meta.xdgFile != null;
-      enableOption = config.domains.${category}.${name}.enable;
+      enableOption =
+        if isSingle then config.domains.${category}.enable else config.domains.${category}.${name}.enable;
 
-      prefix = "domains/${category}/${name}/config/";
+      prefix = if isSingle then "domains/${category}/config/" else "domains/${category}/${name}/config/";
 
       validateOutputs =
         outs:
@@ -42,11 +45,11 @@ let
               || !(builtins.isString (o.path or null))
               || !(builtins.isString (o.text or null))
             then
-              throw "domains/${category}/${name}/render.nix: outputs must be { path, text, checks? }"
+              throw "${domainPathStr}/render.nix: outputs must be { path, text, checks? }"
             else if !(lib.hasPrefix prefix o.path) then
-              throw "domains/${category}/${name}/render.nix: output path '${o.path}' must be under '${prefix}'"
+              throw "${domainPathStr}/render.nix: output path '${o.path}' must be under '${prefix}'"
             else if o ? checks && !(builtins.isList o.checks) then
-              throw "domains/${category}/${name}/render.nix: 'checks' must be a list"
+              throw "${domainPathStr}/render.nix: 'checks' must be a list"
             else
               o;
           checked = map check outs;
@@ -54,7 +57,7 @@ let
           duplicate = lib.findFirst (path: pathCount path > 1) null (map (o: o.path) checked);
         in
         if duplicate != null then
-          throw "domains/${category}/${name}/render.nix: duplicate output path '${duplicate}'"
+          throw "${domainPathStr}/render.nix: duplicate output path '${duplicate}'"
         else
           checked;
 
@@ -152,9 +155,11 @@ let
           [ ];
 
       baseModule = {
-        options.domains.${category}.${name} = {
-          enable = lib.mkEnableOption "Enable ${meta.description or name}";
-        };
+        options.domains =
+          if isSingle then
+            { ${category}.enable = lib.mkEnableOption "Enable ${meta.description or name}"; }
+          else
+            { ${category}.${name}.enable = lib.mkEnableOption "Enable ${meta.description or name}"; };
 
         config = lib.mkIf enableOption {
           home.packages = lib.optionals (meta.package != null) [

@@ -18,12 +18,8 @@ let
   treesitterShellHookFor = t: ''
     mkdir -p ~/.local/share/tree-sitter
     rm -rf ~/.local/share/tree-sitter/parser ~/.local/share/tree-sitter/queries 2>/dev/null
-    ln -sf ${
-      if t != null then t.treesitterParsers else "/dev/null"
-    } ~/.local/share/tree-sitter/parser
-    ln -sf ${
-      if t != null then t.treesitterQueries else "/dev/null"
-    } ~/.local/share/tree-sitter/queries
+    ln -sf ${if t != null then t.treesitterParsers else "/dev/null"} ~/.local/share/tree-sitter/parser
+    ln -sf ${if t != null then t.treesitterQueries else "/dev/null"} ~/.local/share/tree-sitter/queries
     export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
   '';
 

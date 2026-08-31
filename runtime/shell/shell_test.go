@@ -7,7 +7,7 @@ import (
 )
 
 func TestPrepareShellPrependsPathAndSetsEnv(t *testing.T) {
-	
+
 	tmp := t.TempDir()
 	oldHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmp)
@@ -60,7 +60,6 @@ func TestPrepareShellPrependsPathAndSetsEnv(t *testing.T) {
 		t.Fatalf("ORIGINAL_SHELL=%q", envMap["ORIGINAL_SHELL"])
 	}
 
-	
 	parserLink := filepath.Join(tmp, ".local", "share", "tree-sitter", "parser")
 	if link, err := os.Readlink(parserLink); err != nil || link != parsers {
 		t.Fatalf("parser symlink wrong: %q err %v", link, err)

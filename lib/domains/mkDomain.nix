@@ -11,7 +11,9 @@
 }:
 
 let
-  err = msg: builtins.throw "domains/${category}/${name}/default.nix: ${msg}";
+  isSingle = category == name;
+  domainPathStr = if isSingle then "domains/${category}" else "domains/${category}/${name}";
+  err = msg: builtins.throw "${domainPathStr}/default.nix: ${msg}";
 
   allowedKeys = [
     "package"

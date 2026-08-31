@@ -8,7 +8,6 @@ import (
 	"strings"
 )
 
-
 type HealthReport struct {
 	QemuRunning   bool
 	QemuPID       int
@@ -88,8 +87,6 @@ func pidHasHostfwd(pid int) bool {
 	return strings.Contains(string(b), "hostfwd")
 }
 
-
-
 func portListens(port uint16) bool {
 	hex := fmt.Sprintf("%04X", port)
 	b, err := os.ReadFile("/proc/net/tcp")
@@ -103,7 +100,6 @@ func portListens(port uint16) bool {
 	}
 	return false
 }
-
 
 func checkHealth(sshExec func(string) (int, string, string)) HealthReport {
 	var r HealthReport

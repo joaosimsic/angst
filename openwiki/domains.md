@@ -1,6 +1,6 @@
 # Domains
 
-Domains (features) are the **unit of configuration** in angst. Each domain describes one feature — a user application, a system feature, or both. There are currently **31 domains across 17 categories**.
+Domains (features) are the **unit of configuration** in angst. Each domain describes one feature — a user application, a system feature, or both. There are currently **38 domains across 20 categories**.
 
 ## Domain Anatomy
 
@@ -45,40 +45,48 @@ The heart of the theme system: a function taking `{ themesLib, themeName, homeDi
 
 There is **no** `lib/domains/activation.nix` (README is stale); activation happens through home-manager `xdg.configFile` and, in VMs, `modules/vm/host-mount.nix` gives live access to the host repo.
 
-## Domain Inventory (30)
+## Domain Inventory (38)
 
 | Category | Name | Package | XDG | Render | home | system | Purpose |
 |---|---|---|---|---|---|---|---|
-| agents | cursor-cli | cursor-cli | — | — | — | — | Cursor AI CLI (package-only) |
+| agents | cursor-cli | cursor-cli | custom | — | ✅ | — | Cursor AI CLI (package-only) |
 | agents | opencode | opencode | opencode | ✅ | ✅ | — | AI coding agent: 22 LSPs, themed TUI, API key from age-encrypted app secret |
 | bar | i3status | *(none)* | i3status | ✅ | ✅ | — | i3 status bar (themed blocks) |
-| editor | nvim | *(pkgs.neovim in home)* | nvim | ✅ | ✅ | — | Neovim: backend adapters/engines, treesitter, Lua tests |
+| browser | firefox | *(none)* | custom | — | ✅ | ✅ | Firefox (policies + tridactyl, themed) |
+| capture | screenshot | *(none)* | custom | — | ✅ | ✅ | Screen capture via portal/maim/grim + `angst-screenshot` |
+| display | lightdm | *(none)* | — | — | — | ✅ | LightDM GTK greeter |
+| display | ly | *(none)* | — | — | — | ✅ | ly TUI display manager |
+| display | x11 | *(none)* | custom | — | ✅ | ✅ | X11 session autostart |
+| editor | nvim | *(none)* | nvim | ✅ | ✅ | — | Neovim: backend adapters/engines, treesitter, Lua tests |
+| embedded | arduino | arduino-cli | custom | — | ✅ | ✅ | Arduino CLI |
 | files | yazi | *(none)* | yazi | ✅ | ✅ | — | Terminal file manager |
+| git | code | git | — | — | — | ✅ | Git version control (system) |
 | git | lazygit | lazygit | lazygit | ✅ | ✅ | — | Git TUI |
-| git | projects | git | custom | — | ✅ | — | Auto-synced encrypted dev projects (clone + `.env` via vault/age tarballs) |
+| git | projects | *(none)* | custom | — | ✅ | — | Auto-synced encrypted dev projects (clone + `.env` via vault/age tarballs) |
 | http-client | posting | posting | posting | ✅ | ✅ | — | Terminal HTTP client |
+| kernel | audio | *(none)* | — | — | — | ✅ | PipeWire with ALSA/PulseAudio compat |
+| kernel | clipboard | *(none)* | — | — | — | ✅ | xclip + xsel |
+| kernel | container | *(none)* | — | — | — | ✅ | Docker + Podman, kubectl, lazydocker |
+| kernel | cursor | *(none)* | custom | — | ✅ | — | Cursor theme (X11/GTK) |
+| kernel | graphical | *(none)* | — | — | — | ✅ | X11, LightDM (themed), libinput, dbus, XDG portals |
+| kernel | monitoring | *(none)* | — | — | — | ✅ | btop |
+| kernel | network | *(none)* | — | — | — | ✅ | wget, curl, unzip |
+| kernel | search | *(none)* | — | — | — | ✅ | fd, ripgrep, fzf |
 | launcher | rofi | rofi | rofi | ✅ | ✅ | — | App launcher |
 | nix | nh | nh | — | — | — | — | Nix CLI helper (package-only) |
+| notifications | notifications | *(none)* | custom | — | ✅ | ✅ | Notification daemon (dunst/mako, `angst-notify`) |
+| remote | ftp | rclone | custom | — | ✅ | ✅ | FTP rclone mount (vault/age) |
 | remote | ssh | openssh | custom | — | ✅ | ✅ | SSH client+agent (home) and sshd (system, per-host opt-in) |
 | security | age | age | — | — | — | — | age encryption (package-only) |
-| session | x11 | *(none)* | custom | ✅ | ✅ | — | X11 autostart/session |
 | shell | carapace | carapace | custom | — | ✅ | — | Shell completion engine |
 | shell | nushell | nushell | nushell | ✅ | ✅ | — | Nushell config (themed) |
 | shell | starship | starship | `starship.toml` (xdgFile) | ✅ | ✅ | — | Prompt (themed) |
 | sql-client | rainfrog | rainfrog | rainfrog | ✅ | ✅ | — | TUI DB manager |
 | sql-client | sqlit | sqlit-tui | sqlit | ✅ | ✅ | — | TUI SQL browser |
-| system | audio | *(none)* | — | — | — | ✅ | PipeWire with ALSA/PulseAudio compat |
-| system | clipboard | *(none)* | — | — | — | ✅ | xclip + xsel |
-| system | container | *(none)* | — | — | — | ✅ | Docker + Podman, kubectl, lazydocker |
-| system | git | *(none)* | — | — | — | ✅ | System-level Git |
-| system | graphical | *(none)* | — | — | — | ✅ | X11, LightDM (themed), libinput, dbus, XDG portals |
-| system | monitoring | *(none)* | — | — | — | ✅ | btop |
-| system | network | *(none)* | — | — | — | ✅ | wget, curl, unzip |
-| system | search | *(none)* | — | — | — | ✅ | fd, ripgrep, fzf |
 | terminal | ghostty | ghostty | ghostty | ✅ | ✅ | — | GPU terminal (themed) |
 | terminal | tmux | tmux | `tmux/tmux.conf` (xdgFile) | ✅ | ✅ | — | Terminal multiplexer |
 | terminal | zellij | zellij | zellij | ✅ | ✅ | — | Multiplexer (layout.nix + theme.nix) |
-| wm | i3 | *(none)* | i3 | ✅ | — | ✅ | i3 WM: themed config (home) + `services.xserver.windowManager.i3` (system) |
+| wm | i3 | *(none)* | i3 | ✅ | ✅ | ✅ | i3 WM: themed config (home) + `services.xserver.windowManager.i3` (system) |
 
 Note: the `home`/`system` columns mark which optional sides a feature ships. Domains with `*(none)*` package rely on their module or system side for installation. `host.type` decides which sides are built — `nixos` hosts build both, `home`-only hosts (e.g. mint) build only home sides.
 

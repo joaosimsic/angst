@@ -97,7 +97,7 @@ The domain framework (`lib/domains/`):
 
 Full 31-domain inventory: see [openwiki/domains.md](openwiki/domains.md).
 
-Domain categories: `agents/` (opencode, cursor-cli), `bar/` (i3status), `editor/` (nvim), `files/` (yazi), `git/` (lazygit, projects), `http-client/` (posting), `launcher/` (rofi), `nix/` (nh),   `remote/` (ssh), `security/` (age), `session/` (x11), `shell/` (nushell, starship, carapace), `sql-client/` (sqlit, rainfrog), `system/` (audio, clipboard, container, git, graphical, monitoring, network, search), `terminal/` (ghostty, zellij, tmux), `wm/` (i3).
+Domain categories: `agents/` (opencode, cursor-cli), `bar/` (i3status), `capture/` (screenshot), `editor/` (nvim), `files/` (yazi), `git/` (code, lazygit, projects), `http-client/` (posting), `launcher/` (rofi), `nix/` (nh), `remote/` (ssh), `security/` (age), `session/` (x11), `shell/` (nushell, starship, carapace), `sql-client/` (sqlit, rainfrog), `kernel/` (audio, clipboard, container, cursor, graphical, monitoring, network, search), `terminal/` (ghostty, zellij, tmux), `wm/` (i3).
 
 Domains are enabled via **profile composition**, not per-host module files.
 

@@ -8,8 +8,8 @@ import (
 
 	"angst/internal/cmd"
 	"angst/internal/paths"
-	"angst/internal/shared"
 	"angst/internal/scope"
+	"angst/internal/shared"
 )
 
 const (

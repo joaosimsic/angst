@@ -65,7 +65,12 @@ let
   };
 
   checkTreesitter = import ./treesitter.nix {
-    inherit pkgs lib hostList self;
+    inherit
+      pkgs
+      lib
+      hostList
+      self
+      ;
   };
 
   checkProjectsPipeline = import ./projects-pipeline.nix {

@@ -7,10 +7,10 @@
 }:
 
 let
-  cfg = config.domains.system.container;
+  cfg = config.domains.kernel.container;
 in
 {
-  options.domains.system.container = {
+  options.domains.kernel.container = {
     enable = lib.mkEnableOption "Container runtimes via Docker and Podman";
   };
 

@@ -6,6 +6,7 @@
   nixosModules,
   runtime,
   themeOverride ? null,
+  store,
 }:
 
 let
@@ -70,7 +71,7 @@ inputs.nixpkgs.lib.nixosSystem {
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
-    inherit runtime;
+    inherit runtime store;
   };
 
   modules = [
@@ -160,7 +161,7 @@ inputs.nixpkgs.lib.nixosSystem {
           userConfig = userCfg;
           theme = effectiveTheme;
           flakeSelf = self;
-          inherit runtime;
+          inherit runtime store;
         };
 
         users.${host.username} = {

@@ -87,7 +87,7 @@ func Run(args []string) int {
 		{"11. Hardcoded Strings Inventory", func() string { return sectionHardcodedStrings() }},
 		{"12. Domain Inventory", func() string { return sectionDomainInventory() }},
 		{"13. Theme Inventory", func() string { return sectionThemeInventory() }},
-		{"14. System Feature Inventory", func() string { return sectionCapabilitiesInventory() }},
+		{"14. Kernel Feature Inventory", func() string { return sectionKernelInventory() }},
 		{"15. Toolchain Inventory", func() string { return sectionToolchainInventory() }},
 		{"16. Host Inventory", func() string { return sectionHostInventory() }},
 		{"17. Option Inventory", func() string { return sectionOptionInventory() }},

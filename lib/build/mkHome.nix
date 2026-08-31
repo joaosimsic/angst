@@ -8,6 +8,7 @@
   hmSwitchTool,
   themeOverride ? null,
   shellOverride ? null,
+  store,
 }:
 
 let
@@ -62,7 +63,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
-    inherit runtime;
+    inherit runtime store;
   };
 
   modules = [

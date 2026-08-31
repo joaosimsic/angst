@@ -46,8 +46,6 @@ func acceptsJSON(r *http.Request) bool {
 	return strings.Contains(accept, "application/json") || strings.Contains(accept, "*/*")
 }
 
-
-
 func handleRPC(w http.ResponseWriter, r *http.Request) {
 	if !acceptsJSON(r) {
 		http.Error(w, "MCP HTTP requests must accept application/json", http.StatusNotAcceptable)
@@ -173,7 +171,7 @@ func runVmRestart(headless bool) map[string]any {
 		return toolContent("VM restart failed", true)
 	}
 	if !headless {
-		
+
 	}
 	return toolContent("VM restarting", false)
 }
@@ -211,8 +209,6 @@ func toolsList() map[string]any {
 	}
 }
 
-
-
 func handleStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.WriteHeader(http.StatusOK)
@@ -228,9 +224,9 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"status":       "ok",
-		"VmReachable":  reachable,
-		"details":      details,
+		"status":      "ok",
+		"VmReachable": reachable,
+		"details":     details,
 	})
 }
 
@@ -251,8 +247,6 @@ func runServer(port int) error {
 	fmt.Printf("VM MCP Server listening on http://%s\n", addr)
 	return http.ListenAndServe(addr, mux)
 }
-
-
 
 func mcpDispatch(args []string) int {
 	sub := ""

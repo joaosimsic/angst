@@ -34,8 +34,8 @@ in
   config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = config.domains.system.graphical.enable;
-        message = "domains.display.x11 requires domains.system.graphical to be enabled";
+        assertion = config.domains.kernel.graphical.enable;
+        message = "domains.display.x11 requires domains.kernel.graphical to be enabled";
       }
     ];
 

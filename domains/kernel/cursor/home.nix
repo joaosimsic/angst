@@ -6,7 +6,7 @@
 }:
 
 let
-  cfg = config.domains.system.cursor;
+  cfg = config.domains.kernel.cursor;
 in
 {
   config = lib.mkIf cfg.enable {

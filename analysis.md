@@ -17,7 +17,7 @@
 - [11. Hardcoded Strings Inventory](#hardcoded-strings-inventory)
 - [12. Domain Inventory](#domain-inventory)
 - [13. Theme Inventory](#theme-inventory)
-- [14. System Feature Inventory](#system-feature-inventory)
+- [14. Kernel Feature Inventory](#kernel-feature-inventory)
 - [15. Toolchain Inventory](#toolchain-inventory)
 - [16. Host Inventory](#host-inventory)
 - [17. Option Inventory](#option-inventory)
@@ -357,20 +357,22 @@ _(none found)_
   - `monochrome` — 28 LOC (default)
   - `noctis` — 28 LOC
   - `rose-pine` — 29 LOC
-## 14. System Feature Inventory
+## 14. Kernel Feature Inventory
 
 > **See `nix flake show` for the full list.**
 
-- **8 system features**, 241 total LOC
+- **10 kernel features**, 379 total LOC
 
-  - `system/audio` — 29 LOC
-  - `system/clipboard` — 23 LOC
-  - `system/container` — 43 LOC
-  - `system/git` — 22 LOC
-  - `system/graphical` — 54 LOC
-  - `system/monitoring` — 22 LOC
-  - `system/network` — 24 LOC
-  - `system/search` — 24 LOC
+  - `kernel/audio` — 29 LOC
+  - `kernel/clipboard` — 32 LOC
+  - `kernel/container` — 43 LOC
+  - `kernel/graphical` — 39 LOC
+  - `kernel/monitoring` — 22 LOC
+  - `kernel/network` — 24 LOC
+  - `kernel/search` — 24 LOC
+  - `display/lightdm` — 51 LOC
+  - `display/ly` — 56 LOC
+  - `display/x11` — 59 LOC
 ## 15. Toolchain Inventory
 
 > **See `nix flake show` for the full list.**

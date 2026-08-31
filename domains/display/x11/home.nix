@@ -13,8 +13,8 @@ in
     {
       assertions = [
         {
-          assertion = !cfg.enable || config.domains.system.graphical.enable;
-          message = "domains.display.x11 requires domains.system.graphical to be enabled";
+          assertion = !cfg.enable || config.domains.kernel.graphical.enable;
+          message = "domains.display.x11 requires domains.kernel.graphical to be enabled";
         }
       ];
     }

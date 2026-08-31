@@ -40,9 +40,16 @@ let
       inherit lib;
     };
 
-  enableModule = e: {
-    domains.${e.category}.${e.name}.enable = true;
-  };
+  enableModule =
+    e:
+    if e.category == e.name then
+      {
+        domains.${e.category}.enable = true;
+      }
+    else
+      {
+        domains.${e.category}.${e.name}.enable = true;
+      };
 
   mkHome = import ../build/mkHome.nix;
   mkHost = import ../build/mkNixos.nix;
@@ -66,12 +73,15 @@ let
     db = { };
     sshAgent = { };
     username = "user";
+    store = mkStore [ ];
   };
 
   render = import ../render.nix {
     host = if representative != null then representative else fallbackHost;
     inherit lib;
   };
+
+  mkStore = enabled: import ../store.nix { inherit enabled; };
 
   mkHomeCfg =
     {
@@ -80,32 +90,45 @@ let
       themeOverride ? null,
       shellOverride ? null,
     }:
+    let
+      p = profilesFor host;
+      store = mkStore p.enabled;
+      hostWithStore = host // {
+        inherit store;
+      };
+    in
     mkHome {
       inherit
         self
         inputs
-        host
         runtime
         hmSwitchTool
         angstShell
         hmModules
         themeOverride
         shellOverride
+        store
         ;
+      host = hostWithStore;
     };
 
   mkHostFor =
     host:
     let
       p = profilesFor host;
+      store = mkStore p.enabled;
+      hostWithStore = host // {
+        inherit store;
+      };
     in
     mkHost {
       inherit
         self
         inputs
-        host
         runtime
+        store
         ;
+      host = hostWithStore;
       hmModules = map enableModule p.enabled;
       nixosModules = map enableModule (builtins.filter (e: e.hasSystem) p.enabled) ++ p.modules;
     };
@@ -116,9 +139,9 @@ let
     inherit
       pkgs
       runtime
+      vmHost
       ;
     host = representative;
-    vmHost = vmHost;
   };
 
   angstShell = runtime.mkAngstShell {
