@@ -138,6 +138,7 @@ in
   check-projects-encrypted = checkSecretsEncrypted.projects;
   check-ssh-keys = checkSecretsEncrypted.sshKeys;
   check-ftp-encrypted = checkSecretsEncrypted.ftp;
+  check-vpn-encrypted = checkSecretsEncrypted.vpn;
   check-projects-ftp-declared = checkDeclared;
   check-projects-pipeline = checkProjectsPipeline;
   check-vault-pipeline = checkVaultPipeline;

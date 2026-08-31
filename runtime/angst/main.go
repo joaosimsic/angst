@@ -44,6 +44,8 @@ func run(args []string) int {
 		return system.ProvisionSSHKey(args)
 	case "provision-app-secret":
 		return system.ProvisionAppSecret(args)
+	case "provision-vpn":
+		return system.ProvisionVPN(args)
 	case "ftp":
 		return ftp.Run(args)
 	case "vault":
@@ -70,6 +72,7 @@ func usage() {
   angst ssh-add-keys KEY...
   angst provision-ssh-key --user USER --home DIR --secrets-dir DIR [--scopes work[,personal]]
   angst provision-app-secret --secrets-dir DIR --slug NAME [--slug NAME ...] [--scopes work[,personal]] [--home DIR]
+  angst provision-vpn --secrets-dir DIR --dest-dir DIR [--user USER] [--home DIR] [--scopes personal[,work]]
   angst set-password-hash --username USER --age-path FILE --age-key FILE
   angst ftp <decrypt|mount|unmount|transform> ...
 `)

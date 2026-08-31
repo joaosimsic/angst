@@ -26,6 +26,7 @@ let
     embedded = import ./embedded.nix;
     server = import ./server.nix;
     vm = import ./vm.nix;
+    vpn = import ./vpn.nix;
   };
 
   resolve =

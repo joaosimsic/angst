@@ -125,6 +125,48 @@ let
         echo "==> All projects tarballs are age-encrypted."
         touch $out
       '';
+  vpnCheck =
+    pkgs.runCommand "check-vpn-encrypted"
+      {
+        nativeBuildInputs = [
+          pkgs.findutils
+          pkgs.gnugrep
+        ];
+      }
+      ''
+        set -euo pipefail
+        cd ${repoRoot}
+
+        files=$(find ./secrets/vpn -type f -name '*.age' 2>/dev/null || true)
+        if [ -z "$files" ]; then
+          echo "No secrets/vpn files found; nothing to check."
+          touch $out
+          exit 0
+        fi
+
+        echo "==> Checking secrets/vpn files are age-encrypted (personal/work scopes)..."
+        failed=0
+        for f in $files; do
+          if ! grep -q 'age-encryption.org/v1' "$f"; then
+            echo "FAIL: $f is not age-encrypted (missing age-encryption.org/v1 envelope)"
+            failed=1
+          elif grep -qE '"remote"|"auth-user-pass"|"ca "|-----BEGIN CERTIFICATE-----' "$f"; then
+            echo "FAIL: $f contains plaintext VPN config-like content"
+            failed=1
+          else
+            echo "PASS: $f is age-encrypted"
+          fi
+        done
+
+        if [ "$failed" -ne 0 ]; then
+          echo "==> One or more secrets/vpn files are not properly encrypted. Refusing to proceed."
+          exit 1
+        fi
+
+        echo "==> All secrets/vpn files are age-encrypted."
+        touch $out
+      '';
+
   sshKeysCheck =
     pkgs.runCommand "check-ssh-keys-encrypted"
       {
@@ -183,4 +225,5 @@ in
   projects = projectsCheck;
   sshKeys = sshKeysCheck;
   ftp = ftpCheck;
+  vpn = vpnCheck;
 }

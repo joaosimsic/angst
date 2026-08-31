@@ -28,4 +28,5 @@ paths = [
   "openwiki/",
   "secrets/ssh/.*\\.age",
   "secrets/ftp/.*\\.age",
+  "secrets/vpn/.*\\.age",
 ]
