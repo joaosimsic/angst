@@ -96,6 +96,7 @@ let
       hostWithStore = host // {
         inherit store;
       };
+      perHostAngstShell = mkAngstShellFor hostWithStore;
     in
     mkHome {
       inherit
@@ -103,12 +104,12 @@ let
         inputs
         runtime
         hmSwitchTool
-        angstShell
         hmModules
         themeOverride
         shellOverride
         store
         ;
+      angstShell = perHostAngstShell;
       host = hostWithStore;
     };
 
@@ -135,20 +136,32 @@ let
 
   vmHost = lib.findFirst (h: h.hostname == "vm") null hostList;
 
-  devshell = import ./devshell.nix {
+  devshellFor = hostArg: import ./devshell.nix {
     inherit
       pkgs
       runtime
       vmHost
       ;
-    host = representative;
+    host = hostArg;
   };
+
+  devshell = devshellFor representative;
 
   angstShell = runtime.mkAngstShell {
     devShell = devshell.shells.dev;
     safeShell = devshell.shells.safe;
     treesitter = if representative != null then representative.scan.treesitter else null;
   };
+
+  mkAngstShellFor = hostArg:
+    let
+      ds = devshellFor hostArg;
+    in
+    runtime.mkAngstShell {
+      devShell = ds.shells.dev;
+      safeShell = ds.shells.safe;
+      treesitter = hostArg.scan.treesitter;
+    };
 
   mkChecks = import ../../checks/default.nix {
     inherit
