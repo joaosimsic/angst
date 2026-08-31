@@ -92,43 +92,46 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable (lib.mkMerge [
-    {
-      boot.kernelModules = [ "tun" ];
-      services.openvpn.servers = cfg.openvpn.servers;
-    }
-
-    (lib.mkIf (cfg.openvpn.servers != { }) {
-      systemd.services = {
-        angst-provision-vpn = {
-          description = "angst: decrypt VPN .ovpn + creds (both scopes)";
-          wantedBy = [ "multi-user.target" ];
-          before = map (n: "openvpn-${n}.service") (builtins.attrNames cfg.openvpn.servers);
-          after = [
-            "local-fs.target"
-            "vm-age-key.service"
-          ];
-          wants = [ "network-online.target" ];
-
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            ExecStart = (runtime.vpn-provision {
-              secretsDir = "${flakeSelf}/${cfg.secretsDir}";
-              inherit (cfg) destDir;
-              inherit (userConfig) username homeDirectory;
-              scopes = [
-                "personal"
-                "work"
-              ];
-            }).bin;
-          };
-        };
+  config = lib.mkIf cfg.enable (
+    lib.mkMerge [
+      {
+        boot.kernelModules = [ "tun" ];
+        services.openvpn.servers = cfg.openvpn.servers;
       }
-      // lib.genAttrs (map (n: "openvpn-${n}") (builtins.attrNames cfg.openvpn.servers)) (_: {
-        after = [ "angst-provision-vpn.service" ];
-        requires = [ "angst-provision-vpn.service" ];
-      });
-    })
-  ]);
+
+      (lib.mkIf (cfg.openvpn.servers != { }) {
+        systemd.services = {
+          angst-provision-vpn = {
+            description = "angst: decrypt VPN .ovpn + creds (both scopes)";
+            wantedBy = [ "multi-user.target" ];
+            before = map (n: "openvpn-${n}.service") (builtins.attrNames cfg.openvpn.servers);
+            after = [
+              "local-fs.target"
+              "vm-age-key.service"
+            ];
+            wants = [ "network-online.target" ];
+
+            serviceConfig = {
+              Type = "oneshot";
+              RemainAfterExit = true;
+              ExecStart =
+                (runtime.vpn-provision {
+                  secretsDir = "${flakeSelf}/${cfg.secretsDir}";
+                  inherit (cfg) destDir;
+                  inherit (userConfig) username homeDirectory;
+                  scopes = [
+                    "personal"
+                    "work"
+                  ];
+                }).bin;
+            };
+          };
+        }
+        // lib.genAttrs (map (n: "openvpn-${n}") (builtins.attrNames cfg.openvpn.servers)) (_: {
+          after = [ "angst-provision-vpn.service" ];
+          requires = [ "angst-provision-vpn.service" ];
+        });
+      })
+    ]
+  );
 }
