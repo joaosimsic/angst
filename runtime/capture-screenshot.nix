@@ -187,7 +187,13 @@ mkScript {
       fi
     fi
 
-    if command -v notify-send >/dev/null 2>&1; then
+    if command -v angst-notify >/dev/null 2>&1; then
+      if [ "$SAVE_TO_FILE" = "1" ]; then
+        angst-notify notify "Screenshot saved" "$DEST" "$DEST" 2>/dev/null || notify-send "Screenshot saved" "$DEST" -i "$DEST" 2>/dev/null || notify-send "Screenshot saved" "$DEST" 2>/dev/null || true
+      else
+        angst-notify notify "Screenshot copied to clipboard" 2>/dev/null || notify-send "Screenshot copied to clipboard" 2>/dev/null || true
+      fi
+    elif command -v notify-send >/dev/null 2>&1; then
       if [ "$SAVE_TO_FILE" = "1" ]; then
         notify-send "Screenshot saved" "$DEST" -i "$DEST" 2>/dev/null || notify-send "Screenshot saved" "$DEST" 2>/dev/null || true
       else

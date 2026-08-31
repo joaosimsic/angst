@@ -35,8 +35,8 @@ let
           else
             [
               (mkDomain {
+                inherit name;
                 category = name;
-                name = name;
                 path = domainPath;
                 spec = import defaultPath;
               })

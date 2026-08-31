@@ -1,7 +1,6 @@
 {
   mkScript,
   pkgs,
-  lib,
 }:
 {
   backend,
@@ -51,10 +50,19 @@ mkScript {
         shift || true
         TITLE="''${1:-Notification}"
         BODY="''${2:-}"
-        if [ -n "$BODY" ]; then
-          exec notify-send "$TITLE" "$BODY" 2>/dev/null || true
+        ICON="''${3:-}"
+        if [ -n "$ICON" ]; then
+          if [ -n "$BODY" ]; then
+            exec notify-send -i "$ICON" "$TITLE" "$BODY" 2>/dev/null || true
+          else
+            exec notify-send -i "$ICON" "$TITLE" 2>/dev/null || true
+          fi
         else
-          exec notify-send "$TITLE" 2>/dev/null || true
+          if [ -n "$BODY" ]; then
+            exec notify-send "$TITLE" "$BODY" 2>/dev/null || true
+          else
+            exec notify-send "$TITLE" 2>/dev/null || true
+          fi
         fi
         ;;
       *) echo "Usage: $0 [dismiss|dismiss-all|history|notify <title> [body]]" >&2; exit 1 ;;

@@ -58,4 +58,4 @@
 - [x] login screen
 - [x] firefox
 - [x] persistent and not persistent prints
-- [ ] notifications and add print notifications
+- [x] notifications and add print notifications
