@@ -9,6 +9,7 @@
     "desktop"
     "development"
     "embedded"
+    "vm"
   ];
   toolchains = "*";
   env = {
