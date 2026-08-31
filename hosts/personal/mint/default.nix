@@ -60,6 +60,7 @@
   projects = [
     "angst"
     "advent-of-code"
+    "datapath"
     "agent"
     "intelligence/backend"
     "intelligence/frontend"
