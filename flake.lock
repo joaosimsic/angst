@@ -81,7 +81,9 @@
     "nixGL": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": [
+          "nixpkgs"
+        ]
       },
       "locked": {
         "lastModified": 1762090880,
@@ -115,21 +117,6 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1746378225,
-        "narHash": "sha256-OeRSuL8PUjIfL3Q0fTbNJD/fmv1R+K2JAOqWJd3Oceg=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "93e8cdce7afc64297cfec447c311470788131cd9",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_3": {
-      "locked": {
         "lastModified": 1787498568,
         "narHash": "sha256-9i/VTdusq/+NM/tz+J1Re+ojkMB8MBf0QshnYfzHz30=",
         "owner": "nixos",
@@ -149,7 +136,7 @@
         "home-manager": "home-manager",
         "impermanence": "impermanence",
         "nixGL": "nixGL",
-        "nixpkgs": "nixpkgs_3"
+        "nixpkgs": "nixpkgs_2"
       }
     },
     "systems": {

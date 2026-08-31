@@ -9,7 +9,10 @@
 
     impermanence.url = "github:nix-community/impermanence";
 
-    nixGL.url = "github:nix-community/nixGL";
+    nixGL = {
+      url = "github:nix-community/nixGL";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =

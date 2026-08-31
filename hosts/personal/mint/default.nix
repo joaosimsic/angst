@@ -49,15 +49,15 @@
       }
     ];
   };
-  # ftp = {
-  #   mounts = [
-  #     {
-  #       mountPoint = "ftp/server";
-  #       remotePath = "/httpdocs";
-  #
-  #     }
-  #   ];
-  # };
+  ftp = {
+    mounts = [
+      {
+        mountPoint = "ftp/server";
+        remotePath = "/httpdocs";
+
+      }
+    ];
+  };
   projects = [
     "angst"
     "advent-of-code"

@@ -21,7 +21,22 @@ in
     lib.mkMerge [
       {
         targets.genericLinux.nixGL = lib.mkIf (hostType != "nixos") {
-          packages = inputs.nixGL.packages;
+          packages =
+            let
+              isIntelX86 = pkgs.stdenv.hostPlatform.isx86_64;
+              patchedNixGL = builtins.toFile "nixGL-patched.nix" (
+                builtins.replaceStrings [ "kernel = null;" ] [ "" ] (builtins.readFile "${inputs.nixGL.outPath}/nixGL.nix")
+              );
+            in
+            pkgs.callPackage patchedNixGL (
+              {
+                nvidiaVersion = null;
+                nvidiaHash = null;
+                nvidiaVersionFile = null;
+                enable32bits = isIntelX86;
+              }
+              // lib.optionalAttrs (!isIntelX86) { intel-media-driver = null; }
+            );
           defaultWrapper = "nvidia";
           installScripts = [ "nvidia" ];
         };
