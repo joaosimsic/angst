@@ -25,6 +25,11 @@
   "sidebar.revamp" = true;
   "sidebar.verticalTabs" = true;
   "sidebar.visibility" = "always-show";
+  "webgl.disabled" = false;
+  "webgl.force-enabled" = true;
+  "webgl.enable-webgl2" = true;
+  "layers.acceleration.force-enabled" = true;
+  "gfx.webrender.all" = true;
   "intl.accept_languages" = "en-US, en, pt-BR";
   "intl.locale.requested" = "en-US,pt-BR";
   "spellchecker.dictionary" = "en-US";
