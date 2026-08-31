@@ -8,6 +8,8 @@
     };
 
     impermanence.url = "github:nix-community/impermanence";
+
+    nixGL.url = "github:nix-community/nixGL";
   };
 
   outputs =

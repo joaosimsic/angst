@@ -20,7 +20,7 @@ hm host="nixos" user="joao":
     nix build .#homeConfigurations."{{user}}@{{host}}".activationPackage
 
 hm-switch host="":
-    @if [ -n "{{host}}" ]; then nix run .#hm-switch -- switch --flake .#{{host}}; else nix run .#hm-switch -- switch --flake .; fi
+    @if [ -n "{{host}}" ]; then NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake .#{{host}} --impure; else NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake . --impure; fi
 
 analyze:
     nix run .#analyze -- --output analysis.md

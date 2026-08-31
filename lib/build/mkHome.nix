@@ -63,7 +63,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
-    inherit runtime store;
+    inherit inputs runtime store;
   };
 
   modules = [
