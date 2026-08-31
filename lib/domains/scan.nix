@@ -52,7 +52,11 @@ let
       else
         let
           categoryPath = domainsPath + "/${category}";
-          isSingle = builtins.pathExists (categoryPath + "/default.nix") && !(builtins.any (n: builtins.pathExists (categoryPath + "/${n}/default.nix")) (builtins.attrNames (builtins.readDir categoryPath)));
+          isSingle =
+            builtins.pathExists (categoryPath + "/default.nix")
+            && !(builtins.any (n: builtins.pathExists (categoryPath + "/${n}/default.nix")) (
+              builtins.attrNames (builtins.readDir categoryPath)
+            ));
         in
         if isSingle then
           [ ]

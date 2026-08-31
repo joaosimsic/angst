@@ -155,10 +155,11 @@ let
           [ ];
 
       baseModule = {
-        options.domains = if isSingle then
-          { ${category}.enable = lib.mkEnableOption "Enable ${meta.description or name}"; }
-        else
-          { ${category}.${name}.enable = lib.mkEnableOption "Enable ${meta.description or name}"; };
+        options.domains =
+          if isSingle then
+            { ${category}.enable = lib.mkEnableOption "Enable ${meta.description or name}"; }
+          else
+            { ${category}.${name}.enable = lib.mkEnableOption "Enable ${meta.description or name}"; };
 
         config = lib.mkIf enableOption {
           home.packages = lib.optionals (meta.package != null) [

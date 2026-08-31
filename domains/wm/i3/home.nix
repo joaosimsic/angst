@@ -18,30 +18,24 @@ in
     xdg.configFile."i3/screenshot.conf".text = lib.mkDefault (
       if shouldBind then
         ''
-          # angst capture/screenshot — i3 adapter (store-gated, hasX11=${if hasX11 then "1" else "0"})
           bindsym Print exec --no-startup-id angst-screenshot-save fullscreen
           bindsym Shift+Print exec --no-startup-id angst-screenshot-copy region
           bindsym $mod+Shift+s exec --no-startup-id angst-screenshot-copy region
           bindsym $mod+Print exec --no-startup-id angst-screenshot-save window
         ''
       else
-        ''
-          # capture.screenshot disabled or !hasX11 — no bindings
-        ''
+        ""
     );
 
     xdg.configFile."i3/notifications.conf".text = lib.mkDefault (
       if shouldBindNotif then
         ''
-          # angst notifications — i3 adapter (store-gated, hasNotifications=${if hasNotifications then "1" else "0"})
           bindsym $mod+Shift+n exec --no-startup-id angst-notify dismiss
           bindsym $mod+Shift+m exec --no-startup-id angst-notify dismiss-all
           bindsym $mod+Control+n exec --no-startup-id angst-notify history
         ''
       else
-        ''
-          # notifications disabled or !hasX11 — no bindings
-        ''
+        ""
     );
 
     assertions = [

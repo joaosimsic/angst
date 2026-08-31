@@ -40,11 +40,16 @@ let
       inherit lib;
     };
 
-  enableModule = e: if e.category == e.name then {
-    domains.${e.category}.enable = true;
-  } else {
-    domains.${e.category}.${e.name}.enable = true;
-  };
+  enableModule =
+    e:
+    if e.category == e.name then
+      {
+        domains.${e.category}.enable = true;
+      }
+    else
+      {
+        domains.${e.category}.${e.name}.enable = true;
+      };
 
   mkHome = import ../build/mkHome.nix;
   mkHost = import ../build/mkNixos.nix;

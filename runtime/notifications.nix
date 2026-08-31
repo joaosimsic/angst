@@ -8,7 +8,13 @@
 }:
 mkScript {
   inherit name;
-  runtimeInputs = with pkgs; [ libnotify dunst mako dbus coreutils ];
+  runtimeInputs = with pkgs; [
+    libnotify
+    dunst
+    mako
+    dbus
+    coreutils
+  ];
   text = ''
     set -euo pipefail
 

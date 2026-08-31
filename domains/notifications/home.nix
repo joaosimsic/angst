@@ -13,22 +13,39 @@ let
   inherit (store) hasWayland hasX11;
   rawBackend = cfg.backend or "auto";
   effectiveBackend =
-    if rawBackend == "auto" then
-      if hasWayland && !hasX11 then "mako" else "dunst"
-    else rawBackend;
+    if rawBackend == "auto" then if hasWayland && !hasX11 then "mako" else "dunst" else rawBackend;
   themeName = config.theme or "catppuccin-mocha";
   t =
-    if themesLib != null then themesLib.get themeName
-    else {
-      palette = {
-        background = { base = "#1e1e2e"; variant = "#1e1e2e"; };
-        foreground = { base = "#cdd6f4"; variant = "#cdd6f4"; };
-        accent = { base = "#89b4fa"; variant = "#89b4fa"; };
-        surface = { base = "#89b4fa"; variant = "#a6e3a1"; };
-        dim = "#f38ba8";
+    if themesLib != null then
+      themesLib.get themeName
+    else
+      {
+        palette = {
+          background = {
+            base = "#1e1e2e";
+            variant = "#1e1e2e";
+          };
+          foreground = {
+            base = "#cdd6f4";
+            variant = "#cdd6f4";
+          };
+          accent = {
+            base = "#89b4fa";
+            variant = "#89b4fa";
+          };
+          surface = {
+            base = "#89b4fa";
+            variant = "#a6e3a1";
+          };
+          dim = "#f38ba8";
+        };
+        ansi = {
+          error = "#f38ba8";
+          warn = "#f9e2af";
+          info = "#89dceb";
+          success = "#a6e3a1";
+        };
       };
-      ansi = { error = "#f38ba8"; warn = "#f9e2af"; info = "#89dceb"; success = "#a6e3a1"; };
-    };
   p = t.palette;
   angstNotify = runtime.notifications {
     backend = effectiveBackend;
@@ -38,7 +55,11 @@ in
 {
   options.domains.notifications = {
     backend = lib.mkOption {
-      type = lib.types.enum [ "auto" "dunst" "mako" ];
+      type = lib.types.enum [
+        "auto"
+        "dunst"
+        "mako"
+      ];
       default = "auto";
       description = "Notification backend. auto=detect hasWayland/hasX11, dunst=X11, mako=Wayland";
     };

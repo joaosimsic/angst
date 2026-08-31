@@ -14,9 +14,7 @@ let
       entry = lib.findFirst (e: domainId e == name) null entries;
     in
     if entry == null then
-      throw "Unknown domain '${name}'. Available: ${
-        builtins.concatStringsSep ", " (map domainId entries)
-      }"
+      throw "Unknown domain '${name}'. Available: ${builtins.concatStringsSep ", " (map domainId entries)}"
     else
       entry;
 
