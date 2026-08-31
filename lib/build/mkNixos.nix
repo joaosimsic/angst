@@ -71,7 +71,7 @@ inputs.nixpkgs.lib.nixosSystem {
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
-    inherit runtime store;
+    inherit inputs runtime store;
   };
 
   modules = [
@@ -161,7 +161,7 @@ inputs.nixpkgs.lib.nixosSystem {
           userConfig = userCfg;
           theme = effectiveTheme;
           flakeSelf = self;
-          inherit runtime store;
+          inherit inputs runtime store;
         };
 
         users.${host.username} = {
