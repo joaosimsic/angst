@@ -72,8 +72,12 @@ func ProvisionVPN(args []string) int {
 		}
 	}
 
-	_ = username // reserved for future install -o handling if destDir is home-relative
-	_ = homeDir
+	if username != "" {
+		_ = os.Setenv("USER", username)
+	}
+	if homeDir != "" {
+		_ = os.Setenv("HOME", homeDir)
+	}
 
 	if secretsDir == "" {
 		fmt.Fprintln(os.Stderr, "error: --secrets-dir is required")
@@ -95,6 +99,7 @@ func ProvisionVPN(args []string) int {
 	}
 	_ = os.Chmod(destDir, 0o700)
 
+	expected := map[string]struct{}{}
 	overall := shared.ExitOK
 	for _, sc := range requested {
 		keyFile := scope.AgeKeyfile(sc, scope.EnvOverride)
@@ -121,11 +126,11 @@ func ProvisionVPN(args []string) int {
 				continue
 			}
 			plainName := strings.TrimSuffix(name, ".age")
-			// only handle .ovpn and .creds (also allow .conf, .key etc but we restrict to expected)
 			if !strings.HasSuffix(plainName, ".ovpn") && !strings.HasSuffix(plainName, ".creds") && !strings.HasSuffix(plainName, ".conf") {
-				// still decrypt generically to destDir/plainName if someone adds other suffix
-				// but warn: we allow any .age -> dest file for flexibility
+				fmt.Fprintf(os.Stderr, "warn: skipping %s/%s: unexpected suffix (want .ovpn/.creds/.conf)\n", sc, name)
+				continue
 			}
+			expected[plainName] = struct{}{}
 			src := filepath.Join(scopeDir, name)
 			dest := filepath.Join(destDir, plainName)
 			tmp := dest + ".tmp"
@@ -146,6 +151,23 @@ func ProvisionVPN(args []string) int {
 			}
 			_ = os.Chmod(dest, 0o600)
 			fmt.Printf("provisioned vpn %s/%s -> %s\n", sc, name, dest)
+		}
+	}
+	if entries, err := os.ReadDir(destDir); err == nil {
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			n := e.Name()
+			if strings.HasSuffix(n, ".tmp") {
+				_ = os.Remove(filepath.Join(destDir, n))
+				continue
+			}
+			if _, ok := expected[n]; !ok && (strings.HasSuffix(n, ".ovpn") || strings.HasSuffix(n, ".creds") || strings.HasSuffix(n, ".conf")) {
+				p := filepath.Join(destDir, n)
+				_ = os.Remove(p)
+				fmt.Printf("removed stale vpn %s\n", p)
+			}
 		}
 	}
 

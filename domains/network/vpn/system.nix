@@ -102,7 +102,7 @@ in
       (lib.mkIf (cfg.openvpn.servers != { }) {
         systemd.services = {
           angst-provision-vpn = {
-            description = "angst: decrypt VPN .ovpn + creds (both scopes)";
+            description = "angst: decrypt VPN .ovpn + creds (both scopes, ephemeral)";
             wantedBy = [ "multi-user.target" ];
             before = map (n: "openvpn-${n}.service") (builtins.attrNames cfg.openvpn.servers);
             after = [
@@ -114,6 +114,17 @@ in
             serviceConfig = {
               Type = "oneshot";
               RemainAfterExit = true;
+              PrivateTmp = true;
+              ProtectSystem = "strict";
+              ProtectHome = "read-only";
+              ReadOnlyPaths = [
+                "${userConfig.homeDirectory}/.config/age"
+                "${flakeSelf}/${cfg.secretsDir}"
+              ];
+              ReadWritePaths = [ cfg.destDir ];
+              NoNewPrivileges = true;
+              UMask = "0077";
+              RestrictAddressFamilies = [ "AF_UNIX" ];
               ExecStart =
                 (runtime.vpn-provision {
                   secretsDir = "${flakeSelf}/${cfg.secretsDir}";

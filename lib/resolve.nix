@@ -129,7 +129,40 @@ in
       else
         [ "work" ];
 
-    secrets = decl.secrets or [ ];
+    secrets =
+      let
+        isVm = (decl.hostname or "nixos") == "vm";
+        declSecrets = decl.secrets or [ ];
+        autoSecrets =
+          if !isVm || self == null then
+            [ ]
+          else
+            let
+              slugsFor = scope:
+                let
+                  dir = self + "/secrets/apps/${scope}";
+                in
+                if builtins.pathExists dir then
+                  let
+                    entries = builtins.readDir dir;
+                    ageFiles = lib.filterAttrs (
+                      n: t: t == "regular" && lib.hasSuffix ".age" n
+                    ) entries;
+                  in
+                  map (n: lib.removeSuffix ".age" n) (builtins.attrNames ageFiles)
+                else
+                  [ ];
+              all = lib.concatMap slugsFor [
+                "personal"
+                "work"
+              ];
+            in
+            lib.unique all;
+      in
+      if isVm && self != null then
+        if autoSecrets != [ ] then lib.unique (declSecrets ++ autoSecrets) else declSecrets
+      else
+        declSecrets;
 
     toolchainModules = _selectedTCs;
 
