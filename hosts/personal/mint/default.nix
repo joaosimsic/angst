@@ -63,6 +63,7 @@
     "advent-of-code"
     "datapath"
     "agent"
+    "warfront"
     "intelligence/backend"
     "intelligence/frontend"
   ];
