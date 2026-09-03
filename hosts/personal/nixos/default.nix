@@ -9,6 +9,7 @@
     "desktop"
     "development"
     "embedded"
+    "game-dev"
   ];
   toolchains = "*";
 

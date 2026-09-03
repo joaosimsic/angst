@@ -10,6 +10,7 @@
     "development"
     "embedded"
     "vm"
+    "game-dev"
   ];
   toolchains = "*";
   env = {
