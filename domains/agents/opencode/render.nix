@@ -90,6 +90,12 @@ let
       rust = {
         command = [ "rust-analyzer-mux" ];
         extensions = [ ".rs" ];
+        initialization = {
+          "rust-analyzer".check.command = "clippy";
+          "rust-analyzer".inlayHints.chainingHints.enable = true;
+          "rust-analyzer".inlayHints.parameterHints.enable = true;
+          "rust-analyzer".inlayHints.typeHints.enable = true;
+        };
       };
       gopls = {
         command = [ "gopls" "-remote=unix;/run/user/1000/gopls.sock" ];

@@ -19,7 +19,25 @@
     },
     "rust": {
       "command": ["rust-analyzer-mux"],
-      "extensions": [".rs"]
+      "extensions": [".rs"],
+      "initialization": {
+        "rust-analyzer": {
+          "check": {
+            "command": "clippy"
+          },
+          "inlayHints": {
+            "chainingHints": {
+              "enable": true
+            },
+            "parameterHints": {
+              "enable": true
+            },
+            "typeHints": {
+              "enable": true
+            }
+          }
+        }
+      }
     },
     "gopls": {
       "command": ["gopls", "-remote=unix;/run/user/1000/gopls.sock"],
