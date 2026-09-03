@@ -98,43 +98,94 @@ let
         };
       };
       gopls = {
-        command = [ "gopls" "-remote=unix;/run/user/1000/gopls.sock" ];
+        command = [
+          "gopls"
+          "-remote=unix;/run/user/1000/gopls.sock"
+        ];
         extensions = [ ".go" ];
       };
       pyright = {
-        command = [ "pyright-langserver" "--stdio" ];
+        command = [
+          "pyright-langserver"
+          "--stdio"
+        ];
         extensions = [ ".py" ];
       };
       typescript = {
-        command = [ "typescript-language-server" "--stdio" ];
-        extensions = [ ".ts" ".tsx" ];
+        command = [
+          "typescript-language-server"
+          "--stdio"
+        ];
+        extensions = [
+          ".ts"
+          ".tsx"
+        ];
       };
       javascript = {
-        command = [ "typescript-language-server" "--stdio" ];
-        extensions = [ ".js" ".jsx" ".mjs" ".cjs" ];
+        command = [
+          "typescript-language-server"
+          "--stdio"
+        ];
+        extensions = [
+          ".js"
+          ".jsx"
+          ".mjs"
+          ".cjs"
+        ];
       };
       html = {
-        command = [ "vscode-html-language-server" "--stdio" ];
+        command = [
+          "vscode-html-language-server"
+          "--stdio"
+        ];
         extensions = [ ".html" ];
       };
       css = {
-        command = [ "vscode-css-language-server" "--stdio" ];
-        extensions = [ ".css" ".scss" ".less" ];
+        command = [
+          "vscode-css-language-server"
+          "--stdio"
+        ];
+        extensions = [
+          ".css"
+          ".scss"
+          ".less"
+        ];
       };
       json = {
-        command = [ "vscode-json-language-server" "--stdio" ];
-        extensions = [ ".json" ".jsonc" ];
+        command = [
+          "vscode-json-language-server"
+          "--stdio"
+        ];
+        extensions = [
+          ".json"
+          ".jsonc"
+        ];
       };
       "yaml-ls" = {
-        command = [ "yaml-language-server" "--stdio" ];
-        extensions = [ ".yaml" ".yml" ];
+        command = [
+          "yaml-language-server"
+          "--stdio"
+        ];
+        extensions = [
+          ".yaml"
+          ".yml"
+        ];
       };
       bash = {
-        command = [ "bash-language-server" "start" ];
-        extensions = [ ".sh" ".bash" ];
+        command = [
+          "bash-language-server"
+          "start"
+        ];
+        extensions = [
+          ".sh"
+          ".bash"
+        ];
       };
       markdown = {
-        command = [ "marksman" "server" ];
+        command = [
+          "marksman"
+          "server"
+        ];
         extensions = [ ".md" ];
       };
       jdtls = {
@@ -145,40 +196,84 @@ let
         disabled = true;
       };
       php = {
-        command = [ "phpactor" "language-server" ];
+        command = [
+          "phpactor"
+          "language-server"
+        ];
         extensions = [ ".php" ];
       };
       dockerfile = {
-        command = [ "docker-langserver" "--stdio" ];
+        command = [
+          "docker-langserver"
+          "--stdio"
+        ];
         extensions = [ "Dockerfile" ];
       };
       terraform = {
-        command = [ "terraform-ls" "serve" ];
-        extensions = [ ".tf" ".tfvars" ];
+        command = [
+          "terraform-ls"
+          "serve"
+        ];
+        extensions = [
+          ".tf"
+          ".tfvars"
+        ];
       };
       "clojure-lsp" = {
         command = [ "clojure-lsp" ];
-        extensions = [ ".clj" ".cljs" ".cljc" ".edn" ];
+        extensions = [
+          ".clj"
+          ".cljs"
+          ".cljc"
+          ".edn"
+        ];
       };
       xml = {
         command = [ "lemminx" ];
-        extensions = [ ".xml" ".xsd" ".xsl" ".xslt" ];
+        extensions = [
+          ".xml"
+          ".xsd"
+          ".xsl"
+          ".xslt"
+        ];
       };
       clangd = {
         command = [ "clangd" ];
-        extensions = [ ".c" ".h" ".cpp" ".hpp" ".cc" ".hh" ".cxx" ".hxx" ];
+        extensions = [
+          ".c"
+          ".h"
+          ".cpp"
+          ".hpp"
+          ".cc"
+          ".hh"
+          ".cxx"
+          ".hxx"
+        ];
       };
       vue = {
-        command = [ "vue-language-server" "--stdio" ];
+        command = [
+          "vue-language-server"
+          "--stdio"
+        ];
         extensions = [ ".vue" ];
       };
       toml = {
-        command = [ "taplo" "lsp" "stdio" ];
+        command = [
+          "taplo"
+          "lsp"
+          "stdio"
+        ];
         extensions = [ ".toml" ];
       };
       hls = {
-        command = [ "haskell-language-server-wrapper" "--lsp" ];
-        extensions = [ ".hs" ".lhs" ];
+        command = [
+          "haskell-language-server-wrapper"
+          "--lsp"
+        ];
+        extensions = [
+          ".hs"
+          ".lhs"
+        ];
       };
     };
   };

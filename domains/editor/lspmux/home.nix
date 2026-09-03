@@ -44,7 +44,14 @@ in
           "PATH=${pkgs.rust-analyzer}/bin:${pkgs.cargo}/bin:${pkgs.rustc}/bin:/home/joao/.cargo/bin:/home/joao/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           "RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}"
         ];
-        PassEnvironment = [ "PATH" "LD_LIBRARY_PATH" "RUST_SRC_PATH" "CARGO_HOME" "RUSTUP_HOME" "RUSTUP_TOOLCHAIN" ];
+        PassEnvironment = [
+          "PATH"
+          "LD_LIBRARY_PATH"
+          "RUST_SRC_PATH"
+          "CARGO_HOME"
+          "RUSTUP_HOME"
+          "RUSTUP_TOOLCHAIN"
+        ];
       };
       Install.WantedBy = [ "default.target" ];
     };

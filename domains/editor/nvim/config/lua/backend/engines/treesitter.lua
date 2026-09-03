@@ -71,10 +71,10 @@ return {
 				if ft == "" then
 					return
 				end
-			if AdapterScanner:supports_filetype("treesitter", ft, treesitter_opts) then
-				vim.bo[event.buf].syntax = "OFF"
-				vim.b[event.buf].ts_highlight_started = nil
-			end
+				if AdapterScanner:supports_filetype("treesitter", ft, treesitter_opts) then
+					vim.bo[event.buf].syntax = "OFF"
+					vim.b[event.buf].ts_highlight_started = nil
+				end
 			end,
 		})
 
@@ -127,8 +127,10 @@ return {
 				else
 					local using_custom_query = false
 					for _, path in ipairs(query_files) do
-						if path:find(".local/share/tree-sitter", 1, true)
-							or path:find(".config/nvim/queries", 1, true) then
+						if
+							path:find(".local/share/tree-sitter", 1, true)
+							or path:find(".config/nvim/queries", 1, true)
+						then
 							using_custom_query = true
 						end
 					end

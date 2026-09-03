@@ -101,10 +101,7 @@ function M.assert_parser_installed(adapter)
 		local query_dir = vim.fn.expand("~/.local/share/tree-sitter/queries/") .. lang
 		if vim.fn.isdirectory(query_dir) == 1 then
 			local query_files = vim.treesitter.query.get_files(lang, "highlights")
-			assert(
-				#query_files > 0,
-				("Treesitter '%s' should resolve highlight query files, got none"):format(lang)
-			)
+			assert(#query_files > 0, ("Treesitter '%s' should resolve highlight query files, got none"):format(lang))
 		end
 	end
 end
