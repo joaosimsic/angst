@@ -64,6 +64,7 @@
     "datapath"
     "agent"
     "warfront"
+    "TCC"
     "intelligence/backend"
     "intelligence/frontend"
   ];

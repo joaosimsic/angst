@@ -44,6 +44,9 @@ return {
 			conf = "ini",
 			editorconfig = "ini",
 			jsonc = "json",
+			tex = "latex",
+			plaintex = "latex",
+			bib = "bibtex",
 		}
 
 		for filetype, grammar in pairs(grammar_mappings) do

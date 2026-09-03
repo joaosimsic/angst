@@ -89,6 +89,8 @@ let
 
   secretScanHooks = import ./secret-scan-hooks.nix { inherit pkgs; };
 
+  checkTex = import ./tex.nix { inherit pkgs lib; };
+
   domainHealth = import ./health {
     inherit
       lib
@@ -147,6 +149,7 @@ in
   secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;
   check-treesitter = checkTreesitter;
+  check-tex = checkTex;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop = lintDesktop;
   lint-shell = lintShell;
