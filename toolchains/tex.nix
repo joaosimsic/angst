@@ -5,15 +5,17 @@ let
 in
 mkToolchain {
   runtime = with pkgs; [
-    (texliveSmall.withPackages (ps: with ps; [
-      scheme-small
-      latexindent
-      chktex
-      latexmk
-      abntex2
-      enumitem
-      lm
-    ]))
+    (texliveSmall.withPackages (
+      ps: with ps; [
+        scheme-small
+        latexindent
+        chktex
+        latexmk
+        abntex2
+        enumitem
+        lm
+      ]
+    ))
   ];
   lsp = with pkgs; [ texlab ];
   formatter = [ ];

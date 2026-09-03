@@ -11,15 +11,16 @@ let
   cfg = config.domains.network.vpn;
   enabled = cfg.enable && cfg.openvpn.servers != { };
   names = builtins.attrNames cfg.openvpn.servers;
-  provisionBin = (runtime.vpn-provision {
-    secretsDir = "${flakeSelf}/${cfg.secretsDir}";
-    destDir = cfg.destDir;
-    inherit (userConfig) username homeDirectory;
-    scopes = [
-      "personal"
-      "work"
-    ];
-  }).bin;
+  provisionBin =
+    (runtime.vpn-provision {
+      secretsDir = "${flakeSelf}/${cfg.secretsDir}";
+      inherit (cfg) destDir;
+      inherit (userConfig) username homeDirectory;
+      scopes = [
+        "personal"
+        "work"
+      ];
+    }).bin;
   provisionWrapper = pkgs.writeShellApplication {
     name = "angst-provision-vpn-home";
     runtimeInputs = with pkgs; [
@@ -62,7 +63,10 @@ let
               if srv.config != "" then
                 "exec openvpn ${srv.config}"
               else
-                ''exec openvpn --config "$dest/${n}.ovpn"'' + lib.optionalString (srv.authUserPass != null && builtins.isString srv.authUserPass) '' --auth-user-pass "${srv.authUserPass}"'';
+                ''exec openvpn --config "$dest/${n}.ovpn"''
+                + lib.optionalString (
+                  srv.authUserPass != null && builtins.isString srv.authUserPass
+                ) ''--auth-user-pass "${srv.authUserPass}"'';
             extra = lib.concatStringsSep " " (
               lib.optional (srv.up != "") ''--up "${upScript}"''
               ++ lib.optional (srv.down != "") ''--down "${downScript}"''
@@ -78,7 +82,9 @@ let
             if [ "${cfg.destDir}" != "/run/secrets/vpn" ]; then
               dest="${cfg.destDir}"
             fi
-            ${lib.optionalString (srv.config == "") ''[ -f "$dest/${n}.ovpn" ] || { echo "vpn ${n}: missing $dest/${n}.ovpn" >&2; exit 1; }''}
+            ${lib.optionalString (
+              srv.config == ""
+            ) ''[ -f "$dest/${n}.ovpn" ] || { echo "vpn ${n}: missing $dest/${n}.ovpn" >&2; exit 1; }''}
             ${base} ${extra}
           '';
       };
@@ -117,6 +123,9 @@ in
         };
         Install.WantedBy = [ "default.target" ];
       };
-    } // lib.listToAttrs (map (n: lib.nameValuePair "angst-vpn-${n}" (mkVpnService n cfg.openvpn.servers.${n})) names);
+    }
+    // lib.listToAttrs (
+      map (n: lib.nameValuePair "angst-vpn-${n}" (mkVpnService n cfg.openvpn.servers.${n})) names
+    );
   };
 }

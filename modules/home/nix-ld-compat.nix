@@ -15,7 +15,8 @@ in
     pkgs.xclip
     pkgs.xsel
     pkgs.wl-clipboard
-  ] ++ nixLibs;
+  ]
+  ++ nixLibs;
 
   home.sessionVariables = {
     LD_LIBRARY_PATH = lib.mkDefault "${nixLdPath}:\${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}";

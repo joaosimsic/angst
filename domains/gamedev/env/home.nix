@@ -37,11 +37,14 @@ let
 in
 {
   config = lib.mkIf config.domains.gamedev.env.enable {
-    home.packages = with pkgs; [
-      mold
-      sccache
-      pkg-config
-    ] ++ bevyLibs;
+    home.packages =
+      with pkgs;
+      [
+        mold
+        sccache
+        pkg-config
+      ]
+      ++ bevyLibs;
 
     home.sessionVariables = {
       LD_LIBRARY_PATH = lib.mkForce "${bevyLdPath}:\${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}";
