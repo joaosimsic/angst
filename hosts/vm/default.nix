@@ -73,5 +73,5 @@
     "intelligence/backend"
     "intelligence/frontend"
   ];
-  secrets = [ "opencode-go-key" ];
+  secrets = [ ];
 }

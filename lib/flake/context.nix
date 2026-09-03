@@ -136,14 +136,16 @@ let
 
   vmHost = lib.findFirst (h: h.hostname == "vm") null hostList;
 
-  devshellFor = hostArg: import ./devshell.nix {
-    inherit
-      pkgs
-      runtime
-      vmHost
-      ;
-    host = hostArg;
-  };
+  devshellFor =
+    hostArg:
+    import ./devshell.nix {
+      inherit
+        pkgs
+        runtime
+        vmHost
+        ;
+      host = hostArg;
+    };
 
   devshell = devshellFor representative;
 
@@ -153,7 +155,8 @@ let
     treesitter = if representative != null then representative.scan.treesitter else null;
   };
 
-  mkAngstShellFor = hostArg:
+  mkAngstShellFor =
+    hostArg:
     let
       ds = devshellFor hostArg;
     in

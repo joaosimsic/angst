@@ -10,6 +10,7 @@
     "development"
     "embedded"
     "vm"
+    "game-dev"
   ];
   toolchains = "*";
   env = {
@@ -50,19 +51,21 @@
     ];
   };
   ftp = {
-    mounts = [
-      {
-        mountPoint = "ftp/server";
-        remotePath = "/httpdocs";
-
-      }
-    ];
+    # mounts = [
+    #   {
+    #     mountPoint = "ftp/server";
+    #     remotePath = "/httpdocs";
+    #
+    #   }
+    # ];
   };
   projects = [
     "angst"
     "advent-of-code"
     "datapath"
     "agent"
+    "warfront"
+    "TCC"
     "intelligence/backend"
     "intelligence/frontend"
   ];

@@ -4,6 +4,8 @@
   imports = [
     ./treesitter.nix
     ./login-shell.nix
+    ./nix-ld-compat.nix
+    ./nushell-bridge.nix
   ];
 
   programs.home-manager.enable = true;

@@ -1,0 +1,5 @@
+{
+  enable = [
+    "network.vpn"
+  ];
+}

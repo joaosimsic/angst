@@ -89,6 +89,8 @@ let
 
   secretScanHooks = import ./secret-scan-hooks.nix { inherit pkgs; };
 
+  checkTex = import ./tex.nix { inherit pkgs lib; };
+
   domainHealth = import ./health {
     inherit
       lib
@@ -138,6 +140,7 @@ in
   check-projects-encrypted = checkSecretsEncrypted.projects;
   check-ssh-keys = checkSecretsEncrypted.sshKeys;
   check-ftp-encrypted = checkSecretsEncrypted.ftp;
+  check-vpn-encrypted = checkSecretsEncrypted.vpn;
   check-projects-ftp-declared = checkDeclared;
   check-projects-pipeline = checkProjectsPipeline;
   check-vault-pipeline = checkVaultPipeline;
@@ -146,6 +149,7 @@ in
   secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;
   check-treesitter = checkTreesitter;
+  check-tex = checkTex;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop = lintDesktop;
   lint-shell = lintShell;

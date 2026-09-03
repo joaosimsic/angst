@@ -64,3 +64,23 @@ vm host="nixos":
 
 vm-ssh host="nixos":
     @NIX_DEFAULT_TARGET_HOST={{host}} nix run .#vm -- ssh --auto-start
+
+# --- TeX ---
+tex file="monografia/main.tex":
+    @echo "Compiling {{file}} with latexmk (nix develop .#safe)..."
+    nix develop .#safe --command bash -c 'set -e; f="{{file}}"; dir=$(dirname "$f"); base=$(basename "$f"); cd "$dir" && latexmk -pdf -interaction=nonstopmode -halt-on-error "$base" && echo "✓ PDF generated: $dir/${base%.tex}.pdf" || (echo "✗ TeX compilation failed"; exit 1)'
+
+tex-clean file="monografia/main.tex":
+    nix develop .#safe --command bash -c 'f="{{file}}"; dir=$(dirname "$f"); base=$(basename "$f"); cd "$dir" && latexmk -C "$base" && echo "Cleaned latexmk artifacts for $base"'
+
+tex-check:
+    @echo "Running Nix TeX check (minimal document)..."
+    nix build .#checks.x86_64-linux.check-tex --print-build-logs
+
+tex-fmt file="":
+    @if [ -z "{{file}}" ]; then echo "Usage: just tex-fmt <file.tex>"; exit 1; fi
+    nix develop .#safe --command latexindent -w "{{file}}" && echo "Formatted {{file}}"
+
+tex-lint file="":
+    @if [ -z "{{file}}" ]; then echo "Usage: just tex-lint <file.tex>"; exit 1; fi
+    nix develop .#safe --command chktex "{{file}}"

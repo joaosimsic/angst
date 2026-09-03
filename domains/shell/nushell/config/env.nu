@@ -1,3 +1,7 @@
+if ([$nu.default-config-dir hm-session-vars.nu] | path join | path exists) {
+    source $"($nu.default-config-dir)/hm-session-vars.nu"
+}
+
 $env.STARSHIP_SHELL = "nu"
 
 def create_left_prompt [] {
@@ -36,7 +40,17 @@ $env.PATH = (
 )
 
 
-$env.PKG_CONFIG_PATH = ("~/.nix-profile/lib/pkgconfig" | path expand)
+$env.PKG_CONFIG_PATH = (
+    $env.PKG_CONFIG_PATH? | default ""
+    | split row ":"
+    | where $it != ""
+    | prepend ("~/.nix-profile/lib/pkgconfig" | path expand)
+    | prepend "/usr/share/pkgconfig"
+    | prepend "/usr/lib/x86_64-linux-gnu/pkgconfig"
+    | prepend "/usr/lib/pkgconfig"
+    | uniq
+    | str join ":"
+)
 
 const carapace_init = ($XDG_CACHE_HOME | path join "carapace/init.nu")
 
