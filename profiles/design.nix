@@ -1,0 +1,5 @@
+{
+  enable = [
+    "design.paper"
+  ];
+}

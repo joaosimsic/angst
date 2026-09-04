@@ -28,6 +28,7 @@ let
     vm = import ./vm.nix;
     vpn = import ./vpn.nix;
     game-dev = import ./game-dev.nix;
+    design = import ./design.nix;
   };
 
   resolve =
