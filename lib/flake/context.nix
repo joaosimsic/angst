@@ -79,6 +79,8 @@ let
       enabled = [ ];
       profiles = [ ];
       editorLsp = { };
+      env = { };
+      browser = null;
     };
   };
 
@@ -92,12 +94,16 @@ let
       enabled,
       profiles ? [ ],
       editorLsp ? { },
+      env ? { },
+      browser ? null,
     }:
     import ../store.nix {
       inherit
         enabled
         profiles
         editorLsp
+        env
+        browser
         ;
     };
 
@@ -114,6 +120,8 @@ let
         inherit (p) enabled;
         profiles = host.profiles or [ ];
         editorLsp = host.scan.editorLsp or { };
+        env = host.env or { };
+        browser = host.browser or null;
       };
       hostWithStore = host // {
         inherit store;
@@ -143,6 +151,8 @@ let
         inherit (p) enabled;
         profiles = host.profiles or [ ];
         editorLsp = host.scan.editorLsp or { };
+        env = host.env or { };
+        browser = host.browser or null;
       };
       hostWithStore = host // {
         inherit store;
