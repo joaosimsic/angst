@@ -11,6 +11,7 @@
     "embedded"
     "vm"
     "game-dev"
+    "office"
   ];
   toolchains = "*";
   env = {
