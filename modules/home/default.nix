@@ -6,6 +6,7 @@
     ./login-shell.nix
     ./nix-ld-compat.nix
     ./nushell-bridge.nix
+    ./clean-desktop-shadows.nix
   ];
 
   programs.home-manager.enable = true;
