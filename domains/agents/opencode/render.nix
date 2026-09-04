@@ -74,21 +74,7 @@ let
     };
   };
 
-  arrangedLsp =
-    let
-      base = store.editorLsp or { };
-    in
-    builtins.mapAttrs (
-      name: v:
-      if name == "rust" && (store.hasLspmux or false) then
-        v // { command = [ "rust-analyzer-mux" ]; }
-      else if name == "gopls" && (store.hasLspmux or false) then
-        v // { command = v.command ++ [ "-remote=unix;/run/user/1000/gopls.sock" ]; }
-      else
-        v
-    ) base;
-
-  lspWithDisabled = arrangedLsp // {
+  lspWithDisabled = (store.editorLsp or { }) // {
     "php intelephense" = {
       disabled = true;
     };
