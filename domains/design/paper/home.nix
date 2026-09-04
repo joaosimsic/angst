@@ -11,11 +11,7 @@ let
   cfg = config.domains.design.paper;
   paperPkgRaw = pkgs.callPackage ./package.nix { };
   browserPkg = store.defaultBrowser or "firefox";
-  isDark =
-    if themesLib != null then
-      (themesLib.get config.theme).isDark
-    else
-      true;
+  isDark = if themesLib != null then (themesLib.get config.theme).isDark else true;
   ozoneHint = "x11";
   paperPkg = pkgs.symlinkJoin {
     name = "paper-desktop-wrapped";

@@ -23,9 +23,12 @@ let
   hasLspmux = has "editor.lspmux";
 
   defaultBrowser =
-    if browser != null then browser
-    else if env ? BROWSER then env.BROWSER
-    else "firefox";
+    if browser != null then
+      browser
+    else if env ? BROWSER then
+      env.BROWSER
+    else
+      "firefox";
   hasFirefox = defaultBrowser == "firefox";
 in
 {

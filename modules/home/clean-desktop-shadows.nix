@@ -1,4 +1,7 @@
-{ config, lib, pkgs, ... }:
+{
+  lib,
+  ...
+}:
 {
   home.activation.cleanStaleDesktopShadows = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     verboseEcho "Cleaning stale desktop shadows in ~/.local/share/applications"
