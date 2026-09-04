@@ -20,6 +20,7 @@
     "docker"
     "toml"
     "conf"
+    "make"
   ];
   env = {
     EDITOR = "nvim";
