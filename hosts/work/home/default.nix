@@ -50,6 +50,11 @@
       }
     ];
   };
+  projects = [
+    "agent"
+    "intelligence/backend"
+    "intelligence/frontend"
+  ];
   secrets = [
     "cursor-api-key"
     "opencode-go-key"
