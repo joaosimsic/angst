@@ -2,7 +2,7 @@
 return {
 	filetypes = { "go" },
 	lsp = "gopls",
-	lsp_cmd = { "gopls" },
+	lsp_cmd = { "gopls", "-remote=unix;/run/user/1000/gopls.sock" },
 	formatter = "goimports",
 	linter = "golangcilint",
 	linter_cmd = { "golangci-lint" },

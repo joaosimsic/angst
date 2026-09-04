@@ -9,7 +9,7 @@ local logger = Logger.new("LSP")
 return {
 	filetypes = { "rust" },
 	lsp = "rust_analyzer",
-	lsp_cmd = { "rust-analyzer" },
+	lsp_cmd = { "rust-analyzer-mux" },
 	lsp_root_dir = LspTool.make_root_dir_finder(root_markers),
 	linter = "clippy",
 	linter_cmd = { "cargo-clippy" },

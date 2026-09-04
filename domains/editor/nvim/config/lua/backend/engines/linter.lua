@@ -18,11 +18,7 @@ return {
 							stdin = def.stdin,
 							args = def.args,
 							ignore_exitcode = def.ignore_exitcode,
-							parser = require("lint.parser").from_pattern(
-								def.pattern,
-								def.captures,
-								def.severity
-							),
+							parser = require("lint.parser").from_pattern(def.pattern, def.captures, def.severity),
 						}
 					end
 				end

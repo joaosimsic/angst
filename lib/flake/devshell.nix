@@ -33,6 +33,10 @@ let
   hostHasVm = host != null && builtins.elem "vm" (host.profiles or [ ]);
   vmHostHasVm = vmHost != null && builtins.elem "vm" (vmHost.profiles or [ ]);
 
+  rustAnalyzerMux = pkgs.writeShellScriptBin "rust-analyzer-mux" ''
+    exec ${pkgs.lspmux}/bin/lspmux client --server-path ${pkgs.rust-analyzer}/bin/rust-analyzer "$@"
+  '';
+
   fullDevPackages =
     with pkgs;
     [
@@ -45,6 +49,8 @@ let
       cargo
       rustc
       rust-analyzer
+      lspmux
+      rustAnalyzerMux
       go
       gofumpt
       deadnix
@@ -68,6 +74,8 @@ let
       cargo
       rustc
       rust-analyzer
+      lspmux
+      rustAnalyzerMux
       go
       gofumpt
       deadnix
@@ -89,6 +97,8 @@ in
           git
           deadnix
           statix
+          lspmux
+          rustAnalyzerMux
         ]
         ++ allToolchainPkgs;
       shellHook = treesitterShellHook;
