@@ -111,7 +111,7 @@ let
     let
       p = profilesFor host;
       store = mkStore {
-        enabled = p.enabled;
+        inherit (p) enabled;
         profiles = host.profiles or [ ];
         editorLsp = host.scan.editorLsp or { };
       };
@@ -140,7 +140,7 @@ let
     let
       p = profilesFor host;
       store = mkStore {
-        enabled = p.enabled;
+        inherit (p) enabled;
         profiles = host.profiles or [ ];
         editorLsp = host.scan.editorLsp or { };
       };
