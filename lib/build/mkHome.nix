@@ -56,6 +56,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
     hostType = host.type;
     hostScopes = host.scopes;
     hostSecrets = host.secrets;
+    inherit host;
     shell = if shellOverride != null then shellOverride else host.shell;
     inherit (host.scan) themes;
     themesLib = host.scan.themes;

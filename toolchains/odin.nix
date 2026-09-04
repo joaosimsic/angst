@@ -7,4 +7,8 @@ mkToolchain {
   runtime = with pkgs; [ odin ];
   lsp = with pkgs; [ ols ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-odin ];
+  editor.lsp.ols = {
+    command = [ "ols" ];
+    extensions = [ ".odin" ];
+  };
 }

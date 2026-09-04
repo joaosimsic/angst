@@ -5,6 +5,7 @@
   themesLib,
   inputs,
   hostType,
+  store,
   ...
 }:
 let
@@ -15,6 +16,7 @@ let
   tridactyl = import ./tridactyl.nix { inherit theme config; };
   policies = import ./policies.nix;
   settings = import ./settings.nix { inherit theme; };
+  isFirefoxDefault = (store.defaultBrowser or "firefox") == "firefox";
 in
 {
   config = lib.mkIf cfg.enable (
@@ -90,6 +92,22 @@ in
           "tridactyl/themes/angst.css".text = tridactyl.css;
         };
       }
+
+      (lib.mkIf isFirefoxDefault {
+        xdg.mimeApps = {
+          enable = true;
+          defaultApplications = {
+            "x-scheme-handler/http" = "firefox.desktop";
+            "x-scheme-handler/https" = "firefox.desktop";
+            "text/html" = "firefox.desktop";
+            "application/xhtml+xml" = "firefox.desktop";
+          };
+          associations.added = {
+            "x-scheme-handler/http" = "firefox.desktop";
+            "x-scheme-handler/https" = "firefox.desktop";
+          };
+        };
+      })
     ]
   );
 }

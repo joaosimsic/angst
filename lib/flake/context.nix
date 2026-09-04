@@ -68,12 +68,20 @@ let
     scan = {
       domains.homeEntries = [ ];
       themes = themesLib;
+      editorLsp = { };
     };
     monitors = { };
     db = { };
     sshAgent = { };
     username = "user";
-    store = mkStore [ ];
+    profiles = [ ];
+    store = mkStore {
+      enabled = [ ];
+      profiles = [ ];
+      editorLsp = { };
+      env = { };
+      browser = null;
+    };
   };
 
   render = import ../render.nix {
@@ -81,7 +89,23 @@ let
     inherit lib;
   };
 
-  mkStore = enabled: import ../store.nix { inherit enabled; };
+  mkStore =
+    {
+      enabled,
+      profiles ? [ ],
+      editorLsp ? { },
+      env ? { },
+      browser ? null,
+    }:
+    import ../store.nix {
+      inherit
+        enabled
+        profiles
+        editorLsp
+        env
+        browser
+        ;
+    };
 
   mkHomeCfg =
     {
@@ -92,7 +116,13 @@ let
     }:
     let
       p = profilesFor host;
-      store = mkStore p.enabled;
+      store = mkStore {
+        inherit (p) enabled;
+        profiles = host.profiles or [ ];
+        editorLsp = host.scan.editorLsp or { };
+        env = host.env or { };
+        browser = host.browser or null;
+      };
       hostWithStore = host // {
         inherit store;
       };
@@ -117,7 +147,13 @@ let
     host:
     let
       p = profilesFor host;
-      store = mkStore p.enabled;
+      store = mkStore {
+        inherit (p) enabled;
+        profiles = host.profiles or [ ];
+        editorLsp = host.scan.editorLsp or { };
+        env = host.env or { };
+        browser = host.browser or null;
+      };
       hostWithStore = host // {
         inherit store;
       };

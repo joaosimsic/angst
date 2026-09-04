@@ -1,5 +1,9 @@
 {
   enabled,
+  profiles ? [ ],
+  editorLsp ? { },
+  env ? { },
+  browser ? null,
 }:
 
 let
@@ -14,6 +18,15 @@ let
   isGraphical = has "kernel.graphical" || hasX11 || hasWayland;
   hasClipboard = has "kernel.clipboard";
   hasAudio = has "kernel.audio";
+  hasPaper = has "design.paper";
+  hasVm = builtins.elem "vm" profiles;
+  hasLspmux = has "editor.lspmux";
+
+  defaultBrowser =
+    if browser != null then browser
+    else if env ? BROWSER then env.BROWSER
+    else "firefox";
+  hasFirefox = defaultBrowser == "firefox";
 in
 {
   inherit
@@ -24,6 +37,12 @@ in
     isGraphical
     hasClipboard
     hasAudio
+    hasPaper
+    hasVm
+    hasLspmux
+    editorLsp
+    defaultBrowser
+    hasFirefox
     ;
   enabledNames = names;
   isX11Only = hasX11 && !hasWayland;

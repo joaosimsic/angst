@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  store ? { },
   ...
 }:
 
@@ -9,17 +10,37 @@ let
   cfg = config.domains.editor.lspmux;
   socket = "/run/user/1000/lspmux.sock";
   goSocket = "/run/user/1000/gopls.sock";
+  hasRust = (store.editorLsp or { }) ? rust;
+  hasGo = (store.editorLsp or { }) ? gopls;
   rustAnalyzerMux = pkgs.writeShellScriptBin "rust-analyzer-mux" ''
     exec ${pkgs.lspmux}/bin/lspmux client --server-path ${pkgs.rust-analyzer}/bin/rust-analyzer "$@"
   '';
 in
 {
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      lspmux
-      gopls
-      rustAnalyzerMux
-    ];
+    home = {
+      packages =
+        with pkgs;
+        [ lspmux ] ++ lib.optionals hasGo [ gopls ] ++ lib.optionals hasRust [ rustAnalyzerMux ];
+      file.".local/bin/rust-analyzer" = lib.mkIf hasRust {
+        executable = true;
+        text = ''
+          #!${pkgs.bash}/bin/bash
+          exec ${pkgs.lspmux}/bin/lspmux client --server-path ${pkgs.rust-analyzer}/bin/rust-analyzer "$@"
+        '';
+      };
+      file.".local/bin/gopls" = lib.mkIf hasGo {
+        executable = true;
+        text = ''
+          #!${pkgs.bash}/bin/bash
+          exec ${pkgs.gopls}/bin/gopls -remote=unix;${goSocket} "$@"
+        '';
+      };
+      sessionVariables = {
+        LSPMUX_SOCKET = socket;
+        GOPLS_REMOTE = "unix;${goSocket}";
+      };
+    };
 
     xdg.configFile."lspmux/config.toml".text = ''
       instance_timeout = 300
@@ -30,7 +51,7 @@ in
       pass_environment = ["*", "!WINDOWID", "!ALACRITTY_*", "!KITTY_WINDOW_ID", "!DESKTOP_STARTUP_ID"]
     '';
 
-    systemd.user.services.lspmux = {
+    systemd.user.services.lspmux = lib.mkIf hasRust {
       Unit = {
         Description = "lspmux server (shared rust-analyzer)";
         After = [ "network.target" ];
@@ -56,7 +77,7 @@ in
       Install.WantedBy = [ "default.target" ];
     };
 
-    systemd.user.services.gopls-daemon = {
+    systemd.user.services.gopls-daemon = lib.mkIf hasGo {
       Unit = {
         Description = "gopls daemon (shared, -remote multiplex)";
         After = [ "network.target" ];
@@ -68,11 +89,6 @@ in
         RestartSec = "5s";
       };
       Install.WantedBy = [ "default.target" ];
-    };
-
-    home.sessionVariables = {
-      LSPMUX_SOCKET = socket;
-      GOPLS_REMOTE = "unix;${goSocket}";
     };
   };
 }

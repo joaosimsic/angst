@@ -10,4 +10,14 @@ mkToolchain {
   linter = with pkgs; [ clippy ];
   formatter = with pkgs; [ rustfmt ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-rust ];
+  editor.lsp.rust = {
+    command = [ "rust-analyzer" ];
+    extensions = [ ".rs" ];
+    initialization = {
+      "rust-analyzer".check.command = "clippy";
+      "rust-analyzer".inlayHints.chainingHints.enable = true;
+      "rust-analyzer".inlayHints.parameterHints.enable = true;
+      "rust-analyzer".inlayHints.typeHints.enable = true;
+    };
+  };
 }

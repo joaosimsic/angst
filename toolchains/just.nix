@@ -8,4 +8,8 @@ mkToolchain {
   lsp = with pkgs; [ just-lsp ];
   formatter = with pkgs; [ just-formatter ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-just ];
+  editor.lsp.just = {
+    command = [ "just-lsp" ];
+    extensions = [ ".just" ];
+  };
 }

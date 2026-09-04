@@ -11,4 +11,11 @@ mkToolchain {
     tree-sitter-markdown
     tree-sitter-markdown-inline
   ];
+  editor.lsp.markdown = {
+    command = [
+      "marksman"
+      "server"
+    ];
+    extensions = [ ".md" ];
+  };
 }

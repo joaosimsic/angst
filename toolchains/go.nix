@@ -14,4 +14,8 @@ mkToolchain {
     tree-sitter-gomod
     tree-sitter-gowork
   ];
+  editor.lsp.gopls = {
+    command = [ "gopls" ];
+    extensions = [ ".go" ];
+  };
 }

@@ -8,4 +8,14 @@ mkToolchain {
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-bash ];
   linter = with pkgs; [ shellcheck ];
   formatter = with pkgs; [ shfmt ];
+  editor.lsp.bash = {
+    command = [
+      "bash-language-server"
+      "start"
+    ];
+    extensions = [
+      ".sh"
+      ".bash"
+    ];
+  };
 }
