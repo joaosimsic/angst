@@ -2,12 +2,15 @@
 let
   t = themesLib.get config.theme;
   p = t.palette;
-  isDark = t.isDark;
+  inherit (t) isDark colorScheme;
 in
 rec {
-  inherit t p isDark;
-
-  colorScheme = t.colorScheme;
+  inherit
+    t
+    p
+    isDark
+    colorScheme
+    ;
   toolbarThemeVal = if isDark then 1 else 0;
   contentThemeVal = if isDark then 1 else 0;
   contentOverrideVal = if isDark then 0 else 1;
