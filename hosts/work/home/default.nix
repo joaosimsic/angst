@@ -37,6 +37,12 @@
         identityFile = "~/.ssh/work_ed25519";
       }
       {
+        host = "gitlab.ezvoice.com.br";
+        hostName = "gitlab.ezvoice.com.br";
+        user = "git";
+        identityFile = "~/.ssh/work_ed25519";
+      }
+      {
         host = "work_server";
         hostName = "200.152.183.154";
         user = "joao";

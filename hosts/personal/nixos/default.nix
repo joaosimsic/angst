@@ -63,6 +63,12 @@
         user = "git";
         identityFile = "~/.ssh/work_ed25519";
       }
+      {
+        host = "gitlab.ezvoice.com.br";
+        hostName = "gitlab.ezvoice.com.br";
+        user = "git";
+        identityFile = "~/.ssh/work_ed25519";
+      }
     ];
   };
   ftp = {
