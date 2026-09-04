@@ -13,7 +13,7 @@ let
   browserPkg = store.defaultBrowser or "firefox";
   isDark =
     if themesLib != null then
-      themesLib.relativeLuminance (themesLib.get config.theme).palette.background.base < 0.179
+      (themesLib.get config.theme).isDark
     else
       true;
   ozoneHint = "x11";

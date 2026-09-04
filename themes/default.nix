@@ -217,9 +217,12 @@ in
         threshold = raw.contrastThreshold or 4.5;
         theme = withRgb (validateTheme name (normalizeTheme raw));
         p = theme.palette;
+        isDark = relativeLuminance p.background.base < 0.179;
+        colorScheme = if isDark then "dark" else "light";
       in
       theme
       // {
+        inherit isDark colorScheme;
         safe = {
           foregroundOnSurfaceVariant = ensureContrast {
             fg = p.foreground.variant;
