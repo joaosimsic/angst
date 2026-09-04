@@ -19,6 +19,7 @@
     "yaml"
     "docker"
     "toml"
+    "conf"
   ];
   env = {
     EDITOR = "nvim";
