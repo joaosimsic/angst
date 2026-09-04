@@ -10,4 +10,14 @@ mkToolchain {
   formatter = with pkgs; [ fourmolu ];
   linter = with pkgs; [ hlint ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-haskell ];
+  editor.lsp.hls = {
+    command = [
+      "haskell-language-server-wrapper"
+      "--lsp"
+    ];
+    extensions = [
+      ".hs"
+      ".lhs"
+    ];
+  };
 }

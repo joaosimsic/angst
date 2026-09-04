@@ -10,4 +10,13 @@ mkToolchain {
   linter = with pkgs; [ clj-kondo ];
   formatter = with pkgs; [ cljfmt ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-clojure ];
+  editor.lsp."clojure-lsp" = {
+    command = [ "clojure-lsp" ];
+    extensions = [
+      ".clj"
+      ".cljs"
+      ".cljc"
+      ".edn"
+    ];
+  };
 }

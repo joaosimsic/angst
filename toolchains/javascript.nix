@@ -22,4 +22,35 @@ mkToolchain {
     tree-sitter-typescript
     tree-sitter-vue
   ];
+  editor.lsp = {
+    typescript = {
+      command = [
+        "typescript-language-server"
+        "--stdio"
+      ];
+      extensions = [
+        ".ts"
+        ".tsx"
+      ];
+    };
+    javascript = {
+      command = [
+        "typescript-language-server"
+        "--stdio"
+      ];
+      extensions = [
+        ".js"
+        ".jsx"
+        ".mjs"
+        ".cjs"
+      ];
+    };
+    vue = {
+      command = [
+        "vue-language-server"
+        "--stdio"
+      ];
+      extensions = [ ".vue" ];
+    };
+  };
 }

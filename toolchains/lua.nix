@@ -9,4 +9,8 @@ mkToolchain {
   lsp = with pkgs; [ lua-language-server ];
   formatter = with pkgs; [ stylua ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-lua ];
+  editor.lsp."lua-ls" = {
+    command = [ "lua-language-server" ];
+    extensions = [ ".lua" ];
+  };
 }

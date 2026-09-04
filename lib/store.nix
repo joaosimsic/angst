@@ -1,5 +1,7 @@
 {
   enabled,
+  profiles ? [ ],
+  editorLsp ? { },
 }:
 
 let
@@ -14,6 +16,9 @@ let
   isGraphical = has "kernel.graphical" || hasX11 || hasWayland;
   hasClipboard = has "kernel.clipboard";
   hasAudio = has "kernel.audio";
+  hasPaper = has "design.paper";
+  hasVm = builtins.elem "vm" profiles;
+  hasLspmux = has "editor.lspmux";
 in
 {
   inherit
@@ -24,6 +29,10 @@ in
     isGraphical
     hasClipboard
     hasAudio
+    hasPaper
+    hasVm
+    hasLspmux
+    editorLsp
     ;
   enabledNames = names;
   isX11Only = hasX11 && !hasWayland;

@@ -18,4 +18,8 @@ mkToolchain {
     nix-tree
   ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-nix ];
+  editor.lsp.nixd = {
+    command = [ "nixd" ];
+    extensions = [ ".nix" ];
+  };
 }

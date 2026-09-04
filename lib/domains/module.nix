@@ -11,6 +11,8 @@ let
       monitors,
       db,
       sshAgent ? { },
+      store ? { },
+      host ? { },
       ...
     }:
     let
@@ -68,6 +70,9 @@ let
           monitors
           db
           sshAgent
+          config
+          store
+          host
           ;
         checkHelpers = import ../../checks/theme/assertions.nix {
           inherit lib;

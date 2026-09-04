@@ -2,12 +2,30 @@
   config,
   lib,
   pkgs,
+  store ? { },
   ...
 }:
 
+let
+  mcpServers = lib.filterAttrs (_: v: v != null) {
+    paper = if (store.hasPaper or false) then
+      {
+        url = "http://127.0.0.1:29979/mcp";
+      }
+    else
+      null;
+    vm = if (store.hasVm or false) then
+      {
+        url = "http://localhost:8765/mcp";
+      }
+    else
+      null;
+  };
+in
 {
-  config = lib.mkIf config.domains.agents.cursor-cli.enable {
-    home.file.".local/bin/cursor" = {
+  config = lib.mkIf config.domains.agents.cursor-cli.enable (lib.mkMerge [
+    {
+      home.file.".local/bin/cursor" = {
       executable = true;
       force = true;
       text = ''
@@ -40,5 +58,14 @@
         exec ${pkgs.cursor-cli}/bin/cursor-agent "$@"
       '';
     };
-  };
+    }
+
+    {
+      home.file.".cursor/mcp.json" = lib.mkIf (mcpServers != { }) {
+        text = builtins.toJSON {
+          mcpServers = mcpServers;
+        };
+      };
+    }
+  ]);
 }

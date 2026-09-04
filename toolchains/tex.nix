@@ -25,4 +25,11 @@ mkToolchain {
     tree-sitter-latex
     tree-sitter-bibtex
   ];
+  editor.lsp.texlab = {
+    command = [ "texlab" ];
+    extensions = [
+      ".tex"
+      ".bib"
+    ];
+  };
 }

@@ -173,6 +173,7 @@ in
         inherit lib pkgs;
         grammars = lib.unique (lib.concatMap (t: t.toolchains.treesitterGrammars or [ ]) _selectedTCs);
       };
+      editorLsp = lib.foldl' (acc: t: acc // (t.toolchains.editor.lsp or { })) { } _selectedTCs;
     };
   };
 }

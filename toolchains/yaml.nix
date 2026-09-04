@@ -9,4 +9,14 @@ mkToolchain {
   formatter = with pkgs; [ yamlfmt ];
   linter = with pkgs; [ yamllint ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-yaml ];
+  editor.lsp."yaml-ls" = {
+    command = [
+      "yaml-language-server"
+      "--stdio"
+    ];
+    extensions = [
+      ".yaml"
+      ".yml"
+    ];
+  };
 }

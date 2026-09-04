@@ -9,4 +9,11 @@ mkToolchain {
     docker-compose-language-service
   ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-dockerfile ];
+  editor.lsp.dockerfile = {
+    command = [
+      "docker-langserver"
+      "--stdio"
+    ];
+    extensions = [ "Dockerfile" ];
+  };
 }

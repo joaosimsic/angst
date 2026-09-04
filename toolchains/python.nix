@@ -13,4 +13,11 @@ mkToolchain {
   formatter = with pkgs; [ black ];
   linter = with pkgs; [ pylint ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-python ];
+  editor.lsp.pyright = {
+    command = [
+      "pyright-langserver"
+      "--stdio"
+    ];
+    extensions = [ ".py" ];
+  };
 }

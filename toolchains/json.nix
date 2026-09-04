@@ -7,4 +7,14 @@ mkToolchain {
   lsp = [ pkgs.vscode-langservers-extracted ];
   formatter = [ pkgs.fixjson ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-json ];
+  editor.lsp.json = {
+    command = [
+      "vscode-json-language-server"
+      "--stdio"
+    ];
+    extensions = [
+      ".json"
+      ".jsonc"
+    ];
+  };
 }
