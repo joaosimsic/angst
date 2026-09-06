@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "layout": [],
+  "comment": "Baseline Vial layout — export current keyboard via Vial -> Save Current Layout and replace this file. Tracked for versioned history; mutable so local ~/.config/vial/layout.json is not clobbered."
+}

@@ -89,6 +89,7 @@
       ".config/google-chrome"
       ".local/share/keyrings"
       ".arduino15"
+      ".config/vial"
     ];
   };
   projects = [
