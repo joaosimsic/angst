@@ -58,13 +58,13 @@
     ];
   };
   ftp = {
-    # mounts = [
-    #   {
-    #     mountPoint = "ftp/server";
-    #     remotePath = "/httpdocs";
-    #
-    #   }
-    # ];
+    mounts = [
+      {
+        mountPoint = "ftp/server";
+        remotePath = "/httpdocs";
+
+      }
+    ];
   };
   projects = [
     "angst"
