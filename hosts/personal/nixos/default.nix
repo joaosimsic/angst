@@ -92,6 +92,7 @@
     ];
   };
   projects = [
+    "vault"
     "angst"
     "agent"
     "intelligence/backend"

@@ -72,6 +72,7 @@
     "datapath"
     "agent"
     "warfront"
+    "vault"
     "TCC"
     "intelligence/backend"
     "intelligence/frontend"
