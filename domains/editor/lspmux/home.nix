@@ -62,7 +62,7 @@ in
         Restart = "on-failure";
         RestartSec = "5s";
         Environment = [
-          "PATH=${pkgs.rust-analyzer}/bin:${pkgs.cargo}/bin:${pkgs.rustc}/bin:/home/joao/.cargo/bin:/home/joao/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          "PATH=${pkgs.rust-analyzer}/bin:${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.clippy}/bin:/home/joao/.cargo/bin:/home/joao/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           "RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}"
         ];
         PassEnvironment = [
