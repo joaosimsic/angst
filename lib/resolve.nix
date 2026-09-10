@@ -101,7 +101,7 @@ in
       else if isAttrs && raw == { connections = { }; } then
         [ ]
       else if isAttrs then
-        throw "db: inline db.connections removed — use db = [\"personal/slug\" \"work/slug\" …] + vault tarball (secrets/db/<scope>.tar.age) with <slug>/connection.json; see openwiki/secrets.md#db-store (got ${builtins.toJSON raw})"
+        throw "db: inline db.connections removed — use db = [\"personal/slug\" \"work/slug\" …] + vault tarball (secrets/db/<scope>.tar.age) with <slug>.json; see openwiki/secrets.md#db-store (got ${builtins.toJSON raw})"
       else
         throw "db: must be a list of scoped slugs like [\"personal/my-pg\" \"work/analytics\"], got ${builtins.typeOf raw}";
     profiles = decl.profiles or [ "base" ];

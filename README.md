@@ -131,10 +131,10 @@ nothing about them.
 Two layers, with the repo store as committed, age-encrypted tarballs (now under `secrets/`):
 
 - **Repo store** — `secrets/projects/{personal,work}.tar.age` and `secrets/db/{personal,work}.tar.age` (committed, **age-encrypted**). Each
-  tarball holds the whole `<scope>/<id>/{metadata.json,.env}` (projects) or `<scope>/<id>/connection.json` (db) tree. This is the transport:
+  tarball holds the whole `<scope>/<id>/{metadata.json,.env}` (projects) or `<scope>/<id>.json` (db) tree. This is the transport:
   it travels with the public repo, so a new machine that clones the repo has all the
   metadata to clone its projects or connect to its DBs. Rewritten only by your manual `vault` edit flow (below).
-- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.json,.env}` and `~/.secrets/db/{personal,work}/<id>/connection.json` (fixed
+- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.json,.env}` and `~/.secrets/db/{personal,work}/<id>.json` (fixed
   per-host, **decrypted plaintext**). `sync` reads this directly — no age needed at runtime.
   Seeded from the tarballs at build time (home activation runs `import`).
 - **Clone root** — `~/projects/<name>`: the cloned repo + its decrypted `.env`. Clones
@@ -179,9 +179,9 @@ angst vault decrypt secrets/projects/personal.tar.age --dir --scope personal   #
 angst vault encrypt secrets/projects/personal --dir --scope personal           # overwrites secrets/projects/personal.tar.age, removes secrets/projects/personal/
 git add secrets/projects/personal.tar.age && git commit
 
-# DB vault (same flow):
-angst vault decrypt secrets/db/personal.tar.age --dir --scope personal        # -> secrets/db/personal/
-# ... edit secrets/db/personal/<id>/connection.json ...
+# DB vault (same flow, one file per DB):
+angst vault decrypt secrets/db/personal.tar.age --dir --scope personal        # -> secrets/db/personal/ (all personal DBs)
+# ... edit secrets/db/personal/<id>.json (e.g. postgres.json, analytics.json) ...
 angst vault encrypt secrets/db/personal --dir --scope personal
 git add secrets/db/personal.tar.age && git commit
 ```

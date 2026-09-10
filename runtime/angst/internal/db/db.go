@@ -103,7 +103,7 @@ type connection struct {
 }
 
 func loadConnection(scope, id string) (connection, error) {
-	p := filepath.Join(storeRoot(), scope, id, "connection.json")
+	p := filepath.Join(storeRoot(), scope, id+".json")
 	data, err := os.ReadFile(p)
 	if err != nil {
 		return connection{}, err
@@ -124,12 +124,15 @@ func discoverAllSlugs() []scopedSlug {
 			if err != nil || d.IsDir() {
 				return nil
 			}
-			if d.Name() != "connection.json" {
+			if !strings.HasSuffix(d.Name(), ".json") {
 				return nil
 			}
-			dir := filepath.Dir(path)
-			rel, rerr := filepath.Rel(base, dir)
-			if rerr != nil || rel == "." {
+			rel, rerr := filepath.Rel(base, path)
+			if rerr != nil {
+				return nil
+			}
+			rel = strings.TrimSuffix(rel, ".json")
+			if rel == "." || rel == "" {
 				return nil
 			}
 			raw := scope + "/" + filepath.ToSlash(rel)

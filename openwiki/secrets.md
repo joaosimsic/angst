@@ -153,9 +153,9 @@ Unlike some older secret stores, the project store is **age/vault**, not sops:
 
 Parallel to the project store, the **DB store** keeps `sqlit`/`rainfrog` credentials (see `domains/sql-client`). It is also **age/vault**, not sops:
 
-- **Repo store** — `secrets/db/{personal,work}.tar.age` (committed, **age-encrypted**). Each tarball holds the whole `<scope>/<id>/connection.json` tree (full spec: `type`, `host`, `port`, `database`, `username`, `password`, `path`, `default`). Encrypted per-scope, same keys as projects.
-- **Working store** — `~/.secrets/db/{personal,work}/<id>/connection.json` (fixed, `0600`). `angst db import` decrypts tarballs; `angst db sync` merges selected slugs into `~/.config/sqlit/connections.json` (`version=2`) + `~/.config/rainfrog/rainfrog_config.toml` (`[db]`). Host declares `db = ["personal/my-pg" "work/analytics"]` (explicit `scope/slug`, may be nested like `intelligence/pg`).
-- **Vault flow** — `angst vault decrypt secrets/db/personal.tar.age --dir --scope personal` → `secrets/db/personal/` → edit `connection.json` → `angst vault encrypt secrets/db/personal --dir --scope personal` + `git add secrets/db/personal.tar.age`.
+- **Repo store** — `secrets/db/{personal,work}.tar.age` (committed, **age-encrypted**). Each tarball holds the whole `<scope>/<id>.json` tree (`<id>` is slug, may be nested like `intelligence/backend` → `intelligence/backend.json`, full spec: `type`, `host`, `port`, `database`, `username`, `password`, `path`, `default`). Encrypted per-scope, same keys as projects.
+- **Working store** — `~/.secrets/db/{personal,work}/<id>.json` (fixed, `0600`). `angst db import` decrypts tarballs (`vault.DecryptTarball`); `angst db sync` merges selected slugs (`db = ["personal/my-pg" "work/analytics"]`) into `~/.config/sqlit/connections.json` (`version=2`, `port` as string, optional `password`) + `~/.config/rainfrog/rainfrog_config.toml` (`[db]` with `password` + `default`).
+- **Vault flow** — `angst vault decrypt secrets/db/personal.tar.age --dir --scope personal` → `secrets/db/personal/` (all personal DBs at once) → edit `<id>.json` (e.g. `postgres.json`, `intelligence/backend.json`) → `angst vault encrypt secrets/db/personal --dir --scope personal` + `git add secrets/db/personal.tar.age`.
 - **Resilience / leak prevention** — same as projects: missing key/tarball → warn + exit 0; staging dirs gitignored via `secrets/.gitignore`; `check-db-encrypted` + gitleaks `secrets/db/.*` guard it.
 
 ## Secret scanning (defense in depth)
