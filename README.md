@@ -35,7 +35,7 @@ nix run .#lint-themes                # fast, eval-only theme check
 @hosts/          machine declarations (hosts/<domain>/<hostname>/default.nix) — auto-discovered
 @checks/         build-time validation (theme lint, config rendering, secrets, projects, password, login shell, Nix lint)
 @domains/        features (31 domains / 17 categories) — each with a default.nix interface + optional home.nix/system.nix sides
-@projects/       encrypted, auto-synced dev-project store (age-encrypted tarballs; simple slug ids, real name only in encrypted metadata)
+@secrets/        encrypted stores: master, apps, ssh, ftp, vpn, projects, db — age-encrypted vault tarballs (secrets/projects/*.tar.age, secrets/db/*.tar.age) under secrets/
 @lib/            build system, domain framework, host resolution, flake outputs
 @modules/        core NixOS/home/VM modules + age secrets integration
 @profiles/       reusable composition units — selected via the host decl's `profiles` list
@@ -65,7 +65,7 @@ Each machine is `hosts/<domain>/<hostname>/default.nix`, a pure data decl. A dir
   profiles = ["base" "desktop" "development"];   # validated against profiles/default.nix
   toolchains = "*";                   # all 24 languages, or a list (unknown names throw)
   monitors = { primary = { name = "DP-1"; resolution = "1920x1080"; refreshRate = 144; }; };
-  db.connections = { };               # sql-client credentials
+  db = [ "personal/my-pg" "work/analytics" ];  # sql-client vault slugs (secrets/db/<scope>.tar.age → ~/.secrets/db)
   nixos = { keyboardLayout = "br-abnt2"; };      # per-machine extras (extraNixos)
   env = { EDITOR = "nvim"; BROWSER = "firefox"; };
   sshAgent = { enable = true; keys = ["~/.ssh/id_ed25519"]; };
@@ -122,19 +122,19 @@ Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run
 
 ---
 
-### `@projects/` — Auto-Synced Encrypted Dev Projects
+### `@secrets/projects/` + `@secrets/db/` — Auto-Synced Encrypted Vault Stores
 
-`domains/git/projects` + the `angst projects` subcommand of the Go `angst` binary (`runtime/angst`, shared by the CLI and the `angst-projects-sync` wrapper) give every host the same set of dev
-repositories with working `.env` files — while the angst repo stays **public** and reveals
+`domains/git/projects` + the `angst projects` subcommand (`runtime/angst`, via `angst-projects-sync`) and `domains/sql-client` + `angst db` (`angst-db-sync`) give every host the same set of dev
+repositories and DB credentials with working `.env` / `connections.json` files — while the angst repo stays **public** and reveals
 nothing about them.
 
-Two layers, with the repo store as committed, age-encrypted tarballs:
+Two layers, with the repo store as committed, age-encrypted tarballs (now under `secrets/`):
 
-- **Repo store** — `projects/{personal,work}.tar.age` (committed, **age-encrypted**). Each
-  tarball holds the whole `<scope>/<id>/{metadata.json,.env}` tree. This is the transport:
+- **Repo store** — `secrets/projects/{personal,work}.tar.age` and `secrets/db/{personal,work}.tar.age` (committed, **age-encrypted**). Each
+  tarball holds the whole `<scope>/<id>/{metadata.json,.env}` (projects) or `<scope>/<id>/connection.json` (db) tree. This is the transport:
   it travels with the public repo, so a new machine that clones the repo has all the
-  metadata to clone its projects. Rewritten only by your manual `vault` edit flow (below).
-- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.json,.env}` (fixed
+  metadata to clone its projects or connect to its DBs. Rewritten only by your manual `vault` edit flow (below).
+- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.json,.env}` and `~/.secrets/db/{personal,work}/<id>/connection.json` (fixed
   per-host, **decrypted plaintext**). `sync` reads this directly — no age needed at runtime.
   Seeded from the tarballs at build time (home activation runs `import`).
 - **Clone root** — `~/projects/<name>`: the cloned repo + its decrypted `.env`. Clones
@@ -168,17 +168,25 @@ Two layers, with the repo store as committed, age-encrypted tarballs:
 
 ```bash
 # Runtime (on a host):
-angst projects import   # decrypt projects/*.tar.age -> working store
+angst projects import   # decrypt secrets/projects/*.tar.age -> working store
 angst projects sync     # clone-if-missing + env materialize (working store)
+angst db import         # decrypt secrets/db/*.tar.age -> working store
+angst db sync           # materialize DB configs to ~/.config/sqlit + ~/.config/rainfrog
 
 # Editing the repo store (run from the repo root, then commit the .tar.age):
-angst vault decrypt projects/personal.tar.age --dir --scope personal   # -> projects/personal/
-# ... edit projects/personal/<id>/metadata.json and/or .env by hand ...
-angst vault encrypt projects/personal --dir --scope personal           # overwrites projects/personal.tar.age, removes projects/personal/
-git add projects/personal.tar.age && git commit
+angst vault decrypt secrets/projects/personal.tar.age --dir --scope personal   # -> secrets/projects/personal/
+# ... edit secrets/projects/personal/<id>/metadata.json and/or .env by hand ...
+angst vault encrypt secrets/projects/personal --dir --scope personal           # overwrites secrets/projects/personal.tar.age, removes secrets/projects/personal/
+git add secrets/projects/personal.tar.age && git commit
+
+# DB vault (same flow):
+angst vault decrypt secrets/db/personal.tar.age --dir --scope personal        # -> secrets/db/personal/
+# ... edit secrets/db/personal/<id>/connection.json ...
+angst vault encrypt secrets/db/personal --dir --scope personal
+git add secrets/db/personal.tar.age && git commit
 ```
 
-The decrypted scope dirs (`projects/personal/`, `projects/work/`) are gitignored, so an
+The decrypted scope dirs (`secrets/projects/personal/`, `secrets/db/personal/`, etc.) are gitignored via `secrets/.gitignore`, so an
 in-place decrypt never stages plaintext. All secrets are age-encrypted, so no sops tooling is required.
 
 ---
@@ -299,7 +307,7 @@ home-manager activation                    # xdg.configFile symlinks → ~/.conf
 
 ### Secrets (summary)
 
-age-encrypted secrets → decrypted at runtime into `~/.secrets/`. The master password (`secrets/master/<host>.age`) drives the login-hash via the `angst-bootstrap-secrets` systemd service; app secrets (e.g. `opencode-go-key`) land at `~/.secrets/` via `angst provision-app-secret`. Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`; the FTP server config lives age-encrypted in `secrets/ftp/`. The VM receives the host's age key + SSH keys via a shared dir at boot — keys are never baked into the image. The `projects/` store is age-encrypted (vault tarballs) too, with scope-isolated keys (repo tarballs travel; working store decrypted at `~/.secrets/projects`, see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets/master/*.age` / non-encrypted `projects/*.tar.age` / `secrets/ssh/*.age` / `secrets/ftp/*`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
+age-encrypted secrets → decrypted at runtime into `~/.secrets/`. The master password (`secrets/master/<host>.age`) drives the login-hash via the `angst-bootstrap-secrets` systemd service; app secrets (e.g. `opencode-go-key`) land at `~/.secrets/` via `angst provision-app-secret`. Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`; the FTP server config lives age-encrypted in `secrets/ftp/`. Vault stores for projects and DB (`secrets/projects/*.tar.age` + `secrets/db/*.tar.age`) are age-encrypted too, with scope-isolated keys (repo tarballs travel; working stores decrypted at `~/.secrets/projects` + `~/.secrets/db`, see [`@secrets/projects/ + @secrets/db/`](#secrets-projects--secretsdb---auto-synced-encrypted-vault-stores)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets/master/*.age` / `secrets/projects/*.tar.age` / `secrets/db/*.tar.age` / `secrets/ssh/*.age` / `secrets/ftp/*`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
 
 ### CI
 

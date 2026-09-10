@@ -107,7 +107,7 @@ Separate from per-host secrets, the **project store** keeps declared dev repos +
 `.env` (see the [`git/projects` domain](domains.md#gitprojects--encrypted-project-store)).
 Unlike some older secret stores, the project store is **age/vault**, not sops:
 
-- **Repo store** — `projects/{personal,work}.tar.age` (committed, **age-encrypted**). Each
+- **Repo store** — `secrets/projects/{personal,work}.tar.age` (committed, **age-encrypted**). Each
   tarball holds the whole `<scope>/<id>/{metadata.json,.env}` tree. The transport: travels
   with the public repo so a new machine has the metadata to clone its projects. Rewritten
   only by the manual `vault` edit flow (`angst vault decrypt --dir` → edit → `angst vault
@@ -131,7 +131,7 @@ Unlike some older secret stores, the project store is **age/vault**, not sops:
   tarball lists **only** the work recipient, so a work-key compromise can never decrypt
   personal projects. Both keys are static, generated once, provisioned on every host through
   the `.config/age` impermanence dir — this tool never rotates them.
-- **Vault flow** — `import` decrypts each `projects/<scope>.tar.age` into the working store
+- **Vault flow** — `import` decrypts each `secrets/projects/<scope>.tar.age` into the working store
   (`vault.DecryptTarball`); `sync` reads the plaintext working store and materializes
   `.env` (0600) at `~/projects/<name>/.env`. The repo tarballs only change via the manual
   `vault` edit flow above. Host selection (`ANGST_PROJECTS_ONLY`) still happens in `sync`,
@@ -144,17 +144,26 @@ Unlike some older secret stores, the project store is **age/vault**, not sops:
 - **Resilience** — a missing scope key, missing tarball, no network, or any decrypt error
   skips that project with a warning and exits 0; nothing fails a build or boot.
 - **Leak prevention** — the repo store is always age-encrypted (`check-projects-encrypted`
-  + gitleaks guard it); the decrypted scope dirs (`projects/personal/`, `projects/work/`) are
+  + gitleaks guard it); the decrypted scope dirs (`secrets/projects/personal/`, `secrets/projects/work/`) are
   gitignored so an in-place decrypt never stages plaintext; plaintext lives only in the
   private `~/.secrets` working store (0700) and decrypted `.env` files; `sync` prints no env
   values.
 
+## DB store (tarball + vault/age)
+
+Parallel to the project store, the **DB store** keeps `sqlit`/`rainfrog` credentials (see `domains/sql-client`). It is also **age/vault**, not sops:
+
+- **Repo store** — `secrets/db/{personal,work}.tar.age` (committed, **age-encrypted**). Each tarball holds the whole `<scope>/<id>/connection.json` tree (full spec: `type`, `host`, `port`, `database`, `username`, `password`, `path`, `default`). Encrypted per-scope, same keys as projects.
+- **Working store** — `~/.secrets/db/{personal,work}/<id>/connection.json` (fixed, `0600`). `angst db import` decrypts tarballs; `angst db sync` merges selected slugs into `~/.config/sqlit/connections.json` (`version=2`) + `~/.config/rainfrog/rainfrog_config.toml` (`[db]`). Host declares `db = ["personal/my-pg" "work/analytics"]` (explicit `scope/slug`, may be nested like `intelligence/pg`).
+- **Vault flow** — `angst vault decrypt secrets/db/personal.tar.age --dir --scope personal` → `secrets/db/personal/` → edit `connection.json` → `angst vault encrypt secrets/db/personal --dir --scope personal` + `git add secrets/db/personal.tar.age`.
+- **Resilience / leak prevention** — same as projects: missing key/tarball → warn + exit 0; staging dirs gitignored via `secrets/.gitignore`; `check-db-encrypted` + gitleaks `secrets/db/.*` guard it.
+
 ## Secret scanning (defense in depth)
 
 - **Git hooks** (`githooks/`, install with `just install-hooks`): `pre-commit` runs `gitleaks git --pre-commit --staged --redact`; `pre-push` scans pushed ranges (`<remote_oid>..<local_oid>`, or all new commits for new refs) with gitleaks. Hooks use a host `gitleaks` or fall back to `nix run nixpkgs#gitleaks`.
-- **`.gitleaks.toml`** — extends default rules with an `angst-plaintext-secret-value` rule targeting `secrets.yaml` and `secrets/master/` and an `angst-projects-plaintext-secret-value` rule targeting `projects/.*`. Allowlists age blocks/public keys, `secrets/ssh/.*\.age`, `secrets/ftp/.*\.age`, and `README.md`/`pure.md`/`analysis.md`/`openwiki/` — no broad path allowlist on `projects/`.
+- **`.gitleaks.toml`** — extends default rules with `angst-plaintext-secret-value` (`secrets.yaml`, `secrets/master/`), `angst-projects-plaintext-secret-value` (`secrets/projects/.*`) and `angst-db-plaintext-secret-value` (`secrets/db/.*`). Allowlists age blocks/public keys, `secrets/ssh/.*\.age`, `secrets/ftp/.*\.age`, `secrets/projects/.*\.tar\.age`, `secrets/db/.*\.tar\.age`, and `README.md`/`pure.md`/`analysis.md`/`openwiki/` — no broad path allowlist on `secrets/`.
 - **CI** (`.github/workflows/secret-scan.yml`) — gitleaks-action + trufflehog (`--results=verified,unknown`) on every push/PR; `fix: trufflehog` (HEAD) tuned the trufflehog args.
-- **Flake check** (`checks/secrets.nix`) — `check-secrets-encrypted` fails if any `secrets/master/*.age` lacks an `age-encryption.org/v1` envelope; `check-projects-encrypted` asserts every `projects/*.tar.age` is age-encrypted (envelope present); `check-ssh-keys` asserts every `secrets/ssh/*.age` is age-encrypted (envelope present, no plaintext private key) with a valid matching `.pub` (see [Shared SSH keys](#shared-ssh-keys-secretsssh)); `check-ftp-encrypted` asserts every `secrets/ftp/*` carries an age envelope with no plaintext server fields.
+- **Flake check** (`checks/secrets.nix`) — `check-secrets-encrypted` fails if any `secrets/master/*.age` lacks an `age-encryption.org/v1` envelope; `check-projects-encrypted` asserts every `secrets/projects/*.tar.age` is age-encrypted; `check-db-encrypted` asserts every `secrets/db/*.tar.age` is age-encrypted; `check-ssh-keys` asserts every `secrets/ssh/*.age` is age-encrypted (envelope present, no plaintext private key) with a valid matching `.pub` (see [Shared SSH keys](#shared-ssh-keys-secretsssh)); `check-ftp-encrypted` asserts every `secrets/ftp/*` carries an age envelope with no plaintext server fields.
 
 ## Security rules for contributors
 

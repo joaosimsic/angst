@@ -28,7 +28,7 @@ func repoRoot() string {
 	if v := os.Getenv("ANGST_PROJECTS_REPO"); v != "" {
 		return v
 	}
-	return filepath.Join(paths.RepoRoot(), "projects")
+	return filepath.Join(paths.RepoRoot(), "secrets", "projects")
 }
 
 func projectsRoot() string {

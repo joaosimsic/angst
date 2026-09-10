@@ -110,7 +110,7 @@ A Lua config with a pluggable backend (`config/lua/backend/`):
 
 Layers:
 
-- **Repo store** — `projects/{personal,work}.tar.age` (committed, **age-encrypted**). Each
+- **Repo store** — `secrets/projects/{personal,work}.tar.age` (committed, **age-encrypted**). Each
   tarball holds the whole `<scope>/<id>/{metadata.json,.env}` tree. The transport: travels
   with the public repo so a new machine has the metadata to clone its projects. Rewritten
   only by the manual `vault` edit flow (`angst vault decrypt --dir` → edit → `angst vault

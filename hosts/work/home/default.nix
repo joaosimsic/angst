@@ -22,6 +22,7 @@
     "conf"
     "make"
   ];
+  db = [ ];
   env = {
     EDITOR = "nvim";
   };

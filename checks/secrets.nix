@@ -99,14 +99,14 @@ let
         set -euo pipefail
         cd ${repoRoot}
 
-        files=$(find ./projects -type f -name '*.tar.age' 2>/dev/null || true)
+        files=$(find ./secrets/projects -type f -name '*.tar.age' 2>/dev/null || true)
         if [ -z "$files" ]; then
           echo "No projects tarballs found; nothing to check."
           touch $out
           exit 0
         fi
 
-        echo "==> Checking projects tarballs are age-encrypted..."
+        echo "==> Checking projects tarballs are age-encrypted (secrets/projects)..."
         failed=0
         for f in $files; do
           if ! grep -q 'age-encryption.org/v1' "$f"; then
@@ -123,6 +123,44 @@ let
         fi
 
         echo "==> All projects tarballs are age-encrypted."
+        touch $out
+      '';
+  dbCheck =
+    pkgs.runCommand "check-db-encrypted"
+      {
+        nativeBuildInputs = [
+          pkgs.findutils
+          pkgs.gnugrep
+        ];
+      }
+      ''
+        set -euo pipefail
+        cd ${repoRoot}
+
+        files=$(find ./secrets/db -type f -name '*.tar.age' 2>/dev/null || true)
+        if [ -z "$files" ]; then
+          echo "No db tarballs found; nothing to check."
+          touch $out
+          exit 0
+        fi
+
+        echo "==> Checking db tarballs are age-encrypted (secrets/db)..."
+        failed=0
+        for f in $files; do
+          if ! grep -q 'age-encryption.org/v1' "$f"; then
+            echo "FAIL: $f is not age-encrypted (missing age envelope marker)"
+            failed=1
+          else
+            echo "PASS: $f is age-encrypted"
+          fi
+        done
+
+        if [ "$failed" -ne 0 ]; then
+          echo "==> One or more db tarballs are not age-encrypted. Refusing to proceed."
+          exit 1
+        fi
+
+        echo "==> All db tarballs are age-encrypted."
         touch $out
       '';
   vpnCheck =
@@ -223,6 +261,7 @@ in
 {
   secrets = secretsCheck;
   projects = projectsCheck;
+  db = dbCheck;
   sshKeys = sshKeysCheck;
   ftp = ftpCheck;
   vpn = vpnCheck;

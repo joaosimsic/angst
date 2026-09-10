@@ -71,7 +71,7 @@ let
       editorLsp = { };
     };
     monitors = { };
-    db = { };
+    db = [ ];
     sshAgent = { };
     username = "user";
     profiles = [ ];

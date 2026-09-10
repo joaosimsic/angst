@@ -14,7 +14,7 @@
 
   monitors = { };
 
-  db.connections = { };
+  db = [ ];
   nixos = {
     keyboardLayout = "br-abnt2";
   };

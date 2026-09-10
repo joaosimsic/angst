@@ -14,6 +14,7 @@
     "office"
   ];
   toolchains = "*";
+  db = [ ];
   env = {
     EDITOR = "nvim";
     BROWSER = "firefox";
