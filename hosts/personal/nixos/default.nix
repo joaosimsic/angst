@@ -94,6 +94,7 @@
   };
   projects = [
     "vault"
+    "llm-ruler"
     "angst"
     "agent"
     "intelligence/backend"

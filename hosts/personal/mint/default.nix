@@ -71,6 +71,7 @@
     "angst"
     "advent-of-code"
     "datapath"
+    "llm-ruler"
     "agent"
     "warfront"
     "vault"
