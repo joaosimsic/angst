@@ -23,7 +23,7 @@
     };
   };
 
-  db = [ "personal/example" ];
+  db = [ "work/intelligence" ];
 
   nixos = {
     keyboardLayout = "br-abnt2";

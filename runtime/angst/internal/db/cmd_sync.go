@@ -23,11 +23,129 @@ var sqlitDbTypes = map[string]string{
 }
 
 var rainfrogDrivers = map[string]string{
-	"postgres": "postgres",
-	"mysql":    "mysql",
-	"sqlite":   "sqlite",
-	"oracle":   "oracle",
-	"duckdb":   "duckdb",
+	"postgres":    "postgres",
+	"redshift":    "postgres",
+	"cockroachdb": "postgres",
+	"mysql":       "mysql",
+	"mariadb":     "mysql",
+	"sqlite":      "sqlite",
+	"oracle":      "oracle",
+	"duckdb":      "duckdb",
+	// NOTE: mssql has no rainfrog driver — entries are skipped for rainfrog
+	// (sqlit still gets them) with a warning.
+}
+
+// defaultPortForType returns the conventional default port for a db type.
+// Used by both sqlit and rainfrog writers when the vault entry omits `port`.
+func defaultPortForType(connType string) int {
+	switch connType {
+	case "mysql", "mariadb":
+		return 3306
+	case "oracle":
+		return 1521
+	case "mssql":
+		return 1433
+	case "redshift":
+		return 5439
+	case "cockroachdb":
+		return 26257
+	default: // postgres + unknown tcp types
+		return 5432
+	}
+}
+
+func effectivePort(c connection) int {
+	if c.Port != nil {
+		return *c.Port
+	}
+	return defaultPortForType(c.Type)
+}
+
+// encodeRainfrogPassword percent-encodes a password the same way rainfrog does
+// (src/config.rs StructuredConnection::connection_string):
+// utf8_percent_encode(password, FRAGMENT) where FRAGMENT = CONTROLS +
+// ' ' '"' '<' '>' '`' '#' '{' '}' '|' '^' '\' '[' ']' '$' '&' '(' ')' ':'
+// ';' '=' '?' '@' '!' '~' '\” '*' '+' ',' '/'.
+// We additionally encode '%' itself (upstream omits it, which corrupts
+// passwords containing a literal '%' or "%XX") and all non-ASCII bytes, both
+// of which still decode to the original password.
+func encodeRainfrogPassword(s string) string {
+	const hex = "0123456789ABCDEF"
+	var b strings.Builder
+	b.Grow(len(s) + 8)
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		encode := c < 0x20 || c == 0x7F || c >= 0x80
+		if !encode {
+			switch c {
+			case ' ', '"', '<', '>', '`', '#', '{', '}', '|', '^', '\\',
+				'[', ']', '$', '&', '(', ')', ':', ';', '=', '?', '@',
+				'!', '~', '\'', '*', '+', ',', '/', '%':
+				encode = true
+			}
+		}
+		if !encode {
+			b.WriteByte(c)
+			continue
+		}
+		b.WriteByte('%')
+		b.WriteByte(hex[c>>4])
+		b.WriteByte(hex[c&0x0F])
+	}
+	return b.String()
+}
+
+// tomlEscape escapes a string for use inside a TOML basic string ("...").
+func tomlEscape(s string) string {
+	r := strings.NewReplacer(
+		`\`, `\\`,
+		`"`, `\"`,
+		"\n", `\n`,
+		"\r", `\r`,
+		"\t", `\t`,
+	)
+	return r.Replace(s)
+}
+
+// tomlKey renders a [db] entry name as a TOML key. Bare keys are used when
+// safe; otherwise the name is quoted to avoid `.' creating subtables or
+// spaces/slashes breaking the parse.
+func tomlKey(name string) string {
+	if name == "" {
+		return `""`
+	}
+	isBare := true
+	for _, r := range name {
+		if (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+			continue
+		}
+		isBare = false
+		break
+	}
+	if isBare {
+		return name
+	}
+	return `"` + tomlEscape(name) + `"`
+}
+
+// rainfrogConnectionURL builds the Raw connection_string for entries that
+// carry a password. It returns driver, url, true on success. File-based types
+// (sqlite/duckdb) ignore the password. mssql and unknown types return false.
+func rainfrogConnectionURL(e syncEntry, port int) (string, string, bool) {
+	c := e.conn
+	switch c.Type {
+	case "postgres", "redshift", "cockroachdb":
+		enc := encodeRainfrogPassword(c.Password)
+		return "postgres", fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", c.Username, enc, c.Host, port, c.Database), true
+	case "mysql", "mariadb":
+		enc := encodeRainfrogPassword(c.Password)
+		return "mysql", fmt.Sprintf("mysql://%s:%s@%s:%d/%s", c.Username, enc, c.Host, port, c.Database), true
+	case "oracle":
+		enc := encodeRainfrogPassword(c.Password)
+		return "oracle", fmt.Sprintf("jdbc:oracle:thin:%s/%s@//%s:%d/%s", c.Username, enc, c.Host, port, c.Database), true
+	default:
+		return "", "", false
+	}
 }
 
 type syncEntry struct {
@@ -123,9 +241,9 @@ func validateConnection(c connection, raw string) error {
 			return fmt.Errorf("unsupported type %q", c.Type)
 		}
 	}
-	if c.Type == "sqlite" {
+	if c.Type == "sqlite" || c.Type == "duckdb" {
 		if strings.TrimSpace(c.Path) == "" {
-			return fmt.Errorf("sqlite requires 'path'")
+			return fmt.Errorf("%s requires 'path'", c.Type)
 		}
 	} else {
 		if strings.TrimSpace(c.Host) == "" {
@@ -159,7 +277,7 @@ func writeSqlitConfig(entries []syncEntry) error {
 			continue
 		}
 		var connMap map[string]interface{}
-		if e.conn.Type == "sqlite" {
+		if e.conn.Type == "sqlite" || e.conn.Type == "duckdb" {
 			connMap = map[string]interface{}{
 				"name":    e.name,
 				"db_type": dbType,
@@ -169,10 +287,7 @@ func writeSqlitConfig(entries []syncEntry) error {
 				},
 			}
 		} else {
-			port := 5432
-			if e.conn.Port != nil {
-				port = *e.conn.Port
-			}
+			port := effectivePort(e.conn)
 			endpoint := map[string]interface{}{
 				"kind":     "tcp",
 				"host":     e.conn.Host,
@@ -223,30 +338,45 @@ autopairs_enabled = true
 		for _, e := range entries {
 			driver, ok := rainfrogDrivers[e.conn.Type]
 			if !ok {
+				fmt.Fprintf(os.Stderr, "warn: type %q has no rainfrog driver; skipping %q for rainfrog (sqlit kept)\n", e.conn.Type, e.slug.raw)
 				continue
 			}
 			defaultFlag := ""
 			if e.conn.Default {
 				defaultFlag = ", default = true"
 			}
+			key := tomlKey(e.name)
 			if e.conn.Type == "sqlite" {
-				escaped := strings.ReplaceAll(e.conn.Path, `"`, `\"`)
-				fmt.Fprintf(&b, "%s = { connection_string = \"sqlite://%s\", driver = \"sqlite\"%s }\n", e.name, escaped, defaultFlag)
-			} else {
-				port := 5432
-				if e.conn.Port != nil {
-					port = *e.conn.Port
-				}
-				passPart := ""
-				if e.conn.Password != "" {
-					esc := strings.ReplaceAll(e.conn.Password, `"`, `\"`)
-					passPart = fmt.Sprintf(`, password = "%s"`, esc)
-				}
-				escHost := strings.ReplaceAll(e.conn.Host, `"`, `\"`)
-				escDB := strings.ReplaceAll(e.conn.Database, `"`, `\"`)
-				escUser := strings.ReplaceAll(e.conn.Username, `"`, `\"`)
-				fmt.Fprintf(&b, "%s = { host = \"%s\", port = %d, database = \"%s\", username = \"%s\", driver = \"%s\"%s%s }\n", e.name, escHost, port, escDB, escUser, driver, passPart, defaultFlag)
+				escaped := tomlEscape(e.conn.Path)
+				fmt.Fprintf(&b, "%s = { connection_string = \"sqlite://%s\", driver = \"sqlite\"%s }\n", key, escaped, defaultFlag)
+				continue
 			}
+			if e.conn.Type == "duckdb" {
+				escaped := tomlEscape(e.conn.Path)
+				fmt.Fprintf(&b, "%s = { connection_string = \"duckdb://%s\", driver = \"duckdb\"%s }\n", key, escaped, defaultFlag)
+				continue
+			}
+			port := effectivePort(e.conn)
+			if e.conn.Password != "" {
+				// Structured entries always prompt via keyring (rainfrog
+				// ignores `password =`). Embed the password in a Raw
+				// connection_string so rainfrog connects without prompting.
+				// File is 0600 (see atomicWrite).
+				urlDriver, url, ok := rainfrogConnectionURL(e, port)
+				if !ok {
+					fmt.Fprintf(os.Stderr, "warn: could not build rainfrog connection_string for %q; skipping for rainfrog\n", e.slug.raw)
+					continue
+				}
+				// urlDriver matches driver for aliased types (mariadb->mysql,
+				// redshift/cockroach->postgres); use the resolved driver.
+				_ = driver
+				fmt.Fprintf(&b, "%s = { connection_string = \"%s\", driver = \"%s\"%s }\n", key, tomlEscape(url), urlDriver, defaultFlag)
+				continue
+			}
+			escHost := tomlEscape(e.conn.Host)
+			escDB := tomlEscape(e.conn.Database)
+			escUser := tomlEscape(e.conn.Username)
+			fmt.Fprintf(&b, "%s = { host = \"%s\", port = %d, database = \"%s\", username = \"%s\", driver = \"%s\"%s }\n", key, escHost, port, escDB, escUser, driver, defaultFlag)
 		}
 	}
 	dest := rainfrogConfigPath()
