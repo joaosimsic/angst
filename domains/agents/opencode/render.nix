@@ -76,7 +76,10 @@ let
 
   lspWithMux = lib.mapAttrs (
     name: cfg:
-    if name == "rust" && (store.hasLspmux or false) then cfg // { command = [ "rust-analyzer-mux" ]; } else cfg
+    if name == "rust" && (store.hasLspmux or false) then
+      cfg // { command = [ "rust-analyzer-mux" ]; }
+    else
+      cfg
   ) (store.editorLsp or { });
 
   lspWithDisabled = lspWithMux // {

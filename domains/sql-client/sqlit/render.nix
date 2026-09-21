@@ -1,5 +1,4 @@
 {
-  lib,
   themesLib,
   themeName,
   checkHelpers,

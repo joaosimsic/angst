@@ -1,10 +1,9 @@
 {
-  lib,
   checkHelpers,
 }:
 
 let
-  inherit (checkHelpers) requireInfix require;
+  inherit (checkHelpers) requireInfix;
 
   settingsText = ''
     [settings]

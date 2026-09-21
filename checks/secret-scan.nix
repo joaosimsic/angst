@@ -23,7 +23,7 @@ pkgs.runCommand "secret-scan"
             fail() { echo "FAIL: $1" >&2; exit 1; }
             pass() { echo "PASS: $1"; }
 
-            mkdir -p "$work/leaks/github" "$work/leaks/aws" "$work/leaks/slack" "$work/leaks/private-key" "$work/leaks/plain-secrets" "$work/leaks/projects-secret/projects/personal/3f9a1c2b4d7e09a2"
+            mkdir -p "$work/leaks/github" "$work/leaks/aws" "$work/leaks/slack" "$work/leaks/private-key" "$work/leaks/plain-secrets" "$work/leaks/projects-secret/secrets/projects/personal/3f9a1c2b4d7e09a2"
 
             gh_p1='ghp_y'
             gh_p2='ar3TjQ95prkRPC7go9w7datuPIaXJ48VmHH'
@@ -47,7 +47,7 @@ pkgs.runCommand "secret-scan"
 
             sk_p1='sk-test-12345678'
             sk_p2='90abcdefghij'
-            printf 'API_KEY = "%s%s"\n' "$sk_p1$sk_p2" > "$work/leaks/projects-secret/projects/personal/3f9a1c2b4d7e09a2/env"
+            printf 'API_KEY = "%s%s"\n' "$sk_p1$sk_p2" > "$work/leaks/projects-secret/secrets/projects/personal/3f9a1c2b4d7e09a2/env"
 
             mkdir -p "$work/age"
             cat > "$work/age/opencode-go-key.age" <<'EOF'
