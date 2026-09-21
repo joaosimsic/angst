@@ -74,7 +74,12 @@ let
     };
   };
 
-  lspWithDisabled = (store.editorLsp or { }) // {
+  lspWithMux = lib.mapAttrs (
+    name: cfg:
+    if name == "rust" && (store.hasLspmux or false) then cfg // { command = [ "rust-analyzer-mux" ]; } else cfg
+  ) (store.editorLsp or { });
+
+  lspWithDisabled = lspWithMux // {
     "php intelephense" = {
       disabled = true;
     };

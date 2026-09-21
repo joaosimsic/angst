@@ -19,6 +19,7 @@ in
 {
   config = lib.mkIf cfg.enable {
     home = {
+      sessionPath = lib.mkIf (hasRust || hasGo) [ "$HOME/.local/bin" ];
       packages =
         with pkgs;
         [ lspmux ] ++ lib.optionals hasGo [ gopls ] ++ lib.optionals hasRust [ rustAnalyzerMux ];
@@ -48,7 +49,7 @@ in
       listen = "${socket}"
       connect = "${socket}"
       log_filters = "info"
-      pass_environment = ["*", "!WINDOWID", "!ALACRITTY_*", "!KITTY_WINDOW_ID", "!DESKTOP_STARTUP_ID"]
+      pass_environment = ["*", "!WINDOWID", "!ALACRITTY_*", "!KITTY_WINDOW_ID", "!DESKTOP_STARTUP_ID", "!CMD_DURATION_MS", "!ZELLIJ_*", "!NVIM*", "!VIM*", "!MYVIMRC", "!OPENCODE*", "!AGENT", "!_", "!SHLVL", "!OLDPWD"]
     '';
 
     systemd.user.services.lspmux = lib.mkIf hasRust {
