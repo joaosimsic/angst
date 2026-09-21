@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"angst/internal/boot"
+	"angst/internal/db"
 	"angst/internal/ftp"
 	"angst/internal/projects"
 	"angst/internal/render"
@@ -34,6 +35,8 @@ func run(args []string) int {
 		return boot.SetPasswordHash(args)
 	case "projects":
 		return projects.Run(args)
+	case "db":
+		return db.Run(args)
 	case "ssh-key":
 		return sshkey.Run(args)
 	case "login-shell":
@@ -66,6 +69,7 @@ func usage() {
   angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
   angst watch  [--repo PATH] [--host HOST] [--theme THEME]
   angst projects <add|sync|status|capture|edit-env|import|export|rm> ...
+  angst db <import|sync> ...
   angst vault <encrypt|decrypt|status> ...
   angst ssh-key <generate|verify> --scope personal|work
   angst login-shell --shell NAME --home DIR --user USER

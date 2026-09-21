@@ -6,10 +6,10 @@
 
 appimageTools.wrapType2 {
   pname = "paper-desktop";
-  version = "0.5.7";
+  version = "0.5.11";
   src = fetchurl {
     url = "https://download.paper.design/linux/appImage";
-    hash = "sha256-9hJJoO5LLERyJMvTQlX5MMJfe/6571Oy1rqbPWEDV/8=";
+    hash = "sha256-EkrUhc1scLrjiYfENshKiDYn5n/z3YbWTAbYhFXn3Wc=";
   };
 
   extraPkgs =

@@ -37,6 +37,23 @@ let
     exec ${pkgs.lspmux}/bin/lspmux client --server-path ${pkgs.rust-analyzer}/bin/rust-analyzer "$@"
   '';
 
+  isRawRustAnalyzer =
+    p:
+    let
+      pname = p.pname or "";
+      name = p.name or "";
+    in
+    pname == "rust-analyzer" || builtins.match "rust-analyzer(-.*)?" name != null;
+
+  filterMuxPkgs = pkgsList: pkgs.lib.filter (p: !(isRawRustAnalyzer p)) pkgsList;
+
+  allToolchainPkgsMux = filterMuxPkgs allToolchainPkgs;
+  vmAllToolchainPkgsMux = filterMuxPkgs vmAllToolchainPkgs;
+
+  muxEnvHook = ''
+    export LSPMUX_SOCKET="/run/user/1000/lspmux.sock"
+  '';
+
   fullDevPackages =
     with pkgs;
     [
@@ -48,7 +65,6 @@ let
       gitleaks
       cargo
       rustc
-      rust-analyzer
       lspmux
       rustAnalyzerMux
       go
@@ -60,7 +76,7 @@ let
       qemu
       runtime.vmTool
     ]
-    ++ allToolchainPkgs;
+    ++ allToolchainPkgsMux;
 
   fullVmPackages =
     with pkgs;
@@ -73,7 +89,6 @@ let
       gitleaks
       cargo
       rustc
-      rust-analyzer
       lspmux
       rustAnalyzerMux
       go
@@ -85,7 +100,7 @@ let
       qemu
       runtime.vmTool
     ]
-    ++ vmAllToolchainPkgs;
+    ++ vmAllToolchainPkgsMux;
 in
 {
   shells = {
@@ -100,18 +115,18 @@ in
           lspmux
           rustAnalyzerMux
         ]
-        ++ allToolchainPkgs;
-      shellHook = treesitterShellHook;
+        ++ allToolchainPkgsMux;
+      shellHook = "${treesitterShellHook}\n${muxEnvHook}";
     };
 
     dev = pkgs.mkShell {
       packages = fullDevPackages;
-      shellHook = "${treesitterShellHook}\n. ${shellDevHook}";
+      shellHook = "${treesitterShellHook}\n${muxEnvHook}\n. ${shellDevHook}";
     };
 
     vm = pkgs.mkShell {
       packages = fullVmPackages;
-      shellHook = "${vmTreesitterShellHook}\n. ${shellDevHook}";
+      shellHook = "${vmTreesitterShellHook}\n${muxEnvHook}\n. ${shellDevHook}";
     };
   };
 }

@@ -33,9 +33,9 @@ $env.PATH = (
     $env.PATH
     | split row (char esep)
     | prepend "/nix/var/nix/profiles/default/bin"
-    | prepend ($nu.home-dir | path join ".local/bin")
     | prepend ($nu.home-dir | path join ".cargo/bin")
     | prepend ($nu.home-dir | path join ".nix-profile/bin")
+    | prepend ($nu.home-dir | path join ".local/bin")
     | uniq
 )
 

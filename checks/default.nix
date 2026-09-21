@@ -138,6 +138,7 @@ in
   check-password = checkPassword;
   check-secrets-encrypted = checkSecretsEncrypted.secrets;
   check-projects-encrypted = checkSecretsEncrypted.projects;
+  check-db-encrypted = checkSecretsEncrypted.db;
   check-ssh-keys = checkSecretsEncrypted.sshKeys;
   check-ftp-encrypted = checkSecretsEncrypted.ftp;
   check-vpn-encrypted = checkSecretsEncrypted.vpn;

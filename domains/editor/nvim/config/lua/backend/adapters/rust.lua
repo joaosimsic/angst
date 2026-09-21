@@ -1,16 +1,45 @@
 local Logger = require("common.Logger")
-local LspTool = require("backend.shared.LspTool")
-
-local root_markers = { "Cargo.toml", ".git" }
 
 local logger = Logger.new("LSP")
+
+local function find_workspace_root(bufnr, on_dir)
+	local path = vim.api.nvim_buf_get_name(bufnr)
+	if path == "" then
+		return
+	end
+
+	local dir = vim.fs.dirname(path)
+	while dir do
+		local manifest = io.open(dir .. "/Cargo.toml", "r")
+		if manifest then
+			local text = manifest:read("a") or ""
+			manifest:close()
+			if text:match("%[workspace%]") then
+				on_dir(dir)
+				return
+			end
+		end
+		local parent = vim.fs.dirname(dir)
+		if parent == dir then
+			break
+		end
+		dir = parent
+	end
+
+	on_dir(vim.fs.root(path, { "Cargo.toml", ".git" }) or vim.fs.dirname(path))
+end
 
 ---@type Adapter
 return {
 	filetypes = { "rust" },
 	lsp = "rust_analyzer",
-	lsp_cmd = { "/home/joao/.nix-profile/bin/rust-analyzer" },
-	lsp_root_dir = LspTool.make_root_dir_finder(root_markers),
+	lsp_cmd = function()
+		if vim.fn.executable("rust-analyzer-mux") == 1 then
+			return { "rust-analyzer-mux" }
+		end
+		return { "rust-analyzer" }
+	end,
+	lsp_root_dir = find_workspace_root,
 	linter = "clippy",
 	linter_cmd = { "cargo-clippy" },
 	formatter = "rustfmt",

@@ -71,7 +71,7 @@ let
       editorLsp = { };
     };
     monitors = { };
-    db = { };
+    db = [ ];
     sshAgent = { };
     username = "user";
     profiles = [ ];
@@ -113,11 +113,13 @@ let
       hmModules,
       themeOverride ? null,
       shellOverride ? null,
+      enabledOverride ? null,
     }:
     let
       p = profilesFor host;
+      effectiveEnabled = if enabledOverride != null then enabledOverride else p.enabled;
       store = mkStore {
-        inherit (p) enabled;
+        enabled = effectiveEnabled;
         profiles = host.profiles or [ ];
         editorLsp = host.scan.editorLsp or { };
         env = host.env or { };
@@ -222,6 +224,11 @@ let
         overrideTheme = builtins.head (
           builtins.filter (n: n != r.theme) (builtins.attrNames r.scan.themes.themes)
         );
+        # Hermetic test: exclude floating-network packages (e.g. design.paper
+        # AppImage from download.paper.design) so theme-override-test never
+        # fails on upstream hash drift. Real hosts still build paper.
+        isTestNetworkExcluded = e: e.category == "design" && e.name == "paper";
+        testEnabled = builtins.filter (e: !isTestNetworkExcluded e) p.enabled;
       in
       {
         "${r.username}" = mkHomeCfg {
@@ -231,7 +238,8 @@ let
 
         "${r.username}-theme-override-test" = mkHomeCfg {
           host = r;
-          hmModules = map enableModule p.enabled;
+          hmModules = map enableModule testEnabled;
+          enabledOverride = testEnabled;
           themeOverride = overrideTheme;
           shellOverride = "";
         };

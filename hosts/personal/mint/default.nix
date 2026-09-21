@@ -14,6 +14,7 @@
     "office"
   ];
   toolchains = "*";
+  db = [ ];
   env = {
     EDITOR = "nvim";
     BROWSER = "firefox";
@@ -70,6 +71,7 @@
     "angst"
     "advent-of-code"
     "datapath"
+    "llm-ruler"
     "agent"
     "warfront"
     "vault"

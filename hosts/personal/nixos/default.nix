@@ -23,7 +23,8 @@
     };
   };
 
-  db.connections = { };
+  db = [ "work/intelligence" ];
+
   nixos = {
     keyboardLayout = "br-abnt2";
   };
@@ -93,6 +94,7 @@
   };
   projects = [
     "vault"
+    "llm-ruler"
     "angst"
     "agent"
     "intelligence/backend"

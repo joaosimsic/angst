@@ -33,7 +33,7 @@ rec {
               ;
             fontFamily = defaultFontFamily;
             monitors = host.monitors or { };
-            db = host.db or { };
+            db = host.db or [ ];
             sshAgent = host.sshAgent or { };
             homeDirectory = "/home/${host.username}";
           }
