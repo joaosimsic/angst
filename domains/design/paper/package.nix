@@ -9,7 +9,7 @@ appimageTools.wrapType2 {
   version = "0.5.11";
   src = fetchurl {
     url = "https://download.paper.design/linux/appImage";
-    hash = "sha256-EkrUhc1scLrjiYfENshKiDYn5n/z3YbWTAbYhFXn3Wc=";
+    hash = "sha256-st9hMDQt6OMAzFPncTfqvu9rsS+Q689z5OX3rxaubzU=";
   };
 
   extraPkgs =

@@ -8,6 +8,7 @@
     "wm.i3"
     "bar.i3status"
     "browser.firefox"
+    "display.gpu"
     "kernel.graphical"
     "kernel.cursor"
     "kernel.audio"
