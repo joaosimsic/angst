@@ -37,6 +37,11 @@ let
 in
 {
   config = lib.mkIf config.domains.gamedev.env.enable {
+    systemd.user.sessionVariables = {
+      PKG_CONFIG_PATH = "${lib.makeSearchPath "lib/pkgconfig" bevyLibs}:${lib.makeSearchPath "share/pkgconfig" bevyLibs}:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig";
+      LD_LIBRARY_PATH = bevyLdPath;
+    };
+
     home.packages =
       with pkgs;
       [
