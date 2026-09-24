@@ -13,7 +13,7 @@ let
   hasRust = (store.editorLsp or { }) ? rust;
   hasGo = (store.editorLsp or { }) ? gopls;
   rustAnalyzerMux = pkgs.writeShellScriptBin "rust-analyzer-mux" ''
-    exec ${pkgs.lspmux}/bin/lspmux client --server-path ${pkgs.rust-analyzer}/bin/rust-analyzer "$@"
+    exec ${pkgs.lspmux}/bin/lspmux client "$@"
   '';
 in
 {
@@ -27,7 +27,7 @@ in
         executable = true;
         text = ''
           #!${pkgs.bash}/bin/bash
-          exec ${pkgs.lspmux}/bin/lspmux client --server-path ${pkgs.rust-analyzer}/bin/rust-analyzer "$@"
+          exec ${pkgs.lspmux}/bin/lspmux client "$@"
         '';
       };
       file.".local/bin/gopls" = lib.mkIf hasGo {
@@ -63,8 +63,7 @@ in
         Restart = "on-failure";
         RestartSec = "5s";
         Environment = [
-          "PATH=${pkgs.rust-analyzer}/bin:${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.clippy}/bin:/home/joao/.cargo/bin:/home/joao/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          "RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}"
+          "PATH=/home/joao/.cargo/bin:/home/joao/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         ];
         PassEnvironment = [
           "PATH"

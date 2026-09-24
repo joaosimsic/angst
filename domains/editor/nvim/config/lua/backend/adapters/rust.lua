@@ -29,19 +29,22 @@ local function find_workspace_root(bufnr, on_dir)
 	on_dir(vim.fs.root(path, { "Cargo.toml", ".git" }) or vim.fs.dirname(path))
 end
 
+local config
+
 ---@type Adapter
-return {
+config = {
 	filetypes = { "rust" },
 	lsp = "rust_analyzer",
 	lsp_cmd = function()
-		if vim.fn.executable("rust-analyzer-mux") == 1 then
-			return { "rust-analyzer-mux" }
+		if vim.fn.executable("lspmux") == 1 then
+			return { "lspmux", "client" }
 		end
+		logger:warn(function()
+			return string.format("failed to find lspmux, falling back to %s", config.lsp)
+		end)
 		return { "rust-analyzer" }
 	end,
 	lsp_root_dir = find_workspace_root,
-	linter = "clippy",
-	linter_cmd = { "cargo-clippy" },
 	formatter = "rustfmt",
 	treesitter = "rust",
 	lsp_settings = {
@@ -85,3 +88,5 @@ return {
 	compiler = "rustc",
 	compiler_cmd = { "sh", "-c", "rustc $FILE -o /tmp/scratch_out 2>&1 && /tmp/scratch_out" },
 }
+
+return config

@@ -34,7 +34,7 @@ let
   vmHostHasVm = vmHost != null && builtins.elem "vm" (vmHost.profiles or [ ]);
 
   rustAnalyzerMux = pkgs.writeShellScriptBin "rust-analyzer-mux" ''
-    exec ${pkgs.lspmux}/bin/lspmux client --server-path ${pkgs.rust-analyzer}/bin/rust-analyzer "$@"
+    exec ${pkgs.lspmux}/bin/lspmux client "$@"
   '';
 
   isRawRustAnalyzer =
@@ -63,8 +63,6 @@ let
       openssh
       age
       gitleaks
-      cargo
-      rustc
       lspmux
       rustAnalyzerMux
       go
@@ -87,8 +85,6 @@ let
       openssh
       age
       gitleaks
-      cargo
-      rustc
       lspmux
       rustAnalyzerMux
       go
