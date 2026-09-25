@@ -57,6 +57,7 @@ jobs:
           - lint-nix
           - eval-all
           - check-session-env
+          - check-session-usability
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main

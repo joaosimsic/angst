@@ -21,8 +21,6 @@ let
     || lib.hasPrefix "LD_LIBRARY_PATH=" e
     || lib.hasPrefix "LD_PRELOAD=" e;
 
-  # Home-manager user services: ban all loader vars (no nixpkgs defaults
-  # here; every entry is angst/HM-controlled).
   hmSvcRows =
     prefix: services:
     lib.concatMap (
@@ -66,9 +64,6 @@ let
         let
           c = cfg.config;
           hmUsers = c.home-manager.users or { };
-          # Stock nixpkgs NSS wiring (e.g. dbus-broker, nscd, sshd):
-          # LD_LIBRARY_PATH is exactly the NSS module path. Safe on NixOS
-          # (all Nix-built) -> exempt. Anything else loader-related fails.
           nssPath = toString (c.system.nssModules.path or "");
           isNssDefault = e: e == "LD_LIBRARY_PATH=${nssPath}";
           sysSvc = map (
@@ -148,10 +143,12 @@ let
     map (h: "home\t${h.name}\t${if h.ok then "ok" else "FAIL"}") homeData
     ++ map (h: "system\t${h.name}\t${if h.ok then "ok" else "FAIL"}") systemData;
 
-  envManifest = pkgs.writeText "session-env-manifest" (builtins.concatStringsSep "\n" envRows);
-  svcManifest = pkgs.writeText "session-svc-manifest" (builtins.concatStringsSep "\n" svcRows);
-  infoManifest = pkgs.writeText "session-info-manifest" (builtins.concatStringsSep "\n" infoRows);
-  drvManifest = pkgs.writeText "session-drv-manifest" (builtins.concatStringsSep "\n" drvRows);
+  envManifest = pkgs.writeText "session-env-manifest" (builtins.concatStringsSep "\n" envRows + "\n");
+  svcManifest = pkgs.writeText "session-svc-manifest" (builtins.concatStringsSep "\n" svcRows + "\n");
+  infoManifest = pkgs.writeText "session-info-manifest" (
+    builtins.concatStringsSep "\n" infoRows + "\n"
+  );
+  drvManifest = pkgs.writeText "session-drv-manifest" (builtins.concatStringsSep "\n" drvRows + "\n");
 in
 pkgs.runCommand "check-session-env"
   {
@@ -189,7 +186,9 @@ pkgs.runCommand "check-session-env"
           ;;
       esac
     done < ${envManifest}
-    [ "$count" -gt 0 ] || echo "No global session env entries; nothing to check."
+    if [ "$count" -eq 0 ]; then
+      fail "no global session env entries evaluated, gate is blind"
+    fi
     ok "global session env clean ($count entries)"
 
     echo "==> Checking systemd services leak no loader vars (home + nixos)..."
@@ -204,7 +203,9 @@ pkgs.runCommand "check-session-env"
           ;;
       esac
     done < ${svcManifest}
-    [ "$count" -gt 0 ] || echo "No systemd service env entries; nothing to check."
+    if [ "$count" -eq 0 ]; then
+      fail "no systemd service env entries evaluated, gate is blind"
+    fi
     while IFS=$'\t' read -r kind host info; do
       [ -z "$kind" ] && continue
       echo "INFO: $kind/$host $info (nixpkgs default, safe on NixOS)"
@@ -222,7 +223,9 @@ pkgs.runCommand "check-session-env"
         fail "$kind/$host FAILED to evaluate (e.g. fetchurl without sha256 blocks switch)"
       fi
     done < ${drvManifest}
-    [ "$count" -gt 0 ] || echo "No configurations; nothing to check."
+    if [ "$count" -eq 0 ]; then
+      fail "no configurations evaluated, gate is blind"
+    fi
 
     echo "==> Checking nixGL nvidiaHash is pinned..."
     if grep -q 'nvidiaHash = null' domains/display/gpu/home.nix; then

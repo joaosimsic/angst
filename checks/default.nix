@@ -95,6 +95,15 @@ let
     inherit pkgs lib self;
   };
 
+  checkSessionUsability = import ./session-usability.nix {
+    inherit
+      pkgs
+      lib
+      self
+      hostList
+      ;
+  };
+
   domainHealth = import ./health {
     inherit
       lib
@@ -156,6 +165,7 @@ in
   check-treesitter = checkTreesitter;
   check-tex = checkTex;
   check-session-env = checkSessionEnv;
+  check-session-usability = checkSessionUsability;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop = lintDesktop;
   lint-shell = lintShell;
