@@ -91,6 +91,10 @@ let
 
   checkTex = import ./tex.nix { inherit pkgs lib; };
 
+  checkSessionEnv = import ./session-env.nix {
+    inherit pkgs lib self;
+  };
+
   domainHealth = import ./health {
     inherit
       lib
@@ -151,6 +155,7 @@ in
   lint-nix = lintNix;
   check-treesitter = checkTreesitter;
   check-tex = checkTex;
+  check-session-env = checkSessionEnv;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop = lintDesktop;
   lint-shell = lintShell;

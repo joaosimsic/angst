@@ -67,7 +67,6 @@ in
         ];
         PassEnvironment = [
           "PATH"
-          "LD_LIBRARY_PATH"
           "PKG_CONFIG_PATH"
           "RUST_SRC_PATH"
           "CARGO_HOME"
