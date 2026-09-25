@@ -15,7 +15,7 @@ let
     wayland
     libxkbcommon
     alsa-lib
-    systemd
+    libudev-zero
     libx11
     libxcursor
     libxi
@@ -39,7 +39,6 @@ in
   config = lib.mkIf config.domains.gamedev.env.enable {
     systemd.user.sessionVariables = {
       PKG_CONFIG_PATH = "${lib.makeSearchPath "lib/pkgconfig" bevyLibs}:${lib.makeSearchPath "share/pkgconfig" bevyLibs}:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig";
-      LD_LIBRARY_PATH = bevyLdPath;
     };
 
     home.packages =
@@ -52,7 +51,6 @@ in
       ++ bevyLibs;
 
     home.sessionVariables = {
-      LD_LIBRARY_PATH = lib.mkForce "${bevyLdPath}:\${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}";
       NIX_LD_LIBRARY_PATH = lib.mkForce "${bevyLdPath}:\${NIX_LD_LIBRARY_PATH:+:$NIX_LD_LIBRARY_PATH}";
       NIX_LD = lib.mkForce "${pkgs.stdenv.cc.bintools.dynamicLinker}";
       PKG_CONFIG_PATH = lib.mkForce "${lib.makeSearchPath "lib/pkgconfig" bevyLibs}:${lib.makeSearchPath "share/pkgconfig" bevyLibs}:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig:\${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}";

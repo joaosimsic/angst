@@ -19,7 +19,6 @@ in
   ++ nixLibs;
 
   home.sessionVariables = {
-    LD_LIBRARY_PATH = lib.mkDefault "${nixLdPath}:\${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}";
     NIX_LD_LIBRARY_PATH = lib.mkDefault "${nixLdPath}:\${NIX_LD_LIBRARY_PATH:+:$NIX_LD_LIBRARY_PATH}";
     NIX_LD = lib.mkDefault "${pkgs.stdenv.cc.bintools.dynamicLinker}";
   };

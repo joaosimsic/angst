@@ -34,7 +34,7 @@ in
         pkgs.callPackage patchedNixGL (
           {
             nvidiaVersion = "470.256.02";
-            nvidiaHash = null;
+            nvidiaHash = "1pmi949s0gzzjw2w3qhhihb82gppd1icvdzk8w2bp5dnvri1hifn";
             nvidiaVersionFile = null;
             enable32bits = isIntelX86;
           }
