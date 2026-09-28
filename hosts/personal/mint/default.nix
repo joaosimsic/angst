@@ -14,7 +14,7 @@
     "office"
   ];
   toolchains = "*";
-  db = [ ];
+  db = [ "work/intelligence-metadata" ];
   env = {
     EDITOR = "nvim";
     BROWSER = "firefox";
