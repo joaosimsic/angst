@@ -1,4 +1,9 @@
-{ pkgs, lib, hostList, ... }:
+{
+  pkgs,
+  lib,
+  hostList,
+  ...
+}:
 
 let
   nixosHosts = lib.filter (h: h.type == "nixos") hostList;
