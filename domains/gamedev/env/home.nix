@@ -54,7 +54,6 @@ in
       NIX_LD_LIBRARY_PATH = lib.mkForce "${bevyLdPath}:\${NIX_LD_LIBRARY_PATH:+:$NIX_LD_LIBRARY_PATH}";
       NIX_LD = lib.mkForce "${pkgs.stdenv.cc.bintools.dynamicLinker}";
       PKG_CONFIG_PATH = lib.mkForce "${lib.makeSearchPath "lib/pkgconfig" bevyLibs}:${lib.makeSearchPath "share/pkgconfig" bevyLibs}:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig:\${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}";
-      RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C link-arg=-Wl,-rpath,${rustRpath}:${hostLdPath}";
       CARGO_BUILD_RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C link-arg=-Wl,-rpath,${rustRpath}:${hostLdPath}";
       RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
       SCCACHE_DIR = "${config.home.homeDirectory}/.cache/sccache";
