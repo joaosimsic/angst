@@ -38,15 +38,7 @@
         };
       sharedPkgs = pkgsFor "x86_64-linux";
 
-      importToolchain =
-        path: fullArgs:
-        let
-          f = import path;
-          fArgs = builtins.functionArgs f;
-          filtered =
-            if fArgs ? __unfixed__ then fullArgs else lib.filterAttrs (n: _: builtins.hasAttr n fArgs) fullArgs;
-        in
-        f filtered;
+      importToolchain = import ./lib/toolchain-import.nix { inherit lib; };
 
       _sharedRawFiles = builtins.attrNames (
         lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "default.nix") (
@@ -58,13 +50,11 @@
           f:
           let
             name = lib.removeSuffix ".nix" f;
-            system = "x86_64-linux";
-            fenixPkgs = inputs.fenix.packages.${system};
+            fenixPkgs = inputs.fenix.packages.x86_64-linux;
             fullArgs = {
               inherit lib;
               pkgs = sharedPkgs;
               fenix = fenixPkgs;
-              inherit system;
             };
           in
           {

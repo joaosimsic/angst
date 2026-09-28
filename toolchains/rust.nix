@@ -61,15 +61,30 @@ let
     if stableToolchain == null then
       null
     else
-      pkgs.runCommand "rust-stable-1.95.0-wrappers" { } ''
-        mkdir -p $out/bin
-        for bin in cargo rustc rustdoc clippy-driver cargo-clippy cargo-fmt rustfmt rust-analyzer; do
-          if [ -e ${stableToolchain}/bin/$bin ]; then
-            ln -s ${stableToolchain}/bin/$bin $out/bin/$bin-stable
+      pkgs.runCommand "rust-stable-1.95.0-wrappers"
+        {
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+        }
+        ''
+          mkdir -p $out/bin
+          makeWrapper ${stableToolchain}/bin/rustc $out/bin/rustc-stable --add-flags "--sysroot ${stableToolchain}"
+          makeWrapper ${stableToolchain}/bin/rustdoc $out/bin/rustdoc-stable --add-flags "--sysroot ${stableToolchain}"
+          makeWrapper ${stableToolchain}/bin/clippy-driver $out/bin/clippy-driver-stable --add-flags "--sysroot ${stableToolchain}"
+          makeWrapper ${stableToolchain}/bin/cargo $out/bin/cargo-stable --set RUSTC ${stableToolchain}/bin/rustc
+          if [ -e ${stableToolchain}/bin/cargo-clippy ]; then
+            makeWrapper ${stableToolchain}/bin/cargo-clippy $out/bin/cargo-clippy-stable --set RUSTC ${stableToolchain}/bin/rustc
           fi
-        done
-        echo -n ${stableToolchain} > $out/stable-toolchain-path
-      '';
+          if [ -e ${stableToolchain}/bin/cargo-fmt ]; then
+            ln -s ${stableToolchain}/bin/cargo-fmt $out/bin/cargo-fmt-stable
+          fi
+          if [ -e ${stableToolchain}/bin/rustfmt ]; then
+            ln -s ${stableToolchain}/bin/rustfmt $out/bin/rustfmt-stable
+          fi
+          if [ -e ${stableToolchain}/bin/rust-analyzer ]; then
+            ln -s ${stableToolchain}/bin/rust-analyzer $out/bin/rust-analyzer-stable
+          fi
+          echo -n ${stableToolchain} > $out/stable-toolchain-path
+        '';
 in
 if fenix == null then
   mkToolchain {

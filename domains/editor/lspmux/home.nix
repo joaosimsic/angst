@@ -63,7 +63,7 @@ in
         Restart = "on-failure";
         RestartSec = "5s";
         Environment = [
-          "PATH=/home/joao/.cargo/bin:/home/joao/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          "PATH=/home/joao/.nix-profile/bin:/home/joao/.local/bin:/home/joao/.cargo/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         ];
         PassEnvironment = [
           "PATH"

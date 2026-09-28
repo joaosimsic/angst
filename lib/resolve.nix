@@ -28,15 +28,7 @@ let
       builtins.readDir _toolchainDir
     )
   );
-  _importToolchain =
-    path: fullArgs:
-    let
-      f = import path;
-      fArgs = builtins.functionArgs f;
-      filtered =
-        if fArgs ? __unfixed__ then fullArgs else lib.filterAttrs (n: _: builtins.hasAttr n fArgs) fullArgs;
-    in
-    f filtered;
+  _importToolchain = import ./toolchain-import.nix { inherit lib; };
   _fenixPkgs =
     if inputs ? fenix && builtins.hasAttr system inputs.fenix.packages then
       inputs.fenix.packages.${system}
@@ -52,7 +44,7 @@ let
           let
             name = lib.removeSuffix ".nix" f;
             fullArgs = {
-              inherit lib pkgs system;
+              inherit lib pkgs;
               fenix = _fenixPkgs;
             };
           in
