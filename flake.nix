@@ -9,6 +9,11 @@
 
     impermanence.url = "github:nix-community/impermanence";
 
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nixGL = {
       url = "github:nix-community/nixGL";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -33,6 +38,8 @@
         };
       sharedPkgs = pkgsFor "x86_64-linux";
 
+      importToolchain = import ./lib/toolchain-import.nix { inherit lib; };
+
       _sharedRawFiles = builtins.attrNames (
         lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "default.nix") (
           builtins.readDir ./toolchains
@@ -43,13 +50,16 @@
           f:
           let
             name = lib.removeSuffix ".nix" f;
+            fenixPkgs = inputs.fenix.packages.x86_64-linux;
+            fullArgs = {
+              inherit lib;
+              pkgs = sharedPkgs;
+              fenix = fenixPkgs;
+            };
           in
           {
             inherit name;
-            value = import (./toolchains + "/${f}") {
-              inherit lib;
-              pkgs = sharedPkgs;
-            };
+            value = importToolchain (./toolchains + "/${f}") fullArgs;
           }
         ) _sharedRawFiles
       );

@@ -73,6 +73,15 @@ let
       ;
   };
 
+  checkRust = import ./rust.nix {
+    inherit
+      pkgs
+      lib
+      self
+      hostList
+      ;
+  };
+
   checkProjectsPipeline = import ./projects-pipeline.nix {
     inherit pkgs runtime;
   };
@@ -163,6 +172,7 @@ in
   secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;
   check-treesitter = checkTreesitter;
+  check-rust = checkRust;
   check-tex = checkTex;
   check-session-env = checkSessionEnv;
   check-session-usability = checkSessionUsability;

@@ -28,6 +28,12 @@ let
       builtins.readDir _toolchainDir
     )
   );
+  _importToolchain = import ./toolchain-import.nix { inherit lib; };
+  _fenixPkgs =
+    if inputs ? fenix && builtins.hasAttr system inputs.fenix.packages then
+      inputs.fenix.packages.${system}
+    else
+      null;
   _tcIndex =
     if tcIndexOverride != null then
       tcIndexOverride
@@ -37,10 +43,14 @@ let
           f:
           let
             name = lib.removeSuffix ".nix" f;
+            fullArgs = {
+              inherit lib pkgs;
+              fenix = _fenixPkgs;
+            };
           in
           {
             inherit name;
-            value = import (_toolchainDir + "/${f}") { inherit lib pkgs; };
+            value = _importToolchain (_toolchainDir + "/${f}") fullArgs;
           }
         ) _rawFiles
       );
