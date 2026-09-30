@@ -55,6 +55,7 @@
   };
   projects = [
     "agent"
+    "box"
     "intelligence/backend"
     "intelligence/frontend"
   ];

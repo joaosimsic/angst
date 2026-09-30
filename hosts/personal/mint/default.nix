@@ -77,6 +77,7 @@
     "Throughput-Releases"
     "vault"
     "TCC"
+    "box"
     "intelligence/backend"
     "intelligence/frontend"
   ];
