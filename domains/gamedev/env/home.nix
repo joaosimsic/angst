@@ -47,6 +47,7 @@ in
         mold
         sccache
         pkg-config
+        dioxus-cli
       ]
       ++ bevyLibs;
 
