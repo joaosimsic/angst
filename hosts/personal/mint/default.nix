@@ -8,6 +8,7 @@
     "base"
     "desktop"
     "development"
+    "design"
     "embedded"
     "vm"
     "game-dev"
