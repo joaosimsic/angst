@@ -22,6 +22,9 @@ hm host="nixos" user="joao":
 hm-switch host="":
     @if [ -n "{{host}}" ]; then NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake .#{{host}} --impure; else NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake . --impure; fi
 
+install-paper:
+    NIXPKGS_ALLOW_UNFREE=1 nix profile install .#paper-desktop --impure
+
 analyze:
     nix run .#analyze -- --output analysis.md
 

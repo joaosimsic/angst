@@ -107,6 +107,18 @@ let
         ;
     };
 
+  representativeStore =
+    if representative != null then
+      mkStore {
+        inherit (profilesFor representative) enabled;
+        profiles = representative.profiles or [ ];
+        editorLsp = representative.scan.editorLsp or { };
+        env = representative.env or { };
+        browser = representative.browser or null;
+      }
+    else
+      null;
+
   mkHomeCfg =
     {
       host,
@@ -224,11 +236,10 @@ let
         overrideTheme = builtins.head (
           builtins.filter (n: n != r.theme) (builtins.attrNames r.scan.themes.themes)
         );
-        # Hermetic test: exclude floating-network packages (e.g. design.paper
-        # AppImage from download.paper.design) so theme-override-test never
-        # fails on upstream hash drift. Real hosts still build paper.
-        isTestNetworkExcluded = e: e.category == "design" && e.name == "paper";
-        testEnabled = builtins.filter (e: !isTestNetworkExcluded e) p.enabled;
+        # Floating-network packages (e.g. the design.paper AppImage) are
+        # installed on-demand via packages.paper-desktop, not part of any home
+        # activation, so hermetic checks never hit upstream hash drift.
+        testEnabled = p.enabled;
       in
       {
         "${r.username}" = mkHomeCfg {
@@ -288,6 +299,7 @@ in
     hostList
     nixosHosts
     representative
+    representativeStore
     defaultSystem
     pkgs
     profilesFor
