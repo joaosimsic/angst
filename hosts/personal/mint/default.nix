@@ -86,4 +86,9 @@
     "opencode-go-key"
     "cursor-api-key"
   ];
+  home =
+    { lib, ... }:
+    {
+      domains.notifications.enable = lib.mkForce false;
+    };
 }
