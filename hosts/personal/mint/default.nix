@@ -74,6 +74,7 @@
     "datapath"
     "llm-ruler"
     "agent"
+    "horror"
     "Throughput"
     "Throughput-Releases"
     "vault"
