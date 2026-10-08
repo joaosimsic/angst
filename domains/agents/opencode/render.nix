@@ -113,6 +113,10 @@ let
     {
       "$schema" = "https://opencode.ai/config.json";
       model = "opencode-go/deepseek-v4-pro";
+      compaction = {
+        auto = true;
+        reserved = 10000;
+      };
       provider = {
         opencode-go = {
           options = {
@@ -121,6 +125,18 @@ let
         };
       };
       lsp = lspWithDisabled;
+      command = {
+        caveman = {
+          description = "Caveman voice: /caveman toggles on/off, or lite|full|ultra|off";
+          template = ''
+            Caveman control. Argument: "$ARGUMENTS"
+
+            The caveman plugin already applied the mode.
+            Reply with exactly one line using the Caveman level from your system instructions:
+            Caveman level: <level>
+          '';
+        };
+      };
     }
     // lib.optionalAttrs (mcpServers != { }) { mcp = mcpServers; }
   );
