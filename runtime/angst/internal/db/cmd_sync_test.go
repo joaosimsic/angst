@@ -57,7 +57,7 @@ func TestPostgresPasswordUsesConnectionString(t *testing.T) {
 	if strings.Contains(out, "password =") {
 		t.Fatalf("output must not contain `password =`:\n%s", out)
 	}
-	if !strings.Contains(out, `connection_string = "postgresql://bob:s3cret@db.local:5432/app"`) {
+	if !strings.Contains(out, `connection_string = "postgresql://bob:s3cret@db.local:5432/app"`) { // trufflehog:ignore
 		t.Fatalf("missing expected postgresql URL:\n%s", out)
 	}
 	if !strings.Contains(out, `driver = "postgres"`) {
@@ -71,7 +71,7 @@ func TestPasswordSpecialCharsEncoded(t *testing.T) {
 		name: "my-pg",
 		conn: connection{Type: "postgres", Host: "h", Database: "d", Username: "u", Password: "p@ss/w:rd?x&y foo"},
 	}})
-	want := `postgresql://u:p%40ss%2Fw%3Ard%3Fx%26y%20foo@h:5432/d`
+	want := `postgresql://u:p%40ss%2Fw%3Ard%3Fx%26y%20foo@h:5432/d` // trufflehog:ignore
 	if !strings.Contains(out, want) {
 		t.Fatalf("want %q in:\n%s", want, out)
 	}
@@ -111,7 +111,7 @@ func TestAllDriversWithPassword(t *testing.T) {
 		`driver = "mysql"`,
 		`red = { connection_string = "postgresql://`,
 		`cock = { connection_string = "postgresql://`,
-		`ora = { connection_string = "jdbc:oracle:thin:u/p@//h:1521/d"`,
+		`ora = { connection_string = "jdbc:oracle:thin:u/p@//h:1521/d"`, // trufflehog:ignore
 		`driver = "oracle"`,
 		`lite = { connection_string = "sqlite:///tmp/a.db"`,
 		`duck = { connection_string = "duckdb:///tmp/a.duckdb"`,
@@ -151,13 +151,13 @@ func TestDefaultPorts(t *testing.T) {
 		{slug: scopedSlug{raw: "p/custom"}, name: "custom", conn: connection{Type: "postgres", Host: "h", Database: "d", Username: "u", Password: "p", Port: intPtr(9999)}},
 	})
 	for _, want := range []string{
-		"postgresql://u:p@h:5432/d",
+		"postgresql://u:p@h:5432/d", // trufflehog:ignore
 		"mysql://u:p@h:3306/d",
-		"jdbc:oracle:thin:u/p@//h:1521/d",
-		"postgresql://u:p@h:5439/d",
-		"postgresql://u:p@h:26257/d",
+		"jdbc:oracle:thin:u/p@//h:1521/d", // trufflehog:ignore
+		"postgresql://u:p@h:5439/d",       // trufflehog:ignore
+		"postgresql://u:p@h:26257/d",      // trufflehog:ignore
 		`np = { host = "h", port = 3306,`,
-		"postgresql://u:p@h:9999/d",
+		"postgresql://u:p@h:9999/d", // trufflehog:ignore
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("want %q in:\n%s", want, out)
@@ -170,7 +170,7 @@ func TestDefaultFlagPreservedNoAutoDefault(t *testing.T) {
 		{slug: scopedSlug{raw: "p/a"}, name: "a", conn: connection{Type: "postgres", Host: "h", Database: "d", Username: "u", Password: "p", Default: true}},
 		{slug: scopedSlug{raw: "p/b"}, name: "b", conn: connection{Type: "postgres", Host: "h", Database: "d", Username: "u", Password: "p"}},
 	})
-	if !strings.Contains(out, `a = { connection_string = "postgresql://u:p@h:5432/d", driver = "postgres", default = true }`) {
+	if !strings.Contains(out, `a = { connection_string = "postgresql://u:p@h:5432/d", driver = "postgres", default = true }`) { // trufflehog:ignore
 		t.Fatalf("default flag lost:\n%s", out)
 	}
 	bLine := ""
