@@ -7,7 +7,10 @@
 
 {
   config = lib.mkIf config.domains.agents.opencode.enable {
-    home.packages = [ pkgs.opencode ];
+    home.packages = [
+      pkgs.opencode
+      pkgs.rtk
+    ];
 
     xdg.configFile = import ./skills.nix { inherit lib pkgs; };
 
