@@ -11,14 +11,20 @@
 
 let
   pname = "paper-desktop";
-  version = "0.5.13";
+  version = "0.5.15";
   src = fetchurl {
     url = "https://download.paper.design/linux/appImage";
-    hash = "sha256-RRxNXQ8NStBTNkUvD02BjyPSNt9hhKUftYRpW/Cg0vs=";
+    hash = "sha256-TxqHdvjFgDt4dSoFES5TC42+5dbRSMQZKXxF0iqjlPs=";
   };
+  appdir = appimageTools.extract { inherit pname version src; };
 in
 appimageTools.wrapType2 {
   inherit pname version src;
+
+  extraInstallCommands = ''
+    mkdir -p "$out/share/icons"
+    cp -r ${appdir}/usr/share/icons/hicolor "$out/share/icons/"
+  '';
 
   extraPkgs =
     pkgs: with pkgs; [

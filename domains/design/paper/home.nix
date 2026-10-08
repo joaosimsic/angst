@@ -26,6 +26,22 @@ in
             "x-scheme-handler/claude-cli" = "claude-code-url-handler.desktop";
           };
         };
+
+        xdg.desktopEntries.paper-desktop = {
+          name = "Paper";
+          genericName = "Design Tool";
+          comment = "Paper Desktop – connected canvas (paper.design)";
+          exec = "${config.home.homeDirectory}/.nix-profile/bin/paper-desktop %U";
+          icon = "paper-desktop";
+          categories = [
+            "Graphics"
+            "Development"
+          ];
+          mimeType = [ "x-scheme-handler/paper" ];
+          startupNotify = true;
+          terminal = false;
+          settings.StartupWMClass = "Paper";
+        };
       }
       (lib.mkIf isDark {
         dconf.settings."org/gnome/desktop/interface" = {
