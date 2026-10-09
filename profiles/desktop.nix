@@ -8,6 +8,7 @@
     "wm.i3"
     "bar.i3status"
     "browser.firefox"
+    "chat.discord"
     "display.gpu"
     "kernel.graphical"
     "kernel.cursor"
