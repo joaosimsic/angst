@@ -10,6 +10,7 @@
     "development"
     "embedded"
     "game-dev"
+    "gaming"
     "office"
   ];
   toolchains = "*";
