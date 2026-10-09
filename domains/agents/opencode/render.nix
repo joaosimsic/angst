@@ -98,15 +98,6 @@ let
         }
       else
         null;
-    vm =
-      if (store.hasVm or false) then
-        {
-          type = "remote";
-          url = "http://localhost:8765/mcp";
-          enabled = true;
-        }
-      else
-        null;
   };
 
   opencodeConfig = builtins.toJSON (

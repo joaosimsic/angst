@@ -58,6 +58,7 @@ jobs:
           - eval-all
           - check-session-env
           - check-session-usability
+          - check-agent-project-config
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main

@@ -18,7 +18,7 @@ in
   formatter.${defaultSystem} = pkgs.nixfmt;
 
   lib = {
-    inherit (render) renderDomainOutputsFor renderDomainOutputFor;
+    inherit (render) renderDomainOutputsFor renderDomainOutputFor renderProjectOutputs;
     themeLint =
       mkChecks.themeLint or (import ../../checks/theme {
         inherit lib themesLib;

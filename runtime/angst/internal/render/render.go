@@ -155,6 +155,19 @@ func Render(args []string) int {
 		return exitError
 	}
 
+	projectOut, err := cmd.OutputRaw("nix", "eval", repoRoot+"#lib.renderProjectOutputs",
+		"--apply", "x: builtins.toJSON x", "--raw")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: nix eval project outputs failed\n")
+		return exitError
+	}
+	var projectOutputs []output
+	if err := json.Unmarshal(projectOut, &projectOutputs); err != nil {
+		fmt.Fprintf(os.Stderr, "error: could not parse project render output\n")
+		return exitError
+	}
+	outputs = append(outputs, projectOutputs...)
+
 	for _, o := range outputs {
 		if o.Path == "" {
 			continue
@@ -204,6 +217,11 @@ func uniqueDirs(outputs []output) []string {
 	seen := map[string]bool{}
 	var out []string
 	for _, o := range outputs {
+		// Only domain config outputs get a generated .gitignore; repo-root
+		// project outputs (e.g. opencode.json) stay tracked.
+		if !strings.HasPrefix(o.Path, "domains/") {
+			continue
+		}
 		d := paths.SubDir(o.Path, 4)
 		if !seen[d] {
 			seen[d] = true

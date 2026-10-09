@@ -78,7 +78,7 @@ pkgs.runCommand "check-projects-pipeline"
         fail "vault encrypt --dir did not create $s.tar.age"
       elif ! grep -q 'age-encryption.org/v1' "$store/$s.tar.age"; then
         fail "$s.tar.age is not age-encrypted"
-      elif grep -qE '"name"|"repo"|://|^[A-Za-z_][A-Za-z0-9_]*=' "$store/$s.tar.age"; then
+      elif grep -qE "''${personal_name}|''${work_name}|example\.invalid|PIPELINE_|secret-one|secret-two" "$store/$s.tar.age"; then
         fail "$s.tar.age leaks plaintext name/repo/secret content"
       else
         ok "$s encrypted to age tarball (no plaintext leak)"
