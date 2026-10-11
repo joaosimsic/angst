@@ -126,6 +126,7 @@ in
     persist = {
       root = "/persist";
       homeDirs = [ ];
+      homeFiles = [ ];
       enable = false;
     }
     // (decl.persist or { });

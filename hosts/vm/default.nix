@@ -73,6 +73,7 @@
     root = "/persist";
     homeDirs = [
       ".ssh"
+      ".mozilla"
       ".local/share"
       ".config"
       ".cache"

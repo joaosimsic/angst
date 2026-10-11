@@ -29,18 +29,36 @@
 
   fileSystems = {
     "/" = {
-      device = "/dev/disk/by-uuid/d61dd677-665b-4600-afac-7cdc169e043b";
-      fsType = "ext4";
+      device = "tmpfs";
+      fsType = "tmpfs";
+      options = [
+        "defaults"
+        "size=4G"
+        "mode=755"
+      ];
     };
     "/home" = {
       device = "/dev/disk/by-uuid/9577720e-6962-434c-a0a2-39300244b8ea";
       fsType = "ext4";
       neededForBoot = true;
     };
+    "/home/joao" = {
+      device = "tmpfs";
+      fsType = "tmpfs";
+      options = [
+        "defaults"
+        "size=8G"
+        "mode=0700"
+        "uid=1000"
+        "gid=100"
+      ];
+      neededForBoot = true;
+    };
     "/nix" = {
       device = "/home/nix";
       fsType = "none";
       options = [ "bind" ];
+      neededForBoot = true;
     };
     "/var/lib/ollama" = {
       device = "/home/ollama_data";

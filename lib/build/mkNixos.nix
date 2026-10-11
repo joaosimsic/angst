@@ -126,6 +126,7 @@ inputs.nixpkgs.lib.nixosSystem {
           inherit lib;
           inherit (host) persist username;
           persistDirs = secrets.persistDirs ++ lib.optionals (host.projects != [ ]) [ "projects" ];
+          persistFiles = host.persist.homeFiles;
         })
       ]
     else

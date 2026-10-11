@@ -85,14 +85,42 @@
 
   persist = {
     enable = true;
-    root = "/persist";
+    root = "/home/persist";
     homeDirs = [
+      ".ssh"
       ".mozilla"
+      ".cursor"
+      ".docker"
+      ".kube"
+      ".arduino15"
+      "Arduino"
       ".config/google-chrome"
       ".config/easyeffects"
+      ".config/discord"
+      ".config/libreoffice"
+      ".config/PrismLauncher"
+      ".config/containers"
+      ".config/composer"
+      ".config/git"
+      ".config/btop"
       ".local/share/easyeffects"
+      ".local/share/Steam"
+      ".local/share/PrismLauncher"
+      ".local/share/opencode"
+      ".local/share/nvim"
+      ".local/share/nushell"
+      ".local/share/containers"
+      ".local/share/posting"
       ".local/share/keyrings"
-      ".arduino15"
+      ".local/state/opencode"
+      ".local/state/nvim"
+      ".local/state/nix"
+      ".local/state/wireplumber"
+      ".local/state/lazygit"
+      ".local/state/yazi"
+    ];
+    homeFiles = [
+      ".cargo/credentials.toml"
     ];
   };
   projects = [
