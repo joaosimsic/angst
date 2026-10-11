@@ -26,18 +26,6 @@ let
         }
         + "\n";
     }
-    {
-      path = ".cursor/mcp.json";
-      text =
-        builtins.toJSON {
-          mcpServers = {
-            vm = {
-              inherit (vmMcp) url;
-            };
-          };
-        }
-        + "\n";
-    }
   ];
 in
 rec {

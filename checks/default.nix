@@ -113,14 +113,6 @@ let
       ;
   };
 
-  checkAgentProjectConfig = import ./agent-project-config.nix {
-    inherit
-      pkgs
-      self
-      render
-      ;
-  };
-
   domainHealth = import ./health {
     inherit
       lib
@@ -184,7 +176,6 @@ in
   check-tex = checkTex;
   check-session-env = checkSessionEnv;
   check-session-usability = checkSessionUsability;
-  check-agent-project-config = checkAgentProjectConfig;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop = lintDesktop;
   lint-shell = lintShell;
