@@ -17,5 +17,10 @@
     stateVersion = "24.05";
   };
 
-  fonts.fontconfig.enable = true;
+  fonts.fontconfig = {
+    enable = true;
+    antialiasing = true;
+    hinting = "full";
+    subpixelRendering = "rgb";
+  };
 }

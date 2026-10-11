@@ -89,6 +89,8 @@
     homeDirs = [
       ".mozilla"
       ".config/google-chrome"
+      ".config/easyeffects"
+      ".local/share/easyeffects"
       ".local/share/keyrings"
       ".arduino15"
     ];
