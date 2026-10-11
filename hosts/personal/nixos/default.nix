@@ -28,6 +28,7 @@
 
   nixos = {
     keyboardLayout = "br-abnt2";
+    virtualisation.docker.daemon.settings.data-root = "/home/docker-data";
   };
   home = { };
   env = {
@@ -85,7 +86,7 @@
 
   persist = {
     enable = true;
-    root = "/home/persist";
+    root = "/persist";
     homeDirs = [
       ".ssh"
       ".mozilla"
@@ -98,14 +99,11 @@
       ".config/easyeffects"
       ".config/discord"
       ".config/libreoffice"
-      ".config/PrismLauncher"
       ".config/containers"
       ".config/composer"
       ".config/git"
       ".config/btop"
       ".local/share/easyeffects"
-      ".local/share/Steam"
-      ".local/share/PrismLauncher"
       ".local/share/opencode"
       ".local/share/nvim"
       ".local/share/nushell"

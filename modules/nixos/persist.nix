@@ -16,7 +16,6 @@
         "/var/lib/nixos"
         "/var/lib/systemd/coredump"
         "/var/lib/NetworkManager"
-        "/var/lib/docker"
         "/var/lib/alsa"
         "/etc/ssh"
         "/etc/NetworkManager/system-connections"

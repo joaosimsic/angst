@@ -10,6 +10,8 @@ let
     angstShell
     hmSwitchTool
     pkgs
+    hostDefs
+    lib
     ;
 
   mkApp = program: {
@@ -39,6 +41,9 @@ in
     lint-shell = mkApp "${(runtime.apps.lint-shell { system = defaultSystem; }).bin}";
     analyze = mkApp "${runtime.apps.analyze.bin}";
     analyze-to-file = mkApp "${runtime.apps.analyze-to-file.bin}";
+  }
+  // lib.optionalAttrs (hostDefs ? nixos) {
+    install-nixos = mkApp "${(runtime.apps.install-nixos { host = hostDefs.nixos; }).bin}";
   }
   // (
     if representative != null then

@@ -38,7 +38,7 @@
       ];
     };
     "/home" = {
-      device = "/dev/disk/by-uuid/9577720e-6962-434c-a0a2-39300244b8ea";
+      device = "/dev/disk/by-label/home";
       fsType = "ext4";
       neededForBoot = true;
     };
@@ -52,6 +52,11 @@
         "uid=1000"
         "gid=100"
       ];
+      neededForBoot = true;
+    };
+    "/persist" = {
+      device = "/dev/disk/by-label/persist";
+      fsType = "ext4";
       neededForBoot = true;
     };
     "/nix" = {
@@ -77,6 +82,14 @@
 
   swapDevices = [
     { device = "/dev/disk/by-uuid/4ea63f7b-5e3b-4ab7-a9bf-75742248aa2b"; }
+  ];
+
+  systemd.tmpfiles.rules = [
+    "d /home/joao/.local/share 0755 joao users -"
+    "d /home/steam 0755 joao users -"
+    "d /home/prism 0755 joao users -"
+    "L+ /home/joao/.local/share/Steam - - - - /home/steam"
+    "L+ /home/joao/.local/share/PrismLauncher - - - - /home/prism"
   ];
 
   hardware = {
