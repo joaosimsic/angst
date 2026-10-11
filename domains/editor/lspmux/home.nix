@@ -13,12 +13,13 @@ let
   hasRust = (store.editorLsp or { }) ? rust;
   hasGo = (store.editorLsp or { }) ? gopls;
   rustAnalyzerMux = pkgs.writeShellScriptBin "rust-analyzer-mux" ''
-    exec ${pkgs.lspmux}/bin/lspmux client --server-path ${pkgs.rust-analyzer}/bin/rust-analyzer "$@"
+    exec ${pkgs.lspmux}/bin/lspmux client "$@"
   '';
 in
 {
   config = lib.mkIf cfg.enable {
     home = {
+      sessionPath = lib.mkIf (hasRust || hasGo) [ "$HOME/.local/bin" ];
       packages =
         with pkgs;
         [ lspmux ] ++ lib.optionals hasGo [ gopls ] ++ lib.optionals hasRust [ rustAnalyzerMux ];
@@ -26,7 +27,7 @@ in
         executable = true;
         text = ''
           #!${pkgs.bash}/bin/bash
-          exec ${pkgs.lspmux}/bin/lspmux client --server-path ${pkgs.rust-analyzer}/bin/rust-analyzer "$@"
+          exec ${pkgs.lspmux}/bin/lspmux client "$@"
         '';
       };
       file.".local/bin/gopls" = lib.mkIf hasGo {
@@ -48,7 +49,7 @@ in
       listen = "${socket}"
       connect = "${socket}"
       log_filters = "info"
-      pass_environment = ["*", "!WINDOWID", "!ALACRITTY_*", "!KITTY_WINDOW_ID", "!DESKTOP_STARTUP_ID"]
+      pass_environment = ["*", "!WINDOWID", "!ALACRITTY_*", "!KITTY_WINDOW_ID", "!DESKTOP_STARTUP_ID", "!CMD_DURATION_MS", "!ZELLIJ_*", "!NVIM*", "!VIM*", "!MYVIMRC", "!OPENCODE*", "!AGENT", "!_", "!SHLVL", "!OLDPWD"]
     '';
 
     systemd.user.services.lspmux = lib.mkIf hasRust {
@@ -62,12 +63,11 @@ in
         Restart = "on-failure";
         RestartSec = "5s";
         Environment = [
-          "PATH=${pkgs.rust-analyzer}/bin:${pkgs.cargo}/bin:${pkgs.rustc}/bin:/home/joao/.cargo/bin:/home/joao/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          "RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}"
+          "PATH=/home/joao/.nix-profile/bin:/home/joao/.local/bin:/home/joao/.cargo/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         ];
         PassEnvironment = [
           "PATH"
-          "LD_LIBRARY_PATH"
+          "PKG_CONFIG_PATH"
           "RUST_SRC_PATH"
           "CARGO_HOME"
           "RUSTUP_HOME"

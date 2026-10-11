@@ -1,14 +1,11 @@
 bootstrap-secrets host="nixos":
     angst bootstrap-secrets --host {{host}}
 
-disko host="nixos":
-    sudo nix run github:nix-community/disko -- --mode disko hosts/{{host}}/disk.nix
+install-nixos *args:
+    sudo nix run .#install-nixos -- {{args}}
 
-hardware host="nixos":
-    nixos-generate-config --show-hardware-config > hosts/{{host}}/hardware.nix
-
-bootstrap-disk host="nixos": disko hardware
-    @echo "Disk and hardware bootstrapped for {{host}}."
+hardware path="personal/nixos":
+    nixos-generate-config --show-hardware-config > hosts/{{path}}/hardware.nix
 
 build host="nixos":
     NIXPKGS_ALLOW_UNFREE=1 nix build .#nixosConfigurations.{{host}} --impure
@@ -16,11 +13,14 @@ build host="nixos":
 switch host="nixos":
     sudo nixos-rebuild switch --flake .#{{host}}
 
-hm host="nixos" user="joao":
-    NIXPKGS_ALLOW_UNFREE=1 nix build .#homeConfigurations."{{user}}@{{host}}".activationPackage --impure
+hm host="nixos":
+    NIXPKGS_ALLOW_UNFREE=1 nix build .#homeConfigurations.{{host}}.activationPackage --impure
 
 hm-switch host="":
     @if [ -n "{{host}}" ]; then NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake .#{{host}} --impure; else NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake . --impure; fi
+
+install-paper:
+    NIXPKGS_ALLOW_UNFREE=1 nix profile install .#paper-desktop --impure
 
 analyze:
     nix run .#analyze -- --output analysis.md

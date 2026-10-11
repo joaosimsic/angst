@@ -21,6 +21,10 @@ let
     lib.concatMap (h: map (id: "${h.type}/${h.hostname}\t${id}") (h.projects or [ ])) hostList
   );
 
+  dbRows = builtins.concatStringsSep "\n" (
+    lib.concatMap (h: map (id: "${h.type}/${h.hostname}\t${id}") (h.db or [ ])) hostList
+  );
+
   ftpRows = builtins.concatStringsSep "\n" (
     lib.concatMap (
       h:
@@ -54,21 +58,48 @@ pkgs.runCommand "check-projects-ftp-declared"
         echo "==> Checking host-declared projects resolve to an encrypted scope tarball..."
         count=0
         while IFS=$'\t' read -r hostname id; do
+          [ -z "$hostname" ] && continue
           count=$((count + 1))
-          if { [ -f "projects/personal.tar.age" ] && grep -q 'age-encryption.org/v1' "projects/personal.tar.age"; } ||
-            { [ -f "projects/work.tar.age" ] && grep -q 'age-encryption.org/v1' "projects/work.tar.age"; }; then
-            ok "$hostname declares projects/$id (a scope tarball is present and encrypted)"
+          if { [ -f "secrets/projects/personal.tar.age" ] && grep -q 'age-encryption.org/v1' "secrets/projects/personal.tar.age"; } ||
+            { [ -f "secrets/projects/work.tar.age" ] && grep -q 'age-encryption.org/v1' "secrets/projects/work.tar.age"; }; then
+            ok "$hostname declares projects/$id (scope tarball present and encrypted: secrets/projects)"
           else
-            fail "$hostname declares projects/$id but no encrypted projects/{personal,work}.tar.age exists"
+            fail "$hostname declares projects/$id but no encrypted secrets/projects/{personal,work}.tar.age exists"
           fi
         done <<'EOF'
     ${projRows}
     EOF
         [ "$count" -gt 0 ] || echo "No host-declared projects; nothing to check."
 
+        echo "==> Checking host-declared db slugs resolve to an encrypted scope tarball..."
+        count=0
+        while IFS=$'\t' read -r hostname id; do
+          [ -z "$hostname" ] && continue
+          count=$((count + 1))
+          # id is expected as scoped slug like personal/my-pg
+          scope=$(printf "%s" "$id" | cut -d/ -f1)
+          case "$scope" in
+            personal|work)
+              tar="secrets/db/$scope.tar.age"
+              if [ -f "$tar" ] && grep -q 'age-encryption.org/v1' "$tar"; then
+                ok "$hostname declares db/$id (scope tarball $tar present and encrypted)"
+              else
+                fail "$hostname declares db/$id but $tar is missing or not age-encrypted"
+              fi
+              ;;
+            *)
+              fail "$hostname declares db/$id with invalid scope (expected personal/ or work/ prefix)"
+              ;;
+          esac
+        done <<'EOF'
+    ${dbRows}
+    EOF
+        [ "$count" -gt 0 ] || echo "No host-declared db slugs; nothing to check."
+
         echo "==> Checking host-declared ftp mounts exist, are encrypted, and use a safe mountPoint..."
         count=0
         while IFS=$'\t' read -r hostname cfg mnt; do
+          [ -z "$hostname" ] && continue
           count=$((count + 1))
           case "$mnt" in
           "" | /* | *".."*)

@@ -16,5 +16,8 @@ __pycache__
 node_modules
 *.dec
 *.agekey
-projects/personal/
-projects/work/
+# vault staging dirs (plaintext) — tarballs are tracked as *.tar.age under secrets/
+secrets/projects/personal/
+secrets/projects/work/
+secrets/db/personal/
+secrets/db/work/

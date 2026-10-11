@@ -3,8 +3,6 @@
   lib,
   pkgs,
   themesLib,
-  inputs,
-  hostType,
   store,
   ...
 }:
@@ -22,28 +20,12 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       {
-        targets.genericLinux.nixGL = lib.mkIf (hostType != "nixos") {
-          packages =
-            let
-              isIntelX86 = pkgs.stdenv.hostPlatform.isx86_64;
-              patchedNixGL = builtins.toFile "nixGL-patched.nix" (
-                builtins.replaceStrings [ "kernel = null;" ] [ "" ] (
-                  builtins.readFile "${inputs.nixGL.outPath}/nixGL.nix"
-                )
-              );
-            in
-            pkgs.callPackage patchedNixGL (
-              {
-                nvidiaVersion = "470.256.02";
-                nvidiaHash = null;
-                nvidiaVersionFile = null;
-                enable32bits = isIntelX86;
-              }
-              // lib.optionalAttrs (!isIntelX86) { intel-media-driver = null; }
-            );
-          defaultWrapper = "nvidia";
-          installScripts = [ "nvidia" ];
-        };
+        assertions = [
+          {
+            assertion = !cfg.enable || config.domains.display.gpu.enable;
+            message = "domains.browser.firefox requires domains.display.gpu to be enabled";
+          }
+        ];
       }
       {
         programs.firefox = {

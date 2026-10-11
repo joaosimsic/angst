@@ -16,6 +16,7 @@
 - [ ] fix render md badge and move through zellij
 - [ ] add profiler, benchmark and assembly view for scratch plugin
 - [ ] move adapter to use new toolchain definitions
+- [ ] spring idea, pull the string until reach a file, then release it to return to where u first pulled. a quick recall
 
 # nu
 

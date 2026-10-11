@@ -71,7 +71,7 @@ let
       editorLsp = { };
     };
     monitors = { };
-    db = { };
+    db = [ ];
     sshAgent = { };
     username = "user";
     profiles = [ ];
@@ -107,17 +107,31 @@ let
         ;
     };
 
+  representativeStore =
+    if representative != null then
+      mkStore {
+        inherit (profilesFor representative) enabled;
+        profiles = representative.profiles or [ ];
+        editorLsp = representative.scan.editorLsp or { };
+        env = representative.env or { };
+        browser = representative.browser or null;
+      }
+    else
+      null;
+
   mkHomeCfg =
     {
       host,
       hmModules,
       themeOverride ? null,
       shellOverride ? null,
+      enabledOverride ? null,
     }:
     let
       p = profilesFor host;
+      effectiveEnabled = if enabledOverride != null then enabledOverride else p.enabled;
       store = mkStore {
-        inherit (p) enabled;
+        enabled = effectiveEnabled;
         profiles = host.profiles or [ ];
         editorLsp = host.scan.editorLsp or { };
         env = host.env or { };
@@ -222,6 +236,10 @@ let
         overrideTheme = builtins.head (
           builtins.filter (n: n != r.theme) (builtins.attrNames r.scan.themes.themes)
         );
+        # Floating-network packages (e.g. the design.paper AppImage) are
+        # installed on-demand via packages.paper-desktop, not part of any home
+        # activation, so hermetic checks never hit upstream hash drift.
+        testEnabled = p.enabled;
       in
       {
         "${r.username}" = mkHomeCfg {
@@ -231,7 +249,8 @@ let
 
         "${r.username}-theme-override-test" = mkHomeCfg {
           host = r;
-          hmModules = map enableModule p.enabled;
+          hmModules = map enableModule testEnabled;
+          enabledOverride = testEnabled;
           themeOverride = overrideTheme;
           shellOverride = "";
         };
@@ -280,6 +299,7 @@ in
     hostList
     nixosHosts
     representative
+    representativeStore
     defaultSystem
     pkgs
     profilesFor

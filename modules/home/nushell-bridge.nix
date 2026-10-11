@@ -16,7 +16,7 @@ let
     "NIX_LD"
   ];
 
-  rawLd = sessionVars.LD_LIBRARY_PATH or "";
+  rawLd = sessionVars.NIX_LD_LIBRARY_PATH or "";
   nixLdPath = lib.head (lib.splitString ":\\\${" rawLd);
 
 in

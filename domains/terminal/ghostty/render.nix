@@ -43,6 +43,8 @@ in
 
       font-family = ${fontFamily}
       font-size = 13
+      font-thicken = true
+      freetype-load-flags = hinting,no-force-autohint,no-monochrome,autohint,no-light
 
       adjust-underline-thickness = 100%
 

@@ -28,6 +28,12 @@ let
       builtins.readDir _toolchainDir
     )
   );
+  _importToolchain = import ./toolchain-import.nix { inherit lib; };
+  _fenixPkgs =
+    if inputs ? fenix && builtins.hasAttr system inputs.fenix.packages then
+      inputs.fenix.packages.${system}
+    else
+      null;
   _tcIndex =
     if tcIndexOverride != null then
       tcIndexOverride
@@ -37,10 +43,14 @@ let
           f:
           let
             name = lib.removeSuffix ".nix" f;
+            fullArgs = {
+              inherit lib pkgs;
+              fenix = _fenixPkgs;
+            };
           in
           {
             inherit name;
-            value = import (_toolchainDir + "/${f}") { inherit lib pkgs; };
+            value = _importToolchain (_toolchainDir + "/${f}") fullArgs;
           }
         ) _rawFiles
       );
@@ -88,7 +98,22 @@ in
       decl.password
         or "$6$7BqkEtUqOq/ylZb5$0dij1Cb/ykQJ8Vqt7SEJ7MMD77gn/ZW0LuLGo6tjU4e3rQcIyoH7q878EU2xXB9Suwh2bV/d/kpWeVl/nbsoe.";
     monitors = decl.monitors or { };
-    db = decl.db or { };
+    db =
+      let
+        raw = decl.db or [ ];
+        isList = builtins.isList raw;
+        isAttrs = builtins.isAttrs raw;
+      in
+      if isList then
+        raw
+      else if isAttrs && raw == { } then
+        [ ]
+      else if isAttrs && raw == { connections = { }; } then
+        [ ]
+      else if isAttrs then
+        throw "db: inline db.connections removed — use db = [\"personal/slug\" \"work/slug\" …] + vault tarball (secrets/db/<scope>.tar.age) with <slug>.json; see openwiki/secrets.md#db-store (got ${builtins.toJSON raw})"
+      else
+        throw "db: must be a list of scoped slugs like [\"personal/my-pg\" \"work/analytics\"], got ${builtins.typeOf raw}";
     profiles = decl.profiles or [ "base" ];
     toolchains = _toolchains;
     extraNixos = decl.nixos or { };
@@ -101,6 +126,7 @@ in
     persist = {
       root = "/persist";
       homeDirs = [ ];
+      homeFiles = [ ];
       enable = false;
     }
     // (decl.persist or { });

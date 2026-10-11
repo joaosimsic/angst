@@ -74,7 +74,15 @@ let
     };
   };
 
-  lspWithDisabled = (store.editorLsp or { }) // {
+  lspWithMux = lib.mapAttrs (
+    name: cfg:
+    if name == "rust" && (store.hasLspmux or false) then
+      cfg // { command = [ "rust-analyzer-mux" ]; }
+    else
+      cfg
+  ) (store.editorLsp or { });
+
+  lspWithDisabled = lspWithMux // {
     "php intelephense" = {
       disabled = true;
     };
@@ -90,21 +98,16 @@ let
         }
       else
         null;
-    vm =
-      if (store.hasVm or false) then
-        {
-          type = "remote";
-          url = "http://localhost:8765/mcp";
-          enabled = true;
-        }
-      else
-        null;
   };
 
   opencodeConfig = builtins.toJSON (
     {
       "$schema" = "https://opencode.ai/config.json";
       model = "opencode-go/deepseek-v4-pro";
+      compaction = {
+        auto = true;
+        reserved = 10000;
+      };
       provider = {
         opencode-go = {
           options = {
@@ -113,6 +116,18 @@ let
         };
       };
       lsp = lspWithDisabled;
+      command = {
+        caveman = {
+          description = "Caveman voice: /caveman toggles on/off, or lite|full|ultra|off";
+          template = ''
+            Caveman control. Argument: "$ARGUMENTS"
+
+            The caveman plugin already applied the mode.
+            Reply with exactly one line using the Caveman level from your system instructions:
+            Caveman level: <level>
+          '';
+        };
+      };
     }
     // lib.optionalAttrs (mcpServers != { }) { mcp = mcpServers; }
   );

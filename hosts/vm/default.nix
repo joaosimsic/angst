@@ -14,7 +14,7 @@
 
   monitors = { };
 
-  db.connections = { };
+  db = [ ];
   nixos = {
     keyboardLayout = "br-abnt2";
   };
@@ -73,6 +73,7 @@
     root = "/persist";
     homeDirs = [
       ".ssh"
+      ".mozilla"
       ".local/share"
       ".config"
       ".cache"

@@ -73,6 +73,15 @@ let
       ;
   };
 
+  checkRust = import ./rust.nix {
+    inherit
+      pkgs
+      lib
+      self
+      hostList
+      ;
+  };
+
   checkProjectsPipeline = import ./projects-pipeline.nix {
     inherit pkgs runtime;
   };
@@ -90,6 +99,19 @@ let
   secretScanHooks = import ./secret-scan-hooks.nix { inherit pkgs; };
 
   checkTex = import ./tex.nix { inherit pkgs lib; };
+
+  checkSessionEnv = import ./session-env.nix {
+    inherit pkgs lib self;
+  };
+
+  checkSessionUsability = import ./session-usability.nix {
+    inherit
+      pkgs
+      lib
+      self
+      hostList
+      ;
+  };
 
   domainHealth = import ./health {
     inherit
@@ -138,6 +160,7 @@ in
   check-password = checkPassword;
   check-secrets-encrypted = checkSecretsEncrypted.secrets;
   check-projects-encrypted = checkSecretsEncrypted.projects;
+  check-db-encrypted = checkSecretsEncrypted.db;
   check-ssh-keys = checkSecretsEncrypted.sshKeys;
   check-ftp-encrypted = checkSecretsEncrypted.ftp;
   check-vpn-encrypted = checkSecretsEncrypted.vpn;
@@ -149,7 +172,10 @@ in
   secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;
   check-treesitter = checkTreesitter;
+  check-rust = checkRust;
   check-tex = checkTex;
+  check-session-env = checkSessionEnv;
+  check-session-usability = checkSessionUsability;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop = lintDesktop;
   lint-shell = lintShell;

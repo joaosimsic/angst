@@ -7,6 +7,5 @@
     "http-client.posting"
     "git.projects"
     "editor.lspmux"
-    "design.paper"
   ];
 }

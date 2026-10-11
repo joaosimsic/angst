@@ -10,6 +10,7 @@
     "development"
     "embedded"
     "game-dev"
+    "gaming"
     "office"
   ];
   toolchains = "*";
@@ -23,9 +24,11 @@
     };
   };
 
-  db.connections = { };
+  db = [ "work/intelligence" ];
+
   nixos = {
     keyboardLayout = "br-abnt2";
+    virtualisation.docker.daemon.settings.data-root = "/home/docker-data";
   };
   home = { };
   env = {
@@ -85,14 +88,43 @@
     enable = true;
     root = "/persist";
     homeDirs = [
+      ".ssh"
       ".mozilla"
-      ".config/google-chrome"
-      ".local/share/keyrings"
+      ".cursor"
+      ".docker"
+      ".kube"
       ".arduino15"
+      "Arduino"
+      ".config/google-chrome"
+      ".config/easyeffects"
+      ".config/discord"
+      ".config/libreoffice"
+      ".config/containers"
+      ".config/composer"
+      ".config/git"
+      ".config/btop"
       ".config/vial"
+      ".local/share/easyeffects"
+      ".local/share/opencode"
+      ".local/share/nvim"
+      ".local/share/nushell"
+      ".local/share/containers"
+      ".local/share/posting"
+      ".local/share/keyrings"
+      ".local/state/opencode"
+      ".local/state/nvim"
+      ".local/state/nix"
+      ".local/state/wireplumber"
+      ".local/state/lazygit"
+      ".local/state/yazi"
+    ];
+    homeFiles = [
+      ".cargo/credentials.toml"
     ];
   };
   projects = [
+    "vault"
+    "llm-ruler"
     "angst"
     "agent"
     "intelligence/backend"

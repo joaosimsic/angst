@@ -169,9 +169,9 @@ Flags:
 
 Examples:
   angst vault encrypt secrets/              # encrypt files in-place
-  angst vault encrypt projects/ --dir       # tar + encrypt entire directory
+  angst vault encrypt secrets/projects/personal --dir --scope personal  # tar + encrypt vault dir
   angst vault decrypt secrets/              # decrypt all .age files
-  angst vault decrypt projects.tar.age --dir  # decrypt + untar
+  angst vault decrypt secrets/projects/personal.tar.age --dir --scope personal  # decrypt + untar
   angst vault status .                      # show encryption status
 `)
 }

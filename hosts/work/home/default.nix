@@ -22,6 +22,7 @@
     "conf"
     "make"
   ];
+  db = [ ];
   env = {
     EDITOR = "nvim";
   };
@@ -54,6 +55,7 @@
   };
   projects = [
     "agent"
+    "box"
     "intelligence/backend"
     "intelligence/frontend"
   ];

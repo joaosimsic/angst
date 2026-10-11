@@ -1,18 +1,50 @@
 local Logger = require("common.Logger")
-local LspTool = require("backend.shared.LspTool")
-
-local root_markers = { "Cargo.toml", ".git" }
 
 local logger = Logger.new("LSP")
 
+local function find_workspace_root(bufnr, on_dir)
+	local path = vim.api.nvim_buf_get_name(bufnr)
+	if path == "" then
+		return
+	end
+
+	local dir = vim.fs.dirname(path)
+	while dir do
+		local manifest = io.open(dir .. "/Cargo.toml", "r")
+		if manifest then
+			local text = manifest:read("a") or ""
+			manifest:close()
+			if text:match("%[workspace%]") then
+				on_dir(dir)
+				return
+			end
+		end
+		local parent = vim.fs.dirname(dir)
+		if parent == dir then
+			break
+		end
+		dir = parent
+	end
+
+	on_dir(vim.fs.root(path, { "Cargo.toml", ".git" }) or vim.fs.dirname(path))
+end
+
+local config
+
 ---@type Adapter
-return {
+config = {
 	filetypes = { "rust" },
 	lsp = "rust_analyzer",
-	lsp_cmd = { "rust-analyzer-mux" },
-	lsp_root_dir = LspTool.make_root_dir_finder(root_markers),
-	linter = "clippy",
-	linter_cmd = { "cargo-clippy" },
+	lsp_cmd = function()
+		if vim.fn.executable("lspmux") == 1 then
+			return { "lspmux", "client" }
+		end
+		logger:warn(function()
+			return string.format("failed to find lspmux, falling back to %s", config.lsp)
+		end)
+		return { "rust-analyzer" }
+	end,
+	lsp_root_dir = find_workspace_root,
 	formatter = "rustfmt",
 	treesitter = "rust",
 	lsp_settings = {
@@ -56,3 +88,5 @@ return {
 	compiler = "rustc",
 	compiler_cmd = { "sh", "-c", "rustc $FILE -o /tmp/scratch_out 2>&1 && /tmp/scratch_out" },
 }
+
+return config

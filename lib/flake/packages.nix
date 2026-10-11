@@ -6,9 +6,13 @@ let
   inherit (context)
     homeConfigurations
     representative
+    representativeStore
     defaultSystem
     runtime
     hmSwitchTool
+    pkgs
+    lib
+    themesLib
     ;
 in
 {
@@ -33,6 +37,28 @@ in
           }
         else
           { };
+
+      paperRaw = pkgs.callPackage ../../domains/design/paper/package.nix { };
+      paperBrowser =
+        if representativeStore != null then representativeStore.defaultBrowser else "firefox";
+      paperIsDark = if representative != null then (themesLib.get representative.theme).isDark else true;
+      paperDesktop = pkgs.symlinkJoin {
+        name = "paper-desktop-wrapped";
+        paths = [ paperRaw ];
+        buildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/paper-desktop \
+            --set BROWSER "${paperBrowser}" \
+            ${lib.optionalString paperIsDark ''--add-flags "--force-dark-mode --enable-features=WebUIDarkMode,WebContentsForceDark --ozone-platform-hint=x11" --set ELECTRON_OZONE_PLATFORM_HINT x11 --set GTK_THEME Adwaita:dark''} \
+            --run 'export XDG_DATA_DIRS="$HOME/.nix-profile/share:$HOME/.local/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"' \
+            --run 'export XDG_DATA_HOME="''${XDG_DATA_HOME:-$HOME/.local/share}"'
+        '';
+      };
     in
-    { hm-switch = hmSwitchTool; } // extra // hmPkgs;
+    {
+      hm-switch = hmSwitchTool;
+      paper-desktop = paperDesktop;
+    }
+    // extra
+    // hmPkgs;
 }

@@ -8,12 +8,14 @@
     "base"
     "desktop"
     "development"
+    "design"
     "embedded"
     "vm"
     "game-dev"
     "office"
   ];
   toolchains = "*";
+  db = [ "work/intelligence-metadata" ];
   env = {
     EDITOR = "nvim";
     BROWSER = "firefox";
@@ -58,21 +60,26 @@
     ];
   };
   ftp = {
-    # mounts = [
-    #   {
-    #     mountPoint = "ftp/server";
-    #     remotePath = "/httpdocs";
-    #
-    #   }
-    # ];
+    mounts = [
+      {
+        mountPoint = "ftp/server";
+        remotePath = "/httpdocs";
+
+      }
+    ];
   };
   projects = [
     "angst"
     "advent-of-code"
     "datapath"
+    "llm-ruler"
     "agent"
-    "warfront"
+    "horror"
+    "Throughput"
+    "Throughput-Releases"
+    "vault"
     "TCC"
+    "box"
     "intelligence/backend"
     "intelligence/frontend"
   ];
@@ -80,4 +87,9 @@
     "opencode-go-key"
     "cursor-api-key"
   ];
+  home =
+    { lib, ... }:
+    {
+      domains.notifications.enable = lib.mkForce false;
+    };
 }

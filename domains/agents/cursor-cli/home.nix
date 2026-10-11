@@ -15,13 +15,6 @@ let
         }
       else
         null;
-    vm =
-      if (store.hasVm or false) then
-        {
-          url = "http://localhost:8765/mcp";
-        }
-      else
-        null;
   };
 in
 {

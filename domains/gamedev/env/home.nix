@@ -15,7 +15,7 @@ let
     wayland
     libxkbcommon
     alsa-lib
-    systemd
+    libudev-zero
     libx11
     libxcursor
     libxi
@@ -37,25 +37,28 @@ let
 in
 {
   config = lib.mkIf config.domains.gamedev.env.enable {
+    systemd.user.sessionVariables = {
+      PKG_CONFIG_PATH = "${lib.makeSearchPath "lib/pkgconfig" bevyLibs}:${lib.makeSearchPath "share/pkgconfig" bevyLibs}:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig";
+    };
+
     home.packages =
       with pkgs;
       [
         mold
         sccache
         pkg-config
+        dioxus-cli
       ]
       ++ bevyLibs;
 
     home.sessionVariables = {
-      LD_LIBRARY_PATH = lib.mkForce "${bevyLdPath}:\${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}";
       NIX_LD_LIBRARY_PATH = lib.mkForce "${bevyLdPath}:\${NIX_LD_LIBRARY_PATH:+:$NIX_LD_LIBRARY_PATH}";
       NIX_LD = lib.mkForce "${pkgs.stdenv.cc.bintools.dynamicLinker}";
       PKG_CONFIG_PATH = lib.mkForce "${lib.makeSearchPath "lib/pkgconfig" bevyLibs}:${lib.makeSearchPath "share/pkgconfig" bevyLibs}:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig:\${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}";
-      RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C link-arg=-Wl,-rpath,${rustRpath}:${hostLdPath}";
       CARGO_BUILD_RUSTFLAGS = "-C link-arg=-fuse-ld=mold -C link-arg=-Wl,-rpath,${rustRpath}:${hostLdPath}";
       RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
       SCCACHE_DIR = "${config.home.homeDirectory}/.cache/sccache";
-      SCCACHE_CACHE_SIZE = "10G";
+      SCCACHE_CACHE_SIZE = "5G";
       VK_ICD_FILENAMES = "${pkgs.mesa}/share/vulkan/icd.d/intel_icd.x86_64.json:${pkgs.mesa}/share/vulkan/icd.d/radeon_icd.x86_64.json:${pkgs.mesa}/share/vulkan/icd.d/intel_hasvk_icd.x86_64.json:${pkgs.mesa}/share/vulkan/icd.d/lvp_icd.x86_64.json:/usr/share/vulkan/icd.d/nvidia_icd.json:/usr/share/vulkan/icd.d/intel_icd.json";
     };
   };

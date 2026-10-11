@@ -8,10 +8,13 @@
     "wm.i3"
     "bar.i3status"
     "browser.firefox"
+    "chat.discord"
+    "display.gpu"
     "kernel.graphical"
     "kernel.cursor"
     "kernel.audio"
     "kernel.clipboard"
+    "audio.easyeffects"
     "capture.screenshot"
     "notifications"
   ];
