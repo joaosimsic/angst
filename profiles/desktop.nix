@@ -14,6 +14,7 @@
     "kernel.cursor"
     "kernel.audio"
     "kernel.clipboard"
+    "audio.easyeffects"
     "capture.screenshot"
     "notifications"
   ];
