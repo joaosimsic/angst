@@ -6,8 +6,7 @@ in
   {
     path = "domains/embedded/vial/config/theme.json";
     text = builtins.toJSON {
-      palette = t.palette;
-      ansi = t.ansi;
+      inherit (t) palette ansi;
     };
   }
 ]

@@ -6,14 +6,14 @@
 # Functional round-trip test of `angst vault`, driving the real Go binary
 # (runtime.goAngst) with throwaway age keys and synthetic data (no real
 # secrets, no network):
-#   encrypt (file)   -> .age is valid age ciphertext, source preserved
+#   encrypt (file)   -> .age is valid age ciphertext, source removed by default (--no-delete keeps it)
 #   decrypt (file)   -> byte-exact round trip
-#   encrypt (dir)    -> all files encrypted, .age skipped, source preserved
+#   encrypt (dir)    -> all files encrypted, .age skipped, source removed by default
 #   decrypt (dir)    -> byte-exact restoration
 #   encrypt --dir    -> tarball age file, original removed
 #   decrypt --dir    -> directory restored, byte-exact
 #   status           -> correct encrypted/plaintext reporting
-#   --force/--delete -> overwrite existing + source removal
+#   --force/--delete -> overwrite existing + source removal (default and explicit)
 #   --scope work     -> isolated key scope (cross-scope decrypt rejected)
 #   errors           -> missing path / --dir on file / --dir on non-tar.age / unknown cmd
 
@@ -53,14 +53,14 @@ pkgs.runCommand "check-vault-pipeline"
     fdir="$scratch/file"
     mkdir -p "$fdir"
     printf 'token: super-secret\n' > "$fdir/secret.yaml"
-    if ! "$angst" vault encrypt "$fdir/secret.yaml"; then
+    if ! "$angst" vault encrypt "$fdir/secret.yaml" --no-delete; then
       fail "vault encrypt (file) failed"
     elif [ ! -f "$fdir/secret.yaml.age" ]; then
       fail "vault encrypt (file) did not create .age"
     elif [ ! -f "$fdir/secret.yaml" ]; then
-      fail "vault encrypt (file) removed source without --delete"
+      fail "vault encrypt --no-delete removed source"
     else
-      ok "vault encrypt (file) created .age, kept source"
+      ok "vault encrypt (file) created .age, kept source with --no-delete"
     fi
 
     if ! grep -q 'age-encryption.org/v1' "$fdir/secret.yaml.age"; then
@@ -130,7 +130,7 @@ pkgs.runCommand "check-vault-pipeline"
     sdir="$scratch/status"
     mkdir -p "$sdir"
     printf 'payload\n' > "$sdir/s.txt"
-    "$angst" vault encrypt "$sdir/s.txt"
+    "$angst" vault encrypt "$sdir/s.txt" --no-delete
 
     st_out="$("$angst" vault status "$sdir" 2>&1)"
     if ! echo "$st_out" | grep -q 'encrypted: 1, plaintext: 1'; then
@@ -157,9 +157,9 @@ pkgs.runCommand "check-vault-pipeline"
     fflag="$scratch/ff"
     mkdir -p "$fflag"
     printf 'orig\n' > "$fflag/f.txt"
-    "$angst" vault encrypt "$fflag/f.txt"
+    "$angst" vault encrypt "$fflag/f.txt" --no-delete
     printf 'TAMPER' > "$fflag/f.txt.age"
-    if "$angst" vault encrypt "$fflag/f.txt"; then
+    if "$angst" vault encrypt "$fflag/f.txt" --no-delete; then
       if [ "$(cat "$fflag/f.txt.age")" != "TAMPER" ]; then
         fail "vault encrypt without --force overwrote existing .age"
       else
@@ -169,13 +169,24 @@ pkgs.runCommand "check-vault-pipeline"
       fail "vault encrypt (skip) returned non-zero"
     fi
 
-    "$angst" vault encrypt "$fflag/f.txt" --force
+    "$angst" vault encrypt "$fflag/f.txt" --force --no-delete
     if ! "$angst" vault decrypt "$fflag/f.txt.age"; then
       fail "vault decrypt after --force failed"
     elif [ "$(cat "$fflag/f.txt")" != "orig" ]; then
       fail "vault --force did not re-encrypt source"
     else
       ok "vault --force re-encrypted existing .age"
+    fi
+
+    printf 'def\n' > "$fflag/def.txt"
+    if ! "$angst" vault encrypt "$fflag/def.txt"; then
+      fail "vault encrypt (file default) failed"
+    elif [ -f "$fflag/def.txt" ]; then
+      fail "vault encrypt (file) did not remove source by default"
+    elif [ ! -f "$fflag/def.txt.age" ]; then
+      fail "vault encrypt (file default) did not create .age"
+    else
+      ok "vault encrypt (file) removes source by default"
     fi
 
     printf 'del\n' > "$fflag/d.txt"

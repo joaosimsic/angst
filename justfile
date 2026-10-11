@@ -32,10 +32,10 @@ verify:
     NIXPKGS_ALLOW_UNFREE=1 nix flake check --no-build --impure
 
 go-fmt:
-    for d in angst vm shell analyze; do echo "=== $$d ==="; (cd runtime/$$d && gofmt -l . && go vet ./...); done
+    for d in angst vm shell analyze; do echo "=== $d ==="; (cd runtime/$d && gofmt -l . && go vet ./...); done
 
 go-test:
-    for d in angst vm shell analyze; do echo "=== $$d ==="; (cd runtime/$$d && go test ./...); done
+    for d in angst vm shell analyze; do echo "=== $d ==="; (cd runtime/$d && go test ./...); done
 
 vault-test:
     cd runtime/angst && go test ./internal/vault/... -v
