@@ -87,4 +87,14 @@
     "intelligence/frontend"
   ];
   secrets = [ ];
+  git = {
+    personal = {
+      name = "joaosimsic";
+      email = "jpsimsic@hotmail.com";
+    };
+    work = {
+      name = "joaosimsic";
+      email = "joao.simsic@ezvoice.com.br";
+    };
+  };
 }

@@ -120,6 +120,7 @@ in
     extraHome = decl.home or { };
     env = decl.env or { };
     sshAgent = decl.sshAgent or { };
+    git = decl.git or { };
     ssh = decl.ssh or { };
     ftp = decl.ftp or { };
     shell = decl.shell or "";

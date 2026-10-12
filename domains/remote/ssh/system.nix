@@ -72,6 +72,10 @@ in
               inherit (userConfig) username homeDirectory;
               secretsDir = "${flakeSelf}/secrets/ssh";
             }).bin;
+          Environment = [
+            "ANGST_AGE_KEY_FILE=${homeDirectory}/.config/age/keys.txt"
+            "ANGST_WORK_AGE_KEY_FILE=${homeDirectory}/.config/age/work-keys.txt"
+          ];
         };
       };
     })

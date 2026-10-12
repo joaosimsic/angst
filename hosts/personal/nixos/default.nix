@@ -8,9 +8,10 @@
     "base"
     "desktop"
     "development"
+    "design"
     "embedded"
+    "vm"
     "game-dev"
-    "gaming"
     "office"
   ];
   toolchains = "*";
@@ -27,7 +28,7 @@
   db = [ "work/intelligence" ];
 
   nixos = {
-    keyboardLayout = "br-abnt2";
+    keyboardLayout = "us";
     virtualisation.docker.daemon.settings.data-root = "/home/docker-data";
   };
   home = { };
@@ -123,10 +124,17 @@
     ];
   };
   projects = [
-    "vault"
-    "llm-ruler"
     "angst"
+    "advent-of-code"
+    "datapath"
+    "llm-ruler"
     "agent"
+    "horror"
+    "Throughput"
+    "Throughput-Releases"
+    "vault"
+    "TCC"
+    "box"
     "intelligence/backend"
     "intelligence/frontend"
   ];
@@ -134,4 +142,14 @@
     "opencode-go-key"
     "cursor-api-key"
   ];
+  git = {
+    personal = {
+      name = "joaosimsic";
+      email = "jpsimsic@hotmail.com";
+    };
+    work = {
+      name = "joaosimsic";
+      email = "joao.simsic@ezvoice.com.br";
+    };
+  };
 }

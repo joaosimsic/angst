@@ -69,6 +69,7 @@ in
     ];
 
     programs.nix-ld.enable = true;
+    programs.dconf.enable = lib.mkDefault true;
 
     fileSystems."/" = lib.mkDefault {
       device = "/dev/disk/by-label/nixos";

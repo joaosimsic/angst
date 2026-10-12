@@ -87,6 +87,16 @@
     "opencode-go-key"
     "cursor-api-key"
   ];
+  git = {
+    personal = {
+      name = "joaosimsic";
+      email = "jpsimsic@hotmail.com";
+    };
+    work = {
+      name = "joaosimsic";
+      email = "joao.simsic@ezvoice.com.br";
+    };
+  };
   home =
     { lib, ... }:
     {
