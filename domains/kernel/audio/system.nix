@@ -21,8 +21,17 @@ in
       alsa.enable = true;
       alsa.support32Bit = true;
       pulse.enable = true;
+
+      wireplumber.extraConfig."10-default-volume" = {
+        "wireplumber.settings" = {
+          "device.routes.default-sink-volume" = 1.0;
+        };
+      };
     };
 
-    environment.systemPackages = [ pkgs.pavucontrol ];
+    environment.systemPackages = [
+      pkgs.pavucontrol
+      pkgs.wireplumber
+    ];
   };
 }

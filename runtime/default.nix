@@ -135,6 +135,8 @@ let
         lib.makeBinPath [
           pkgs.bash
           pkgs.coreutils
+          pkgs.nix
+          self.inputs.home-manager.packages.${pkgs.stdenv.hostPlatform.system}.home-manager
         ]
       } \
       --set-default ANGST_LOG_LEVEL info

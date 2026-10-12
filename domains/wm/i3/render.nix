@@ -61,6 +61,7 @@ in
       include ~/.config/i3/screenshot.conf
       include ~/.config/i3/screenshot.local.conf
       include ~/.config/i3/notifications.conf
+      include ~/.config/i3/audio.conf
 
       bindsym $mod+q kill
       bindsym $mod+Shift+q kill
@@ -130,7 +131,7 @@ in
       bindsym $mod+space exec --no-startup-id rofi -show drun
 
       bar {
-          status_command i3status -c ~/.config/i3status/config
+          status_command i3status-rs ~/.config/i3status-rust/config.toml
           position top
           font pango:${fontFamily} 10
           colors {

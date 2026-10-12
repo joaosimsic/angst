@@ -6,7 +6,7 @@
     "display.x11"
     "display.lightdm"
     "wm.i3"
-    "bar.i3status"
+    "bar.i3status-rust"
     "browser.firefox"
     "chat.discord"
     "display.gpu"

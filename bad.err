@@ -1,0 +1,13 @@
+
+
+Configuration file 'bad.toml' not found
+
+
+[src/main.rs:55:9] error = NotInBlock(
+    Error {
+        message: Some(
+            "Configuration file 'bad.toml' not found",
+        ),
+        cause: None,
+    },
+)

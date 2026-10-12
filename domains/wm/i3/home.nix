@@ -9,9 +9,11 @@ let
   cfg = config.domains.wm.i3;
   cap = config.domains.capture.screenshot or { enable = false; };
   notif = config.domains.notifications or { enable = false; };
+  audio = config.domains.kernel.audio or { enable = false; };
   inherit (store) hasX11 hasNotifications;
   shouldBind = cfg.enable && (cap.enable or false) && hasX11;
   shouldBindNotif = cfg.enable && (notif.enable or false) && hasX11 && hasNotifications;
+  shouldBindAudio = cfg.enable && (audio.enable or false) && hasX11;
 in
 {
   config = lib.mkIf cfg.enable {
@@ -38,6 +40,21 @@ in
         ""
     );
 
+    xdg.configFile."i3/audio.conf".text = lib.mkDefault (
+      if shouldBindAudio then
+        ''
+          bindsym XF86AudioRaiseVolume exec --no-startup-id wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
+          bindsym XF86AudioLowerVolume exec --no-startup-id wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+          bindsym XF86AudioMute exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+          bindsym XF86AudioMicMute exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+          bindsym $mod+plus exec --no-startup-id wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
+          bindsym $mod+minus exec --no-startup-id wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+          bindsym $mod+m exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+        ''
+      else
+        ""
+    );
+
     assertions = [
       {
         assertion = !shouldBind || config.domains.kernel.graphical.enable;
@@ -46,6 +63,10 @@ in
       {
         assertion = !shouldBindNotif || config.domains.kernel.graphical.enable;
         message = "domains.wm.i3 notification bindings require domains.kernel.graphical to be enabled";
+      }
+      {
+        assertion = !shouldBindAudio || config.domains.kernel.graphical.enable;
+        message = "domains.wm.i3 audio bindings require domains.kernel.graphical to be enabled";
       }
     ];
   };
