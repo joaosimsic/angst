@@ -116,6 +116,7 @@ in
         throw "db: must be a list of scoped slugs like [\"personal/my-pg\" \"work/analytics\"], got ${builtins.typeOf raw}";
     profiles = decl.profiles or [ "base" ];
     toolchains = _toolchains;
+    toolchainNames = if _toolchains == "*" then _bareNames else _toolchains;
     extraNixos = decl.nixos or { };
     extraHome = decl.home or { };
     env = decl.env or { };

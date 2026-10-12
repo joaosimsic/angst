@@ -81,7 +81,12 @@ let
     width = 4.0;
   };
 
-  bands = builtins.genList mkBand 32;
+  bands = builtins.listToAttrs (
+    builtins.genList (i: {
+      name = "band${toString i}";
+      value = mkBand i;
+    }) 32
+  );
 in
 {
   blocklist = [ ];

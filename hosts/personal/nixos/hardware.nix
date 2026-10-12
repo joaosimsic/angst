@@ -38,7 +38,7 @@
       ];
     };
     "/home" = {
-      device = "/dev/disk/by-label/home";
+      device = "/dev/disk/by-label/data";
       fsType = "ext4";
       neededForBoot = true;
     };
@@ -54,8 +54,8 @@
       ];
       neededForBoot = true;
     };
-    "/persist" = {
-      device = "/dev/disk/by-label/persist";
+    "/state" = {
+      device = "/dev/disk/by-label/state";
       fsType = "ext4";
       neededForBoot = true;
     };
@@ -65,13 +65,8 @@
       options = [ "bind" ];
       neededForBoot = true;
     };
-    "/var/lib/ollama" = {
-      device = "/home/ollama_data";
-      fsType = "none";
-      options = [ "bind" ];
-    };
     "/boot" = {
-      device = "/dev/disk/by-uuid/2CE5-C81F";
+      device = "/dev/disk/by-partlabel/boot";
       fsType = "vfat";
       options = [
         "fmask=0022"
@@ -81,7 +76,7 @@
   };
 
   swapDevices = [
-    { device = "/dev/disk/by-uuid/4ea63f7b-5e3b-4ab7-a9bf-75742248aa2b"; }
+    { device = "/dev/disk/by-label/swap"; }
   ];
 
   systemd.tmpfiles.rules = [

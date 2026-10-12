@@ -29,10 +29,12 @@ in
     wantedBy = [ "multi-user.target" ];
     before = [ "home-manager-${userConfig.username}.service" ];
     after = [ "local-fs.target" ];
+    unitConfig = {
+      RequiresMountsFor = hostAngstPath;
+    };
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      RequiresMountsFor = hostAngstPath;
       ExecStart = "${pkgs.bash}/bin/bash -c 'if [ -d ${lib.escapeShellArg hostAngstPath} ]; then mkdir -p $(dirname ${lib.escapeShellArg repoPathLink}); chown ${lib.escapeShellArg userConfig.username}:users ${lib.escapeShellArg repoPathDir} 2>/dev/null || true; ln -sfn ${lib.escapeShellArg hostAngstPath} ${lib.escapeShellArg repoPathLink}; fi'";
     };
   };

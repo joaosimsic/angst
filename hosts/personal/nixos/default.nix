@@ -10,9 +10,9 @@
     "development"
     "design"
     "embedded"
-    "vm"
     "game-dev"
     "office"
+    "gaming"
   ];
   toolchains = "*";
 
@@ -87,41 +87,8 @@
 
   persist = {
     enable = true;
-    root = "/persist";
-    homeDirs = [
-      ".ssh"
-      ".mozilla"
-      ".cursor"
-      ".docker"
-      ".kube"
-      ".arduino15"
-      "Arduino"
-      ".config/google-chrome"
-      ".config/easyeffects"
-      ".config/discord"
-      ".config/libreoffice"
-      ".config/containers"
-      ".config/composer"
-      ".config/git"
-      ".config/btop"
-      ".config/vial"
-      ".local/share/easyeffects"
-      ".local/share/opencode"
-      ".local/share/nvim"
-      ".local/share/nushell"
-      ".local/share/containers"
-      ".local/share/posting"
-      ".local/share/keyrings"
-      ".local/state/opencode"
-      ".local/state/nvim"
-      ".local/state/nix"
-      ".local/state/wireplumber"
-      ".local/state/lazygit"
-      ".local/state/yazi"
-    ];
-    homeFiles = [
-      ".cargo/credentials.toml"
-    ];
+    root = "/state";
+    dataRoot = "/home/durable";
   };
   projects = [
     "angst"

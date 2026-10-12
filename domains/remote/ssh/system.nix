@@ -44,6 +44,10 @@ in
       };
     })
     (lib.mkIf cfg.enable {
+      systemd.tmpfiles.rules = [
+        "d ${homeDirectory}/.ssh 0700 ${userConfig.username} users -"
+      ];
+
       systemd.services.angst-provision-ssh-key = {
         description = "angst: decrypt and install the shared scope SSH keys";
         wantedBy = [ "multi-user.target" ];
@@ -52,6 +56,10 @@ in
           "local-fs.target"
           "vm-age-key.service"
         ];
+
+        unitConfig = {
+          RequiresMountsFor = [ "${homeDirectory}/.config/age" ];
+        };
 
         serviceConfig = {
           Type = "oneshot";

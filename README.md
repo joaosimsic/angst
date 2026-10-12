@@ -13,7 +13,7 @@ Maintained reference documentation lives in [openwiki/](openwiki/quickstart.md) 
 nixos-rebuild switch --flake .#nixos
 
 # Home-manager only (also for type = "home" hosts like mint)
-just hm-switch host=nixos            # or: nix build .#homeConfigurations.joao.activationPackage && ./result/activate
+just hm-switch nixos                 # or: nix build .#homeConfigurations.joao.activationPackage && ./result/activate
 
 # Development shells
 nix develop .#safe                   # editing env: neovim, parsers, LSPs, formatters
@@ -69,11 +69,38 @@ Each machine is `hosts/<domain>/<hostname>/default.nix`, a pure data decl. A dir
   nixos = { keyboardLayout = "br-abnt2"; };      # per-machine extras (extraNixos)
   env = { EDITOR = "nvim"; BROWSER = "firefox"; };
   sshAgent = { enable = true; keys = ["~/.ssh/id_ed25519"]; };
-  persist = { enable = true; root = "/persist"; homeDirs = [".mozilla" ...]; };  # impermanence
+  persist = { enable = true; root = "/state"; dataRoot = "/home/durable"; };  # impermanence; dirs come from features
 }
 ```
 
+Persisted dirs are **not** listed in the host decl. Each feature declares the paths it owns in `modules/nixos/persist-features.nix` (keyed by domain id, e.g. `"browser.firefox"`, `"git.projects"`, `"toolchain:rust"`); only enabled features contribute, and `dataRoot` routes durable entries there as bind mounts (falling back to `root` when unset, like the VM).
+
 Optional siblings: `secrets/master/<host>.age` and `secrets/apps/` (age-encrypted, see [Secrets](openwiki/secrets.md)) and `hardware.nix` (auto-imported by `mkNixos.nix`). Current hosts: `ci` (CI runner, user `runner`), `personal/nixos` (desktop), `personal/mint` (home-only), `vm` (disposable QEMU VM).
+
+**Machine layout (`personal/nixos`)** — dual-boot with Windows, split so the OS can be erased and rebuilt without touching Windows or user data:
+
+| Partition | Label | Mount | Role |
+|---|---|---|---|
+| `nvme0n1p1` | ESP, partlabel `boot` | `/boot` | Windows + NixOS loaders, shared |
+| `nvme0n1p2` | `swap` | swap | by label |
+| `nvme0n1p3` | `state` | `/state` | wipeable OS state (impermanence root) |
+| `nvme0n1p4` | `data` | `/home` | Nix store (`/home/nix`), games, `/home/durable` |
+| `nvme0n1p5/p6` | — | — | Windows, never touched |
+
+`/` and `/home/joao` are tmpfs. Only system state (machine-id, `/var/lib/*`, logs) persists on `state`. Durable user state — age identity (`/home/durable/age` → `~/.config/age`), git config, browser, keyrings, cargo, and projects — is bind-mounted from `data` (declared per feature in `modules/nixos/persist-features.nix`), so it survives reinstalls. `.ssh` and `.secrets` are rebuilt at boot from the age-encrypted repo stores.
+
+```bash
+# New computer: boot the NixOS ISO, clone this repo, then
+just provision-dual   # keep Windows + shared ESP, use free space (shrink C: in
+                      # Windows first if the disk is fully allocated)
+just provision-full   # or: erase a whole disk (second disk / NixOS-only machine)
+
+# Erase the state partition and reinstall, keeping Windows, ESP and /home.
+# Durable data is copied to /home/durable first, so the age keys cannot be lost.
+just reinstall
+```
+
+`install-nixos` auto-detects the disk when there is exactly one candidate (`--disk` otherwise), creates/relabels partitions, names the shared ESP `boot` (GPT metadata only; Windows bootmgr untouched) and never touches NTFS. On a brand-new machine seed the age identity with `--identity PATH` (a directory holding `keys.txt`/`work-keys.txt`); otherwise the host boots with the fallback password until keys are restored. Existing machines migrated to this layout need a one-time `sudo sgdisk -c 1:boot /dev/nvme0n1 && sudo swaplabel -L swap /dev/nvme0n1p2` before switching.
 
 ---
 
@@ -150,7 +177,7 @@ Two layers, with the repo store as committed, age-encrypted tarballs (now under 
   the id is the relative path under the scope (the store is discovered recursively). The real name
   never appears in tracked files (it lives only in the encrypted `metadata.json`). Empty list =
   nothing synced. Works on NixOS **and** home-only hosts (`nixos`/`home` host types).
-  `~/projects` is only persisted when the host declared at least one project.
+  `~/projects` persistence is owned by the `git.projects` feature (durable on the data partition; the impermanence root on hosts without `dataRoot`, like the VM), so clones survive reinstalls.
 - **Clone if missing only** — `sync` (home activation + `systemd.user` oneshot
   `angst-projects-sync`) clones the host's selected projects into `~/projects/<name>`
   when the dir has no `.git`; no auto-pull, no hooks, no `.gitignore` edits — clones are
@@ -213,7 +240,7 @@ in-place decrypt never stages plaintext. All secrets are age-encrypted, so no so
 
 ### `@modules/` — Core Home, NixOS, and VM Modules
 
-**`modules/nixos/`** — Base NixOS config imported by every configuration: `system.stateVersion = "25.11"`, keyboard layout (from `angst.keyboardLayout`, e.g. `br-abnt2`), `America/Sao_Paulo` timezone, `en_US.UTF-8` locale, NetworkManager, flakes + `allowUnfree`, user creation (nushell shell, wheel/networkmanager/video/audio groups), `nix-ld`, fonts, and impermanence (`persist.nix`).
+**`modules/nixos/`** — Base NixOS config imported by every configuration: `system.stateVersion = "25.11"`, keyboard layout (from `angst.keyboardLayout`, e.g. `br-abnt2`), `America/Sao_Paulo` timezone, `en_US.UTF-8` locale, NetworkManager, flakes + `allowUnfree`, user creation (nushell shell, wheel/networkmanager/video/audio groups), `nix-ld`, fonts, and impermanence (`persist.nix` + `persist-features.nix`, the feature → paths persistence policy).
 
 **`modules/home/`** — Base home-manager config: username, stateVersion, fontconfig, tree-sitter (`treesitter.nix`), login shell handling (`login-shell.nix`), secrets activation (`secrets-activation.nix`), theme option (`themeModule.nix`). (SSH client config + agent live in `domains/remote/ssh/`.)
 
@@ -326,12 +353,25 @@ Nix CI uses DeterminateSystems `nix-installer-action` + `magic-nix-cache-action`
 
 ```bash
 just check                 # nix flake check
-just hm host=nixos user=joao        # build home activation package
-just hm-switch host=nixos user=joao # build + activate
-just switch host=nixos              # sudo nixos-rebuild switch --flake .#nixos
-just hardware host=nixos            # regenerate hardware.nix next to the decl
-just bootstrap-secrets host=nixos   # create/rotate secrets.yaml + password hash
-just analyze                        # regenerate analysis.md
-just install-hooks                  # enable gitleaks git hooks
-just vm host=vm / just vm-ssh host=vm   # VM start / ssh via vm CLI
+just build nixos           # nix build .#nixosConfigurations.nixos.config.system.build.toplevel
+just hm nixos              # build home activation package
+just hm-switch nixos       # build + activate (run as your user, never sudo)
+just switch nixos          # sudo nixos-rebuild switch --flake .#nixos
+just hardware personal/nixos  # regenerate hardware.nix next to the decl
+just bootstrap-secrets nixos   # create/rotate secrets.yaml + password hash
+just analyze               # regenerate analysis.md
+just install-hooks         # enable gitleaks git hooks
+just install-nixos         # install/reuse; see --help for flags
+just reinstall             # --fresh: erase state partition, keep ESP/Windows/data
+just provision-dual        # new machine: keep Windows, use free space
+just provision-full        # new machine: erase a whole disk
+just vm vm / just vm-ssh vm    # VM start / ssh via vm CLI
 ```
+
+> **Passing arguments to recipes.** Arguments are positional — `just hm-switch nixos`,
+> `just hardware personal/nixos`. Run `just --list` to see each recipe's parameters.
+> The `name=value` form does **not** work here: `just` only accepts overrides for
+> global variables (recipe parameters are rejected outright), and a `name=value`
+> placed after the recipe name is passed through as a literal string. So
+> `just hm-switch host=nixos` silently expands to `--flake .#host=nixos` and fails
+> with a confusing "does not provide attribute" error.

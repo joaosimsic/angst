@@ -58,9 +58,11 @@ func ProvisionSSHKey(args []string) int {
 	provision := func(scope, ageKey, dest string) int {
 		ageFile := filepath.Join(secretsDir, scope+".ed25519.age")
 		if _, err := os.Stat(ageKey); err != nil {
+			fmt.Fprintf(os.Stderr, "warn: no %s age key at %s; skipping %s SSH key\n", scope, ageKey, scope)
 			return shared.ExitOK
 		}
 		if _, err := os.Stat(ageFile); err != nil {
+			fmt.Fprintf(os.Stderr, "warn: no encrypted %s SSH key at %s; skipping\n", scope, ageFile)
 			return shared.ExitOK
 		}
 		plain := filepath.Join(tmp, scope+".key")

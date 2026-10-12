@@ -1,23 +1,39 @@
+# Recipe arguments are POSITIONAL: `just hm-switch nixos`, `just hardware personal/nixos`.
+# The `name=value` form does NOT work for recipe parameters in just 1.58 — overrides are
+# only accepted for global variables, and a `name=value` placed after the recipe name is
+# passed through as a literal string. So `just hm-switch host=nixos` silently expands to
+# `--flake .#host=nixos` and fails with a confusing "does not provide attribute" error.
+# Run `just --list` to see each recipe's parameter names.
+
 bootstrap-secrets host="nixos":
-    angst bootstrap-secrets --host {{host}}
+    angst bootstrap-secrets --host {{ host }}
 
 install-nixos *args:
-    sudo nix run .#install-nixos -- {{args}}
+    sudo nix run .#install-nixos -- {{ args }}
+
+reinstall *args:
+    sudo nix run .#install-nixos -- --fresh --yes {{ args }}
+
+provision-dual *args:
+    sudo nix run .#install-nixos --extra-experimental-features nix-command --extra-experimental-features flakes -- --dual-boot --yes {{ args }}
+
+provision-full *args:
+    sudo nix run .#install-nixos -- --full-disk --yes {{ args }}
 
 hardware path="personal/nixos":
-    nixos-generate-config --show-hardware-config > hosts/{{path}}/hardware.nix
+    nixos-generate-config --show-hardware-config > hosts/{{ path }}/hardware.nix
 
 build host="nixos":
-    NIXPKGS_ALLOW_UNFREE=1 nix build .#nixosConfigurations.{{host}} --impure
+    NIXPKGS_ALLOW_UNFREE=1 nix build .#nixosConfigurations.{{ host }}.config.system.build.toplevel --impure
 
 switch host="nixos":
-    sudo nixos-rebuild switch --flake .#{{host}}
+    sudo nixos-rebuild switch --flake .#{{ host }}
 
 hm host="nixos":
-    NIXPKGS_ALLOW_UNFREE=1 nix build .#homeConfigurations.{{host}}.activationPackage --impure
+    NIXPKGS_ALLOW_UNFREE=1 nix build .#homeConfigurations.{{ host }}.activationPackage --impure
 
 hm-switch host="":
-    @if [ -n "{{host}}" ]; then NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake .#{{host}} --impure; else NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake . --impure; fi
+    @if [ -n "{{ host }}" ]; then NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake .#{{ host }} --impure; else NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake . --impure; fi
 
 install-paper:
     NIXPKGS_ALLOW_UNFREE=1 nix profile install .#paper-desktop --impure
@@ -51,36 +67,16 @@ test-secrets:
     nix build '.#checks.x86_64-linux.secret-scan-hooks' --no-link --print-build-logs
 
 vault-encrypt path scope="personal" dir="":
-    @angst vault encrypt {{path}} --scope {{scope}} {{ if dir != "" { "--dir" } else { "" } }}
+    @angst vault encrypt {{ path }} --scope {{ scope }} {{ if dir != "" { "--dir" } else { "" } }}
 
 vault-decrypt path scope="personal" dir="":
-    @angst vault decrypt {{path}} --scope {{scope}} {{ if dir != "" { "--dir" } else { "" } }}
+    @angst vault decrypt {{ path }} --scope {{ scope }} {{ if dir != "" { "--dir" } else { "" } }}
 
 vault-status path=".":
-    angst vault status {{path}}
+    angst vault status {{ path }}
 
 vm host="nixos":
-    @NIX_DEFAULT_TARGET_HOST={{host}} nix run .#vm -- start
+    @NIX_DEFAULT_TARGET_HOST={{ host }} nix run .#vm -- start
 
 vm-ssh host="nixos":
-    @NIX_DEFAULT_TARGET_HOST={{host}} nix run .#vm -- ssh --auto-start
-
-# --- TeX ---
-tex file="monografia/main.tex":
-    @echo "Compiling {{file}} with latexmk (nix develop .#safe)..."
-    nix develop .#safe --command bash -c 'set -e; f="{{file}}"; dir=$(dirname "$f"); base=$(basename "$f"); cd "$dir" && latexmk -pdf -interaction=nonstopmode -halt-on-error "$base" && echo "✓ PDF generated: $dir/${base%.tex}.pdf" || (echo "✗ TeX compilation failed"; exit 1)'
-
-tex-clean file="monografia/main.tex":
-    nix develop .#safe --command bash -c 'f="{{file}}"; dir=$(dirname "$f"); base=$(basename "$f"); cd "$dir" && latexmk -C "$base" && echo "Cleaned latexmk artifacts for $base"'
-
-tex-check:
-    @echo "Running Nix TeX check (minimal document)..."
-    nix build .#checks.x86_64-linux.check-tex --print-build-logs
-
-tex-fmt file="":
-    @if [ -z "{{file}}" ]; then echo "Usage: just tex-fmt <file.tex>"; exit 1; fi
-    nix develop .#safe --command latexindent -w "{{file}}" && echo "Formatted {{file}}"
-
-tex-lint file="":
-    @if [ -z "{{file}}" ]; then echo "Usage: just tex-lint <file.tex>"; exit 1; fi
-    nix develop .#safe --command chktex "{{file}}"
+    @NIX_DEFAULT_TARGET_HOST={{ host }} nix run .#vm -- ssh --auto-start

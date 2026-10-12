@@ -29,8 +29,8 @@ in
       home.activation.angstProjectsSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         mkdir -p "$HOME/.secrets/projects"
         chmod 700 "$HOME/.secrets" 2>/dev/null || true
-        ${sync.bin} import || true
-        ${sync.bin} sync || true
+        ${sync.bin} import || echo "warn: projects import failed (age key missing?)" >&2
+        ${sync.bin} sync || echo "warn: projects sync failed (network or SSH keys?)" >&2
       '';
 
       systemd.user.services.angst-projects-sync = {

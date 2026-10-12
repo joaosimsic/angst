@@ -5,6 +5,7 @@
   userConfig,
   runtime,
   flakeSelf,
+  host,
   ssh,
   ...
 }:
@@ -51,11 +52,13 @@ in
 
     documentation.nixos.enable = lib.mkForce false;
 
-    environment.persistence."/persist".directories = lib.mkForce [
-      "/var/lib/bluetooth"
-      "/var/lib/nixos"
-      "/var/lib/systemd/coredump"
-    ];
+    environment.persistence."${host.persist.root}".directories = lib.mkIf (host.hostname == "vm") (
+      lib.mkForce [
+        "/var/lib/bluetooth"
+        "/var/lib/nixos"
+        "/var/lib/systemd/coredump"
+      ]
+    );
 
     boot = {
       initrd.kernelModules = lib.mkForce [ ];

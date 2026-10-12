@@ -26,6 +26,19 @@ let
   appNixosModules = map host.scan.domains.mkNixosSystemModule host.scan.domains.systemEntries;
   appHomeModules = map host.scan.domains.mkDomainModule host.scan.domains.homeEntries;
 
+  enabledFeatures =
+    let
+      profileEntries =
+        (import ../../profiles/default.nix {
+          inherit lib;
+          inherit (host) profiles scan;
+        }).enabled;
+      domainIds = map (
+        e: if e.category == e.name then e.category else "${e.category}.${e.name}"
+      ) profileEntries;
+    in
+    domainIds ++ map (n: "toolchain:${n}") (host.toolchainNames or [ ]);
+
   themeModule = import ../../modules/home/themeModule.nix {
     inherit lib;
     themesLib = host.scan.themes;
@@ -123,10 +136,9 @@ inputs.nixpkgs.lib.nixosSystem {
     if host.persist.enable then
       [
         (import ../../modules/nixos/persist.nix {
-          inherit lib;
+          inherit lib enabledFeatures;
           inherit (host) persist username;
-          persistDirs = secrets.persistDirs ++ lib.optionals (host.projects != [ ]) [ "projects" ];
-          persistFiles = host.persist.homeFiles;
+          inherit (userCfg) homeDirectory;
         })
       ]
     else

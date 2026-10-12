@@ -25,6 +25,7 @@
   "sidebar.revamp" = true;
   "sidebar.verticalTabs" = true;
   "sidebar.visibility" = "always-show";
+  "sidebar.position_start" = true;
   "webgl.disabled" = false;
   "webgl.force-enabled" = true;
   "webgl.enable-webgl2" = true;

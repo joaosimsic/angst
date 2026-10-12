@@ -35,9 +35,8 @@ let
           - "#${a.error}"
         defaultFgColor:
           - "#${p.foreground.base}"
-      authorColors: {}
-      branchColors: {}
-      branchColorPatterns: {}
+        authorColors: {}
+        branchColorPatterns: {}
       customIcons:
         filenames: {}
         extensions: {}
@@ -58,7 +57,7 @@ let
       expandedSidePanelWeight: 2
       mainPanelSplitMode: flexible
       enlargedSideViewLocation: left
-      wrapLinesInStagingView: true
+      wrapLinesInDiffView: true
       language: auto
       timeFormat: 02 Jan 06
       shortTimeFormat: 3:04PM

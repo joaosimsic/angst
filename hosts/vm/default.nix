@@ -71,13 +71,6 @@
   persist = {
     enable = true;
     root = "/persist";
-    homeDirs = [
-      ".ssh"
-      ".mozilla"
-      ".local/share"
-      ".config"
-      ".cache"
-    ];
   };
   projects = [
     "advent-of-code"
