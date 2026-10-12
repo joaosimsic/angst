@@ -103,7 +103,6 @@ let
   opencodeConfig = builtins.toJSON (
     {
       "$schema" = "https://opencode.ai/config.json";
-      model = "opencode-go/deepseek-v4-pro";
       compaction = {
         auto = true;
         reserved = 10000;

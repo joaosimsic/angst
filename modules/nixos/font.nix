@@ -13,7 +13,7 @@
   };
 
   config = {
-    environment.systemPackages = [ pkgs.nerd-fonts.jetbrains-mono ];
+    fonts.packages = [ pkgs.nerd-fonts.jetbrains-mono ];
 
     fonts.fontconfig.defaultFonts.monospace = [ config.font.family ];
   };
