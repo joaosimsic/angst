@@ -22,8 +22,7 @@ in
         settings = [
           {
             user = {
-              name = primary.name;
-              email = primary.email;
+              inherit (primary) name email;
             };
           }
         ]

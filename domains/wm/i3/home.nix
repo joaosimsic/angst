@@ -17,43 +17,45 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
-    xdg.configFile."i3/screenshot.conf".text = lib.mkDefault (
-      if shouldBind then
-        ''
-          bindsym Print exec --no-startup-id angst-screenshot-save fullscreen
-          bindsym Shift+Print exec --no-startup-id angst-screenshot-copy region
-          bindsym $mod+Shift+s exec --no-startup-id angst-screenshot-copy region
-          bindsym $mod+Print exec --no-startup-id angst-screenshot-save window
-        ''
-      else
-        ""
-    );
+    xdg.configFile = {
+      "i3/screenshot.conf".text = lib.mkDefault (
+        if shouldBind then
+          ''
+            bindsym Print exec --no-startup-id angst-screenshot-save fullscreen
+            bindsym Shift+Print exec --no-startup-id angst-screenshot-copy region
+            bindsym $mod+Shift+s exec --no-startup-id angst-screenshot-copy region
+            bindsym $mod+Print exec --no-startup-id angst-screenshot-save window
+          ''
+        else
+          ""
+      );
 
-    xdg.configFile."i3/notifications.conf".text = lib.mkDefault (
-      if shouldBindNotif then
-        ''
-          bindsym $mod+Shift+n exec --no-startup-id angst-notify dismiss
-          bindsym $mod+Shift+m exec --no-startup-id angst-notify dismiss-all
-          bindsym $mod+Control+n exec --no-startup-id angst-notify history
-        ''
-      else
-        ""
-    );
+      "i3/notifications.conf".text = lib.mkDefault (
+        if shouldBindNotif then
+          ''
+            bindsym $mod+Shift+n exec --no-startup-id angst-notify dismiss
+            bindsym $mod+Shift+m exec --no-startup-id angst-notify dismiss-all
+            bindsym $mod+Control+n exec --no-startup-id angst-notify history
+          ''
+        else
+          ""
+      );
 
-    xdg.configFile."i3/audio.conf".text = lib.mkDefault (
-      if shouldBindAudio then
-        ''
-          bindsym XF86AudioRaiseVolume exec --no-startup-id wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
-          bindsym XF86AudioLowerVolume exec --no-startup-id wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
-          bindsym XF86AudioMute exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
-          bindsym XF86AudioMicMute exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
-          bindsym $mod+plus exec --no-startup-id wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
-          bindsym $mod+minus exec --no-startup-id wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
-          bindsym $mod+m exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
-        ''
-      else
-        ""
-    );
+      "i3/audio.conf".text = lib.mkDefault (
+        if shouldBindAudio then
+          ''
+            bindsym XF86AudioRaiseVolume exec --no-startup-id wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
+            bindsym XF86AudioLowerVolume exec --no-startup-id wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+            bindsym XF86AudioMute exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+            bindsym XF86AudioMicMute exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+            bindsym $mod+plus exec --no-startup-id wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
+            bindsym $mod+minus exec --no-startup-id wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+            bindsym $mod+m exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+          ''
+        else
+          ""
+      );
+    };
 
     assertions = [
       {
