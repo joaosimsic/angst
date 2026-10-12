@@ -19,6 +19,7 @@ mkScript {
     gnused
     nixos-install-tools
     efibootmgr
+    systemd
   ];
   text = ''
     set -euo pipefail
@@ -32,6 +33,7 @@ mkScript {
     migrate=1
     assume_yes=0
     dry_run=0
+    force_format=0
     mode=install
 
     die() {
@@ -50,6 +52,7 @@ mkScript {
       --disk PATH     Disk to use (default: /dev/nvme0n1)
       --flake REF     Flake ref to install (default: this flake + host)
       --no-migrate    Do not move existing home state into /persist
+      --force-format  Format persist even if a previous interrupted install is detected
       --cleanup       Remove Arch boot leftovers (run on the installed system)
       --yes           Do not ask for confirmation
       --dry-run       Print what would be done without changing anything
@@ -69,6 +72,10 @@ mkScript {
           ;;
         --no-migrate)
           migrate=0
+          shift
+          ;;
+        --force-format)
+          force_format=1
           shift
           ;;
         --cleanup)
@@ -159,31 +166,64 @@ mkScript {
       [ -b "$part" ] || die "partition not found: $part"
     done
 
-    if findmnt -n /mnt >/dev/null 2>&1; then
-      die "/mnt is already mounted"
-    fi
-
     esp_type=$(blkid -s TYPE -o value "$esp")
     [ "$esp_type" = "vfat" ] || die "$esp is not a vfat ESP (found: $esp_type)"
     home_type=$(blkid -s TYPE -o value "$home")
     [ "$home_type" = "ext4" ] || die "$home is not ext4 (found: $home_type)"
 
     echo "==> Checking for the Windows bootloader on $esp"
-    esp_check=$(mktemp -d)
-    mount -o ro "$esp" "$esp_check"
-    if [ ! -e "$esp_check/EFI/Microsoft/Boot/bootmgfw.efi" ]; then
-      umount "$esp_check"
-      rmdir "$esp_check"
-      die "Windows bootloader not found on $esp - refusing to continue (wrong disk?)"
+    esp_check=$(findmnt -S "$esp" -n -o TARGET | head -n 1)
+    esp_probe=""
+    if [ -z "$esp_check" ]; then
+      esp_check=$(mktemp -d)
+      if mount -o ro "$esp" "$esp_check" 2>/dev/null; then
+        esp_probe=$esp_check
+      else
+        esp_check=""
+      fi
     fi
-    umount "$esp_check"
-    rmdir "$esp_check"
+    found=0
+    if [ -n "$esp_check" ] && [ -e "$esp_check/EFI/Microsoft/Boot/bootmgfw.efi" ]; then
+      found=1
+    fi
+    if [ -n "$esp_probe" ]; then
+      umount "$esp_probe"
+      rmdir "$esp_probe"
+    fi
+    [ "$found" -eq 1 ] || die "Windows bootloader not found on $esp - refusing to continue (wrong disk?)"
+
+    persist_reuse=0
+    if [ "$force_format" -eq 0 ] && [ "$(blkid -s LABEL -o value "$persist" 2>/dev/null || true)" = "persist" ]; then
+      probe=$(findmnt -S "$persist" -n -o TARGET | head -n 1)
+      probe_mount=""
+      if [ -z "$probe" ]; then
+        probe=$(mktemp -d)
+        if mount -o ro "$persist" "$probe" 2>/dev/null; then
+          probe_mount=$probe
+        else
+          probe=""
+        fi
+      fi
+      if [ -n "$probe" ] && [ -d "$probe/home/$username" ]; then
+        persist_reuse=1
+      fi
+      if [ -n "$probe_mount" ]; then
+        umount "$probe_mount"
+        rmdir "$probe_mount"
+      fi
+    fi
+
+    if [ "$persist_reuse" -eq 1 ]; then
+      persist_note="$persist (reused, existing data preserved)"
+    else
+      persist_note="$persist (WILL BE FORMATTED ext4, label 'persist')"
+    fi
 
     cat <<SUMMARY
     ==> Plan for host '${host.hostname}'
       disk:     $disk
       ESP:      $esp (kept, shared with Windows)
-      persist:  $persist (WILL BE FORMATTED ext4, label 'persist')
+      persist:  $persist_note
       home:     $home (kept, relabeled 'home')
       migrate:  $migrate
       flake:    $flake_ref
@@ -195,18 +235,40 @@ mkScript {
       [ "$answer" = "YES" ] || die "aborted"
     fi
 
-    echo "==> Formatting $persist"
-    run mkfs.ext4 -L persist "$persist"
+    echo "==> Cleaning up mounts from previous runs"
+    if findmnt -n /mnt >/dev/null 2>&1; then
+      run umount -R /mnt
+    fi
+    for stale_part in "$esp" "$persist" "$home"; do
+      while IFS= read -r stale; do
+        [ -n "$stale" ] || continue
+        echo "  unmounting $stale"
+        run umount "$stale"
+      done < <(findmnt -S "$stale_part" -n -o TARGET)
+    done
+
+    if [ "$persist_reuse" -eq 1 ]; then
+      echo "==> Reusing $persist (previous interrupted install detected); data preserved"
+    else
+      echo "==> Formatting $persist"
+      run mkfs.ext4 -F -L persist "$persist"
+    fi
 
     if [ "$(blkid -s LABEL -o value "$home" 2>/dev/null || true)" != "home" ]; then
       echo "==> Labeling $home as 'home'"
       run e2label "$home" home
     fi
 
+    echo "==> Refreshing udev (/dev/disk/by-label)"
+    run udevadm trigger --action=change --settle "$persist" "$home"
+
     echo "==> Mounting the target"
-    run mount -t tmpfs -o size=2G tmpfs /mnt
+    run mount -t tmpfs -o size=2G,mode=755 tmpfs /mnt
     run mkdir -p /mnt/boot /mnt/home /mnt/persist /mnt/nix
     run mount "$esp" /mnt/boot
+    if [ "$dry_run" -eq 0 ] && findmnt -no OPTIONS /mnt/boot | grep -qE '(^|,)ro(,|$)'; then
+      die "$esp mounted read-only (a stale mount is still holding it); aborting"
+    fi
     run mount /dev/disk/by-label/home /mnt/home
     run mount /dev/disk/by-label/persist /mnt/persist
     run mkdir -p /mnt/home/nix
