@@ -32,4 +32,5 @@ in
     formatter
     lib
     ;
+  inherit (import ./tests.nix { inherit context; }) tests;
 }
