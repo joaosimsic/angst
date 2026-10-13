@@ -1,41 +1,25 @@
 { lib }:
 
 let
-  schema = import ./schema.nix;
-  inherit (schema) paletteTokens subTokens ansiTokens;
+  schema = import ./schema.nix { inherit lib; };
 
-  subPaths =
-    layer: token:
+  themesDir = ../../themes;
+
+  themeFiles = lib.filterAttrs (
+    filename: type:
+    type == "regular"
+    && lib.hasSuffix ".nix" filename
+    && filename != "default.nix"
+    && filename != "schema.nix"
+  ) (builtins.readDir themesDir);
+
+  themes = lib.mapAttrs' (
+    filename: _:
     let
-      pairs = map (sub: {
-        path = [
-          layer
-          token
-          sub
-        ];
-        label = "${layer}.${token}.${sub}";
-      }) subTokens;
+      name = lib.removeSuffix ".nix" filename;
     in
-    pairs;
-
-  dimPath = {
-    path = [
-      "palette"
-      "dim"
-    ];
-    label = "palette.dim";
-  };
-
-  ansiPaths = map (token: {
-    path = [
-      "ansi"
-      token
-    ];
-    label = "ansi.${token}";
-  }) ansiTokens;
-
-  requiredColorPaths =
-    (lib.concatMap (token: subPaths "palette" token) paletteTokens) ++ [ dimPath ] ++ ansiPaths;
+    lib.nameValuePair name (schema.validate (import (themesDir + "/${filename}")))
+  ) themeFiles;
 
   stripHash = hex: if lib.hasPrefix "#" hex then lib.removePrefix "#" hex else hex;
 
@@ -72,8 +56,6 @@ let
     in
     "${toString (hexByte 0)} ${toString (hexByte 2)} ${toString (hexByte 4)}";
 
-  isValidHex = value: builtins.match "[0-9a-fA-F]{6}" (stripHash value) != null;
-
   hexToRgbInts =
     hex:
     let
@@ -99,10 +81,12 @@ let
     if cNorm <= 0.04045 then
       cNorm / 12.92
     else
-      let
-        x = (cNorm + 0.055) / 1.055;
-      in
-      x * x;
+      (
+        let
+          x = (cNorm + 0.055) / 1.055;
+        in
+        x * x
+      );
 
   relativeLuminance =
     hex:
@@ -154,24 +138,6 @@ let
       "ansi"
     ];
 
-  validateTheme =
-    name: theme:
-    let
-      missing = lib.filter (entry: !(lib.hasAttrByPath entry.path theme)) requiredColorPaths;
-      present = lib.filter (entry: lib.hasAttrByPath entry.path theme) requiredColorPaths;
-      invalid = lib.filter (entry: !isValidHex (lib.attrByPath entry.path "" theme)) present;
-    in
-    if missing != [ ] then
-      builtins.throw "Theme '${name}' missing tokens: ${
-        lib.concatStringsSep ", " (map (entry: entry.label) missing)
-      }"
-    else if invalid != [ ] then
-      builtins.throw "Theme '${name}' has invalid hex for: ${
-        lib.concatStringsSep ", " (map (entry: entry.label) invalid)
-      }"
-    else
-      theme;
-
   withRgb =
     theme:
     let
@@ -186,36 +152,13 @@ let
     in
     theme // walk "" theme;
 
-  themesDir = ./.;
-  themeFiles = lib.filterAttrs (
-    filename: type:
-    type == "regular"
-    && lib.hasSuffix ".nix" filename
-    && filename != "default.nix"
-    && filename != "schema.nix"
-  ) (builtins.readDir themesDir);
-
-  themes = lib.mapAttrs' (
-    filename: _:
-    let
-      name = lib.removeSuffix ".nix" filename;
-    in
-    lib.nameValuePair name (import (themesDir + "/${filename}"))
-  ) themeFiles;
-in
-{
-  inherit themes schema;
-  inherit ensureContrast contrastRatio relativeLuminance;
-
-  default = "monochrome";
-
   get =
     name:
     if themes ? ${name} then
       let
         raw = themes.${name};
         threshold = raw.contrastThreshold or 4.5;
-        theme = withRgb (validateTheme name (normalizeTheme raw));
+        theme = withRgb (normalizeTheme raw);
         p = theme.palette;
         isDark = relativeLuminance p.background.base < 0.179;
         colorScheme = if isDark then "dark" else "light";
@@ -263,4 +206,14 @@ in
       }
     else
       builtins.throw "Unknown theme '${name}'. Available themes: ${lib.concatStringsSep ", " (builtins.attrNames themes)}";
+in
+{
+  inherit
+    themes
+    get
+    ensureContrast
+    contrastRatio
+    relativeLuminance
+    ;
+  default = "monochrome";
 }
