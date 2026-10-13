@@ -109,68 +109,66 @@ pkgs.testers.runNixOSTest {
   qemu.forceAccel = true;
   globalTimeout = 30 * 60;
 
-  nodes.machine =
-    { config, pkgs, ... }:
-    {
-      imports = [
-        self.inputs.impermanence.nixosModules.impermanence
-        self.inputs.home-manager.nixosModules.home-manager
-        (import ../modules/nixos/persist.nix {
-          inherit lib enabledFeatures;
-          inherit username;
-          persist = {
-            enable = true;
-            root = persistRoot;
-            dataRoot = dataRoot;
-            homeDirs = [ ];
-            homeFiles = [ ];
-          };
-          homeDirectory = home;
-        })
+  nodes.machine = {
+    imports = [
+      self.inputs.impermanence.nixosModules.impermanence
+      self.inputs.home-manager.nixosModules.home-manager
+      (import ../modules/nixos/persist.nix {
+        inherit lib enabledFeatures;
+        inherit username;
+        persist = {
+          enable = true;
+          root = persistRoot;
+          inherit dataRoot;
+          homeDirs = [ ];
+          homeFiles = [ ];
+        };
+        homeDirectory = home;
+      })
+    ];
+
+    users.users.${username} = {
+      isNormalUser = true;
+      uid = 1000;
+      group = "users";
+      inherit home;
+      createHome = true;
+    };
+
+    systemd.services.angst-test-seed = {
+      description = "angst: seed root-owned persisted state for the ownership test";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "local-fs.target" ];
+      before = [
+        "angst-persist-ownership.service"
+        "home-manager-joao.service"
       ];
-
-      users.users.${username} = {
-        isNormalUser = true;
-        uid = 1000;
-        group = "users";
-        home = home;
-        createHome = true;
-      };
-
-      systemd.services.angst-test-seed = {
-        description = "angst: seed root-owned persisted state for the ownership test";
-        wantedBy = [ "multi-user.target" ];
-        after = [ "local-fs.target" ];
-        before = [
-          "angst-persist-ownership.service"
-          "home-manager-joao.service"
-        ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          ExecStart = seedScript;
-        };
-      };
-
-      home-manager = {
-        useGlobalPkgs = true;
-        useUserPackages = true;
-        backupFileExtension = "hm-backup";
-        extraSpecialArgs = {
-          flakeSelf = testSecrets;
-          inherit runtime;
-          hostScopes = [
-            "personal"
-            "work"
-          ];
-          hostSecrets = [ "opencode-go-key" ];
-        };
-        users.${username} = {
-          imports = [ ../modules/home/app-secrets.nix ];
-          home.stateVersion = "25.11";
-        };
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = seedScript;
       };
     };
+
+    home-manager = {
+      useGlobalPkgs = true;
+      useUserPackages = true;
+      backupFileExtension = "hm-backup";
+      extraSpecialArgs = {
+        flakeSelf = testSecrets;
+        inherit runtime;
+        hostScopes = [
+          "personal"
+          "work"
+        ];
+        hostSecrets = [ "opencode-go-key" ];
+      };
+      users.${username} = {
+        imports = [ ../modules/home/app-secrets.nix ];
+        home.stateVersion = "25.11";
+      };
+    };
+  };
 
   inherit testScript;
 }
