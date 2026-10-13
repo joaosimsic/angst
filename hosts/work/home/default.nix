@@ -70,7 +70,6 @@
   ];
   secrets = [
     "cursor-api-key"
-    "opencode-go-key"
   ];
   git = {
     default = "work";
