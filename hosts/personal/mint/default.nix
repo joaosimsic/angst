@@ -9,12 +9,33 @@
     "desktop"
     "development"
     "design"
-    "embedded"
-    "vm"
     "game-dev"
     "office"
   ];
-  toolchains = "*";
+  toolchains = [
+    "javascript"
+    "php"
+    "python"
+    "bash"
+    "json"
+    "nix"
+    "go"
+    "lua"
+    "yaml"
+    "docker"
+    "toml"
+    "conf"
+    "make"
+    "rust"
+    "just"
+    "markdown"
+    "html"
+    "css"
+    "c"
+    "xml"
+    "editorconfig"
+    "blade"
+  ];
   db = [ "work/intelligence-metadata" ];
   env = {
     EDITOR = "nvim";

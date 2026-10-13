@@ -12,6 +12,7 @@
     "javascript"
     "php"
     "python"
+    "json"
     "bash"
     "nix"
     "go"
@@ -21,6 +22,14 @@
     "toml"
     "conf"
     "make"
+    "just"
+    "markdown"
+    "html"
+    "css"
+    "c"
+    "xml"
+    "editorconfig"
+    "blade"
   ];
   db = [ ];
   env = {
