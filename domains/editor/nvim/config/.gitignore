@@ -1,1 +1,2 @@
 lua/config/theme/palette.lua
+lua/backend/shared/EnabledAdapters.lua

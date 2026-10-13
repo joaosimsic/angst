@@ -4,6 +4,32 @@ local logger = Logger.new("ADAPTER")
 
 local M = {}
 
+---@param opts? { include?: string[] }
+---@return table<string, boolean>|nil
+local function include_set(opts)
+	local include = opts and opts.include
+
+	if include == nil then
+		local ok, list = pcall(require, "backend.shared.EnabledAdapters")
+
+		if ok and type(list) == "table" then
+			include = list
+		end
+	end
+
+	if type(include) ~= "table" then
+		return nil
+	end
+
+	local set = {}
+
+	for _, name in ipairs(include) do
+		set[name] = true
+	end
+
+	return set
+end
+
 ---@param module_name string
 ---@return string
 local function module_dir(module_name)
@@ -99,15 +125,19 @@ local function adapter_modules(module_name)
 end
 
 ---@param module_name string
+---@param opts? { include?: string[] }
 ---@return table<string, Adapter>
-function M.load(module_name)
+function M.load(module_name, opts)
 	local adapters = {}
+	local include = include_set(opts)
 
 	for _, adapter_module in ipairs(adapter_modules(module_name)) do
-		local adapter = require_module(adapter_module.module)
+		if include == nil or include[adapter_module.name] then
+			local adapter = require_module(adapter_module.module)
 
-		if type(adapter) == "table" then
-			adapters[adapter_module.name] = adapter
+			if type(adapter) == "table" then
+				adapters[adapter_module.name] = adapter
+			end
 		end
 	end
 
@@ -118,6 +148,7 @@ end
 ---@return string[]
 function M.plugin_modules(module_name)
 	local modules = {}
+	local include = include_set(nil)
 	local root = module_dir(module_name)
 	local files = vim.fn.glob(root .. "/*/plugins.lua", false, true)
 	table.sort(files)
@@ -126,7 +157,9 @@ function M.plugin_modules(module_name)
 		local dir = vim.fn.fnamemodify(file, ":h")
 		local name = vim.fn.fnamemodify(dir, ":t")
 
-		modules[#modules + 1] = module_name .. "." .. name .. ".plugins"
+		if include == nil or include[name] then
+			modules[#modules + 1] = module_name .. "." .. name .. ".plugins"
+		end
 	end
 
 	return modules

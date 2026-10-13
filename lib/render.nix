@@ -57,6 +57,7 @@ rec {
               themesLib
               themeName
               checkHelpers
+              host
               ;
             fontFamily = defaultFontFamily;
             monitors = host.monitors or { };
