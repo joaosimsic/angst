@@ -3,7 +3,7 @@
 let
   t = import "../../lib/core/types.nix" { inherit lib; };
 
-  inherit (import ../core/evalAttr.nix { inherit lib; }) evalAttr;
+  inherit (import ../core/evalSchema.nix { inherit lib; }) evalSchema;
 
   hexColor = t.addCheck t.str (value: builtins.match "[#][0-9a-fA-F]{6}" value != null);
 
@@ -31,7 +31,7 @@ let
     contrastThreshold = t.optionOr t.number 4.5;
   };
 
-  validate = attr: evalAttr schema attr;
+  validate = set: evalSchema schema set;
 in
 {
   inherit hexColor validate schema;

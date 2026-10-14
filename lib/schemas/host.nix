@@ -3,7 +3,7 @@
 let
   t = import "../core/types.nix" { inherit lib; };
 
-  inherit (import "../core/evalAttr.nix" { inherit lib; }) evalAttr;
+  inherit (import "../core/evalSchema.nix" { inherit lib; }) evalSchema;
 
   hostType = t.enum [
     "nixos"
@@ -91,7 +91,7 @@ let
     };
   };
 
-  validate = attr: evalAttr schema attr;
+  validate = set: evalSchema schema set;
 in
 {
   inherit schema validate;

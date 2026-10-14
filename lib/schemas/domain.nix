@@ -3,7 +3,7 @@
 let
   t = import "../core/types.nix" { inherit lib; };
 
-  inherit (import "../core/evalAttr.nix" { inherit lib; }) evalAttr;
+  inherit (import "../core/evalSchema.nix.nix" { inherit lib; }) evalSchema;
 
   relPath = t.addCheck t.str (
     v: v != "" && !(lib.hasPrefix "/" v) && !(lib.hasPrefix "~" v) && !(lib.hasPrefix ".." v)
@@ -20,7 +20,7 @@ let
     mutableFiles = t.option t.listOf basename;
   };
 
-  validate = attr: evalAttr schema attr;
+  validate = set: evalSchema schema set;
 in
 {
   inherit

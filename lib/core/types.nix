@@ -1,48 +1,91 @@
 { lib }:
 
 let
-  inherit (lib) types mkOption;
+  inherit (lib) types;
 
-  option = type: {
+  leaf = type: {
+    _kind = "leaf";
+    inherit type;
+  };
+  normalize = x: if builtins.isAttrs x && (x ? _kind) then x else leaf x;
+  underlying = x: (normalize x).type or null;
+
+  option = inner: {
     _kind = "option";
-    type = types.nullOr type;
+    inner = normalize inner;
     default = null;
   };
-
-  optionOr = type: default: {
+  optionOr = inner: default: {
     _kind = "option";
-    inherit type default;
+    inner = normalize inner;
+    inherit default;
+  };
+  nullOr = inner: {
+    _kind = "nullOr";
+    inner = normalize inner;
+  };
+  set = fields: {
+    _kind = "set";
+    inherit fields;
+  };
+  listOf = item: {
+    _kind = "list";
+    item = normalize item;
+  };
+  attrsOf = item: {
+    _kind = "attrs";
+    item = normalize item;
+  };
+  either = a: b: {
+    _kind = "either";
+    a = normalize a;
+    b = normalize b;
   };
 
-  makeAttr =
-    attr:
-    if attr ? _kind && attr._kind == "option" then
-      mkOption (removeAttrs attr [ "_kind" ])
-    else
-      mkOption { type = attr; };
+  addCheck = base: f: leaf (types.addCheck (underlying base) f);
+  strMatching = pattern: leaf (types.strMatching pattern);
+  enum = names: leaf (types.enum names);
 
-  set =
-    attrs:
-    types.submodule {
-      options = lib.mapAttrs (_: makeAttr) attrs;
-    };
+  str = leaf types.str;
+  bool = leaf types.bool;
+  int = leaf types.int;
+  number = leaf types.number;
+  path = leaf types.path;
+  float = leaf types.float;
+  deferredModule = leaf types.deferredModule;
+
+  kinds = [
+    "leaf"
+    "option"
+    "nullOr"
+    "list"
+    "attrs"
+    "set"
+    "either"
+  ];
 in
 {
-  inherit set option optionOr;
-
-  inherit (types)
+  inherit
+    option
+    optionOr
+    nullOr
+    set
+    listOf
+    attrsOf
+    either
+    addCheck
+    strMatching
+    enum
     str
     bool
     int
     number
     path
     float
-    enum
-    listOf
-    attrsOf
-    either
-    addCheck
-    strMatching
     deferredModule
+    leaf
+    normalize
+    underlying
+    kinds
     ;
 }
