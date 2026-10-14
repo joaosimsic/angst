@@ -94,6 +94,7 @@
   projects = [
     "angst"
     "advent-of-code"
+    "stealing-eye"
     "datapath"
     "llm-ruler"
     "agent"
