@@ -19,7 +19,9 @@ let
     ${lib.optionalString (h.user != null) "  User ${h.user}"}
     ${lib.optionalString (h.identityFile != null) "  IdentityFile ${h.identityFile}"}
     ${lib.optionalString h.identitiesOnly "  IdentitiesOnly yes"}
-    ${lib.optionalString (h.strictHostKeyChecking != null) "  StrictHostKeyChecking ${h.strictHostKeyChecking}"}
+    ${lib.optionalString (
+      h.strictHostKeyChecking != null
+    ) "  StrictHostKeyChecking ${h.strictHostKeyChecking}"}
     ${lib.concatMapStringsSep "\n" (k: renderOption k h.extraOptions.${k}) (
       builtins.attrNames h.extraOptions
     )}
