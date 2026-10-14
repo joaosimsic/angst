@@ -13,6 +13,7 @@
     "game-dev"
     "office"
     "gaming"
+    "obs"
   ];
   toolchains = "*";
 

@@ -31,6 +31,7 @@ let
     gaming = import ./gaming.nix;
     design = import ./design.nix;
     office = import ./office.nix;
+    obs = import ./obs.nix;
   };
 
   resolve =
