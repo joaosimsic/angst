@@ -19,6 +19,15 @@ return {
 		nixd = LspTool.make_root_dir_finder(root_markers),
 	},
 	lsp_settings = {
+		nil_ls = {
+			["nil"] = {
+				nix = {
+					flake = {
+						autoEvalInputs = true,
+					},
+				},
+			},
+		},
 		nixd = {
 			nixd = {
 				nixpkgs = {
