@@ -52,16 +52,6 @@ $env.PKG_CONFIG_PATH = (
     | str join ":"
 )
 
-const carapace_init = ($XDG_CACHE_HOME | path join "carapace/init.nu")
-
-if not ($carapace_init | path exists) {
-    mkdir ($carapace_init | path dirname)
-    carapace _carapace nushell | save --force $carapace_init
-}
-source $carapace_init
-
-
-
 if (($nu.default-config-dir | path join "ssh-agent.nu") | path exists) {
     source $"($nu.default-config-dir)/ssh-agent.nu"
 }

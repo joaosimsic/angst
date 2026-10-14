@@ -43,8 +43,9 @@ in
       };
 
       activation.arduino-core-install = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        ${lib.getExe pkgs.arduino-cli} core update-index
-        ${lib.getExe pkgs.arduino-cli} core install arduino:avr
+        ( ${lib.getExe pkgs.arduino-cli} core update-index \
+          && ${lib.getExe pkgs.arduino-cli} core install arduino:avr ) \
+          || $VERBOSE_ECHO "warn: arduino core setup failed (offline?); will retry next activation"
       '';
     };
   };

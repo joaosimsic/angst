@@ -62,6 +62,10 @@ dev:
 install-hooks:
     git config core.hooksPath githooks
 
+# Repair .git/objects entries owned by root; no-op when none.
+fix-git-objects:
+    sudo find .git/objects -user root -exec chown "$(id -u):$(id -g)" {} +
+
 test-secrets:
     nix build '.#checks.x86_64-linux.secret-scan' --no-link --print-build-logs
     nix build '.#checks.x86_64-linux.secret-scan-hooks' --no-link --print-build-logs

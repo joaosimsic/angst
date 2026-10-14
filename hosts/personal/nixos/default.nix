@@ -13,6 +13,7 @@
     "game-dev"
     "office"
     "gaming"
+    "obs"
   ];
   toolchains = "*";
 
@@ -93,6 +94,7 @@
   projects = [
     "angst"
     "advent-of-code"
+    "stealing-eye"
     "datapath"
     "llm-ruler"
     "agent"

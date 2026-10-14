@@ -19,6 +19,7 @@ let
     ${lib.optionalString (h.user != null) "  User ${h.user}"}
     ${lib.optionalString (h.identityFile != null) "  IdentityFile ${h.identityFile}"}
     ${lib.optionalString h.identitiesOnly "  IdentitiesOnly yes"}
+    ${lib.optionalString (h.strictHostKeyChecking != null) "  StrictHostKeyChecking ${h.strictHostKeyChecking}"}
     ${lib.concatMapStringsSep "\n" (k: renderOption k h.extraOptions.${k}) (
       builtins.attrNames h.extraOptions
     )}
@@ -57,6 +58,12 @@ in
               type = lib.types.bool;
               default = true;
               description = "Only use the configured identity for this host";
+            };
+
+            strictHostKeyChecking = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = "accept-new";
+              description = "StrictHostKeyChecking value; null omits the directive";
             };
 
             extraOptions = lib.mkOption {
