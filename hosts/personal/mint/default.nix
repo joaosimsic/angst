@@ -96,6 +96,7 @@
     "llm-ruler"
     "agent"
     "horror"
+    "stealing-eye"
     "Throughput"
     "Throughput-Releases"
     "vault"
