@@ -101,6 +101,7 @@
     "Throughput-Releases"
     "vault"
     "TCC"
+    "Tyto"
     "box"
     "intelligence/backend"
     "intelligence/frontend"
