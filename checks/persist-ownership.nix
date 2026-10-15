@@ -12,11 +12,13 @@ let
   dataRoot = "/home/durable";
 
   enabledFeatures = [
+    "agents.opencode"
     "security.age"
     "browser.firefox"
     "git.code"
     "git.projects"
     "kernel.graphical"
+    "shell.nushell"
     "toolchain:rust"
   ];
 
@@ -83,6 +85,8 @@ let
         "${home}/.cargo",
         "${home}/.mozilla",
         "${home}/.local/share/keyrings",
+        "${home}/.local/share/nushell",
+        "${home}/.local/share/opencode",
         "${home}/projects",
         "${home}/.secrets",
         "${home}/.secrets/opencode-go-key",

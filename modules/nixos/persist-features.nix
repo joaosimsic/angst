@@ -8,6 +8,16 @@
 # `name` is the directory under `persist.dataRoot` that backs the bind mount.
 {
   features = {
+    "agents.opencode" = [
+      {
+        dir = ".local/share/opencode";
+        name = "opencode";
+        durable = true;
+      }
+      {
+        dir = ".cache/opencode";
+      }
+    ];
     "security.age" = [
       {
         dir = ".config/age";
@@ -41,6 +51,18 @@
       {
         dir = ".local/share/keyrings";
         name = "keyrings";
+        durable = true;
+      }
+      # Fontconfig's cache otherwise lives in tmpfs `~/.cache` and is rebuilt
+      # by the first font client after every boot — rofi feels laggy there.
+      {
+        dir = ".cache/fontconfig";
+      }
+    ];
+    "shell.nushell" = [
+      {
+        dir = ".local/share/nushell";
+        name = "nushell";
         durable = true;
       }
     ];
