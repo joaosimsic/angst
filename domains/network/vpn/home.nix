@@ -9,8 +9,9 @@
 }:
 let
   cfg = config.domains.network.vpn;
-  enabled = cfg.enable && cfg.openvpn.servers != { };
-  names = builtins.attrNames cfg.openvpn.servers;
+  servers = cfg.openvpn.servers or { };
+  enabled = cfg.enable && servers != { };
+  names = builtins.attrNames servers;
   provisionBin =
     (runtime.vpn-provision {
       secretsDir = "${flakeSelf}/${cfg.secretsDir}";
@@ -125,7 +126,7 @@ in
       };
     }
     // lib.listToAttrs (
-      map (n: lib.nameValuePair "angst-vpn-${n}" (mkVpnService n cfg.openvpn.servers.${n})) names
+      map (n: lib.nameValuePair "angst-vpn-${n}" (mkVpnService n servers.${n})) names
     );
   };
 }

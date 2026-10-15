@@ -14,6 +14,7 @@
     "office"
     "gaming"
     "obs"
+    "vpn"
   ];
   toolchains = "*";
 
@@ -31,6 +32,12 @@
   nixos = {
     keyboardLayout = "us";
     virtualisation.docker.daemon.settings.data-root = "/home/docker-data";
+    domains.network.vpn.openvpn.servers.us = {
+      config = "config /run/secrets/vpn/us.ovpn";
+      authUserPass = "/run/secrets/vpn/us.creds";
+      updateResolvConf = true;
+      autoStart = true;
+    };
   };
   home = { };
   env = {
