@@ -21,6 +21,7 @@ let
   hasPaper = has "design.paper";
   hasVm = builtins.elem "vm" profiles;
   hasLspmux = has "editor.lspmux";
+  hasRea = has "agents.rea";
 
   defaultBrowser = if browser != null then browser else env.BROWSER or "firefox";
   hasFirefox = defaultBrowser == "firefox";
@@ -37,6 +38,7 @@ in
     hasPaper
     hasVm
     hasLspmux
+    hasRea
     editorLsp
     defaultBrowser
     hasFirefox

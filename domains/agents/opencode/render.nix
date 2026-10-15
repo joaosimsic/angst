@@ -2,6 +2,7 @@
   lib,
   themesLib,
   themeName,
+  host,
   store ? { },
   ...
 }:
@@ -94,6 +95,27 @@ let
         {
           type = "remote";
           url = "http://127.0.0.1:29979/mcp";
+          enabled = true;
+        }
+      else
+        null;
+
+    rea =
+      if (store.hasRea or false) then
+        {
+          type = "local";
+          command = [
+            "${host.pkgs.nodejs_24}/bin/npx"
+            "-y"
+            "rea-agents@6.5.0"
+            "mcp"
+          ];
+          environment = {
+            GHIDRA_INSTALL_DIR = "${host.pkgs.ghidra-bin}/lib/ghidra";
+            JAVA_HOME = "${host.pkgs.openjdk21.home}";
+            REA_GHIDRA_STARTUP_TIMEOUT_MS = "900000";
+            GHIDRA_HEADLESS_MAXMEM = "4G";
+          };
           enabled = true;
         }
       else
