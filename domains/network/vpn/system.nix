@@ -135,6 +135,10 @@ in
                     "work"
                   ];
                 }).bin;
+            }
+            // lib.optionalAttrs (lib.hasPrefix "/run/" cfg.destDir) {
+              RuntimeDirectory = lib.removePrefix "/run/" cfg.destDir;
+              RuntimeDirectoryMode = "0700";
             };
           };
         }
