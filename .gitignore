@@ -1,5 +1,6 @@
 result/
 result*
+!lib/core/result.nix
 .vm-cli
 .virtiofsd
 *.qcow2

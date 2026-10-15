@@ -14,8 +14,8 @@ let
   themesLib = host.scan.themes;
   alternate = head (filter (n: n != host.theme) (attrNames themesLib.themes));
 
-  themeLint = import ./theme {
-    inherit lib themesLib;
+  themeLint = import ../systems/theme/tests {
+    inherit lib pkgs themesLib;
     inherit (render) renderDomainOutputsFor;
   };
 
@@ -29,19 +29,19 @@ let
     inherit (render) renderDomainOutputFor;
   };
 
-  themeRendered = import ./theme/rendered.nix {
+  themeRendered = import ../systems/theme/tests/rendered.nix {
     inherit lib pkgs themesLib;
     inherit (render) renderDomainOutputsFor;
     themeName = host.theme;
   };
 
-  themeSemanticDistinct = import ./theme/semanticDistinct.nix {
+  themeSemanticDistinct = import ../systems/theme/tests/semanticDistinct.nix {
     inherit lib pkgs;
     themesLib = host.scan.themes;
     themeName = host.theme;
   };
 
-  themeOverrideCheck = import ./theme/override.nix {
+  themeOverrideCheck = import ../systems/theme/tests/override.nix {
     inherit lib pkgs themesLib;
     overrideTheme = alternate;
     inherit (render) renderDomainOutputFor;

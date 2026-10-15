@@ -35,7 +35,7 @@ rec {
     themeName:
     let
       themesLib = host.scan.themes;
-      checkHelpers = import ../checks/theme/assertions.nix {
+      checkHelpers = import ../systems/theme/assertions.nix {
         inherit lib;
         theme = themesLib.get themeName;
         inherit themeName;

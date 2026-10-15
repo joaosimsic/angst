@@ -20,8 +20,8 @@ in
   lib = {
     inherit (render) renderDomainOutputsFor renderDomainOutputFor renderProjectOutputs;
     themeLint =
-      mkChecks.themeLint or (import ../../checks/theme {
-        inherit lib themesLib;
+      mkChecks.themeLint or (import ../../systems/theme/tests {
+        inherit lib pkgs themesLib;
         inherit (render) renderDomainOutputsFor;
       });
   };

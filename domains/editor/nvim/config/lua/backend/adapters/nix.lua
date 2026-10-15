@@ -23,7 +23,7 @@ return {
 			["nil"] = {
 				nix = {
 					flake = {
-						autoEvalInputs = true,
+						autoEvalInputs = false,
 					},
 				},
 			},

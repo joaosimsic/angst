@@ -24,7 +24,7 @@
     { self, nixpkgs, ... }@inputs:
     let
       inherit (nixpkgs) lib;
-      themesLib = import ./themes/default.nix { inherit lib; };
+      themeSys = import ./systems/theme/default.nix { inherit lib; };
       resolve = import ./lib/resolve.nix;
 
       discoverHosts = import ./lib/discover.nix { inherit lib; };
@@ -84,7 +84,7 @@
           inherit
             self
             inputs
-            themesLib
+            themeSys
             domain
             tcIndexOverride
             domainsLibOverride
@@ -105,7 +105,7 @@
         self
         inputs
         hostDefs
-        themesLib
+        themeSys
         ;
     };
 }

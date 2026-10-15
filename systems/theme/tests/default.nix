@@ -1,5 +1,6 @@
 {
   lib,
+  pkgs,
   themesLib,
   renderDomainOutputsFor,
 }:
@@ -9,18 +10,30 @@ let
 
   themeResults = import ./entries.nix { inherit themesLib themeNames; };
 
-  renderResults = lib.concatLists (
-    map (
-      themeName:
-      map (output: "  ${output.path} render + ${themeName}: ok") (renderDomainOutputsFor themeName)
-    ) themeNames
-  );
+  unitResults =
+    import ./color.nix { inherit lib; }
+    ++ import ./schema.nix { inherit lib; }
+    ++ import ./themes.nix { inherit lib themesLib; };
+
+  renderResults = import ./render.nix {
+    inherit
+      lib
+      pkgs
+      themesLib
+      renderDomainOutputsFor
+      ;
+  };
 
   summary = builtins.concatStringsSep "\n" (
     [
       "Themes (${toString (lib.length themeNames)}):"
     ]
     ++ themeResults
+    ++ [
+      ""
+      "Theme unit tests:"
+    ]
+    ++ unitResults
     ++ [
       ""
       "Domain renders:"
@@ -32,4 +45,4 @@ let
     ]
   );
 in
-summary
+builtins.deepSeq summary summary
