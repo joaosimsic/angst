@@ -1,16 +1,16 @@
 {
   loadHost,
-  themesLib,
+  themeSys,
   lib,
   testHostname ? "personal",
 }:
 
 let
   hostConfig = loadHost testHostname;
-  hostTheme = hostConfig.theme or themesLib.default;
+  hostTheme = hostConfig.theme or themeSys.default;
 
   alternateThemes = lib.sort lib.lessThan (
-    lib.filter (name: name != hostTheme) (lib.attrNames themesLib.themes)
+    lib.filter (name: name != hostTheme) (lib.attrNames themeSys.themes)
   );
 in
 {

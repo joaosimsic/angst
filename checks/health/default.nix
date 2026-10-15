@@ -1,7 +1,7 @@
 {
   lib,
   pkgs,
-  themesLib,
+  themeSys,
   render,
   host,
 }:
@@ -11,7 +11,7 @@ let
     inherit
       lib
       pkgs
-      themesLib
+      themeSys
       render
       host
       ;

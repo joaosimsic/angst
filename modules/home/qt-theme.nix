@@ -3,12 +3,12 @@
   pkgs,
   host,
   theme,
-  themesLib,
+  themeSys,
   ...
 }:
 
 let
-  t = themesLib.get theme;
+  t = themeSys.get theme;
 
   csv = key: lib.replaceStrings [ " " ] [ "," ] t."_${key}";
 

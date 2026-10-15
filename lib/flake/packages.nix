@@ -12,7 +12,7 @@ let
     hmSwitchTool
     pkgs
     lib
-    themesLib
+    themeSys
     ;
 in
 {
@@ -41,7 +41,7 @@ in
       paperRaw = pkgs.callPackage ../../domains/design/paper/package.nix { };
       paperBrowser =
         if representativeStore != null then representativeStore.defaultBrowser else "firefox";
-      paperIsDark = if representative != null then (themesLib.get representative.theme).isDark else true;
+      paperIsDark = if representative != null then (themeSys.get representative.theme).isDark else true;
       paperDesktop = pkgs.symlinkJoin {
         name = "paper-desktop-wrapped";
         paths = [ paperRaw ];

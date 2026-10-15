@@ -1,6 +1,6 @@
-{ config, themesLib }:
+{ config, themeSys }:
 let
-  t = themesLib.get config.theme;
+  t = themeSys.get config.theme;
   p = t.palette;
   inherit (t) isDark colorScheme;
 in

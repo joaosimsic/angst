@@ -1,12 +1,12 @@
 {
   lib,
   pkgs,
-  themesLib,
+  themeSys,
   renderDomainOutputFor,
 }:
 
 let
-  themeNames = lib.attrNames themesLib.themes;
+  themeNames = lib.attrNames themeSys.themes;
 
   renderForTheme = themeName: {
     inherit themeName;

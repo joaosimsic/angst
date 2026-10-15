@@ -1,12 +1,12 @@
 {
   lib,
   pkgs,
-  themesLib,
+  themeSys,
   themeName,
 }:
 
 let
-  theme = themesLib.get themeName;
+  theme = themeSys.get themeName;
   inherit (import ../assertions.nix { inherit lib themeName theme; }) requireDistinct;
 
   roles = [

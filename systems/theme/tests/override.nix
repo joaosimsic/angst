@@ -1,7 +1,7 @@
 {
   lib,
   pkgs,
-  themesLib,
+  themeSys,
   overrideTheme,
   homeConfiguration,
   renderDomainOutputFor,
@@ -9,7 +9,7 @@
 
 let
   theme = homeConfiguration.config.theme;
-  expected = themesLib.get overrideTheme;
+  expected = themeSys.get overrideTheme;
 
   ghosttyColors = renderDomainOutputFor overrideTheme "domains/terminal/ghostty/config/colors.conf";
 in

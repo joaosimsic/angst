@@ -7,7 +7,7 @@ let
       config,
       lib,
       pkgs,
-      themesLib,
+      themeSys,
       monitors,
       db,
       sshAgent ? { },
@@ -66,7 +66,7 @@ let
       renderArgs = {
         inherit
           lib
-          themesLib
+          themeSys
           monitors
           db
           sshAgent
@@ -77,7 +77,7 @@ let
         checkHelpers = import ../../systems/theme/assertions.nix {
           inherit lib;
           themeName = config.theme;
-          theme = themesLib.get config.theme;
+          theme = themeSys.get config.theme;
         };
         fontFamily = "JetBrainsMono Nerd Font";
         themeName = config.theme;

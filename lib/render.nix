@@ -34,10 +34,10 @@ rec {
   renderDomainOutputsFor =
     themeName:
     let
-      themesLib = host.scan.themes;
+      themeSys = host.scan.themes;
       checkHelpers = import ../systems/theme/assertions.nix {
         inherit lib;
-        theme = themesLib.get themeName;
+        theme = themeSys.get themeName;
         inherit themeName;
       };
       domainRendererPaths = map (e: e.path + "/render.nix") (
@@ -54,7 +54,7 @@ rec {
           lib.filterAttrs (name: _: builtins.hasAttr name (lib.functionArgs render)) {
             inherit
               lib
-              themesLib
+              themeSys
               themeName
               checkHelpers
               host

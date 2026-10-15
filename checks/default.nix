@@ -11,38 +11,38 @@
 let
   inherit (lib) attrNames filter head;
 
-  themesLib = host.scan.themes;
-  alternate = head (filter (n: n != host.theme) (attrNames themesLib.themes));
+  themeSys = host.scan.themes;
+  alternate = head (filter (n: n != host.theme) (attrNames themeSys.themes));
 
   themeLint = import ../systems/theme/tests {
-    inherit lib pkgs themesLib;
+    inherit lib pkgs themeSys;
     inherit (render) renderDomainOutputsFor;
   };
 
   lintDesktop = import ./desktop.nix {
-    inherit lib pkgs themesLib;
+    inherit lib pkgs themeSys;
     inherit (render) renderDomainOutputFor;
   };
 
   lintShell = import ./shell.nix {
-    inherit lib pkgs themesLib;
+    inherit lib pkgs themeSys;
     inherit (render) renderDomainOutputFor;
   };
 
   themeRendered = import ../systems/theme/tests/rendered.nix {
-    inherit lib pkgs themesLib;
+    inherit lib pkgs themeSys;
     inherit (render) renderDomainOutputsFor;
     themeName = host.theme;
   };
 
   themeSemanticDistinct = import ../systems/theme/tests/semanticDistinct.nix {
     inherit lib pkgs;
-    themesLib = host.scan.themes;
+    themeSys = host.scan.themes;
     themeName = host.theme;
   };
 
   themeOverrideCheck = import ../systems/theme/tests/override.nix {
-    inherit lib pkgs themesLib;
+    inherit lib pkgs themeSys;
     overrideTheme = alternate;
     inherit (render) renderDomainOutputFor;
     homeConfiguration = self.homeConfigurations."${host.username}-theme-override-test";
@@ -117,7 +117,7 @@ let
     inherit
       lib
       pkgs
-      themesLib
+      themeSys
       render
       host
       ;

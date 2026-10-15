@@ -113,7 +113,7 @@ Domains are the single unit of configuration — **50 features across 27 categor
 | `default.nix` | **The domain interface**: pure data — `package`, `xdg`/`xdgFile`/`customXdg`, `description`, `mutable`. Validated strictly by `mkDomain` |
 | `home.nix` | Optional: custom home-manager module (only when auto-generation isn't enough) |
 | `system.nix` | Optional: NixOS module (sshd, i3 WM, `system/*` features) |
-| `render.nix` | Optional: theme-aware config generator: `{ themesLib, themeName, ... } → [{ path, text, checks? }]` |
+| `render.nix` | Optional: theme-aware config generator: `{ themeSys, themeName, ... } → [{ path, text, checks? }]` |
 | `config/` | Optional: static config files (symlinked via `xdg.configFile`) |
 
 The domain framework (`lib/domains/`):
@@ -271,7 +271,7 @@ Profiles replace host-specific `home.nix` / `configuration.nix` files. Each is a
 
 9 themes, each a compact Nix attrset with 13 tokens (**9 palette + 4 ansi**): `background`, `surface`, `foreground`, `accent` (each `{ base, variant }`), `dim`, and `ansi.error/warn/info/success`. Available: `catppuccin-mocha`, `github`, `gotham`, `kanagawa`, `lotus`, `miasma`, `monochrome` (default), `noctis`, `rose-pine`.
 
-`themes/default.nix` normalizes (strips `#`, validates hex), enriches with RGB variants (`_RGB`) for apps that need integer colors, and provides contrast-checked `safe.*` tokens. Themes resolve at eval time via `themesLib.get "<name>"` and are rendered into every domain config. See [openwiki/themes.md](openwiki/themes.md).
+`themes/default.nix` normalizes (strips `#`, validates hex), enriches with RGB variants (`_RGB`) for apps that need integer colors, and provides contrast-checked `safe.*` tokens. Themes resolve at eval time via `themeSys.get "<name>"` and are rendered into every domain config. See [openwiki/themes.md](openwiki/themes.md).
 
 ---
 

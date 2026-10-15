@@ -2,13 +2,13 @@
   config,
   lib,
   pkgs,
-  themesLib,
+  themeSys,
   store,
   ...
 }:
 let
   cfg = config.domains.browser.firefox;
-  theme = import ./theme.nix { inherit config themesLib; };
+  theme = import ./theme.nix { inherit config themeSys; };
   userChrome = import ./chrome.nix { inherit theme; };
   userContent = import ./content.nix { inherit theme; };
   tridactyl = import ./tridactyl.nix { inherit theme config; };

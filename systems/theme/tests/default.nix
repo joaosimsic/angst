@@ -1,25 +1,25 @@
 {
   lib,
   pkgs,
-  themesLib,
+  themeSys,
   renderDomainOutputsFor,
 }:
 
 let
-  themeNames = lib.attrNames themesLib.themes;
+  themeNames = lib.attrNames themeSys.themes;
 
-  themeResults = import ./entries.nix { inherit themesLib themeNames; };
+  themeResults = import ./entries.nix { inherit themeSys themeNames; };
 
   unitResults =
     import ./color.nix { inherit lib; }
     ++ import ./schema.nix { inherit lib; }
-    ++ import ./themes.nix { inherit lib themesLib; };
+    ++ import ./themes.nix { inherit lib themeSys; };
 
   renderResults = import ./render.nix {
     inherit
       lib
       pkgs
-      themesLib
+      themeSys
       renderDomainOutputsFor
       ;
   };

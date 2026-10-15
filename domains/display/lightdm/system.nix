@@ -2,7 +2,7 @@
   config,
   lib,
   theme,
-  themesLib,
+  themeSys,
   ...
 }:
 
@@ -32,7 +32,7 @@ in
 
     services.xserver.displayManager.lightdm = lib.mkIf config.domains.kernel.graphical.enable (
       let
-        themeColors = themesLib.get theme;
+        themeColors = themeSys.get theme;
       in
       {
         enable = true;

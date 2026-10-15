@@ -1,13 +1,13 @@
 {
   lib,
   pkgs,
-  themesLib,
+  themeSys,
   renderDomainOutputsFor,
   themeName,
 }:
 
 let
-  theme = themesLib.get themeName;
+  theme = themeSys.get themeName;
   inherit (import ../assertions.nix { inherit lib themeName theme; }) requireDistinct;
 
   allOutputs = renderDomainOutputsFor themeName;

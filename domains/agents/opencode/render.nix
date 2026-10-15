@@ -1,13 +1,13 @@
 {
   lib,
-  themesLib,
+  themeSys,
   themeName,
   store ? { },
   ...
 }:
 
 let
-  t = themesLib.get themeName;
+  t = themeSys.get themeName;
   p = t.palette;
 
   theme = builtins.toJSON {

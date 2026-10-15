@@ -1,6 +1,6 @@
 {
   inputs,
-  themesLib,
+  themeSys,
   domain,
   decl,
   self ? null,
@@ -195,7 +195,7 @@ in
 
     scan = {
       domains = domainsLib;
-      themes = themesLib;
+      themes = themeSys;
       allToolchainPackages = lib.unique (lib.concatMap (t: t.home.packages or [ ]) _selectedTCs);
       treesitter = import ./treesitter.nix {
         inherit lib pkgs;

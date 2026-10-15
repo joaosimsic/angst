@@ -1,4 +1,4 @@
-{ lib, themeSystem }:
+{ lib, themeSys }:
 
 let
   t = import "../core/types.nix" { inherit lib; };
@@ -55,8 +55,8 @@ let
     password = t.str;
 
     theme = mkOption {
-      type = types.enum (builtins.attrNames themeSystem.themes);
-      default = themeSystem.default;
+      type = types.enum (builtins.attrNames themeSys.themes);
+      default = themeSys.default;
     };
 
     monitors = t.option t.attrsOf monitorType;

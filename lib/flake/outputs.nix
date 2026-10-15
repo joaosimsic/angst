@@ -2,7 +2,7 @@
   self,
   inputs,
   hostDefs,
-  themesLib,
+  themeSys,
 }:
 
 let
@@ -11,7 +11,7 @@ let
       self
       inputs
       hostDefs
-      themesLib
+      themeSys
       ;
   };
 in

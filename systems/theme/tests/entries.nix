@@ -1,3 +1,3 @@
-{ themesLib, themeNames }:
+{ themeSys, themeNames }:
 
-map (themeName: builtins.seq (themesLib.get themeName) "  ${themeName}: ok") themeNames
+map (themeName: builtins.seq (themeSys.get themeName) "  ${themeName}: ok") themeNames

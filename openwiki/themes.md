@@ -61,7 +61,7 @@ Defined as plain attrsets in `/themes/<name>.nix`:
 
 ## Normalization and Validation (`/themes/default.nix`)
 
-`themesLib` (imported in `flake.nix` as `import ./themes/default.nix { inherit lib; }`) exposes:
+`themeSys` (imported in `flake.nix` as `import ./themes/default.nix { inherit lib; }`) exposes:
 
 - `normalizeTheme` — strips leading `#` from every hex value;
 - `validateTheme` — enforces all 13 required paths exist and are valid 6-digit hex (throws otherwise);
@@ -75,7 +75,7 @@ All 9 themes must load (`checks/theme/entries.nix`); the four `ansi.*` roles mus
 Domains consume themes via `render.nix` (see [Domains](domains.md)):
 
 ```nix
-t = themesLib.get themeName;   # all tokens + _RGB + safe.*
+t = themeSys.get themeName;   # all tokens + _RGB + safe.*
 ```
 
 `lib/render.nix` (`renderDomainOutputsFor`) evaluates every enabled domain's `render.nix` for the host's theme (or a `themeOverride`) and produces `[{ path, text, checks? }]`. `angst render` writes those files into the repo (and `angst watch` re-renders on changes). The override machinery powers the `home-theme-override-test` check, which builds a home configuration with an alternate theme and asserts the override propagated into rendered outputs (e.g. ghostty background).

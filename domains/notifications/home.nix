@@ -4,7 +4,7 @@
   pkgs,
   runtime,
   store,
-  themesLib ? null,
+  themeSys ? null,
   ...
 }:
 
@@ -16,8 +16,8 @@ let
     if rawBackend == "auto" then if hasWayland && !hasX11 then "mako" else "dunst" else rawBackend;
   themeName = config.theme or "catppuccin-mocha";
   t =
-    if themesLib != null then
-      themesLib.get themeName
+    if themeSys != null then
+      themeSys.get themeName
     else
       {
         palette = {

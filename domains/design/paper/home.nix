@@ -1,13 +1,13 @@
 {
   config,
   lib,
-  themesLib ? null,
+  themeSys ? null,
   ...
 }:
 
 let
   cfg = config.domains.design.paper;
-  isDark = if themesLib != null then (themesLib.get config.theme).isDark else true;
+  isDark = if themeSys != null then (themeSys.get config.theme).isDark else true;
 in
 {
   config = lib.mkIf cfg.enable (

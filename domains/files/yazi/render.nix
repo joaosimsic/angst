@@ -1,7 +1,7 @@
-{ themesLib, themeName }:
+{ themeSys, themeName }:
 
 let
-  t = themesLib.get themeName;
+  t = themeSys.get themeName;
   p = t.palette;
 in
 [

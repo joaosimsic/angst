@@ -1,4 +1,4 @@
-{ lib, themesLib }:
+{ lib, themeSys }:
 
 let
   inherit (import ./assert.nix { inherit lib; })
@@ -7,7 +7,7 @@ let
     assertMatch
     ;
 
-  themeNames = lib.attrNames themesLib.themes;
+  themeNames = lib.attrNames themeSys.themes;
 
   tokenPaths = [
     "palette.background.base"
@@ -28,7 +28,7 @@ let
   checkTheme =
     name:
     let
-      t = themesLib.get name;
+      t = themeSys.get name;
     in
     map (p: assertTrue "${name}: token ${p}" (lib.hasAttrByPath (lib.splitString "." p) t)) tokenPaths
     ++ [
@@ -46,12 +46,12 @@ let
       (assertTrue "${name}: isDark is bool" (builtins.isBool t.isDark))
     ];
 
-  monochrome = themesLib.get "monochrome";
+  monochrome = themeSys.get "monochrome";
 in
 [
   (assertTrue "at least 9 bundled themes" (lib.length themeNames >= 9))
-  (assertTrue "monochrome present" (themesLib.themes ? monochrome))
-  (assertEq "default is monochrome" "monochrome" themesLib.default)
+  (assertTrue "monochrome present" (themeSys.themes ? monochrome))
+  (assertEq "default is monochrome" "monochrome" themeSys.default)
   (assertEq "monochrome background stripped" "0a0a0a" monochrome.palette.background.base)
   (assertEq "monochrome background RGB" "10 10 10" monochrome."_palette_background_base_RGB")
 ]

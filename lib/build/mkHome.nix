@@ -29,7 +29,7 @@ let
 
   themeModule = import ../../modules/home/themeModule.nix {
     inherit lib;
-    themesLib = host.scan.themes;
+    themeSys = host.scan.themes;
     hostTheme = effectiveTheme;
   };
 
@@ -59,7 +59,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
     inherit host;
     shell = if shellOverride != null then shellOverride else host.shell;
     inherit (host.scan) themes;
-    themesLib = host.scan.themes;
+    themeSys = host.scan.themes;
     hostName = host.hostname;
     userConfig = userCfg;
     theme = effectiveTheme;

@@ -41,7 +41,7 @@ let
 
   themeModule = import ../../modules/home/themeModule.nix {
     inherit lib;
-    themesLib = host.scan.themes;
+    themeSys = host.scan.themes;
     hostTheme = effectiveTheme;
   };
 
@@ -81,7 +81,7 @@ inputs.nixpkgs.lib.nixosSystem {
     inherit host;
     hostName = host.hostname;
     inherit (host.scan) themes;
-    themesLib = host.scan.themes;
+    themeSys = host.scan.themes;
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
@@ -169,7 +169,7 @@ inputs.nixpkgs.lib.nixosSystem {
           inherit host;
           hostName = host.hostname;
           inherit (host.scan) themes;
-          themesLib = host.scan.themes;
+          themeSys = host.scan.themes;
           userConfig = userCfg;
           theme = effectiveTheme;
           flakeSelf = self;

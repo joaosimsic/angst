@@ -1,16 +1,16 @@
 {
   lib,
   pkgs,
-  themesLib,
+  themeSys,
   renderDomainOutputFor,
 }:
 
 let
-  themeNames = lib.attrNames themesLib.themes;
+  themeNames = lib.attrNames themeSys.themes;
 
   renderForTheme = themeName: {
     inherit themeName;
-    themeBg = (themesLib.get themeName).palette.background.base;
+    themeBg = (themeSys.get themeName).palette.background.base;
     i3Config = renderDomainOutputFor themeName "domains/wm/i3/config/config";
     i3statusRustConfig = renderDomainOutputFor themeName "domains/bar/i3status-rust/config/config.toml";
   };

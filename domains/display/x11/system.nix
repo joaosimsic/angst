@@ -3,14 +3,14 @@
   lib,
   pkgs,
   theme,
-  themesLib,
+  themeSys,
   monitors,
   ...
 }:
 
 let
   cfg = config.domains.display.x11;
-  t = themesLib.get theme;
+  t = themeSys.get theme;
   p = t.palette;
   m = monitors.primary or { };
   xrandrLine = lib.optionalString (m ? name && m ? resolution) ''

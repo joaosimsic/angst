@@ -1,12 +1,12 @@
 {
   pkgs,
-  themesLib,
+  themeSys,
   host,
 }:
 
 let
   theme = import ../../domains/browser/firefox/theme.nix {
-    inherit themesLib;
+    inherit themeSys;
     config = {
       inherit (host) theme;
     };

@@ -1,14 +1,14 @@
 {
   lib,
   pkgs,
-  themesLib,
+  themeSys,
   renderDomainOutputsFor,
 }:
 
 let
   inherit (import ./assert.nix { inherit lib; }) assertTrue;
 
-  themeNames = lib.attrNames themesLib.themes;
+  themeNames = lib.attrNames themeSys.themes;
 
   checkOne =
     themeName:

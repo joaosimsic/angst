@@ -1,13 +1,13 @@
 {
   lib,
-  themesLib,
+  themeSys,
   themeName,
   fontFamily,
   monitors ? { },
 }:
 
 let
-  t = themesLib.get themeName;
+  t = themeSys.get themeName;
   p = t.palette;
 
   monitorOrder = lib.unique (

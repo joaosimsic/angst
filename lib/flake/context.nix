@@ -2,7 +2,7 @@
   self,
   inputs,
   hostDefs,
-  themesLib,
+  themeSys,
 }:
 
 let
@@ -67,7 +67,7 @@ let
   fallbackHost = {
     scan = {
       domains.homeEntries = [ ];
-      themes = themesLib;
+      themes = themeSys;
       editorLsp = { };
     };
     monitors = { };
@@ -294,7 +294,7 @@ in
     self
     inputs
     hostDefs
-    themesLib
+    themeSys
     lib
     hostList
     nixosHosts

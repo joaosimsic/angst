@@ -30,7 +30,7 @@ Pure data declaring the domain's characteristics. `mkDomain` (`lib/domains/mkDom
 
 ### render.nix
 
-The heart of the theme system: a function taking `{ themesLib, themeName, homeDirectory, ... }` (see `lib/render.nix`, `renderDomainOutputsFor`) and returning `[{ path, text, checks? }]`. `path` is repo-relative (`domains/<cat>/<name>/config/…`); the framework maps it to the correct XDG location and validates the output shape (`path`/`text` strings, `checks` a list, unique paths). Rendered outputs can carry `checks` (e.g. "this ghostty color must equal `palette 5`") that the theme checks assert.
+The heart of the theme system: a function taking `{ themeSys, themeName, homeDirectory, ... }` (see `lib/render.nix`, `renderDomainOutputsFor`) and returning `[{ path, text, checks? }]`. `path` is repo-relative (`domains/<cat>/<name>/config/…`); the framework maps it to the correct XDG location and validates the output shape (`path`/`text` strings, `checks` a list, unique paths). Rendered outputs can carry `checks` (e.g. "this ghostty color must equal `palette 5`") that the theme checks assert.
 
 ## Framework (`lib/domains/`)
 

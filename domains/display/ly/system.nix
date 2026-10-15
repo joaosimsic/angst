@@ -2,7 +2,7 @@
   config,
   lib,
   theme,
-  themesLib,
+  themeSys,
   ...
 }:
 
@@ -32,7 +32,7 @@ in
 
     services.displayManager.ly = lib.mkIf config.domains.kernel.graphical.enable (
       let
-        themeColors = themesLib.get theme;
+        themeColors = themeSys.get theme;
         p = themeColors.palette;
         hex = h: "0x00" + lib.removePrefix "#" h;
         hexBold = h: "0x01" + lib.removePrefix "#" h;

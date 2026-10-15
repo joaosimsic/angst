@@ -1,11 +1,11 @@
 {
-  themesLib,
+  themeSys,
   themeName,
   fontFamily,
 }:
 
 let
-  t = themesLib.get themeName;
+  t = themeSys.get themeName;
   p = t.palette;
 in
 [
