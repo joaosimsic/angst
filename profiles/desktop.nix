@@ -16,6 +16,7 @@
     "kernel.clipboard"
     "audio.easyeffects"
     "capture.screenshot"
+    "media.celluloid"
     "notifications"
   ];
 }

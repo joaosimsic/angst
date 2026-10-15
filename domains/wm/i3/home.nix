@@ -10,10 +10,12 @@ let
   cap = config.domains.capture.screenshot or { enable = false; };
   notif = config.domains.notifications or { enable = false; };
   audio = config.domains.kernel.audio or { enable = false; };
+  player = config.domains.media.celluloid or { enable = false; };
   inherit (store) hasX11 hasNotifications;
   shouldBind = cfg.enable && (cap.enable or false) && hasX11;
   shouldBindNotif = cfg.enable && (notif.enable or false) && hasX11 && hasNotifications;
   shouldBindAudio = cfg.enable && (audio.enable or false) && hasX11;
+  shouldBindPlayer = cfg.enable && (player.enable or false) && hasX11;
 in
 {
   config = lib.mkIf cfg.enable {
@@ -55,6 +57,20 @@ in
         else
           ""
       );
+
+      "i3/media.conf".text = lib.mkDefault (
+        if shouldBindPlayer then
+          ''
+            bindsym XF86AudioPlay exec --no-startup-id playerctl play-pause
+            bindsym XF86AudioPause exec --no-startup-id playerctl play-pause
+            bindsym XF86AudioStop exec --no-startup-id playerctl stop
+            bindsym XF86AudioNext exec --no-startup-id playerctl next
+            bindsym XF86AudioPrev exec --no-startup-id playerctl previous
+            bindsym $mod+Control+space exec --no-startup-id playerctl play-pause
+          ''
+        else
+          ""
+      );
     };
 
     assertions = [
@@ -69,6 +85,10 @@ in
       {
         assertion = !shouldBindAudio || config.domains.kernel.graphical.enable;
         message = "domains.wm.i3 audio bindings require domains.kernel.graphical to be enabled";
+      }
+      {
+        assertion = !shouldBindPlayer || config.domains.kernel.graphical.enable;
+        message = "domains.wm.i3 media bindings require domains.kernel.graphical to be enabled";
       }
     ];
   };

@@ -62,6 +62,7 @@ in
       include ~/.config/i3/screenshot.local.conf
       include ~/.config/i3/notifications.conf
       include ~/.config/i3/audio.conf
+      include ~/.config/i3/media.conf
 
       bindsym $mod+q kill
       bindsym $mod+Shift+q kill
