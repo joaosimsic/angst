@@ -103,7 +103,6 @@ in
         systemd.services = {
           angst-provision-vpn = {
             description = "angst: decrypt VPN .ovpn + creds (both scopes, ephemeral)";
-            wantedBy = [ "multi-user.target" ];
             before = map (n: "openvpn-${n}.service") (builtins.attrNames cfg.openvpn.servers);
             after = [
               "local-fs.target"

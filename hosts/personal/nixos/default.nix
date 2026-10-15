@@ -36,7 +36,7 @@
       config = "config /run/secrets/vpn/us.ovpn";
       authUserPass = "/run/secrets/vpn/us.creds";
       updateResolvConf = true;
-      autoStart = true;
+      autoStart = false;
     };
   };
   home = { };
