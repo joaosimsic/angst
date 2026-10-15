@@ -125,6 +125,7 @@ in
 
       bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
       bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
+      bindsym $mod+e exec --no-startup-id GDK_BACKEND=x11 ghostty -e yazi
       exec_always --no-startup-id hsetroot -solid '#${p.background.base}'
       exec --no-startup-id dbus-update-activation-environment --systemd --all
       exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY PATH XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
