@@ -25,6 +25,12 @@
       refreshRate = 144;
       position = "0x0";
     };
+    secondary = {
+      name = "HDMI-2";
+      resolution = "1920x1080";
+      refreshRate = 60;
+      position = "1920x0";
+    };
   };
 
   db = [ "work/intelligence" ];
