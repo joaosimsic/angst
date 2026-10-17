@@ -124,7 +124,7 @@ The domain framework (`lib/domains/`):
 
 Full 50-domain inventory: see [openwiki/domains.md](openwiki/domains.md).
 
-Domain categories: `agents/` (opencode, cursor-cli), `audio/` (easyeffects), `bar/` (i3status-rust), `browser/` (firefox), `capture/` (screenshot, obs), `chat/` (discord), `design/` (paper), `display/` (gpu, lightdm, ly, x11), `editor/` (lspmux, nvim), `embedded/` (arduino, vial), `files/` (yazi), `gamedev/` (env), `games/` (minecraft, steam), `git/` (code, lazygit, projects), `http-client/` (posting), `kernel/` (audio, clipboard, container, cursor, graphical, monitoring, network, search), `launcher/` (rofi), `network/` (vpn), `nix/` (nh), `notifications/`, `office/` (libreoffice), `remote/` (ftp, ssh), `security/` (age), `shell/` (carapace, nushell, starship), `sql-client/` (rainfrog, sqlit), `terminal/` (ghostty, tmux, zellij), `wm/` (i3).
+Domain categories: `agents/` (opencode, cursor-cli), `audio/` (easyeffects), `bar/` (i3status-rust), `browser/` (firefox), `capture/` (screenshot, obs), `chat/` (discord), `design/` (paper), `display/` (gpu, lightdm, ly, picom, x11), `editor/` (lspmux, nvim), `embedded/` (arduino, vial), `files/` (yazi), `gamedev/` (env), `games/` (minecraft, steam), `git/` (code, lazygit, projects), `http-client/` (posting), `kernel/` (audio, clipboard, container, cursor, graphical, monitoring, network, search), `launcher/` (rofi), `network/` (vpn), `nix/` (nh), `notifications/`, `office/` (libreoffice), `remote/` (ftp, ssh), `security/` (age), `shell/` (carapace, nushell, starship), `sql-client/` (rainfrog, sqlit), `terminal/` (ghostty, tmux, zellij), `wm/` (i3).
 
 Domains are enabled via **profile composition**, not per-host module files.
 

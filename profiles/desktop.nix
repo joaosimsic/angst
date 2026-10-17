@@ -4,6 +4,7 @@
     "launcher.rofi"
     "terminal.ghostty"
     "display.x11"
+    "display.picom"
     "display.lightdm"
     "wm.i3"
     "bar.i3status-rust"
