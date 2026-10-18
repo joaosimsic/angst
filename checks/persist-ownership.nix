@@ -17,6 +17,7 @@ let
     "browser.firefox"
     "git.code"
     "git.projects"
+    "editor.nvim"
     "kernel.graphical"
     "shell.nushell"
     "toolchain:rust"
@@ -87,6 +88,9 @@ let
         "${home}/.local/share/keyrings",
         "${home}/.local/share/nushell",
         "${home}/.local/share/opencode",
+        "${home}/.local/state/opencode",
+        "${home}/.local/share/nvim",
+        "${home}/.local/state/nvim",
         "${home}/projects",
         "${home}/.secrets",
         "${home}/.secrets/opencode-go-key",
