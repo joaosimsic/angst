@@ -105,6 +105,7 @@ in
       bindsym $mod+Shift+8 move container to workspace number 8
       bindsym $mod+Shift+9 move container to workspace number 9
       bindsym $mod+Shift+0 move container to workspace number 10
+      bindsym $mod+Shift+b exec --no-startup-id i3-swap-workspaces 1 2
 
       bindsym $mod+Shift+c reload
       bindsym $mod+Shift+r restart
