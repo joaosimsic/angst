@@ -1,0 +1,14 @@
+{
+  "name": "markdown-preview",
+  "version": "0.0.10",
+  "private": true,
+  "scripts": {
+    "setup": "bun install --cwd app",
+    "build-lib": "tsc -p ./",
+    "build": "tsc -p ./"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^4.6.4"
+  }
+}

@@ -54,6 +54,9 @@ function Badge:_refresh()
 	vim.bo[self.buf].buflisted = false
 
 	local ui = vim.api.nvim_list_uis()[1]
+	if not ui then
+		return
+	end
 	local my_width = vim.fn.strdisplaywidth(content) + 2
 
 	local max_bottom = 0

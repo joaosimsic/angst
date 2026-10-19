@@ -137,6 +137,12 @@ let
         };
       };
       lsp = lspWithDisabled;
+      permission = {
+        external_directory = {
+          "/tmp/**" = "allow";
+          "/nix/**" = "allow";
+        };
+      };
       command = {
         caveman = {
           description = "Caveman voice: /caveman toggles on/off, or lite|full|ultra|off";
