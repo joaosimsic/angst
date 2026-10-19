@@ -44,6 +44,32 @@ main {
   color: var(--foreground-color);
 }
 
+.smiles-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.smiles-group .smiles {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+}
+
+.smiles-group .smiles svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.smiles-group .smiles code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 #page-header {
   display: flex;
   justify-content: space-between;

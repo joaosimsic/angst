@@ -12,6 +12,7 @@ import markdownDeflist from 'markdown-it-deflist'
 
 import mk from './katex'
 import chart from './chart'
+import smiles, { renderSmiles } from './smiles'
 import mkitMermaid from './mermaid'
 import linenumbers from './linenumbers'
 import image from './image'
@@ -100,7 +101,9 @@ export default class PreviewPage extends React.Component {
   handleThemeChange() {
     this.setState((state) => ({
       theme: state.theme === 'light' ? 'dark' : 'light',
-    }))
+    }), () => {
+      renderSmiles(this.state.theme)
+    })
   }
 
   showThemeButton() {
@@ -218,6 +221,7 @@ export default class PreviewPage extends React.Component {
         .use(image)
         .use(markdownImSize)
         .use(linenumbers)
+        .use(smiles)
         .use(mkitMermaid)
         .use(chart.chartPlugin)
         .use(diagram, {
@@ -295,6 +299,7 @@ export default class PreviewPage extends React.Component {
           renderDiagram()
           renderFlowchart()
           renderDot()
+          renderSmiles(this.state.theme || theme)
         }
         refreshScroll()
       })
