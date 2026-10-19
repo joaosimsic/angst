@@ -29,7 +29,7 @@ M.get = function()
 		["@number.float"] = { link = "Float" },
 
 		["@function"] = { link = "Function" },
-		["@function.builtin"] = { link = "Function" },
+		["@function.builtin"] = { link = "SpecialChar" },
 		["@function.call"] = { link = "Function" },
 		["@function.macro"] = { link = "Function" },
 		["@function.method"] = { link = "Function" },
@@ -43,7 +43,7 @@ M.get = function()
 		["@field"] = { link = "Identifier" },
 
 		["@type"] = { link = "Type" },
-		["@type.builtin"] = { link = "Type" },
+		["@type.builtin"] = { link = "Constant" },
 		["@type.definition"] = { link = "Typedef" },
 		["@type.qualifier"] = { link = "Keyword" },
 		["@attribute"] = { link = "PreProc" },

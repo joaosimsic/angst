@@ -2,102 +2,219 @@
 
 NixOS + home-manager flake for a theme-driven, hot-reloadable desktop environment.
 
-All configuration is driven by a single `local/config.nix` file:
+Every machine is declared as a plain, diffable Nix file under `hosts/` and auto-discovered at flake eval time — no `flake.nix` edits, no env-file hacks. Secrets are age-encrypted (`secrets/master/<host>.age` for the login password, `secrets/apps/<scope>/<slug>.age` for app secrets) and decrypted at runtime. A single color-theme system propagates across ~21 user-space applications.
 
-```nix
-{
-  hostname = "nixos";
-  username = "joao";
-  theme = "miasma";
-  profiles = ["base" "desktop" "development"];   # composes modules + domains + caps
-  toolchains = "*";                                # all 22 languages, or a list
-  password = "$y$j9T$...";                         # hashed via `just password`
-  monitors = { primary = { ... }; };
-  nixos = { keyboardLayout = "br-abnt2"; };        # per-machine extras
-}
+Maintained reference documentation lives in [openwiki/](openwiki/quickstart.md) (quickstart, [architecture](openwiki/architecture.md), [domains](openwiki/domains.md), [themes](openwiki/themes.md), [tools](openwiki/tools.md), [operations](openwiki/operations.md), [secrets](openwiki/secrets.md)).
+
+## Quick Start
+
+```bash
+# Build + switch a NixOS host (hostname comes from hosts/<domain>/<hostname>/default.nix)
+nixos-rebuild switch --flake .#nixos
+
+# Home-manager only (also for type = "home" hosts like mint)
+just hm-switch nixos                 # or: nix build .#homeConfigurations.joao.activationPackage && ./result/activate
+
+# Development shells
+nix develop .#safe                   # editing env: neovim, parsers, LSPs, formatters
+nix develop .#dev                    # full env: angst CLI, qemu, age, gitleaks, Rust, VM tools
+nix develop .#vm                     # QEMU VM (Go angst tooling)
+
+# Render theme-aware configs (no Nix rebuild needed)
+angst render                         # write all rendered domain configs
+angst watch                          # watchexec hot-reload on themes/domains/hosts changes
+
+# Validation
+nix flake check                      # full suite
+nix run .#lint-themes                # fast, eval-only theme check
 ```
-
-Start from `local/config.nix.example`. The build system (`lib/read-config.nix`) loads this file and produces a unified `cfg` object consumed by every builder. See [openwiki/quickstart.md](openwiki/quickstart.md).
 
 ## Structural Partitioning
 
 ```
-@capabilities/     opt-in NixOS system-level feature modules
-@checks/           build-time validation (theme lint, config rendering, Nix syntax)
-@domains/          user-space home feature declarations (app/tool configs)
-@lib/              build system, domain framework, config loading, flake outputs
-@local/            machine-specific identity file + hardware config (gitignored)
-@modules/          core NixOS/home/VM modules (replaces old @core/)
-@profiles/         reusable profile compositions — select via local/config.nix
-@scripts/          auxiliary shell scripts (repo seeding, password hashing)
-@themes/           color token definitions (9 themes, strict schema)
-@toolchains/       language-domain tooling (22 languages, runtime/LSP/formatter/linter)
-@tools/vm/         standalone Rust workspace for NixOS VM lifecycle management
+@hosts/          machine declarations (hosts/<domain>/<hostname>/default.nix) — auto-discovered
+@checks/         build-time validation (theme lint, config rendering, secrets, projects, password, login shell, Nix lint)
+@domains/        features (50 domains / 27 categories) — each with a default.nix interface + optional home.nix/system.nix sides
+@secrets/        encrypted stores: master, apps, ssh, ftp, vpn, projects, db — age-encrypted vault tarballs (secrets/projects/*.tar.age, secrets/db/*.tar.age) under secrets/
+@lib/            build system, domain framework, host resolution, flake outputs
+@modules/        core NixOS/home/VM modules + age secrets integration
+@profiles/       reusable composition units — selected via the host decl's `profiles` list
+@runtime/        runtime tooling as Nix functions + Go CLIs (angst, vm, angst-shell, analyze)
+@themes/         color token definitions (9 themes, strict 13-token schema)
+@toolchains/     language-domain tooling (24 languages: runtime/LSP/formatter/linter/grammar)
+@runtime/angst/  Go CLI `angst` (render, watch, projects, vault, ftp, ssh-key, system, boot) — core host orchestration
+@runtime/vm/     Go CLI `vm` (unified guest+host + MCP) — QEMU VM lifecycle; guest scripts in `runtime/vm/*.nix`
+@runtime/shell/  Go CLI `angst-shell` (dev|safe env switcher)
+@runtime/analyze/ Go CLI `analyze` (flake analysis report → analysis.md)
+@githooks/       gitleaks pre-commit / pre-push hooks (install via `just install-hooks`)
 ```
 
 ---
 
-### `@capabilities/` — System Feature Modules
+### `@hosts/` — Machine Declarations
 
-Capabilities are opt-in NixOS modules that wire up system-level features. Each `.nix` file is auto-discovered by `capabilities/default.nix`. They are the system-level analogue of domains: where domains declare user-space tools, capabilities declare system services. Capabilities are enabled through **profile composition** — each profile uses `mkCap` to activate the capabilities it needs.
+Each machine is `hosts/<domain>/<hostname>/default.nix`, a pure data decl. A directory of host directories is a domain (e.g. `personal/` contains `mint/` and `nixos/`). `lib/discover.nix` finds hosts recursively; `lib/resolve.nix` normalizes each decl into a `host` object with defaults (`system`, `hostname`, `username`, `theme = "monochrome"`, `profiles = ["base"]`, `type = "nixos"`, …).
 
-| File | Provides |
-|---|---|
-| `audio.nix` | PipeWire with ALSA/PulseAudio compat |
-| `graphical.nix` | X11, LightDM (themed background), libinput, dbus, XDG portals |
-| `network.nix` | NetworkManager, wget, curl, unzip |
-| `container.nix` | Docker, Podman, kubectl, lazydocker |
-| `ssh.nix` | OpenSSH server, key-only auth, agent forwarding |
-| `git.nix` | System-level Git config |
-| `search.nix` | FSearch (GNOME) indexer |
-| `clipboard.nix` | `wl-clipboard` + `xclip` |
-| `monitoring.nix` | System monitoring tools |
+```nix
+{
+  type = "nixos";                     # "nixos" | "home" (home-only, e.g. mint)
+  system = "x86_64-linux";
+  hostname = "nixos";
+  username = "joao";
+  theme = "miasma";
+  profiles = ["base" "desktop" "development"];   # validated against profiles/default.nix
+  toolchains = "*";                   # all 24 languages, or a list (unknown names throw)
+  monitors = { primary = { name = "DP-1"; resolution = "1920x1080"; refreshRate = 144; }; };
+  db = [ "personal/my-pg" "work/analytics" ];  # sql-client vault slugs (secrets/db/<scope>.tar.age → ~/.secrets/db)
+  nixos = { keyboardLayout = "br-abnt2"; };      # per-machine extras (extraNixos)
+  env = { EDITOR = "nvim"; BROWSER = "firefox"; };
+  sshAgent = { enable = true; keys = ["~/.ssh/id_ed25519"]; };
+  persist = { enable = true; root = "/state"; dataRoot = "/home/durable"; };  # impermanence; dirs come from features
+}
+```
 
-Capability enable + import is managed by `mkCap` in `profiles/default.nix`. The `base` profile enables `network`, `git`, `search`, `monitoring`, `container`; the `desktop` profile adds `graphical`, `audio`, `clipboard`.
+Persisted dirs are **not** listed in the host decl. Each feature declares the paths it owns in `modules/nixos/persist-features.nix` (keyed by domain id, e.g. `"browser.firefox"`, `"git.projects"`, `"toolchain:rust"`); only enabled features contribute, and `dataRoot` routes durable entries there as bind mounts (falling back to `root` when unset, like the VM).
+
+Optional siblings: `secrets/master/<host>.age` and `secrets/apps/` (age-encrypted, see [Secrets](openwiki/secrets.md)) and `hardware.nix` (auto-imported by `mkNixos.nix`). Current hosts: `ci` (CI runner, user `runner`), `personal/nixos` (desktop), `personal/mint` (home-only), `vm` (disposable QEMU VM).
+
+**Machine layout (`personal/nixos`)** — dual-boot with Windows, split so the OS can be erased and rebuilt without touching Windows or user data:
+
+| Partition | Label | Mount | Role |
+|---|---|---|---|
+| `nvme0n1p1` | ESP, partlabel `boot` | `/boot` | Windows + NixOS loaders, shared |
+| `nvme0n1p2` | `swap` | swap | by label |
+| `nvme0n1p3` | `state` | `/state` | wipeable OS state (impermanence root) |
+| `nvme0n1p4` | `data` | `/home` | Nix store (`/home/nix`), games, `/home/durable` |
+| `nvme0n1p5/p6` | — | — | Windows, never touched |
+
+`/` and `/home/joao` are tmpfs. Only system state (machine-id, `/var/lib/*`, logs) persists on `state`. Durable user state — age identity (`/home/durable/age` → `~/.config/age`), git config, browser, keyrings, cargo, and projects — is bind-mounted from `data` (declared per feature in `modules/nixos/persist-features.nix`), so it survives reinstalls. `.ssh` and `.secrets` are rebuilt at boot from the age-encrypted repo stores.
+
+```bash
+# New computer: boot the NixOS ISO, clone this repo, then
+just provision-dual   # keep Windows + shared ESP, use free space (shrink C: in
+                      # Windows first if the disk is fully allocated)
+just provision-full   # or: erase a whole disk (second disk / NixOS-only machine)
+
+# Erase the state partition and reinstall, keeping Windows, ESP and /home.
+# Durable data is copied to /home/durable first, so the age keys cannot be lost.
+just reinstall
+```
+
+`install-nixos` auto-detects the disk when there is exactly one candidate (`--disk` otherwise), creates/relabels partitions, names the shared ESP `boot` (GPT metadata only; Windows bootmgr untouched) and never touches NTFS. On a brand-new machine seed the age identity with `--identity PATH` (a directory holding `keys.txt`/`work-keys.txt`); otherwise the host boots with the fallback password until keys are restored. Existing machines migrated to this layout need a one-time `sudo sgdisk -c 1:boot /dev/nvme0n1 && sudo swaplabel -L swap /dev/nvme0n1p2` before switching.
 
 ---
 
-### `@checks/` — Build-Time Validation
+### `@domains/` — Feature Declarations
 
-Build-time checks are defined in `checks/` (formerly under `lib/checks/`). Each is a NixOS or home-manager evaluation that validates theme correctness, config rendering, and override propagation.
-
-| Check | What it validates |
-|---|---|
-| `theme/entries.nix` | Each theme file loads without errors |
-| `theme/semanticDistinct.nix` | `ansi.error`, `ansi.success`, `ansi.warn`, `ansi.info` are all distinct |
-| `theme/rendered.nix` | Rendered domain configs contain correct theme tokens |
-| `theme/override.nix` | Theme override propagates into rendered output |
-| `desktop.nix` | i3 + i3status configs per theme |
-| `shell.nix` | starship + nushell configs per theme |
-| `lint-nix.nix` | Statix Nix lint |
-| `password.nix` | Password hash validation |
-
-Run `nix flake check` or individual checks via `nix run .#lint-themes`, `nix run .#lint-desktop`, `nix run .#lint-shell`.
-
----
-
-### `@domains/` — Home Feature Declarations
-
-Domains are the unit of user-space configuration. Each `domains/<category>/<name>/` describes one application:
+Domains are the single unit of configuration — **50 features across 27 categories** (user apps *and* system features). Each `domains/<category>/<name>/` describes one feature, with optional user (`home.nix`) and system (`system.nix`) sides:
 
 | File | Purpose |
 |---|---|
-| `meta.nix` | Schema: Nix package name, XDG target (`xdg` for full directory, `xdgFile` for single file), description |
-| `module.nix` | (optional) Custom home-manager module; most domains use the auto-generated module from `lib/domains/module.nix` |
-| `render.nix` | Theme-aware config generator: `{ themesLib, themeName, fontFamily } → [{ path, text }]` |
-| `nixos.nix` | (optional) System-level module for domains needing NixOS integration (e.g., i3) |
+| `default.nix` | **The domain interface**: pure data — `package`, `xdg`/`xdgFile`/`customXdg`, `description`, `mutable`. Validated strictly by `mkDomain` |
+| `home.nix` | Optional: custom home-manager module (only when auto-generation isn't enough) |
+| `system.nix` | Optional: NixOS module (sshd, i3 WM, `system/*` features) |
+| `render.nix` | Optional: theme-aware config generator: `{ themesLib, themeName, ... } → [{ path, text, checks? }]` |
+| `config/` | Optional: static config files (symlinked via `xdg.configFile`) |
 
-The domain framework in `lib/domains/` provides:
+The domain framework (`lib/domains/`):
 
-- **`scan.nix`** — Recursively discovers all domain directories and parses `meta.nix`
-- **`module.nix`** — Auto-generates home-manager modules: creates `enable` option, installs `meta.package`, calls `mkDomainActivation` for XDG symlinks
-- **`activation.nix`** — Produces home-manager activation scripts that symlink `domains/.../config/` → `~/.config/<app>`, with VM host-mount fallback
+- **`mkDomain.nix`** — the interface. Validates each `default.nix` spec: unknown keys, field types, `package` existence in `pkgs`, `xdg`/`xdgFile`/`customXdg` coherence, required `description`, `mutable` basenames, and the conventional side files (`home.nix`/`system.nix`/`render.nix` must be module functions, `config/` a directory). Violations throw `domains/<cat>/<name>/default.nix: <msg>` at eval.
+- **`scan.nix`** — recursively discovers domain dirs and runs `mkDomain` over each `default.nix`, producing `entries`/`systemEntries`.
+- **`module.nix`** — `mkDomainModule` auto-generates a home-manager module per feature (`enable` option, `home.packages`, `home.file` for rendered outputs, `xdg.configFile` for `config/`, `renderOverrideModule` for `mutable` files); validates the render output contract (`[{ path, text, checks? }]`). `mkNixosSystemModule` imports `system.nix` when present. Each side self-gates on `domains.<cat>.<name>.enable`; `host.type` decides which sides are built (`nixos` → both, `home` → home only).
 
-17 domains across 12 categories — see [openwiki/domains.md](openwiki/domains.md) for the full table.
+Full 50-domain inventory: see [openwiki/domains.md](openwiki/domains.md).
 
-Domain categories: `agents/` (opencode, cursor-cli), `bar/` (i3status), `editor/` (nvim), `files/` (yazi), `git/` (lazygit), `http-client/` (posting), `launcher/` (rofi), `session/` (x11), `shell/` (nushell, starship, carapace), `sql-client/` (sqlit), `terminal/` (ghostty, zellij, tmux), `wm/` (i3).
+Domain categories: `agents/` (opencode, cursor-cli), `audio/` (easyeffects), `bar/` (i3status-rust), `browser/` (firefox), `capture/` (screenshot, obs), `chat/` (discord), `design/` (paper), `display/` (gpu, lightdm, ly, picom, x11), `editor/` (lspmux, nvim), `embedded/` (arduino, vial), `files/` (yazi), `gamedev/` (env), `games/` (minecraft, steam), `git/` (code, lazygit, projects), `http-client/` (posting), `kernel/` (audio, clipboard, container, cursor, graphical, monitoring, network, search), `launcher/` (rofi), `network/` (vpn), `nix/` (nh), `notifications/`, `office/` (libreoffice), `remote/` (ftp, ssh), `security/` (age), `shell/` (carapace, nushell, starship), `sql-client/` (rainfrog, sqlit), `terminal/` (ghostty, tmux, zellij), `wm/` (i3).
 
-Domains are enabled via **profile composition** (in `profiles/`), not per-host `home.nix` files.
+Domains are enabled via **profile composition**, not per-host module files.
+
+### `@checks/` — Build-Time Validation
+
+Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run everything with `nix flake check` (or `nix run .#check`); targeted lints are faster:
+
+| Check | Validates |
+|---|---|
+| `lint-themes` | All 9 themes load and validate (eval-only, fast) |
+| `lint-desktop` | i3 + i3status configs parse per theme |
+| `lint-shell` | starship.toml + nushell colors per theme |
+| `theme-rendered` | Rendered domain configs contain expected theme tokens |
+| `theme-override` | Theme override propagates into a real home config |
+| `theme-semantic-distinct` | `ansi.error/warn/info/success` mutually distinct |
+| `check-password` | Host `password` field is a valid `$6$` sha-512 hash |
+| `check-secrets-encrypted` | Every `secrets/master/*.age` is age-encrypted |
+| `check-secrets-encrypted` | Every `secrets/master/*.age` is age-encrypted |
+| `login-shell-valid` / `login-shell-invalid` | `shellOverride` handling |
+| `home-theme-override-test` | Builds a representative home config with an alternate theme |
+| `lint-nix` | `deadnix --fail` + `statix check .` |
+
+---
+
+### `@secrets/projects/` + `@secrets/db/` — Auto-Synced Encrypted Vault Stores
+
+`domains/git/projects` + the `angst projects` subcommand (`runtime/angst`, via `angst-projects-sync`) and `domains/sql-client` + `angst db` (`angst-db-sync`) give every host the same set of dev
+repositories and DB credentials with working `.env` / `connections.json` files — while the angst repo stays **public** and reveals
+nothing about them.
+
+Two layers, with the repo store as committed, age-encrypted tarballs (now under `secrets/`):
+
+- **Repo store** — `secrets/projects/{personal,work}.tar.age` and `secrets/db/{personal,work}.tar.age` (committed, **age-encrypted**). Each
+  tarball holds the whole `<scope>/<id>/{metadata.json,.env}` (projects) or `<scope>/<id>.json` (db) tree. This is the transport:
+  it travels with the public repo, so a new machine that clones the repo has all the
+  metadata to clone its projects or connect to its DBs. Rewritten only by your manual `vault` edit flow (below).
+- **Working store** — `~/.secrets/projects/{personal,work}/<id>/{metadata.json,.env}` and `~/.secrets/db/{personal,work}/<id>.json` (fixed
+  per-host, **decrypted plaintext**). `sync` reads this directly — no age needed at runtime.
+  Seeded from the tarballs at build time (home activation runs `import`).
+- **Clone root** — `~/projects/<name>`: the cloned repo + its decrypted `.env`. Clones
+  **diverge per host** (each host selects by slug; `sync` only clone-if-missing).
+
+- **Scope-isolated tarballs** — `personal.tar.age` is encrypted only with the personal age
+  recipient, `work.tar.age` only with the work recipient, so a work-key compromise can't
+  decrypt personal projects. Personal = `~/.config/age/keys.txt`; work =
+  `~/.config/age/work-keys.txt` (static, provisioned out-of-band). The recipient is
+  derived from the scope key file at encrypt/decrypt time.
+- **Hosts declare *which* projects, by slug** — each host decl sets
+  `projects = [ "<slug>" ... ]`; slugs may be nested paths (e.g. `intelligence/backend`), in which case
+  the id is the relative path under the scope (the store is discovered recursively). The real name
+  never appears in tracked files (it lives only in the encrypted `metadata.json`). Empty list =
+  nothing synced. Works on NixOS **and** home-only hosts (`nixos`/`home` host types).
+  `~/projects` persistence is owned by the `git.projects` feature (durable on the data partition; the impermanence root on hosts without `dataRoot`, like the VM), so clones survive reinstalls.
+- **Clone if missing only** — `sync` (home activation + `systemd.user` oneshot
+  `angst-projects-sync`) clones the host's selected projects into `~/projects/<name>`
+  when the dir has no `.git`; no auto-pull, no hooks, no `.gitignore` edits — clones are
+  never modified for leak prevention. The only file written into a clone is the
+  decrypted `.env` (0600).
+- **Env handling** — working-store `.env` is materialized/refreshed hash-tracked via a
+  sidecar (`~/.secrets/projects/<name>.env.sha256`). A locally-edited `.env` is **never
+  clobbered**: `sync` marks it `stale`, prints a redacted key-name-only diff, and exits
+  non-zero.
+- **Resilient** — missing key, missing tarball, no network, or a decrypt error skips that
+  project with a warning and exits 0; nothing fails a build or boot.
+- **Leak prevention (defense in depth)** — the repo store is always age-encrypted
+  (`check-projects-encrypted` + gitleaks guard it); plaintext lives only in the private
+  `~/.secrets` working store (0700) and in the decrypted `.env` files.
+
+```bash
+# Runtime (on a host):
+angst projects import   # decrypt secrets/projects/*.tar.age -> working store
+angst projects sync     # clone-if-missing + env materialize (working store)
+angst db import         # decrypt secrets/db/*.tar.age -> working store
+angst db sync           # materialize DB configs to ~/.config/sqlit + ~/.config/rainfrog
+
+# Editing the repo store (run from the repo root, then commit the .tar.age):
+angst vault decrypt secrets/projects/personal.tar.age --dir --scope personal   # -> secrets/projects/personal/
+# ... edit secrets/projects/personal/<id>/metadata.json and/or .env by hand ...
+angst vault encrypt secrets/projects/personal --dir --scope personal           # overwrites secrets/projects/personal.tar.age, removes secrets/projects/personal/
+git add secrets/projects/personal.tar.age && git commit
+
+# DB vault (same flow, one file per DB):
+angst vault decrypt secrets/db/personal.tar.age --dir --scope personal        # -> secrets/db/personal/ (all personal DBs)
+# ... edit secrets/db/personal/<id>.json (e.g. postgres.json, analytics.json) ...
+angst vault encrypt secrets/db/personal --dir --scope personal
+git add secrets/db/personal.tar.age && git commit
+```
+
+The decrypted scope dirs (`secrets/projects/personal/`, `secrets/db/personal/`, etc.) are gitignored via `secrets/.gitignore`, so an
+in-place decrypt never stages plaintext. All secrets are age-encrypted, so no sops tooling is required.
 
 ---
 
@@ -107,150 +224,155 @@ Domains are enabled via **profile composition** (in `profiles/`), not per-host `
 
 | Path | Responsibility |
 |---|---|
-| `lib/build/mkNixos.nix` | NixOS system constructor (receives `cfg` object, wires profiles + modules + VM detection + hardware) |
-| `lib/build/mkHome.nix` | Home-manager profile constructor (cfg-based, no user.env parsing) |
-| `lib/domains/` | Domain discovery, module generation, activation scripts |
-| `lib/flake/outputs.nix` | All flake outputs: home configs, NixOS configs, packages, dev shells, apps, checks |
-| `lib/flake/devshell.nix` | Dev shell definitions (safe, dev) with SSH agent init |
-| `lib/read-config.nix` | Loads `local/config.nix` and produces unified `cfg` object |
-| `lib/render.nix` | Theme rendering engine (`renderDomainOutputsFor`, etc.) |
+| `lib/discover.nix` | Recursively finds host decls under `hosts/` |
+| `lib/resolve.nix` | Normalizes a host decl into a `host` object (defaults, domain/toolchain scanning) |
+| `lib/build/mkNixos.nix` | NixOS system constructor (wires profiles, domains, modules, secrets bootstrap, VM stack, hardware) |
+| `lib/build/mkHome.nix` | Home-manager profile constructor (domains, toolchains, secrets activation, special args) |
+| `lib/domains/` | Domain interface (`mkDomain.nix`) + discovery (`scan.nix`) + module generation (`module.nix`) |
+| `lib/flake/outputs.nix` | All flake outputs: home configs, NixOS configs, packages, apps, dev shells, checks, formatter |
+| `lib/flake/devshell.nix` | Dev shell definitions (safe, dev, vm) with SSH agent init |
+| `lib/render.nix` | Theme rendering engine (`renderDomainOutputsFor`, `renderDomainOutputFor`) |
 | `lib/toolchain.nix` | `mkToolchain` builder — translates toolchain attrsets into packages + grammars |
 | `lib/treesitter.nix` | Tree-sitter grammar builder for cross-glibc compatibility |
 | `lib/nixpkgs-config.nix` | Nixpkgs config (`allowUnfree`) |
 
 ---
 
-### `@local/` — Machine Identity (gitignored)
-
-| File | Purpose |
-|---|---|
-| `config.nix` (gitignored) | Full machine identity — hostname, username, theme, profiles, monitors, extras |
-| `config.nix.example` | Template with comments |
-| `hardware.nix` | Generated hardware config (auto-imported by `mkNixos.nix`) |
-
-No per-host directories, no `.env` file — everything lives in one gitignored file at `local/config.nix`.
-
----
-
 ### `@modules/` — Core Home, NixOS, and VM Modules
 
-Replaces the old `@core/` directory. Three subdirectories:
+**`modules/nixos/`** — Base NixOS config imported by every configuration: `system.stateVersion = "25.11"`, keyboard layout (from `angst.keyboardLayout`, e.g. `br-abnt2`), `America/Sao_Paulo` timezone, `en_US.UTF-8` locale, NetworkManager, flakes + `allowUnfree`, user creation (nushell shell, wheel/networkmanager/video/audio groups), `nix-ld`, fonts, and impermanence (`persist.nix` + `persist-features.nix`, the feature → paths persistence policy).
 
-**`modules/nixos/`** — Base NixOS system config imported by every configuration: keyboard layout, `America/Sao_Paulo` timezone, `en_US.UTF-8` locale, NetworkManager, Nix flakes + `allowUnfree`, user creation, `nix-ld`, and root filesystem default.
+**`modules/home/`** — Base home-manager config: username, stateVersion, fontconfig, tree-sitter (`treesitter.nix`), login shell handling (`login-shell.nix`), secrets activation (`secrets-activation.nix`), theme option (`themeModule.nix`). (SSH client config + agent live in `domains/remote/ssh/`.)
 
-**`modules/home/`** — Base home-manager config: username, fonts, SSH config generation, tree-sitter parser building, domain framework integration, and theme option definition.
+**`modules/vm/`** — Multi-layered VM support: internal `angst.isQemuVm` flag (declared — forced on by the `vm` profile and by `vmVariant`, never probed at eval time), conditional bootloader (`runtime.nix`), vmVariant resources (`vm-variant.nix` — tmpfs `/`, `/persist` ext4, SPICE, 9p host mount), declarative inbound auth + age-key injection (`vm-profile.nix` — `authorized_keys` baked from `secrets/ssh/*.pub`, `vm-age-key` consumes `/tmp/shared`), and host-repo symlink for live editing (`host-mount.nix`). `specialisation.nix` exists but is never imported (dead code).
 
-**`modules/vm/`** — Multi-layered VM support: detection (9p path based), conditional bootloader, QEMU VM profile (9p mounts, SPICE, SSH keys), vmVariant resources, bootable specialisation, and host-mount symlink for live editing.
+**`modules/secrets.nix`** — age secrets integration per host: the master password (`secrets/master/<host>.age`, decrypted by `angst set-password-hash` at boot) and app secrets (e.g. `opencode-go-key` → `~/.secrets/opencode-go-key`, provisioned by `angst provision-app-secret`). Decryption is decided at runtime (age key at `~/.config/age/keys.txt`), never at eval — pure-`nix build` hosts like the VM still get secret wiring. See [openwiki/secrets.md](openwiki/secrets.md).
 
 ---
 
 ### `@profiles/` — Reusable Composition Units
 
-Profiles replace host-specific `home.nix` and `configuration.nix` files. Each profile returns `{ hm = [...]; nixos = [...]; }` module lists:
+Profiles replace host-specific `home.nix` / `configuration.nix` files. Each is a **pure feature list** — `{ enable = [...]; }` (plus an optional `modules` list for NixOS-only infrastructure). `profiles/default.nix` validates every name at build time (unknown features throw). The builder splits the enabled list into home and system sides based on each feature's `home.nix`/`system.nix` presence and the host `type`. Select via `profiles = [...]` in the host decl.
 
-| Profile | Domains | Capabilities |
-|---|---|---|
-| `base.nix` | nushell, carapace, starship, zellij, nvim, yazi, lazygit | network, git, search, monitoring, container |
-| `desktop.nix` | i3, i3status, rofi, ghostty, x11 | graphical, audio, clipboard |
-| `development.nix` | opencode, cursor-cli, sqlit, posting | — |
-| `server.nix` | — | ssh |
-| `vm.nix` | — | vm detection + runtime + profile + ssh |
+| Profile | Features (`enable`) |
+|---|---|
+| `base` | nushell, carapace, starship, zellij, nvim, yazi, lazygit, nh, age, network, git, search, monitoring, container, **ssh** |
+| `desktop` | rofi, ghostty, x11, graphical, audio, clipboard |
+| `development` | opencode, cursor-cli, sqlit, rainfrog, posting, **git.projects** |
+| `server` | ssh (sshd is driven per-host via `host.ssh.server.enable`) |
+| `vm` | ssh + VM modules (runtime, variant, profile, host-mount) |
+| `obs` | obs (capture.obs) |
 
-Select via `profiles = ["base" "desktop" "development"]` in `local/config.nix`.
+> Note: `wm/i3` and `bar/i3status` exist as domains but are currently **commented out** in `profiles/desktop.nix`.
 
 ---
 
 ### `@themes/` — Color Token Definitions
 
-9 themes, each a compact Nix attrset with 13 tokens (palette + ansi: `{ background, surface, foreground, accent, dim, error, warn, info, success }`). Available: `catppuccin-mocha`, `github`, `gotham`, `kanagawa`, `lotus`, `miasma`, `monochrome` (default), `noctis`, `rose-pine`.
+9 themes, each a compact Nix attrset with 13 tokens (**9 palette + 4 ansi**): `background`, `surface`, `foreground`, `accent` (each `{ base, variant }`), `dim`, and `ansi.error/warn/info/success`. Available: `catppuccin-mocha`, `github`, `gotham`, `kanagawa`, `lotus`, `miasma`, `monochrome` (default), `noctis`, `rose-pine`.
 
-`themes/default.nix` normalizes (strips `#`, validates hex), then enriches with RGB variants (`_RGB`) for apps like i3 that need integer colors.
-
-Themes are resolved at eval time via `themesLib.get "miasma"`. See [openwiki/themes.md](openwiki/themes.md).
+`themes/default.nix` normalizes (strips `#`, validates hex), enriches with RGB variants (`_RGB`) for apps that need integer colors, and provides contrast-checked `safe.*` tokens. Themes resolve at eval time via `themesLib.get "<name>"` and are rendered into every domain config. See [openwiki/themes.md](openwiki/themes.md).
 
 ---
 
 ### `@toolchains/` — Language-Domain Tooling
 
-22 language toolchains defined via `mkToolchain`. Each provides runtime, LSP, formatter, linter, tools, and tree-sitter grammar entries.
+24 language toolchains defined via `mkToolchain` (`lib/toolchain.nix`), each providing runtime, LSP, formatter, linter, tools, and tree-sitter grammar entries.
 
-Supported: `bash`, `blade`, `c`, `clojure`, `conf`, `css`, `docker`, `go`, `html`, `java`, `javascript`, `json`, `just`, `lua`, `markdown`, `nix`, `php`, `python`, `rust`, `terraform`, `toml`, `xml`.
+Supported: `bash`, `blade`, `c`, `clojure`, `conf`, `css`, `docker`, `go`, `html`, `java`, `javascript`, `json`, `just`, `lua`, `markdown`, `nix`, `php`, `python`, `rust`, `terraform`, `toml`, `xml`, `yaml`.
 
-Toolchains are auto-discovered by `lib/read-config.nix` and filtered by `config.toolchains` in `local/config.nix`. Packages flow into home-manager and dev shells; grammars flow into tree-sitter setup via `lib/treesitter.nix`.
+Toolchains are auto-discovered by `lib/resolve.nix` and selected via `toolchains = "*"` or a validated list in the host decl. Packages flow into home-manager and dev shells; grammars flow into tree-sitter setup via `lib/treesitter.nix`.
 
 ---
 
-### `@tools/vm/` — Standalone Rust VM Workspace
+### `@tools/` — Standalone Tools
 
-A multi-crate Rust workspace (`vm-core`, `vm-cli`, `vm-mcp`) that manages NixOS VM lifecycle independently of the host config. Integrated as a flake input (`inputs.vm`).
+**angst CLI** (`runtime/angst`, packaged as `angst`):
+- `angst bootstrap-master-password [--host HOST] [--scope personal|work]` — interactive master-password bootstrap; age-encrypts the password to `secrets/master/<host>.age`. The boot service derives the sha-512 hash.
+- `angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]` — batch-evals `.#lib.renderDomainOutputsFor` and writes rendered domain configs.
+- `angst watch [...]` — watchexec-based hot-reload on `themes/`, `domains/`, `hosts/`.
+- `angst projects <add|sync|status|capture|edit-env|rm> ...` — manage the encrypted dev-project store (see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)).
+- `angst ssh-key <generate|verify> --scope personal|work` — generate/verify the shared, age-encrypted scope SSH keys in `secrets/ssh/` (see [`@secrets/`](#secrets-summary)).
 
-Features:
-- SSH-based communication (port 2222 forwarded to guest 22)
-- Headless mode (`--headless` for CI, `-display gtk` for interactive)
-- MCP server for AI agent integration
-- Automatic SSH key injection (ssh-agent + `~/.ssh/*.pub`)
-- 15 CLI commands: `build`, `start`, `stop`, `restart`, `ssh`, `exec`, `scp`, `health`, `status`, `logs`, `snapshot`, `restore`, `mcp`, `list`, `info`
+**vm CLI** (`runtime/vm`, packaged as `vm` / `vm-tool`) — QEMU VM lifecycle with SSH (port 2222 → guest 22), headless mode for CI, automatic SSH key + age key injection, and an MCP server (port 8765, tools `vm_exec`/`vm_status`/`vm_restart`) for AI agent integration. Guest-side helpers (`age-key`, `ephemeral-ssh`, `home-manager-upgrade`, `nixos-switch`, `home-switch`) are `vm` subcommands (`runtime/vm/*.nix` wrappers).
+
+Commands: `start [--headless]`, `stop`, `restart`, `status`, `logs [-n]`, `ssh [--auto-start] [--tty]`, `exec -- <cmd>`, `copy-to`, `copy-from`, `health`, `mcp {start|stop|restart|status|logs|run-server [--port]}`.
+
+```bash
+nix run .#vm -- start --headless    # or: just vm; DISPLAY set → gtk UI
+nix run .#vm -- ssh                 # connect
+nix run .#vm -- health              # QEMU + port + SSH check
+```
+
+**shell CLI** (`runtime/shell`, packaged as `angst-shell`) — env switcher (`angst-shell dev|safe`) with tree-sitter setup; Nix wrapper supplies `SHELL_*` env and `PATH`.
+
+**analyze CLI** (`runtime/analyze`, packaged as `analyze`) — flake analysis report (`nix run .#analyze -- --output analysis.md`).
 
 See [openwiki/tools.md](openwiki/tools.md) and [openwiki/operations.md](openwiki/operations.md).
-- QEMU disk image management (`personal.qcow2`)
 
 ---
 
 ### Data Flow
 
 ```
-hosts/<name>/default.nix              # pure data: theme, user, monitors
+hosts/<domain>/<host>/default.nix         # pure data: theme, user, profiles, toolchains
        │
        ▼
-lib/build/mkHome.nix                  # loads theme (themesLib.get), resolves domains
+lib/discover.nix → lib/resolve.nix        # find decls, normalize into host objects
        │
        ▼
-domains/<cat>/<name>/render.nix       # each domain: theme tokens → [{ path, text }]
+lib/build/mkNixos.nix / mkHome.nix        # NixOS system + home-manager profile builders
        │
        ▼
-nix run .#render                       # writes to domains/<cat>/<name>/config/
+domains/<cat>/<name>/render.nix           # each domain: theme tokens → [{ path, text }]
        │
        ▼
-home-manager activation                # symlinks config/ → ~/.config/<app>
+angst render                               # writes rendered files into the repo
+       │
+       ▼
+home-manager activation                    # xdg.configFile symlinks → ~/.config/<app>
 ```
 
----
+### Secrets (summary)
 
-### Usage
-
-```bash
-# Build and activate home-manager profile
-nix run .#angst
-
-# Render all domain config files for the current theme/host
-nix run .#render
-
-# Watch themes/domains/hosts for changes and hot-reload
-nix run .#watch
-
-# Full evaluation-time validation suite
-nix run .#check
-
-# Targeted lints (faster)
-nix run .#lint-themes    # eval-only theme validation
-nix run .#lint-desktop   # i3 + i3status per theme
-nix run .#lint-shell     # starship + nushell per theme
-
-# VM lifecycle
-nix run .#vm             # CLI tool (start, stop, ssh, restart)
-nix run .#vm-run         # Script-based VM launcher
-nix run .#vm -- --headless  # headless mode for CI
-
-# Development shells
-nix develop .#safe  # safe environment (neovim, LSPs, formatters, no dev tools)
-nix develop .#dev   # full development environment (adds VM CLI, angst, Rust)
-nix develop .#vm    # Rust tooling for the VM workspace
-
-# Shell CLI (standalone — no nix needed at runtime)
-nix run .#shell -- safe  # enter safe environment
-nix run .#shell -- dev   # enter development environment
-```
+age-encrypted secrets → decrypted at runtime into `~/.secrets/`. The master password (`secrets/master/<host>.age`) drives the login-hash via the `angst-bootstrap-secrets` systemd service; app secrets (e.g. `opencode-go-key`) land at `~/.secrets/` via `angst provision-app-secret`. Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`; the FTP server config lives age-encrypted in `secrets/ftp/`. Vault stores for projects and DB (`secrets/projects/*.tar.age` + `secrets/db/*.tar.age`) are age-encrypted too, with scope-isolated keys (repo tarballs travel; working stores decrypted at `~/.secrets/projects` + `~/.secrets/db`, see [`@secrets/projects/ + @secrets/db/`](#secrets-projects--secretsdb---auto-synced-encrypted-vault-stores)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets/master/*.age` / `secrets/projects/*.tar.age` / `secrets/db/*.tar.age` / `secrets/ssh/*.age` / `secrets/ftp/*`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
 
 ### CI
 
-`.github/workflows/checks.yml` runs `nix flake check` (theme validation, desktop/shell linting, NixOS evaluation) and `cargo fmt + cargo test` for the VM tool on every push and PR.
+`.github/workflows/`:
+
+| Workflow | Runs |
+|---|---|
+| `checks.yml` | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the flake checks + nixfmt + shellfmt + Go (`gofmt`/`go vet`/`go test` across `runtime/{angst,vm,shell,analyze}`) |
+| `nvim-tests.yml` | Links `domains/editor/nvim/config` → `~/.config/nvim`, lazy-syncs plugins, runs the plenary adapter test suite |
+| `secret-scan.yml` | gitleaks-action (fetch-depth 0) + trufflehog (`--results=verified,unknown`) |
+| `openwiki-update.yml` | Daily cron + manual: runs `openwiki code --update --print`, opens a PR with `openwiki/` + agent doc changes |
+
+Nix CI uses DeterminateSystems `nix-installer-action` + `magic-nix-cache-action`.
+
+### Useful Commands
+
+```bash
+just check                 # nix flake check
+just build nixos           # nix build .#nixosConfigurations.nixos.config.system.build.toplevel
+just hm nixos              # build home activation package
+just hm-switch nixos       # build + activate (run as your user, never sudo)
+just switch nixos          # sudo nixos-rebuild switch --flake .#nixos
+just hardware personal/nixos  # regenerate hardware.nix next to the decl
+just bootstrap-secrets nixos   # create/rotate secrets.yaml + password hash
+just analyze               # regenerate analysis.md
+just install-hooks         # enable gitleaks git hooks
+just install-nixos         # install/reuse; see --help for flags
+just reinstall             # --fresh: erase state partition, keep ESP/Windows/data
+just provision-dual        # new machine: keep Windows, use free space
+just provision-full        # new machine: erase a whole disk
+just vm vm / just vm-ssh vm    # VM start / ssh via vm CLI
+```
+
+> **Passing arguments to recipes.** Arguments are positional — `just hm-switch nixos`,
+> `just hardware personal/nixos`. Run `just --list` to see each recipe's parameters.
+> The `name=value` form does **not** work here: `just` only accepts overrides for
+> global variables (recipe parameters are rejected outright), and a `name=value`
+> placed after the recipe name is passed through as a literal string. So
+> `just hm-switch host=nixos` silently expands to `--flake .#host=nixos` and fails
+> with a confusing "does not provide attribute" error.

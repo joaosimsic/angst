@@ -79,7 +79,11 @@ local FileType = {
 	end,
 
 	hl = function(self)
-		return { fg = utils.status_color(self, p.foreground.variant), bg = utils.status_bg(self, p.background.variant), bold = true }
+		return {
+			fg = utils.status_color(self, p.foreground.variant),
+			bg = utils.status_bg(self, p.background.variant),
+			bold = true,
+		}
 	end,
 }
 

@@ -4,7 +4,6 @@
   themeName,
   fontFamily,
   monitors ? { },
-  ...
 }:
 
 let
@@ -42,16 +41,15 @@ in
   {
     path = "domains/wm/i3/config/config";
     text = ''
-      # i3 config - colors from angst theme tokens
+
 
       font pango:${fontFamily} 10
 
-      # Window borders
+
       default_border pixel 2
       default_floating_border pixel 2
       hide_edge_borders smart
 
-      # Theme colors: border, background, text, indicator, child_border
       client.focused          #${t.ansi.info} #${p.background.base} #${p.foreground.base} #${t.ansi.info} #${t.ansi.info}
       client.focused_inactive #${p.dim} #${p.background.base} #${p.accent.base} #${p.dim} #${p.dim}
       client.unfocused        #${p.background.base} #${p.background.base} #${p.accent.base} #${p.background.base} #${p.background.base}
@@ -60,6 +58,11 @@ in
       set $mod Mod4
 
       include ~/.config/i3/monitors.conf
+      include ~/.config/i3/screenshot.conf
+      include ~/.config/i3/screenshot.local.conf
+      include ~/.config/i3/notifications.conf
+      include ~/.config/i3/audio.conf
+      include ~/.config/i3/media.conf
 
       bindsym $mod+q kill
       bindsym $mod+Shift+q kill
@@ -102,6 +105,7 @@ in
       bindsym $mod+Shift+8 move container to workspace number 8
       bindsym $mod+Shift+9 move container to workspace number 9
       bindsym $mod+Shift+0 move container to workspace number 10
+      bindsym $mod+Shift+b exec --no-startup-id i3-swap-workspaces 1 2
 
       bindsym $mod+Shift+c reload
       bindsym $mod+Shift+r restart
@@ -122,6 +126,7 @@ in
 
       bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
       bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
+      bindsym $mod+e exec --no-startup-id GDK_BACKEND=x11 ghostty -e yazi
       exec_always --no-startup-id hsetroot -solid '#${p.background.base}'
       exec --no-startup-id dbus-update-activation-environment --systemd --all
       exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY PATH XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
@@ -129,7 +134,7 @@ in
       bindsym $mod+space exec --no-startup-id rofi -show drun
 
       bar {
-          status_command i3status -c ~/.config/i3status/config
+          status_command i3status-rs ~/.config/i3status-rust/config.toml
           position top
           font pango:${fontFamily} 10
           colors {

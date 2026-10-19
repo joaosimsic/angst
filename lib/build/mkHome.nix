@@ -1,46 +1,70 @@
 {
   inputs,
   self,
-  cfg,
+  host,
   hmModules,
-  vmTool,
-  shellTool,
-  angstTool,
+  angstShell,
+  runtime,
+  hmSwitchTool,
   themeOverride ? null,
+  shellOverride ? null,
+  store,
 }:
 
 let
-  pkgs = import inputs.nixpkgs {
-    system = cfg.system;
-    config = import ../nixpkgs-config.nix;
-  };
-  lib = pkgs.lib;
+  pkgs =
+    host.pkgs or (import inputs.nixpkgs {
+      inherit (host) system;
+      config = import ../nixpkgs-config.nix;
+    });
+  inherit (pkgs) lib;
 
-  effectiveTheme = if themeOverride != null then themeOverride else cfg.theme;
+  effectiveTheme = if themeOverride != null then themeOverride else host.theme;
   userCfg = {
-    username = cfg.username;
-    homeDirectory = "/home/${cfg.username}";
+    inherit (host) username;
+    homeDirectory = "/home/${host.username}";
   };
 
-  appHomeModules = map cfg.scan.domains.mkDomainModule cfg.scan.domains.homeEntries;
+  appHomeModules = map host.scan.domains.mkDomainModule host.scan.domains.homeEntries;
 
   themeModule = import ../../modules/home/themeModule.nix {
     inherit lib;
-    themesLib = cfg.scan.themes;
+    themesLib = host.scan.themes;
     hostTheme = effectiveTheme;
+  };
+
+  secrets = import ../../modules/secrets.nix {
+    inherit
+      self
+      host
+      lib
+      ;
   };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
-  pkgs = pkgs;
-
+  inherit pkgs;
   extraSpecialArgs = {
-    inherit (cfg) hostname monitors repoPath;
-    inherit (cfg.scan) themes;
-    themesLib = cfg.scan.themes;
-    hostName = cfg.hostname;
+    inherit (host)
+      hostname
+      monitors
+      db
+      sshAgent
+      ssh
+      ftp
+      projects
+      ;
+    hostType = host.type;
+    hostScopes = host.scopes;
+    hostSecrets = host.secrets;
+    inherit host;
+    shell = if shellOverride != null then shellOverride else host.shell;
+    inherit (host.scan) themes;
+    themesLib = host.scan.themes;
+    hostName = host.hostname;
     userConfig = userCfg;
     theme = effectiveTheme;
     flakeSelf = self;
+    inherit inputs runtime store;
   };
 
   modules = [
@@ -49,15 +73,17 @@ inputs.home-manager.lib.homeManagerConfiguration {
   ]
   ++ appHomeModules
   ++ hmModules
-  ++ cfg.toolchainModules
+  ++ host.toolchainModules
+  ++ secrets.homeModules
   ++ [
-    ({ ... }: {
-      home.packages = [
-        vmTool
-        shellTool
-        angstTool
+    (_: {
+      home.packages = lib.optionals (builtins.elem "vm" host.profiles) [ runtime.vmTool ] ++ [
+        angstShell
+        runtime.angst-cli
+        hmSwitchTool
       ];
     })
   ]
-  ++ (if cfg.extraHome != { } then [ cfg.extraHome ] else [ ]);
+  ++ (if host.extraHome != { } then [ host.extraHome ] else [ ])
+  ++ (if host.env != { } then [ { home.sessionVariables = host.env; } ] else [ ]);
 }

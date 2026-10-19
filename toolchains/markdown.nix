@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib }:
 
 let
   inherit (import ../lib/toolchain.nix { inherit lib pkgs; }) mkToolchain;
@@ -11,4 +11,11 @@ mkToolchain {
     tree-sitter-markdown
     tree-sitter-markdown-inline
   ];
+  editor.lsp.markdown = {
+    command = [
+      "marksman"
+      "server"
+    ];
+    extensions = [ ".md" ];
+  };
 }

@@ -2,7 +2,6 @@
   themesLib,
   themeName,
   homeDirectory,
-  ...
 }:
 
 let

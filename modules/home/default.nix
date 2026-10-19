@@ -3,7 +3,11 @@
 {
   imports = [
     ./treesitter.nix
-    ./domain.nix
+    ./login-shell.nix
+    ./nix-ld-compat.nix
+    ./nushell-bridge.nix
+    ./clean-desktop-shadows.nix
+    ./qt-theme.nix
   ];
 
   programs.home-manager.enable = true;
@@ -14,5 +18,10 @@
     stateVersion = "24.05";
   };
 
-  fonts.fontconfig.enable = true;
+  fonts.fontconfig = {
+    enable = true;
+    antialiasing = true;
+    hinting = "full";
+    subpixelRendering = "rgb";
+  };
 }

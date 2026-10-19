@@ -27,5 +27,3 @@
 
 ---@class HighlightModule
 ---@field get fun(): HighlightGroups
-
-

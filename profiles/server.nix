@@ -1,7 +1,5 @@
-{ mkDomainEnable, mkCap }:
 {
-  hm = [ ];
-  nixos = [
-    (mkCap "ssh")
+  enable = [
+    "remote.ssh"
   ];
 }

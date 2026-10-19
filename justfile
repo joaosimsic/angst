@@ -1,44 +1,86 @@
-password:
-    #!/usr/bin/env bash
-    read -s -p "Enter password: " pass; echo; \
-    read -s -p "Confirm password: " pass2; echo; \
-    if [ "$pass" != "$pass2" ]; then echo "Passwords don't match"; exit 1; fi; \
-    hash=$(echo "$pass" | openssl passwd -6 -stdin); \
-    grep -q '^  password = ' local/config.nix && sed -i 's|^  password = ".*";$|  password = "'"$hash"'";|' local/config.nix || sed -i '/^  toolchains = /a\  password = "'"$hash"'";' local/config.nix
+# Recipe arguments are POSITIONAL: `just hm-switch nixos`, `just hardware personal/nixos`.
+# The `name=value` form does NOT work for recipe parameters in just 1.58 — overrides are
+# only accepted for global variables, and a `name=value` placed after the recipe name is
+# passed through as a literal string. So `just hm-switch host=nixos` silently expands to
+# `--flake .#host=nixos` and fails with a confusing "does not provide attribute" error.
+# Run `just --list` to see each recipe's parameter names.
 
+bootstrap-secrets host="nixos":
+    angst bootstrap-secrets --host {{ host }}
 
-disko:
-    sudo nix run github:nix-community/disko -- --mode disko local/disk.nix
+install-nixos *args:
+    sudo nix run .#install-nixos -- {{ args }}
 
-hardware:
-    nixos-generate-config --show-hardware-config > local/hardware.nix
+reinstall *args:
+    sudo nix run .#install-nixos -- --fresh --yes {{ args }}
 
-bootstrap: disko hardware
-    @echo "Now write local/config.nix, run 'just password', then 'just build'"
+provision-dual *args:
+    sudo nix run .#install-nixos --extra-experimental-features nix-command --extra-experimental-features flakes -- --dual-boot --yes {{ args }}
 
-build:
-    nix build .#nixosConfigurations.current --impure
+provision-full *args:
+    sudo nix run .#install-nixos -- --full-disk --yes {{ args }}
 
-switch:
-    sudo nixos-rebuild switch --flake .#current --impure
+hardware path="personal/nixos":
+    nixos-generate-config --show-hardware-config > hosts/{{ path }}/hardware.nix
 
-hm:
-    nix build .#homeConfigurations.current.activationPackage --impure
+build host="nixos":
+    NIXPKGS_ALLOW_UNFREE=1 nix build .#nixosConfigurations.{{ host }}.config.system.build.toplevel --impure
 
-hm-switch:
-    nix build .#homeConfigurations.current.activationPackage --impure && ./result/activate
+switch host="nixos":
+    sudo nixos-rebuild switch --flake .#{{ host }}
+
+hm host="nixos":
+    NIXPKGS_ALLOW_UNFREE=1 nix build .#homeConfigurations.{{ host }}.activationPackage --impure
+
+hm-switch host="":
+    @if [ -n "{{ host }}" ]; then NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake .#{{ host }} --impure; else NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake . --impure; fi
+
+install-paper:
+    NIXPKGS_ALLOW_UNFREE=1 nix profile install .#paper-desktop --impure
 
 analyze:
-    python3 -m scripts.analyze_flake --output analysis.md
+    nix run .#analyze -- --output analysis.md
 
 check:
-    nix flake check --impure
+    NIXPKGS_ALLOW_UNFREE=1 nix flake check --impure
+
+verify:
+    NIXPKGS_ALLOW_UNFREE=1 nix flake check --no-build --impure
+
+go-fmt:
+    for d in angst vm shell analyze; do echo "=== $d ==="; (cd runtime/$d && gofmt -l . && go vet ./...); done
+
+go-test:
+    for d in angst vm shell analyze; do echo "=== $d ==="; (cd runtime/$d && go test ./...); done
+
+vault-test:
+    cd runtime/angst && go test ./internal/vault/... -v
 
 dev:
-    nix develop --impure
+    nix develop
 
-vm:
-    @nix shell ./tools/vm#wrapped -c vm start
+install-hooks:
+    git config core.hooksPath githooks
 
-vm-ssh:
-    @nix shell ./tools/vm#wrapped -c vm ssh --auto-start
+# Repair .git/objects entries owned by root; no-op when none.
+fix-git-objects:
+    sudo find .git/objects -user root -exec chown "$(id -u):$(id -g)" {} +
+
+test-secrets:
+    nix build '.#checks.x86_64-linux.secret-scan' --no-link --print-build-logs
+    nix build '.#checks.x86_64-linux.secret-scan-hooks' --no-link --print-build-logs
+
+vault-encrypt path scope="personal" dir="":
+    @angst vault encrypt {{ path }} --scope {{ scope }} {{ if dir != "" { "--dir" } else { "" } }}
+
+vault-decrypt path scope="personal" dir="":
+    @angst vault decrypt {{ path }} --scope {{ scope }} {{ if dir != "" { "--dir" } else { "" } }}
+
+vault-status path=".":
+    angst vault status {{ path }}
+
+vm host="nixos":
+    @NIX_DEFAULT_TARGET_HOST={{ host }} nix run .#vm -- start
+
+vm-ssh host="nixos":
+    @NIX_DEFAULT_TARGET_HOST={{ host }} nix run .#vm -- ssh --auto-start

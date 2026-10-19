@@ -40,6 +40,53 @@ local function cache_key(engine_name, opts)
 	return engine_name .. ":" .. tostring(should_check_executable(opts))
 end
 
+---@param a string[]|nil
+---@param b string[]|nil
+---@return string[]
+local function union_filetypes(a, b)
+	local result = {}
+	local seen = {}
+
+	for _, filetype in ipairs(a or {}) do
+		if not seen[filetype] then
+			seen[filetype] = true
+			result[#result + 1] = filetype
+		end
+	end
+
+	for _, filetype in ipairs(b or {}) do
+		if not seen[filetype] then
+			seen[filetype] = true
+			result[#result + 1] = filetype
+		end
+	end
+
+	table.sort(result)
+	return result
+end
+
+local merge_fields = {
+	"cmd",
+	"settings",
+	"init_options",
+	"root_markers",
+	"root_dir",
+	"handlers",
+	"compiler",
+}
+
+---@param existing AdapterToolInfo
+---@param incoming AdapterToolInfo
+local function merge_tool_info(existing, incoming)
+	existing.filetypes = union_filetypes(existing.filetypes, incoming.filetypes)
+
+	for _, field in ipairs(merge_fields) do
+		if existing[field] == nil then
+			existing[field] = incoming[field]
+		end
+	end
+end
+
 ---@return table<string, Adapter>
 function AdapterScanner:adapters()
 	if self.adapters_cache then
@@ -93,8 +140,13 @@ function AdapterScanner:by_tool(engine_name, opts)
 
 	local tools = {}
 	local check_executable = should_check_executable(opts)
+	local adapters = self:adapters()
+	local adapter_names = vim.tbl_keys(adapters)
+	table.sort(adapter_names)
 
-	for _, adapter in pairs(self:adapters()) do
+	for _, adapter_name in ipairs(adapter_names) do
+		local adapter = adapters[adapter_name]
+
 		if type(adapter) ~= "table" then
 			goto continue
 		end
@@ -126,7 +178,14 @@ function AdapterScanner:by_tool(engine_name, opts)
 				end
 			end
 
-			tools[tool_name] = AdapterTool.info(adapter, engine_name, tool_name)
+			local info = AdapterTool.info(adapter, engine_name, tool_name)
+			local existing = tools[tool_name]
+
+			if existing then
+				merge_tool_info(existing, info)
+			else
+				tools[tool_name] = info
+			end
 
 			::next_tool::
 		end

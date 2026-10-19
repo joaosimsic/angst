@@ -5,32 +5,33 @@
 }:
 
 let
-  mkDomainEnable =
+  entries = scan.domains.entries;
+
+  domainId = e: if e.category == e.name then e.category else "${e.category}.${e.name}";
+  entryFor =
     name:
     let
-      entries = scan.domains.homeEntries ++ scan.domains.nixosEntries;
-      domain = lib.findFirst (e: "${e.category}.${e.name}" == name) null entries;
+      entry = lib.findFirst (e: domainId e == name) null entries;
     in
-    if domain == null then
-      throw "Unknown domain '${name}'. Available: ${
-        builtins.concatStringsSep ", " (map (e: "${e.category}.${e.name}") entries)
-      }"
+    if entry == null then
+      throw "Unknown domain '${name}'. Available: ${builtins.concatStringsSep ", " (map domainId entries)}"
     else
-      {
-        domains.${domain.category}.${domain.name}.enable = true;
-      };
-
-  mkCap = name: { ... }: {
-    imports = [ ../capabilities/${name}.nix ];
-    capabilities.${name}.enable = true;
-  };
+      entry;
 
   profileMap = {
-    base = import ./base.nix { inherit mkDomainEnable mkCap; };
-    desktop = import ./desktop.nix { inherit mkDomainEnable mkCap; };
-    development = import ./development.nix { inherit mkDomainEnable mkCap; };
-    server = import ./server.nix { inherit mkDomainEnable mkCap; };
-    vm = import ./vm.nix { inherit mkDomainEnable mkCap; };
+    base = import ./base.nix;
+    ci = import ./ci.nix;
+    desktop = import ./desktop.nix;
+    development = import ./development.nix;
+    embedded = import ./embedded.nix;
+    server = import ./server.nix;
+    vm = import ./vm.nix;
+    vpn = import ./vpn.nix;
+    game-dev = import ./game-dev.nix;
+    gaming = import ./gaming.nix;
+    design = import ./design.nix;
+    office = import ./office.nix;
+    obs = import ./obs.nix;
   };
 
   resolve =
@@ -43,8 +44,8 @@ let
       throw "Unknown profiles: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " validNames}"
     else
       {
-        hm = lib.concatMap (n: profileMap.${n}.hm) names;
-        nixos = lib.concatMap (n: profileMap.${n}.nixos) names;
+        enabled = map entryFor (lib.concatMap (n: profileMap.${n}.enable or [ ]) names);
+        modules = lib.concatMap (n: profileMap.${n}.modules or [ ]) names;
       };
 in
 resolve profiles

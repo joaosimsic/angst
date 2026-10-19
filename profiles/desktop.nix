@@ -1,15 +1,23 @@
-{ mkDomainEnable, mkCap }:
 {
-  hm = [
-    (mkDomainEnable "wm.i3")
-    (mkDomainEnable "bar.i3status")
-    (mkDomainEnable "launcher.rofi")
-    (mkDomainEnable "terminal.ghostty")
-    (mkDomainEnable "session.x11")
-  ];
-  nixos = [
-    (mkCap "graphical")
-    (mkCap "audio")
-    (mkCap "clipboard")
+  enable = [
+
+    "launcher.rofi"
+    "terminal.ghostty"
+    "display.x11"
+    "display.picom"
+    "display.lightdm"
+    "wm.i3"
+    "bar.i3status-rust"
+    "browser.firefox"
+    "chat.discord"
+    "display.gpu"
+    "kernel.graphical"
+    "kernel.cursor"
+    "kernel.audio"
+    "kernel.clipboard"
+    "audio.easyeffects"
+    "capture.screenshot"
+    "media.celluloid"
+    "notifications"
   ];
 }

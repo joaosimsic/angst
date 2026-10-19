@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib }:
 
 let
   inherit (import ../lib/toolchain.nix { inherit lib pkgs; }) mkToolchain;
@@ -22,4 +22,35 @@ mkToolchain {
     tree-sitter-typescript
     tree-sitter-vue
   ];
+  editor.lsp = {
+    typescript = {
+      command = [
+        "typescript-language-server"
+        "--stdio"
+      ];
+      extensions = [
+        ".ts"
+        ".tsx"
+      ];
+    };
+    javascript = {
+      command = [
+        "typescript-language-server"
+        "--stdio"
+      ];
+      extensions = [
+        ".js"
+        ".jsx"
+        ".mjs"
+        ".cjs"
+      ];
+    };
+    vue = {
+      command = [
+        "vue-language-server"
+        "--stdio"
+      ];
+      extensions = [ ".vue" ];
+    };
+  };
 }

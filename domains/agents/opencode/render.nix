@@ -1,4 +1,11 @@
-{ themesLib, themeName, ... }:
+{
+  lib,
+  themesLib,
+  themeName,
+  host,
+  store ? { },
+  ...
+}:
 
 let
   t = themesLib.get themeName;
@@ -67,6 +74,84 @@ let
       messages_half_page_down = "ctrl+d";
     };
   };
+
+  lspWithMux = lib.mapAttrs (
+    name: cfg:
+    if name == "rust" && (store.hasLspmux or false) then
+      cfg // { command = [ "rust-analyzer-mux" ]; }
+    else
+      cfg
+  ) (store.editorLsp or { });
+
+  lspWithDisabled = lspWithMux // {
+    "php intelephense" = {
+      disabled = true;
+    };
+  };
+
+  mcpServers = lib.filterAttrs (_: v: v != null) {
+    paper =
+      if (store.hasPaper or false) then
+        {
+          type = "remote";
+          url = "http://127.0.0.1:29979/mcp";
+          enabled = true;
+        }
+      else
+        null;
+
+    rea =
+      if (store.hasRea or false) then
+        {
+          type = "local";
+          command = [
+            "${host.pkgs.nodejs_24}/bin/npx"
+            "-y"
+            "rea-agents@6.5.0"
+            "mcp"
+          ];
+          environment = {
+            GHIDRA_INSTALL_DIR = "${host.pkgs.ghidra-bin}/lib/ghidra";
+            JAVA_HOME = "${host.pkgs.openjdk21.home}";
+            REA_GHIDRA_STARTUP_TIMEOUT_MS = "900000";
+            GHIDRA_HEADLESS_MAXMEM = "4G";
+          };
+          enabled = true;
+        }
+      else
+        null;
+  };
+
+  opencodeConfig = builtins.toJSON (
+    {
+      "$schema" = "https://opencode.ai/config.json";
+      compaction = {
+        auto = true;
+        reserved = 10000;
+      };
+      provider = {
+        opencode-go = {
+          options = {
+            apiKey = "{file:~/.secrets/opencode-go-key}";
+          };
+        };
+      };
+      lsp = lspWithDisabled;
+      command = {
+        caveman = {
+          description = "Caveman voice: /caveman toggles on/off, or lite|full|ultra|off";
+          template = ''
+            Caveman control. Argument: "$ARGUMENTS"
+
+            The caveman plugin already applied the mode.
+            Reply with exactly one line using the Caveman level from your system instructions:
+            Caveman level: <level>
+          '';
+        };
+      };
+    }
+    // lib.optionalAttrs (mcpServers != { }) { mcp = mcpServers; }
+  );
 in
 [
   {
@@ -76,5 +161,9 @@ in
   {
     path = "domains/agents/opencode/config/themes/angst.json";
     text = theme;
+  }
+  {
+    path = "domains/agents/opencode/config/opencode.jsonc";
+    text = opencodeConfig;
   }
 ]

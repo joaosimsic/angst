@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib }:
 
 let
   inherit (import ../lib/toolchain.nix { inherit lib pkgs; }) mkToolchain;
@@ -18,4 +18,8 @@ mkToolchain {
     nix-tree
   ];
   treesitter = with pkgs.tree-sitter-grammars; [ tree-sitter-nix ];
+  editor.lsp.nixd = {
+    command = [ "nixd" ];
+    extensions = [ ".nix" ];
+  };
 }

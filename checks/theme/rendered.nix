@@ -8,11 +8,7 @@
 
 let
   theme = themesLib.get themeName;
-  inherit (import ./assertions.nix { inherit lib themeName theme; })
-    require
-    requireDistinct
-    requireInfix
-    ;
+  inherit (import ./assertions.nix { inherit lib themeName theme; }) requireDistinct;
 
   allOutputs = renderDomainOutputsFor themeName;
 
@@ -30,6 +26,5 @@ let
   outputChecks = lib.concatMap (o: o.checks or [ ]) allOutputs;
 
   allChecks = themeChecks ++ outputChecks;
-  _ = map (check: check) allChecks;
 in
-pkgs.writeText "theme-rendered-check" "ok"
+pkgs.writeText "theme-rendered-check" (builtins.seq (map (check: check) allChecks) "ok")

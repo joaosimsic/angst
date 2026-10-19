@@ -2,6 +2,19 @@ local M = {}
 
 local client_attach_time = {}
 
+local function mark_ready(client, logger)
+	if client._lsp_ready_logged then
+		return
+	end
+	if logger and client_attach_time[client.id] then
+		local elapsed = vim.uv.now() - client_attach_time[client.id]
+		client._lsp_ready_logged = true
+		logger:info(function()
+			return string.format("%s ready after %dms", client.name, elapsed)
+		end)
+	end
+end
+
 function M.setup_handler(logger)
 	vim.lsp.handlers["$/progress"] = function(_, result, ctx)
 		if not result or not result.value then
@@ -16,13 +29,22 @@ function M.setup_handler(logger)
 		if result.value.kind == "begin" then
 			client_attach_time[client.id] = client_attach_time[client.id] or vim.uv.now()
 		elseif result.value.kind == "end" then
-			if logger and client_attach_time[client.id] and not client._lsp_ready_logged then
-				local elapsed = vim.uv.now() - client_attach_time[client.id]
-				client._lsp_ready_logged = true
-				logger:info(function()
-					return string.format("%s ready after %dms", client.name, elapsed)
-				end)
-			end
+			mark_ready(client, logger)
+		end
+	end
+
+	vim.lsp.handlers["$/clangd/serverStatus"] = function(_, result, ctx)
+		if not result then
+			return
+		end
+
+		local client = vim.lsp.get_client_by_id(ctx.client_id)
+		if not client then
+			return
+		end
+
+		if result.healthy then
+			mark_ready(client, logger)
 		end
 	end
 end
@@ -38,7 +60,7 @@ function M.start_fallback_timer(client, logger, inlay_supported)
 		client._lsp_fallback_timer = nil
 		if not client._lsp_ready_logged then
 			local elapsed = vim.uv.now() - (client_attach_time[client.id] or vim.uv.now())
-			local log_fn = inlay_supported and logger.warn or logger.debug
+			local log_fn = inlay_supported and logger.info or logger.debug
 			log_fn(logger, function()
 				return string.format(
 					"%s not ready after %dms (no $/progress received)%s",

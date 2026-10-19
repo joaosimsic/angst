@@ -1,4 +1,4 @@
-{ themesLib, themeName, ... }:
+{ themesLib, themeName }:
 
 let
   t = themesLib.get themeName;
@@ -20,8 +20,8 @@ in
           { url = "*/", fg = "#${p.surface.base}" }
       ]
 
-      [overall]
-      bg = "#${p.background.base}"
+      [app]
+      overall = { bg = "#${p.background.base}" }
     '';
   }
 ]

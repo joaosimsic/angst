@@ -2,7 +2,6 @@
   themesLib,
   themeName,
   fontFamily,
-  ...
 }:
 
 let

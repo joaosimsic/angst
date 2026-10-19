@@ -3,7 +3,6 @@
   themeName,
   checkHelpers,
   fontFamily,
-  ...
 }:
 
 let
@@ -38,12 +37,14 @@ let
 in
 [
   {
-    path = "domains/terminal/ghostty/config/config";
+    path = "domains/terminal/ghostty/config/config.ghostty";
     text = ''
       config-file = colors.conf
 
       font-family = ${fontFamily}
       font-size = 13
+      font-thicken = true
+      freetype-load-flags = hinting,no-force-autohint,no-monochrome,autohint,no-light
 
       adjust-underline-thickness = 100%
 

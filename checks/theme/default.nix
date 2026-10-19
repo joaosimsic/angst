@@ -12,13 +12,11 @@ let
   renderResults = lib.concatLists (
     map (
       themeName:
-      map (output: "  ${output.path} render + ${themeName}: ok") (
-        renderDomainOutputsFor themeName
-      )
+      map (output: "  ${output.path} render + ${themeName}: ok") (renderDomainOutputsFor themeName)
     ) themeNames
   );
 
-  summary = lib.concatStringsSep "\n" (
+  summary = builtins.concatStringsSep "\n" (
     [
       "Themes (${toString (lib.length themeNames)}):"
     ]

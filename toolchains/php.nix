@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib }:
 
 let
   inherit (import ../lib/toolchain.nix { inherit lib pkgs; }) mkToolchain;
@@ -23,4 +23,11 @@ mkToolchain {
   treesitter = with pkgs.tree-sitter-grammars; [
     tree-sitter-php
   ];
+  editor.lsp.php = {
+    command = [
+      "phpactor"
+      "language-server"
+    ];
+    extensions = [ ".php" ];
+  };
 }

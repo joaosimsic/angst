@@ -3,49 +3,62 @@
   lib,
   pkgs,
   userConfig,
-  repoPath,
+  runtime,
+  flakeSelf,
+  host,
+  ssh,
   ...
 }:
 
 let
-  cfg = config.angst.isQemuVm;
-
+  repoPath = ".config/angst";
   hostAngstPath = "/host${userConfig.homeDirectory}/${repoPath}";
 
-  angstCli = pkgs.writeShellApplication {
-    name = "angst";
-    runtimeInputs = with pkgs; [
-      coreutils findutils git nix watchexec jq
-    ];
-    text = builtins.readFile ../../scripts/angst.sh;
-  };
-
-  p9Options = [
-    "nofail"
-    "trans=virtio"
-    "version=9p2000.L"
-    "msize=16384"
-    "x-systemd.requires=modprobe@9pnet_virtio.service"
-  ];
+  sharedPubs =
+    let
+      pubFor =
+        scope:
+        let
+          p = flakeSelf + "/secrets/ssh/${scope}.ed25519.pub";
+        in
+        lib.optional (builtins.pathExists p) (lib.trim (builtins.readFile p));
+    in
+    (pubFor "personal") ++ (pubFor "work");
 in
 {
-  config = lib.mkIf cfg {
-    assertions = [{
-      assertion = config.services.openssh.enable or false;
-      message = ''
-        angst: VM is running without SSH. Headless VM access requires an SSH server.
+  options.angst.vm.injectWorkAgeKey = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Inject the work age key into the VM (needed to decrypt work-scoped secrets such as ftp mounts). Every host must be able to use the work key.";
+  };
 
-        Ensure the VM profile modules are loaded. Add to your NixOS modules:
-          ../capabilities/ssh.nix
-          ../lib/virtualization/vm-profile.nix
+  config = {
+    assertions = [
+      {
+        assertion = config.services.openssh.enable or false;
+        message = ''
+          angst: VM is running without SSH. Headless VM access requires an SSH server.
 
-        And enable SSH:
-          capabilities.ssh.enable = true;
-          capabilities.ssh.server.enable = true;
-      '';
-    }];
+          Ensure the VM profile modules are loaded. Add to your NixOS modules:
+            domains/remote/ssh/system.nix
+            ../lib/virtualization/vm-profile.nix
+
+          And enable SSH:
+            domains.remote.ssh.enable = true;
+            domains.remote.ssh.server.enable = true;
+        '';
+      }
+    ];
 
     documentation.nixos.enable = lib.mkForce false;
+
+    environment.persistence."${host.persist.root}".directories = lib.mkIf (host.hostname == "vm") (
+      lib.mkForce [
+        "/var/lib/bluetooth"
+        "/var/lib/nixos"
+        "/var/lib/systemd/coredump"
+      ]
+    );
 
     boot = {
       initrd.kernelModules = lib.mkForce [ ];
@@ -71,15 +84,21 @@ in
       };
     };
 
-    capabilities.ssh.enable = lib.mkForce true;
-    capabilities.ssh.server.enable = lib.mkForce true;
+    domains.remote.ssh.enable = lib.mkForce true;
+    domains.remote.ssh.server.enable = lib.mkForce true;
+
+    services.openssh.settings.AuthorizedKeysFile = "/etc/ssh/authorized_keys.d/%u";
+
+    services.openssh.settings.PerSourcePenalties = lib.mkForce false;
 
     environment = {
       systemPackages = with pkgs; [
         spice-vdagent
         pkg-config
         openssl.dev
-        angstCli
+        runtime.angst-cli
+        runtime.vm.nixos-switch
+        runtime.vm.home-switch
       ];
       sessionVariables = {
         ANGST_REPO = hostAngstPath;
@@ -88,7 +107,7 @@ in
     };
 
     users.users.${userConfig.username}.openssh.authorizedKeys.keys =
-      userConfig.ssh.authorizedKeys or [ ];
+      sharedPubs ++ (ssh.authorizedKeys or [ ]);
 
     systemd = {
       user.services.spice-vdagent = {
@@ -106,60 +125,50 @@ in
         };
       };
 
-      services.home-manager-upgrade = {
-        description = "Activate latest Home Manager generation not baked into the system closure";
-        after = [ "home-manager-${userConfig.username}.service" ];
-        wantedBy = [ "multi-user.target" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          User = userConfig.username;
-        };
-        script = ''
-          active=""
-          if [ -L "/etc/profiles/per-user/${userConfig.username}" ]; then
-            active="$(readlink -f "/etc/profiles/per-user/${userConfig.username}")"
-          fi
-
-          latest=""
-          for gen in /nix/store/*-home-manager-generation/activate; do
-            [ -f "$gen" ] || continue
-            dir="$(dirname "$gen")"
-            hp="$(readlink "$dir/home-path" 2>/dev/null || true)"
-            [ -n "$hp" ] || continue
-            [ "$hp" = "$active" ] && continue
-            latest="$dir"
-          done
-
-          if [ -n "$latest" ]; then
-            exec "$latest/activate" --driver-version 1
-          fi
-        '';
-      };
-
-      services.vm-authorized-keys = {
-        description = "Install runtime SSH authorized_keys for VM access";
-        wantedBy = [ "multi-user.target" ];
-        before = [ "sshd.service" ];
-        requires = [ "tmp-shared.mount" ];
-        after = [ "tmp-shared.mount" ];
-
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
+      services = {
+        home-manager-upgrade = {
+          description = "Activate latest Home Manager generation not baked into the system closure";
+          after = [ "home-manager-${userConfig.username}.service" ];
+          wantedBy = [ "multi-user.target" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            User = userConfig.username;
+            ExecStart = (runtime.vm.home-manager-upgrade { inherit (userConfig) username; }).bin;
+          };
         };
 
-        script = ''
-          key_file=/tmp/shared/authorized_keys
+        vm-ephemeral-ssh = {
+          description = "VM: mount tmpfs on /etc/ssh for ephemeral host keys";
+          wantedBy = [ "sshd-keygen.service" ];
+          before = [
+            "sshd-keygen.service"
+            "sshd.service"
+          ];
+          after = [ "local-fs.target" ];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = runtime.vm.ephemeral-ssh.bin;
+          };
+        };
 
-          if [ ! -s "$key_file" ]; then
-            echo "No runtime VM SSH keys found at $key_file; keeping declarative authorized_keys fallback."
-            exit 0
-          fi
+        vm-age-key = {
+          description = "Install host age key for age decryption";
+          wantedBy = [ "multi-user.target" ];
+          before = [ "home-manager-${userConfig.username}.service" ];
+          requires = [ "tmp-shared.mount" ];
+          after = [ "tmp-shared.mount" ];
 
-          install -d -m 700 -o ${userConfig.username} -g users ${userConfig.homeDirectory}/.ssh
-          install -m 600 -o ${userConfig.username} -g users "$key_file" ${userConfig.homeDirectory}/.ssh/authorized_keys
-        '';
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStart =
+              (runtime.vm.age-key {
+                inherit (userConfig) username homeDirectory;
+                injectWorkKey = config.angst.vm.injectWorkAgeKey;
+              }).bin;
+          };
+        };
       };
     };
 
@@ -169,46 +178,6 @@ in
         resolution = "1920x1080";
         refreshRate = 60;
         position = "0x0";
-      };
-    };
-
-    fileSystems = {
-      "/" = lib.mkForce {
-        device = "/dev/disk/by-label/nixos";
-        fsType = "ext4";
-      };
-      ${hostAngstPath} = {
-        device = "angst";
-        fsType = "9p";
-        options = p9Options ++ [ "noatime" ];
-      };
-      "/nix/.ro-store" = {
-        device = "nix-store";
-        fsType = "9p";
-        options = p9Options ++ [ "cache=loose" ];
-      };
-      "/nix/.rw-store" = {
-        device = "tmpfs";
-        fsType = "tmpfs";
-        neededForBoot = true;
-        options = [ "mode=0755" ];
-      };
-      "/nix/store" = {
-        overlay = {
-          lowerdir = [ "/nix/.ro-store" ];
-          upperdir = "/nix/.rw-store/upper";
-          workdir = "/nix/.rw-store/work";
-        };
-      };
-      "/tmp/shared" = {
-        device = "shared";
-        fsType = "9p";
-        options = p9Options;
-      };
-      "/tmp/xchg" = {
-        device = "xchg";
-        fsType = "9p";
-        options = p9Options;
       };
     };
   };

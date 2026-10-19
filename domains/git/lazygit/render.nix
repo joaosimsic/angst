@@ -1,4 +1,4 @@
-{ themesLib, themeName, ... }:
+{ themesLib, themeName }:
 
 let
   t = themesLib.get themeName;
@@ -35,9 +35,8 @@ let
           - "#${a.error}"
         defaultFgColor:
           - "#${p.foreground.base}"
-      authorColors: {}
-      branchColors: {}
-      branchColorPatterns: {}
+        authorColors: {}
+        branchColorPatterns: {}
       customIcons:
         filenames: {}
         extensions: {}
@@ -58,7 +57,7 @@ let
       expandedSidePanelWeight: 2
       mainPanelSplitMode: flexible
       enlargedSideViewLocation: left
-      wrapLinesInStagingView: true
+      wrapLinesInDiffView: true
       language: auto
       timeFormat: 02 Jan 06
       shortTimeFormat: 3:04PM
@@ -223,7 +222,7 @@ let
         prevTab: '['
         nextScreenMode: +
         prevScreenMode: _
-        cyclePagers: '|'
+        cycleDiffRenderers: '|'
         undo: z
         redo: Z
         filteringMenu: <ctrl+s>
@@ -234,6 +233,7 @@ let
         submitEditorText: <enter>
         extrasMenu: '@'
         toggleWhitespaceInDiffView: <ctrl+w>
+        newWorktree: w
         increaseContextInDiffView: '}'
         decreaseContextInDiffView: '{'
         increaseRenameSimilarityThreshold: )
@@ -283,8 +283,6 @@ let
         fetchRemote: f
         addForkRemote: F
         sortOrder: s
-      worktrees:
-        viewWorktreeOptions: w
       commits:
         squashDown: s
         renameCommit: r

@@ -26,6 +26,12 @@ in
   config = {
     system.stateVersion = "25.11";
 
+    boot.loader = {
+      systemd-boot.enable = lib.mkDefault true;
+      systemd-boot.configurationLimit = lib.mkDefault 5;
+      efi.canTouchEfiVariables = lib.mkDefault true;
+    };
+
     console.keyMap = lib.mkDefault config.angst.keyboardLayout;
 
     services.xserver.xkb = {
@@ -63,6 +69,7 @@ in
     ];
 
     programs.nix-ld.enable = true;
+    programs.dconf.enable = lib.mkDefault true;
 
     fileSystems."/" = lib.mkDefault {
       device = "/dev/disk/by-label/nixos";

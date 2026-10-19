@@ -10,10 +10,14 @@ target/
 debug-*
 nvim-profile.log
 .direnv
-user.env
 .claude
 *.log
 __pycache__
 node_modules
-local/*
-!local/config.nix.example
+*.dec
+*.agekey
+# vault staging dirs (plaintext) — tarballs are tracked as *.tar.age under secrets/
+secrets/projects/personal/
+secrets/projects/work/
+secrets/db/personal/
+secrets/db/work/

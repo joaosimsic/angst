@@ -14,6 +14,9 @@
 - [x] md handling(md-preview/render-md)
 - [ ] add file line length in heirline
 - [ ] fix render md badge and move through zellij
+- [ ] add profiler, benchmark and assembly view for scratch plugin
+- [ ] move adapter to use new toolchain definitions
+- [ ] spring idea, pull the string until reach a file, then release it to return to where u first pulled. a quick recall
 
 # nu
 
@@ -25,6 +28,11 @@
 - [x] add package managers to toolchains
 - [x] use nixos-generate-config to set hardware
 
+# toolchains
+
+- [x] yaml
+- [x] json formatter
+
 # analyzer
 
 - [ ] make dynamic scanning
@@ -35,15 +43,21 @@
 - [x] deprecating vm scripts to let rust tool handles it
 - [x] add a headless mode for launching the vm without gui
 - [x] ci tests
-- [ ] mcp degradation
+- [?] mcp degradation
 - [x] static angst repo mounting
 
 # zellij
 
 - [x] screen freeze when exit or close last pane
 
+# encryption
+
+- [x] stardand way to encrypt files and dirs
+- [ ] validate projects and ftp pipelines
+
 # miscellaneous
 
-- [ ] login screen
-- [ ] firefox
-- [ ] persistent and not persistent prints
+- [x] login screen
+- [x] firefox
+- [x] persistent and not persistent prints
+- [x] notifications and add print notifications

@@ -1,2 +1,12 @@
 [mgr]
 show_hidden = true
+
+[opener]
+celluloid = [
+	{ run = "celluloid %s1", desc = "Celluloid", for = "linux", orphan = true },
+]
+
+[open]
+prepend_rules = [
+	{ mime = "video/*", use = "celluloid" },
+]

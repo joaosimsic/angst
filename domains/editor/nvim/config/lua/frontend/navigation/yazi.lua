@@ -15,9 +15,23 @@ return {
 			show_help = "<f1>",
 		},
 		hooks = {
+			yazi_opened = function()
+				vim.g.yazi_process_id = nil
+				vim.g.yazi_buffer = nil
+			end,
 			on_yazi_ready = function(buffer, config, process_api)
 				vim.g.yazi_process_id = process_api.yazi_id
 				vim.g.yazi_buffer = buffer
+
+				vim.schedule(function()
+					vim.api.nvim_exec_autocmds("User", {
+						pattern = "YaziReady",
+						data = {
+							buffer = buffer,
+							yazi_id = process_api.yazi_id,
+						},
+					})
+				end)
 			end,
 		},
 	},

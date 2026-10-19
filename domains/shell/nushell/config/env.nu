@@ -1,3 +1,7 @@
+if ([$nu.default-config-dir hm-session-vars.nu] | path join | path exists) {
+    source $"($nu.default-config-dir)/hm-session-vars.nu"
+}
+
 $env.STARSHIP_SHELL = "nu"
 
 def create_left_prompt [] {
@@ -24,21 +28,30 @@ $env.XDG_CACHE_HOME = $XDG_CACHE_HOME
 
 $env.CLAUDE_CONFIG_DIR = ($XDG_CONFIG_HOME | path join "claude")
 
+
 $env.PATH = (
     $env.PATH
     | split row (char esep)
-    | prepend ($nu.home-dir | path join ".local/bin")
+    | prepend "/nix/var/nix/profiles/default/bin"
     | prepend ($nu.home-dir | path join ".cargo/bin")
+    | prepend ($nu.home-dir | path join ".nix-profile/bin")
+    | prepend ($nu.home-dir | path join ".local/bin")
     | uniq
 )
 
-# Add nix profile pkgconfig to PKG_CONFIG_PATH for cargo/rust-analyzer builds
-$env.PKG_CONFIG_PATH = ("~/.nix-profile/lib/pkgconfig" | path expand)
 
-const carapace_init = ($XDG_CACHE_HOME | path join "carapace/init.nu")
+$env.PKG_CONFIG_PATH = (
+    $env.PKG_CONFIG_PATH? | default ""
+    | split row ":"
+    | where $it != ""
+    | prepend ("~/.nix-profile/lib/pkgconfig" | path expand)
+    | prepend "/usr/share/pkgconfig"
+    | prepend "/usr/lib/x86_64-linux-gnu/pkgconfig"
+    | prepend "/usr/lib/pkgconfig"
+    | uniq
+    | str join ":"
+)
 
-if not ($carapace_init | path exists) {
-    mkdir ($carapace_init | path dirname)
-    carapace _carapace nushell | save --force $carapace_init
+if (($nu.default-config-dir | path join "ssh-agent.nu") | path exists) {
+    source $"($nu.default-config-dir)/ssh-agent.nu"
 }
-source $carapace_init
