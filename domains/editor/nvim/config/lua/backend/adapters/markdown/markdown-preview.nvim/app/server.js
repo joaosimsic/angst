@@ -48,6 +48,12 @@ exports.run = function () {
     routes(req, res)
   })
 
+  server.on('error', (err) => {
+    logger.error('server error: ', err.message)
+    plugin.nvim.call('mkdp#util#echo_messages', ['Error', [`[markdown-preview.nvim]: ${err.message}`]])
+    process.exit(1)
+  })
+
   // websocket server
   const io = websocket(server)
 

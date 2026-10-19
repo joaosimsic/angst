@@ -6,6 +6,8 @@ local p = palette.p
 local source_path = debug.getinfo(1, "S").source:gsub("^@", "")
 local plugin_dir = vim.fn.fnamemodify(source_path, ":p:h") .. "/markdown-preview.nvim"
 
+vim.g.angst_mkdp_root_dir = plugin_dir
+
 ---@type Plugin[]
 return {
 	{
@@ -24,16 +26,14 @@ return {
 			vim.g.mkdp_open_to_the_world = 1
 			vim.g.mkdp_echo_preview_url = 1
 			vim.g.mkdp_browserfunc = "OpenPreviewOnHost"
+			vim.g.mkdp_auto_close = 0
+			vim.g.mkdp_combine_preview = 1
+			vim.g.mkdp_combine_preview_auto_refresh = 1
 
 			vim.cmd([[
 				function! OpenPreviewOnHost(url) abort
-					let @" = a:url
 					echomsg "MD Preview: " . a:url
-					call writefile([a:url], '/tmp/shared/md-preview-url', 'b')
-					silent! call system('wl-copy ' . shellescape(a:url))
-					if v:shell_error
-						silent! call system('xclip -selection clipboard', a:url)
-					endif
+					call jobstart(['xdg-open', a:url])
 				endfunction
 			]])
 
@@ -59,6 +59,7 @@ return {
 				group = group,
 				pattern = "MkdpPreviewStop",
 				callback = function()
+					vim.g.mkdp_linked_bufnr = nil
 					if preview_active then
 						preview_active = false
 						md_badge:hide("md-preview")
@@ -66,19 +67,28 @@ return {
 				end,
 			})
 
-			vim.api.nvim_create_autocmd("BufEnter", {
+			vim.api.nvim_create_autocmd({ "BufEnter", "FileType" }, {
 				group = group,
-				pattern = "*.md",
 				callback = function()
+					if not vim.tbl_contains({ "markdown", "markdown.mdx" }, vim.bo.filetype) then
+						return
+					end
 					vim.api.nvim_buf_create_user_command(0, "MarkdownPreviewToggle", function()
 						require("mkdp").toggle_preview()
 					end, { force = true })
+
+					local bufnr = vim.api.nvim_get_current_buf()
+					if require("mkdp.rpc").get_server_status() == 1 and vim.g.mkdp_linked_bufnr ~= bufnr then
+						vim.g.mkdp_linked_bufnr = bufnr
+						vim.b.MarkdownPreviewToggleBool = 1
+						require("mkdp").open_browser()
+					end
 				end,
 			})
 
 			local binder = Keybinder.new(nil, "MD_PREVIEW")
 			binder:nmap("<leader>mp", function()
-				vim.cmd("MarkdownPreviewToggle")
+				require("mkdp").toggle_preview()
 			end, { desc = "Toggle markdown preview" })
 		end,
 	},

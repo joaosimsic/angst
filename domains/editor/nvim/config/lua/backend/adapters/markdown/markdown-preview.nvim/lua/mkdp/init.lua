@@ -60,7 +60,7 @@ function M.open_preview_page()
 end
 
 function M.combine_preview_refresh()
-  if vim.g.mkdp_clients_active and not vim.g.mkdp_auto_start then
+  if (tonumber(vim.g.mkdp_clients_active) or 0) ~= 0 and (tonumber(vim.g.mkdp_auto_start) or 0) == 0 then
     M.open_browser()
   end
 end
@@ -78,9 +78,10 @@ function M.stop_preview()
 end
 
 function M.toggle_preview()
-  if not vim.b.MarkdownPreviewToggleBool then
-    M.open_preview_page()
+  local running = rpc.get_server_status() == 1
+  if not running or not vim.b.MarkdownPreviewToggleBool then
     vim.b.MarkdownPreviewToggleBool = 1
+    M.open_preview_page()
   else
     M.stop_preview()
     vim.b.MarkdownPreviewToggleBool = 0

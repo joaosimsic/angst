@@ -1,10 +1,17 @@
 local M = {}
 
 local source = debug.getinfo(1, "S").source:gsub("^@", "")
-local root_dir = vim.fn.fnamemodify(vim.fn.resolve(source), ":p:h:h:h")
+local root_dir = vim.g.angst_mkdp_root_dir or vim.fn.fnamemodify(source, ":p:h:h:h")
 
 local channel_id = -1
 local intentional_stop = false
+local active_bufnr = nil
+
+local function reset_toggle(bufnr)
+  if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
+    pcall(vim.api.nvim_buf_set_var, bufnr, "MarkdownPreviewToggleBool", 0)
+  end
+end
 
 local function on_stdout(_, msgs)
   if msgs and #msgs > 0 then
@@ -26,6 +33,8 @@ local function on_exit(id, code)
   if channel_id == id then
     channel_id = -1
     vim.g.mkdp_clients_active = 0
+    reset_toggle(active_bufnr)
+    active_bufnr = nil
     if not intentional_stop then
       vim.schedule(function()
         vim.api.nvim_exec_autocmds("User", { pattern = "MkdpPreviewStop" })
@@ -44,8 +53,9 @@ end
 
 function M.start_server()
   intentional_stop = false
+  active_bufnr = vim.fn.bufnr("%")
   local app_dir = root_dir .. "/app"
-  if vim.fn.isdirectory(app_dir .. "/node_modules/@chemzqm/neovim") == 0 then
+  if vim.fn.isdirectory(app_dir .. "/node_modules/@chemzqm/neovim") == 0 and vim.fn.executable("bun") == 1 then
     vim.system({ "bun", "install" }, { cwd = app_dir }):wait()
   end
 
@@ -54,10 +64,22 @@ function M.start_server()
   local cmd
   if vim.fn.executable(server_script) == 1 then
     cmd = { server_script, "--path", root_dir .. "/app/server.js" }
+  elseif vim.fn.executable("node") == 1 then
+    cmd = {
+      "node",
+      "--preserve-symlinks",
+      "--preserve-symlinks-main",
+      root_dir .. "/app/index.js",
+      "--path",
+      root_dir .. "/app/server.js",
+    }
   elseif vim.fn.executable("bun") == 1 then
     cmd = { "bun", root_dir .. "/app/index.js", "--path", root_dir .. "/app/server.js" }
   else
-    require("mkdp").echo_messages("Error", { "[markdown-preview.nvim]: Pre build and bun is not found" })
+    require("mkdp").echo_messages(
+      "Error",
+      { "[markdown-preview.nvim]: Pre build and node/bun is not found" }
+    )
     return
   end
 
@@ -76,7 +98,8 @@ function M.stop_server()
     pcall(vim.fn.jobstop, channel_id)
   end
   channel_id = -1
-  vim.b.MarkdownPreviewToggleBool = 0
+  reset_toggle(active_bufnr or vim.fn.bufnr("%"))
+  active_bufnr = nil
 end
 
 function M.preview_refresh()
@@ -95,7 +118,8 @@ end
 
 function M.open_browser()
   if channel_id ~= -1 then
-    pcall(vim.fn.rpcnotify, channel_id, "open_browser", { bufnr = vim.fn.bufnr("%") })
+    active_bufnr = vim.fn.bufnr("%")
+    pcall(vim.fn.rpcnotify, channel_id, "open_browser", { bufnr = active_bufnr })
   end
 end
 

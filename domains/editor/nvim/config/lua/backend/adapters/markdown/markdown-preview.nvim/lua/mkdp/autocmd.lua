@@ -5,7 +5,7 @@ function M.init()
   local augroup_name = "MKDP_REFRESH_INIT" .. bufnr
   local group = vim.api.nvim_create_augroup(augroup_name, { clear = true })
 
-  if vim.g.mkdp_refresh_slow then
+  if (tonumber(vim.g.mkdp_refresh_slow) or 0) ~= 0 then
     vim.api.nvim_create_autocmd({ "CursorHold", "BufWrite", "InsertLeave" }, {
       group = group,
       buffer = bufnr,
@@ -23,7 +23,7 @@ function M.init()
     })
   end
 
-  if vim.g.mkdp_auto_close then
+  if (tonumber(vim.g.mkdp_auto_close) or 0) ~= 0 then
     vim.api.nvim_create_autocmd("BufHidden", {
       group = group,
       buffer = bufnr,
