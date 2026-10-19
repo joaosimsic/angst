@@ -14,6 +14,7 @@
   "browser.warnOnQuit" = true;
   "browser.tabs.warnOnClose" = true;
   "browser.tabs.warnOnCloseOtherTabs" = true;
+  "browser.tabs.loadDivertedInBackground" = true;
   "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
   "browser.uidensity" = 0;
   "browser.theme.toolbar-theme" = theme.toolbarThemeVal;
