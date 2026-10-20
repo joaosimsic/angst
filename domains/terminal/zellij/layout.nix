@@ -1,6 +1,8 @@
 {
   inactiveTab,
   activeTab,
+  bellTab,
+  flashingBellTab,
   modeNormal,
   modeLocked,
   modePane,
@@ -53,6 +55,10 @@
                   tab_active              "#[${activeTab}] {index} "
                   tab_active_fullscreen   "#[${activeTab}] {index} "
                   tab_active_sync         "#[${activeTab}] {index} "
+                  tab_normal_bell              "#[${bellTab}] {index} {bell_indicator} "
+                  tab_normal_flashing_bell     "#[${flashingBellTab}] {index} {bell_indicator} "
+                  tab_bell_indicator           "!"
+                  tab_flashing_bell_indicator  "!"
 
                   command_cwd_command    "pwd"
                   command_cwd_format     "{stdout}"

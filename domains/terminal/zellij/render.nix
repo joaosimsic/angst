@@ -12,6 +12,8 @@ let
   standard = "bg=#${p.surface.variant},fg=#${t.safe.foregroundOnSurfaceVariant}";
   inactiveTab = "bg=#${p.surface.variant},fg=#${t.safe.foregroundOnSurfaceVariant},bold";
   activeTab = "bg=#${t.safe.surfaceVariantOnForegroundVariant},fg=#${p.surface.variant},bold";
+  bellTab = "bg=#${t.ansi.error},fg=#${p.background.base},bold";
+  flashingBellTab = "bg=#${t.ansi.warn},fg=#${p.background.base},bold";
 
   modeNormal = "bg=#${p.surface.variant},fg=#${t.safe.foregroundOnSurfaceVariant},bold";
   modeLocked = "bg=#${p.dim},fg=#${p.background.base},bold";
@@ -39,6 +41,7 @@ let
     theme "angst"
     default_layout "default"
     pane_frames false
+    visual_bell true
     auto_layout true
     copy_clipboard "system"
     show_startup_tips false
@@ -110,6 +113,9 @@ let
 
 
         shared_except "locked" {
+            bind "Ctrl Up" { GoToTab 1; }
+            bind "Ctrl Down" { GoToTab 1; GoToPreviousTab; }
+
             bind "Ctrl h" {
                 MessagePlugin "vim-navigator" {
                     name "move_focus_or_tab";
@@ -187,6 +193,8 @@ let
       standard
       inactiveTab
       activeTab
+      bellTab
+      flashingBellTab
       modeNormal
       modeLocked
       modePane
@@ -214,6 +222,13 @@ in
       (requireInfix configText "theme \"angst\"" "zellij config should select the generated angst theme")
       (requireInfix configText "default_layout \"default\""
         "zellij config should select the custom default layout"
+      )
+      (requireInfix configText "visual_bell true" "zellij visual bell should be enabled")
+      (requireInfix configText ''bind "Ctrl Up" { GoToTab 1; }''
+        "zellij Ctrl Up should jump to the first tab"
+      )
+      (requireInfix configText ''bind "Ctrl Down" { GoToTab 1; GoToPreviousTab; }''
+        "zellij Ctrl Down should jump to the last tab"
       )
     ];
   }
@@ -261,6 +276,18 @@ in
       (require (
         p.accent.base != p.background.variant
       ) "zellij inactive tab text and bar surface must differ in ${themeName}")
+      (requireInfix layoutText "tab_normal_bell"
+        "zjstatus should render a persistent bell tab state"
+      )
+      (requireInfix layoutText "tab_normal_flashing_bell"
+        "zjstatus should render a flashing bell tab state"
+      )
+      (requireInfix layoutText "tab_bell_indicator"
+        "zjstatus should render a bell indicator"
+      )
+      (require (
+        t.ansi.error != p.background.base
+      ) "zellij bell tab background must differ from bar surface in ${themeName}")
     ];
   }
 ]

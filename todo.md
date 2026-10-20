@@ -44,13 +44,14 @@
 - [x] add a headless mode for launching the vm without gui
 - [x] ci tests
 - [x] static angst repo mounting
-- [ ] make vm run in a fixed terminal subprocess and dont outlive its parent
-- [ ] make mcp be run alongside the vm startup
+- [x] make vm run in a fixed terminal subprocess and dont outlive its parent
+- [x] make mcp be run alongside the vm startup
+- [x] when host mouse disabled, unable to leave the input grab of vm
 
 # zellij
 
 - [x] screen freeze when exit or close last pane
-- [ ] make ctrl up/down got to the first or last window
+- [x] make ctrl up/down got to the first or last window
 
 # encryption
 
@@ -69,8 +70,8 @@
 - [x] mouse hide button and i3 shortcut
 - [x] switch active and inactive ws number colors
 - [x] better differentiate active and inactive windows
-- [ ] make windows/workspaces that have an update blink, so its better visually to know when do i need to callback to something
-- [ ] remove dark bg in memory section in status bar when memory > 20%
+- [~] make windows/workspaces that have an update blink, so its better visually to know when do i need to callback to something
+- [x] remove dark bg in memory section in status bar when memory > 20%
 
 # opencode
 

@@ -11,6 +11,46 @@ let
 
   p = t.palette;
 
+  configText = ''
+    config-file = colors.conf
+    gtk-single-instance = true
+
+    font-family = ${fontFamily}
+    font-size = 13
+    font-thicken = true
+    freetype-load-flags = hinting,no-force-autohint,no-monochrome,autohint,no-light
+
+    adjust-underline-thickness = 100%
+
+    cursor-style = block
+    cursor-style-blink = false
+
+    window-decoration = false
+
+    window-padding-x = 8
+    window-padding-y = 8
+    window-padding-balance = true
+
+    background-opacity = 1.0
+
+    bold-is-bright = true
+
+    font-feature = +calt
+    font-feature = +liga
+    font-feature = +dlig
+
+    scrollback-limit = 10000
+
+    bell-features = attention,title
+    notify-on-command-finish = unfocused
+    notify-on-command-finish-action = bell
+    notify-on-command-finish-after = 5s
+
+    clipboard-write = allow
+
+    keybind = ctrl+q=text:\x11
+  '';
+
   colorsText = ''
     background           = ${p.background.base}
     foreground           = ${p.foreground.variant}
@@ -38,40 +78,18 @@ in
 [
   {
     path = "domains/terminal/ghostty/config/config.ghostty";
-    text = ''
-      config-file = colors.conf
-      gtk-single-instance = true
-
-      font-family = ${fontFamily}
-      font-size = 13
-      font-thicken = true
-      freetype-load-flags = hinting,no-force-autohint,no-monochrome,autohint,no-light
-
-      adjust-underline-thickness = 100%
-
-      cursor-style = block
-      cursor-style-blink = false
-
-      window-decoration = false
-
-      window-padding-x = 8
-      window-padding-y = 8
-      window-padding-balance = true
-
-      background-opacity = 1.0
-
-      bold-is-bright = true
-
-      font-feature = +calt
-      font-feature = +liga
-      font-feature = +dlig
-
-      scrollback-limit = 10000
-
-      clipboard-write = allow
-
-      keybind = ctrl+q=text:\x11
-    '';
+    text = configText;
+    checks = [
+      (requireInfix configText "bell-features = attention,title"
+        "ghostty should request window attention on bell"
+      )
+      (requireInfix configText "notify-on-command-finish = unfocused"
+        "ghostty should notify when a background command finishes"
+      )
+      (requireInfix configText "notify-on-command-finish-action = bell"
+        "ghostty command-finish should ring the bell"
+      )
+    ];
   }
   {
     path = "domains/terminal/ghostty/config/colors.conf";

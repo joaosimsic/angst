@@ -1,8 +1,15 @@
-{ themesLib, themeName }:
+{
+  themesLib,
+  themeName,
+  host,
+}:
 
 let
   t = themesLib.get themeName;
   p = t.palette;
+  isVm = host.hostname == "vm";
+  grabStatus = if isVm then "i3-vm-grab status --guest" else "i3-vm-grab status";
+  grabClick = if isVm then "i3-vm-grab request" else "i3-vm-grab toggle";
 in
 [
   {
@@ -23,6 +30,9 @@ in
       block = "cpu"
       interval = 5
       format = " $icon $utilization "
+      info_cpu = 100
+      warning_cpu = 75
+      critical_cpu = 90
       [block.theme_overrides]
       warning_fg = "#${t.ansi.warn}"
       warning_bg = "#${p.background.base}"
@@ -33,6 +43,8 @@ in
       block = "memory"
       interval = 5
       format = " $icon $mem_used_percents.eng(w:2) "
+      warning_mem = 75
+      critical_mem = 90
       [block.theme_overrides]
       warning_fg = "#${t.ansi.warn}"
       warning_bg = "#${p.background.base}"
@@ -55,8 +67,8 @@ in
       pct=$((used * 1000 / total))
       ug10=$((used * 10 / 1073741824))
       tg10=$((total * 10 / 1073741824))
-      if [ "$pct" -ge 900 ]; then state=Critical
-      elif [ "$pct" -ge 800 ]; then state=Warning
+      if [ "$pct" -gt 900 ]; then state=Critical
+      elif [ "$pct" -gt 750 ]; then state=Warning
       else state=Idle
       fi
       text=$(printf '%d.%dG/%d.%dG (%d.%d%%)' $((ug10 / 10)) $((ug10 % 10)) $((tg10 / 10)) $((tg10 % 10)) $((pct / 10)) $((pct % 10)))
@@ -98,6 +110,24 @@ in
       [[block.click]]
       button = "left"
       cmd = "i3-mouse-hide toggle"
+      update = true
+
+      [[block]]
+      block = "custom"
+      interval = 1
+      json = true
+      shell = "/bin/sh"
+      command = "${grabStatus}"
+      hide_when_empty = true
+      format = " $icon $text "
+      [block.theme_overrides]
+      good_fg = "#${t.ansi.success}"
+      good_bg = "#${p.background.base}"
+      critical_fg = "#${t.ansi.error}"
+      critical_bg = "#${p.background.base}"
+      [[block.click]]
+      button = "left"
+      cmd = "${grabClick}"
       update = true
 
       [[block]]

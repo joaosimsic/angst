@@ -312,8 +312,58 @@ func PlanBarState(outputs []i3.Output, workspaces []i3.Workspace) []i3.Workspace
 			return inners[first].Num < inners[second].Num
 		})
 		state = append(state, inners...)
+		state = append(state, urgentGroupBadges(workspaces, output.Name, group)...)
 	}
 	return state
+}
+
+func urgentGroupBadges(workspaces []i3.Workspace, output string, activeGroup int) []i3.Workspace {
+	urgent := make(map[int]i3.Workspace)
+	for _, workspace := range workspaces {
+		if workspace.Output != output || !workspace.Urgent {
+			continue
+		}
+		group, _, ok := ParseWorkspace(workspace.Name)
+		if !ok || group == activeGroup {
+			continue
+		}
+		if _, found := urgent[group]; !found {
+			urgent[group] = workspace
+		}
+	}
+
+	groups := make([]int, 0, len(urgent))
+	for group := range urgent {
+		groups = append(groups, group)
+	}
+	sort.Ints(groups)
+
+	badges := make([]i3.Workspace, 0, len(groups))
+	for _, group := range groups {
+		workspace := urgent[group]
+		badges = append(badges, i3.Workspace{
+			ID:     workspace.ID,
+			Num:    -1,
+			Name:   strconv.Itoa(group),
+			Output: output,
+			Urgent: true,
+		})
+	}
+	return badges
+}
+
+func applyBarBlink(state []i3.Workspace, showUrgent bool) ([]i3.Workspace, bool) {
+	hasUrgent := false
+	for index := range state {
+		if !state[index].Urgent {
+			continue
+		}
+		hasUrgent = true
+		if !showUrgent {
+			state[index].Urgent = false
+		}
+	}
+	return state, hasUrgent
 }
 
 func PlanSync(outputs []i3.Output, workspaces []i3.Workspace, state State, group int) []string {

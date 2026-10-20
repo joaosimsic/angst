@@ -3,6 +3,7 @@
   lib,
   pkgs,
   store,
+  host,
   ...
 }:
 
@@ -11,6 +12,7 @@ let
 
   i3Tools = pkgs.callPackage ./package.nix { };
   mouseHide = pkgs.callPackage ./mouse-hide.nix { inherit i3Tools; };
+  vmGrab = pkgs.callPackage ./vm-grab.nix { };
 
   cap = config.domains.capture.screenshot or { enable = false; };
   notif = config.domains.notifications or { enable = false; };
@@ -27,7 +29,25 @@ in
     home.packages = [
       i3Tools
       mouseHide
+      vmGrab
     ];
+
+    systemd.user = lib.mkIf (host.hostname != "vm") {
+      paths.i3-vm-grab = {
+        Unit.Description = "Watch for VM input grab requests";
+        Path.PathChanged = "%S/vm/keys/vm/grab-request";
+        Install.WantedBy = [ "default.target" ];
+      };
+
+      services.i3-vm-grab = {
+        Unit.Description = "Toggle QEMU input grab for the VM";
+        Service = {
+          Type = "oneshot";
+          Environment = [ "VM_GRAB_SHARED_DIR=%S/vm/keys/vm" ];
+          ExecStart = "${vmGrab}/bin/i3-vm-grab handle-request";
+        };
+      };
+    };
 
     xdg.configFile = {
       "i3/screenshot.conf".text = lib.mkDefault (

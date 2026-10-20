@@ -183,6 +183,66 @@ func TestPlanBarStateLegacyFallback(t *testing.T) {
 	}
 }
 
+func TestPlanBarStateAppendsUrgentGroupBadges(t *testing.T) {
+	workspaces := testWorkspaces()
+	workspaces[4].Urgent = true
+	workspaces[5].Urgent = true
+
+	state := PlanBarState(testOutputs(), workspaces)
+	if len(state) != 8 {
+		t.Fatalf("PlanBarState len = %d, want 8", len(state))
+	}
+	if state[2].ID != 5 || state[2].Name != "2" || state[2].Output != "DP-1" || !state[2].Urgent {
+		t.Fatalf("state[2] = %#v, want DP-1 urgent group 2 badge", state[2])
+	}
+	if state[7].ID != 6 || state[7].Name != "2" || state[7].Output != "HDMI-2" || !state[7].Urgent {
+		t.Fatalf("state[7] = %#v, want HDMI-2 urgent group 2 badge", state[7])
+	}
+}
+
+func TestPlanBarStateUrgentGroupBadgeOncePerGroup(t *testing.T) {
+	workspaces := append(testWorkspaces(), i3.Workspace{
+		ID: 9, Name: "2:4", Num: 4, Output: "DP-1", Urgent: true,
+	})
+	workspaces[4].Urgent = true
+
+	state := PlanBarState(testOutputs(), workspaces)
+	if len(state) != 7 {
+		t.Fatalf("PlanBarState len = %d, want 7", len(state))
+	}
+	if state[2].ID != 5 || state[2].Name != "2" || state[2].Output != "DP-1" {
+		t.Fatalf("state[2] = %#v, want only DP-1 urgent group 2 badge", state[2])
+	}
+}
+
+func TestPlanBarStateDoesNotBadgeActiveGroup(t *testing.T) {
+	workspaces := testWorkspaces()
+	workspaces[0].Urgent = true
+
+	state := PlanBarState(testOutputs(), workspaces)
+	if len(state) != 6 {
+		t.Fatalf("PlanBarState len = %d, want 6", len(state))
+	}
+	if !state[1].Urgent {
+		t.Fatalf("state[1] = %#v, want urgent current-group workspace", state[1])
+	}
+}
+
+func TestApplyBarBlink(t *testing.T) {
+	state, hasUrgent := applyBarBlink([]i3.Workspace{{Urgent: true}, {Urgent: false}}, false)
+	if !hasUrgent {
+		t.Fatal("applyBarBlink hasUrgent = false, want true")
+	}
+	if state[0].Urgent {
+		t.Fatalf("applyBarBlink state[0].Urgent = true, want masked")
+	}
+
+	state, hasUrgent = applyBarBlink([]i3.Workspace{{Urgent: true}}, true)
+	if !hasUrgent || !state[0].Urgent {
+		t.Fatalf("applyBarBlink() = (%#v, %v), want visible urgent", state, hasUrgent)
+	}
+}
+
 func TestPlanSync(t *testing.T) {
 	workspaces := testWorkspaces()
 	workspaces[2].Name = "1:4"

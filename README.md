@@ -294,15 +294,18 @@ Toolchains are auto-discovered by `lib/resolve.nix` and selected via `toolchains
 - `angst projects <add|sync|status|capture|edit-env|rm> ...` — manage the encrypted dev-project store (see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)).
 - `angst ssh-key <generate|verify> --scope personal|work` — generate/verify the shared, age-encrypted scope SSH keys in `secrets/ssh/` (see [`@secrets/`](#secrets-summary)).
 
-**vm CLI** (`runtime/vm`, packaged as `vm` / `vm-tool`) — QEMU VM lifecycle with SSH (port 2222 → guest 22), headless mode for CI, automatic SSH key + age key injection, and an MCP server (port 8765, tools `vm_exec`/`vm_status`/`vm_restart`) for AI agent integration. Guest-side helpers (`age-key`, `ephemeral-ssh`, `home-manager-upgrade`, `nixos-switch`, `home-switch`) are `vm` subcommands (`runtime/vm/*.nix` wrappers).
+**vm CLI** (`runtime/vm`, packaged as `vm` / `vm-tool`) — QEMU VM lifecycle with SSH (port 2222 → guest 22), headless mode for CI, automatic SSH key + age key injection, and an MCP server (port 8765, tools `vm_exec`/`vm_status`/`vm_restart`) for AI agent integration. `vm start` runs a foreground supervisor in the current terminal: the VM and MCP are children of that terminal, and closing the terminal or pressing Ctrl-C stops both. Use `--detach` for CI or scripts that need `vm start` to return. Guest-side helpers (`age-key`, `ephemeral-ssh`, `home-manager-upgrade`, `nixos-switch`, `home-switch`) are `vm` subcommands (`runtime/vm/*.nix` wrappers).
 
-Commands: `start [--headless|--gtk] [--full-hd]`, `stop`, `restart [--headless|--gtk] [--full-hd]`, `status`, `logs [-n]`, `ssh [--auto-start] [--tty]`, `exec -- <cmd>`, `copy-to`, `copy-from`, `health`, `mcp {start|stop|restart|status|logs|run-server [--port]}`.
+Commands: `start [--headless|--gtk] [--full-hd] [--detach]`, `stop`, `restart [--headless|--gtk] [--full-hd] [--detach]`, `status`, `logs [-n]`, `ssh [--auto-start] [--tty]`, `exec -- <cmd>`, `copy-to`, `copy-from`, `health`, `mcp {start|stop|restart|status|logs|run-server [--port]}`.
+
+MCP starts automatically with the VM and stops with it when supervised. An already-healthy MCP server is reused; standalone `vm mcp` commands remain available.
 
 ```bash
-nix run .#vm -- start --headless    # or: just vm; DISPLAY set → gtk UI; default 1280x720
+nix run .#vm -- start --headless       # foreground supervisor; blocks until stopped
+nix run .#vm -- start --detach         # background VM + MCP; returns after SSH is ready
 nix run .#vm -- start --gtk --full-hd  # 1920x1080
-nix run .#vm -- ssh                 # connect
-nix run .#vm -- health              # QEMU + port + SSH check
+nix run .#vm -- ssh                    # connect
+nix run .#vm -- health                 # QEMU + port + SSH check
 ```
 
 **shell CLI** (`runtime/shell`, packaged as `angst-shell`) — env switcher (`angst-shell dev|safe`) with tree-sitter setup; Nix wrapper supplies `SHELL_*` env and `PATH`.

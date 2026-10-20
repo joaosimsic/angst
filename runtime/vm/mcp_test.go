@@ -22,6 +22,7 @@ func newMCPTestServer() *httptest.Server {
 		}
 	})
 	mux.HandleFunc("/health", handleHealth)
+	mux.HandleFunc("/healthz", handleLive)
 	return httptest.NewServer(mux)
 }
 
@@ -107,6 +108,34 @@ func TestMCPHealth(t *testing.T) {
 	srv := newMCPTestServer()
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var out map[string]any
+	json.NewDecoder(resp.Body).Decode(&out)
+	if out["status"] != "ok" {
+		t.Fatalf("unexpected status: %v", out["status"])
+	}
+}
+
+func TestMCPServerArgs(t *testing.T) {
+	args := mcpServerArgs()
+	want := []string{"mcp", "run-server", "--port", "8765"}
+	if len(args) != len(want) {
+		t.Fatalf("unexpected args: %v", args)
+	}
+	for i := range want {
+		if args[i] != want[i] {
+			t.Fatalf("unexpected args: %v", args)
+		}
+	}
+}
+
+func TestMCPLive(t *testing.T) {
+	srv := newMCPTestServer()
+	defer srv.Close()
+	resp, err := http.Get(srv.URL + "/healthz")
 	if err != nil {
 		t.Fatal(err)
 	}

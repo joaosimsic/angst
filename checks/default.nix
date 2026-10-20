@@ -100,6 +100,8 @@ let
 
   checkTex = import ./tex.nix { inherit pkgs lib; };
 
+  checkOpencodeAttention = import ./opencode.nix { inherit pkgs; };
+
   checkSessionEnv = import ./session-env.nix {
     inherit pkgs lib self;
   };
@@ -174,6 +176,7 @@ in
   check-treesitter = checkTreesitter;
   check-rust = checkRust;
   check-tex = checkTex;
+  check-opencode-attention = checkOpencodeAttention;
   check-session-env = checkSessionEnv;
   check-session-usability = checkSessionUsability;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;

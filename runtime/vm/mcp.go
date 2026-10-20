@@ -4,10 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 )
 
 const mcpProtocolVersion = "2025-03-26"
@@ -136,6 +141,180 @@ func handleToolCall(req mcpRequest) *mcpResponse {
 	}
 }
 
+type managedMCP struct {
+	cmd     *exec.Cmd
+	done    chan error
+	logFile *os.File
+	owned   bool
+}
+
+func (m *managedMCP) stop(timeout time.Duration) {
+	if m == nil || !m.owned {
+		return
+	}
+	if m.cmd != nil {
+		terminateCmd(m.cmd, m.done, timeout)
+		m.cmd = nil
+		m.done = nil
+		controller.clear(serviceMCP)
+	}
+	if m.logFile != nil {
+		_ = m.logFile.Close()
+		m.logFile = nil
+	}
+}
+
+func mcpServerArgs() []string {
+	return []string{"mcp", "run-server", "--port", strconv.Itoa(mcpPort)}
+}
+
+func mcpListening() bool {
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", mcpPort), 200*time.Millisecond)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
+}
+
+func mcpHealth(path string) bool {
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d%s", mcpPort, path))
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false
+	}
+	var payload struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return false
+	}
+	return payload.Status == "ok"
+}
+
+func mcpReachable() bool {
+	return mcpHealth("/healthz") || mcpHealth("/health")
+}
+
+func waitForMCP(want bool, timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for {
+		if want {
+			if mcpReachable() {
+				return true
+			}
+		} else if !mcpListening() {
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func managerActive(managedBy string) bool {
+	switch managedBy {
+	case serviceSupervisor:
+		return controller.isActive(serviceSupervisor)
+	case serviceVM:
+		return controller.isActive(serviceVM)
+	default:
+		return true
+	}
+}
+
+func mcpManagedBySupervisor() bool {
+	st, ok := controller.read(serviceMCP)
+	return ok && st.ManagedBy == serviceSupervisor && controller.isActive(serviceSupervisor)
+}
+
+func ensureMCPServer(foreground bool, parentPID int) (*managedMCP, error) {
+	st, hasState := controller.read(serviceMCP)
+	if mcpListening() {
+		if !mcpReachable() {
+			return nil, fmt.Errorf("port %d is already in use by a non-MCP process", mcpPort)
+		}
+		if hasState && st.ManagedBy != "" && !managerActive(st.ManagedBy) {
+			_ = controller.Stop(serviceMCP)
+			_ = waitForMCP(false, 2*time.Second)
+			controller.clear(serviceMCP)
+		} else {
+			return &managedMCP{owned: false}, nil
+		}
+	}
+
+	if controller.isActive(serviceMCP) {
+		_ = controller.Stop(serviceMCP)
+		_ = waitForMCP(false, 2*time.Second)
+		controller.clear(serviceMCP)
+	}
+
+	exe, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	args := mcpServerArgs()
+
+	if foreground {
+		logPath := filepath.Join(controller.stateDir(), "logs", serviceMCP+".log")
+		if err := os.MkdirAll(filepath.Dir(logPath), 0o755); err != nil {
+			return nil, err
+		}
+		logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		if err != nil {
+			return nil, err
+		}
+		cmd, err := controller.StartChild(ChildSpec{
+			Name:      serviceMCP,
+			Program:   exe,
+			Args:      args,
+			Env:       []string{fmt.Sprintf("VM_SUPERVISOR_PID=%d", parentPID)},
+			LogPath:   logPath,
+			ManagedBy: serviceSupervisor,
+			ParentPID: parentPID,
+		}, logFile, logFile)
+		if err != nil {
+			_ = logFile.Close()
+			return nil, err
+		}
+		mcp := &managedMCP{cmd: cmd, done: make(chan error, 1), logFile: logFile, owned: true}
+		go func() {
+			mcp.done <- cmd.Wait()
+		}()
+		if !waitForMCP(true, 5*time.Second) {
+			mcp.stop(2 * time.Second)
+			return nil, fmt.Errorf("MCP server did not start listening on port %d", mcpPort)
+		}
+		return mcp, nil
+	}
+
+	if _, err := controller.StartDetached(serviceMCP, exe, args, nil, serviceVM); err != nil {
+		return nil, err
+	}
+	if !waitForMCP(true, 5*time.Second) {
+		_ = controller.Stop(serviceMCP)
+		return nil, fmt.Errorf("MCP server did not start listening on port %d", mcpPort)
+	}
+	return &managedMCP{owned: true}, nil
+}
+
+func supervisorPID() int {
+	if v := os.Getenv("VM_SUPERVISOR_PID"); v != "" {
+		if pid, err := strconv.Atoi(v); err == nil && processAlive(pid) {
+			return pid
+		}
+	}
+	if st, ok := controller.read(serviceSupervisor); ok && processAlive(st.PID) {
+		return st.PID
+	}
+	return 0
+}
+
 func toolContent(text string, isError bool) map[string]any {
 	c := map[string]any{"type": "text", "text": text}
 	if isError {
@@ -156,18 +335,28 @@ func runVmExec(args json.RawMessage) map[string]any {
 
 func runVmStatus() map[string]any {
 	if !controller.isActive(serviceVM) {
-		return toolContent("VM systemd unit is stopped", false)
+		return toolContent("VM is stopped", false)
 	}
 	code, _, _ := sshExec("echo ok")
 	if code == 0 {
 		return toolContent("VM is running and accepting SSH connections", false)
 	}
-	return toolContent("VM systemd unit is active but SSH is unreachable", false)
+	return toolContent("VM process is active but SSH is unreachable", false)
 }
 
 func runVmRestart(headless bool, fullHd bool) map[string]any {
+	if pid := supervisorPID(); pid > 0 {
+		if err := writeRestartRequest(restartRequest{Headless: headless, FullHD: fullHd}); err != nil {
+			return toolContent(fmt.Sprintf("VM restart failed: %v", err), true)
+		}
+		if err := syscall.Kill(pid, syscall.SIGUSR1); err != nil {
+			return toolContent(fmt.Sprintf("VM restart failed: %v", err), true)
+		}
+		return toolContent("VM restart requested", false)
+	}
+
 	_ = controller.Stop(serviceVM)
-	args := []string{}
+	args := []string{"--detach"}
 	if headless {
 		args = append(args, "--headless")
 	} else {
@@ -176,7 +365,7 @@ func runVmRestart(headless bool, fullHd bool) map[string]any {
 	if fullHd {
 		args = append(args, "--full-hd")
 	}
-	rc := start(args)
+	rc := startVM(args, false)
 	if rc != exitOK {
 		return toolContent("VM restart failed", true)
 	}
@@ -204,7 +393,7 @@ func toolsList() map[string]any {
 			},
 			map[string]any{
 				"name":        "vm_restart",
-				"description": "Trigger local VM systemd restart action",
+				"description": "Restart the VM",
 				"inputSchema": map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -221,6 +410,11 @@ func handleStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, ": vm-mcp stream ready\n\n")
+}
+
+func handleLive(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"status": "ok"})
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -251,6 +445,7 @@ func runServer(port int) error {
 		}
 	})
 	mux.HandleFunc("/health", handleHealth)
+	mux.HandleFunc("/healthz", handleLive)
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	fmt.Printf("VM MCP Server listening on http://%s\n", addr)
 	return http.ListenAndServe(addr, mux)
@@ -264,19 +459,36 @@ func mcpDispatch(args []string) int {
 	}
 	switch sub {
 	case "start":
+		if mcpListening() {
+			if mcpReachable() {
+				fmt.Println("VM MCP Server is already running.")
+				return exitOK
+			}
+			fmt.Fprintf(os.Stderr, "port %d is already in use by a non-MCP process\n", mcpPort)
+			return exitError
+		}
 		exe, err := os.Executable()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return exitError
 		}
-		pid, err := controller.StartCommand(serviceMCP, exe, []string{"vm", "mcp", "run-server", "--port", strconv.Itoa(mcpPort)}, nil)
+		pid, err := controller.StartDetached(serviceMCP, exe, mcpServerArgs(), nil, "")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
+			return exitError
+		}
+		if !waitForMCP(true, 5*time.Second) {
+			_ = controller.Stop(serviceMCP)
+			fmt.Fprintln(os.Stderr, "MCP server did not start listening")
 			return exitError
 		}
 		fmt.Printf("VM MCP Server starting (PID %d)\n", pid)
 		return exitOK
 	case "stop":
+		if mcpManagedBySupervisor() {
+			fmt.Fprintln(os.Stderr, "MCP server is managed by 'vm start'. Use 'vm stop'.")
+			return exitError
+		}
 		if err := controller.Stop(serviceMCP); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return exitError
@@ -284,6 +496,10 @@ func mcpDispatch(args []string) int {
 		fmt.Println("VM MCP Server stopped.")
 		return exitOK
 	case "restart":
+		if mcpManagedBySupervisor() {
+			fmt.Fprintln(os.Stderr, "MCP server is managed by 'vm start'. Use 'vm restart'.")
+			return exitError
+		}
 		_ = controller.Stop(serviceMCP)
 		return mcpDispatch([]string{"start"})
 	case "status":
@@ -297,7 +513,15 @@ func mcpDispatch(args []string) int {
 			return exitOK
 		}
 		defer resp.Body.Close()
-		fmt.Println("healthy (process active, /health ok, VM reachable)")
+		var health struct {
+			VmReachable bool `json:"VmReachable"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&health)
+		if health.VmReachable {
+			fmt.Println("healthy (process active, /health ok, VM reachable)")
+		} else {
+			fmt.Println("degraded (process active, /health ok, VM unreachable)")
+		}
 		return exitOK
 	case "logs":
 		lines := uint32(50)

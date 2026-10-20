@@ -11,8 +11,11 @@ let
   renderForTheme = themeName: {
     inherit themeName;
     themeBg = (themesLib.get themeName).palette.background.base;
+    themeError = (themesLib.get themeName).ansi.error;
     i3Config = renderDomainOutputFor themeName "domains/wm/i3/config/config";
     i3statusRustConfig = renderDomainOutputFor themeName "domains/bar/i3status-rust/config/config.toml";
+    ghosttyConfig = renderDomainOutputFor themeName "domains/terminal/ghostty/config/config.ghostty";
+    ghosttyColors = renderDomainOutputFor themeName "domains/terminal/ghostty/config/colors.conf";
   };
 
   rendered = map renderForTheme themeNames;
@@ -21,13 +24,17 @@ let
     {
       themeName,
       themeBg,
+      themeError,
       i3Config,
       i3statusRustConfig,
+      ghosttyConfig,
+      ghosttyColors,
     }:
     pkgs.runCommand "lint-desktop-${themeName}"
       {
         nativeBuildInputs = [
           pkgs.coreutils
+          pkgs.ghostty
           pkgs.gnugrep
           pkgs.i3
           pkgs.i3status-rust
@@ -41,9 +48,19 @@ let
         ''} home/.config/i3/monitors.conf
         cp ${pkgs.writeText "i3-${themeName}.conf" i3Config} i3.conf
         cp ${pkgs.writeText "i3status-rust-${themeName}.toml" i3statusRustConfig} config.toml
+        cp ${pkgs.writeText "ghostty-${themeName}.conf" ghosttyConfig} ghostty.conf
+        cp ${pkgs.writeText "ghostty-colors-${themeName}.conf" ghosttyColors} colors.conf
+        mkdir -p home/.config
 
         echo "Validating i3 config for theme ${themeName}..."
         HOME="$PWD/home" i3 -C -c i3.conf
+        if ! grep -qE "urgent_workspace[[:space:]]+#${themeError}[[:space:]]+#${themeError}" i3.conf; then
+          echo "urgent workspace background did not use theme error color #${themeError}" >&2
+          exit 1
+        fi
+
+        echo "Validating Ghostty config for theme ${themeName}..."
+        HOME="$PWD/home" XDG_CONFIG_HOME="$PWD/home/.config" ghostty +validate-config --config-file="$PWD/ghostty.conf"
 
         echo "Validating i3status-rust config for theme ${themeName}..."
         code=0

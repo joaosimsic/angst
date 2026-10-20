@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"vm/internal/paths"
@@ -84,6 +85,7 @@ func sshExec(command string) (int, string, string) {
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "LogLevel=ERROR",
+		"-o", "ConnectTimeout=5",
 		"-o", "IdentitiesOnly=yes",
 		"-i", identity,
 		fmt.Sprintf("%s@127.0.0.1", user),
@@ -116,6 +118,7 @@ func scpOpts() []string {
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "LogLevel=ERROR",
+		"-o", "ConnectTimeout=5",
 		"-o", "IdentitiesOnly=yes",
 		"-i", identity,
 	}
@@ -176,7 +179,9 @@ func killStaleQemu(disk string) {
 		if s != "" {
 			fmt.Printf("Killed stale QEMU process(es): %s\n", s)
 			controller.clear(serviceVM)
-			controller.clear(serviceMCP)
+			if st, ok := controller.read(serviceSupervisor); ok && !processAlive(st.PID) {
+				controller.clear(serviceSupervisor)
+			}
 			time.Sleep(2 * time.Second)
 		}
 	}
@@ -224,33 +229,107 @@ func prepareSharedDir(host string) (string, error) {
 	return dir, nil
 }
 
-func start(args []string) int {
-	headless := true
-	gtk := false
-	fullHD := false
+type startOptions struct {
+	headless bool
+	gtk      bool
+	fullHD   bool
+	detach   bool
+}
+
+func parseStartOptions(args []string) startOptions {
+	opts := startOptions{headless: true}
 	for _, a := range args {
-		if a == "--headless" {
-			headless = true
-		}
-		if a == "--gtk" || a == "--display" {
-			gtk = true
-		}
-		if a == "--full-hd" {
-			fullHD = true
+		switch a {
+		case "--headless":
+			opts.headless = true
+		case "--gtk", "--display":
+			opts.gtk = true
+		case "--full-hd":
+			opts.fullHD = true
+		case "--detach", "-d":
+			opts.detach = true
 		}
 	}
-	if gtk {
-		headless = false
+	if opts.gtk {
+		opts.headless = false
 	}
+	return opts
+}
+
+func buildVMEnv(host, repo, sharedDir, diskImg string, headless, fullHD bool) []string {
+	width, height := 1280, 720
+	if fullHD {
+		width, height = 1920, 1080
+	}
+	qemuOpts := fmt.Sprintf("-device virtio-gpu-pci,xres=%d,yres=%d", width, height)
+	if headless {
+		qemuOpts = "-display none " + qemuOpts
+	}
+	return []string{
+		"SHARED_DIR=" + sharedDir,
+		"ANGST_REPO=" + repo,
+		"NIX_DISK_IMAGE=" + diskImg,
+		"QEMU_NET_OPTS=hostfwd=tcp::2222-:22",
+		"QEMU_OPTS=" + qemuOpts,
+		fmt.Sprintf("QEMU_KERNEL_PARAMS=video=Virtual-1:%dx%d@60e", width, height),
+		"NIX_DEFAULT_TARGET_HOST=" + host,
+	}
+}
+
+func waitForVMReady() int {
+	for i := 1; i <= 750; i++ {
+		if !controller.isActive(serviceVM) {
+			fmt.Fprintln(os.Stderr, "VM process exited before SSH was ready. Run 'vm logs' for details.")
+			return exitError
+		}
+		code, _, _ := sshExec("true")
+		if code == 0 {
+			fmt.Println("VM was initialized and ready via SSH")
+			return exitOK
+		}
+		elapsed := i * 2
+		if elapsed%60 == 0 {
+			fmt.Printf("still waiting for guest SSH (elapsed %ds)\n", elapsed)
+		}
+		time.Sleep(2 * time.Second)
+	}
+
+	if anyQemuRunning() {
+		fmt.Fprintln(os.Stderr, "\n  QEMU is running but SSH port 2222 is not accepting connections. Check 'vm logs' for boot errors.")
+	} else {
+		fmt.Fprintln(os.Stderr, "\n  No QEMU process found. Run 'vm logs' for details.")
+	}
+	return exitError
+}
+
+func start(args []string) int {
+	return startVM(args, true)
+}
+
+func startVM(args []string, ensureMCP bool) int {
+	opts := parseStartOptions(args)
 	host := targetHost()
 	if err := ensureVmProfile(host); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return exitError
 	}
+	if controller.isActive(serviceSupervisor) {
+		fmt.Fprintln(os.Stderr, "VM supervisor is already running.")
+		return exitError
+	}
+	if controller.isActive(serviceVM) {
+		code, _, _ := sshExec("true")
+		if code == 0 {
+			fmt.Fprintln(os.Stderr, "VM is already running.")
+			return exitError
+		}
+		fmt.Fprintln(os.Stderr, "VM process is running but SSH is not available. Try 'vm restart'.")
+		return exitError
+	}
 	disk := fmt.Sprintf("%s.qcow2", host)
 	killStaleQemu(disk)
 
-	effectiveHeadless := headless && !gtk
+	effectiveHeadless := opts.headless && !opts.gtk
 	if !effectiveHeadless && !detectDisplay() {
 		fmt.Fprintln(os.Stderr, "warn: --gtk requested but no DISPLAY/WAYLAND_DISPLAY; falling back to headless")
 		effectiveHeadless = true
@@ -277,78 +356,85 @@ func start(args []string) int {
 	}
 	repo := repoRoot()
 	diskImg := envOr("NIX_DISK_IMAGE", fmt.Sprintf("%s/%s.qcow2", repo, host))
-	width, height := 1280, 720
-	if fullHD {
-		width, height = 1920, 1080
-	}
-	qemuOpts := fmt.Sprintf("-device virtio-gpu-pci,xres=%d,yres=%d", width, height)
-	if effectiveHeadless {
-		qemuOpts = "-display none " + qemuOpts
-	}
-	env := []string{
-		"SHARED_DIR=" + sharedDir,
-		"ANGST_REPO=" + repo,
-		"NIX_DISK_IMAGE=" + diskImg,
-		"QEMU_NET_OPTS=hostfwd=tcp::2222-:22",
-		"QEMU_OPTS=" + qemuOpts,
-		fmt.Sprintf("QEMU_KERNEL_PARAMS=video=Virtual-1:%dx%d@60e", width, height),
-		"NIX_DEFAULT_TARGET_HOST=" + host,
-	}
+	env := buildVMEnv(host, repo, sharedDir, diskImg, effectiveHeadless, opts.fullHD)
 
-	if controller.isActive(serviceVM) {
-		code, _, _ := sshExec("true")
-		if code == 0 {
-			fmt.Fprintln(os.Stderr, "VM is already running.")
+	if opts.detach {
+		var mcp *managedMCP
+		if ensureMCP {
+			mcp, err = ensureMCPServer(false, 0)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return exitError
+			}
+		}
+		pid, err := controller.StartDetached(serviceVM, runner, nil, env, serviceVM)
+		if err != nil {
+			if mcp != nil && mcp.owned {
+				_ = controller.Stop(serviceMCP)
+			}
+			fmt.Fprintln(os.Stderr, err)
 			return exitError
 		}
-		fmt.Fprintln(os.Stderr, "VM process is running but SSH is not available. Try 'vm restart'.")
-		return exitError
+		fmt.Printf("VM Started! (PID %d) Validating connection status...\n", pid)
+		return waitForVMReady()
 	}
 
-	pid, err := controller.Start(serviceVM, runner, nil, env, effectiveHeadless)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return exitError
-	}
-	fmt.Printf("VM Started! (PID %d) Validating connection status...\n", pid)
-
-	for i := 1; i <= 750; i++ {
-		code, _, _ := sshExec("true")
-		if code == 0 {
-			fmt.Println("VM was initialized and ready via SSH")
-			return exitOK
-		}
-		elapsed := i * 2
-		if elapsed%60 == 0 {
-			fmt.Printf("still waiting for guest SSH (elapsed %ds)\n", elapsed)
-		}
-		time.Sleep(2 * time.Second)
-	}
-
-	if anyQemuRunning() {
-		fmt.Fprintln(os.Stderr, "\n  QEMU is running but SSH port 2222 is not accepting connections. Check 'vm logs' for boot errors.")
-	} else {
-		fmt.Fprintln(os.Stderr, "\n  No QEMU process found. Run 'vm logs' for details.")
-	}
-	return exitError
+	return runSupervisor(supervisorOptions{
+		Host:       host,
+		Runner:     runner,
+		Repo:       repo,
+		SharedDir:  sharedDir,
+		DiskImage:  diskImg,
+		Headless:   effectiveHeadless,
+		FullHD:     opts.fullHD,
+		LogPath:    filepath.Join(controller.stateDir(), "logs", serviceVM+".log"),
+		Foreground: true,
+	})
 }
 
 func stop(args []string) int {
-	if err := controller.Stop(serviceVM); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return exitError
+	managedMCP := false
+	if st, ok := controller.read(serviceMCP); ok && (st.ManagedBy == serviceVM || st.ManagedBy == serviceSupervisor) {
+		managedMCP = true
 	}
+	if st, ok := controller.read(serviceSupervisor); ok && processAlive(st.PID) {
+		_ = syscall.Kill(st.PID, syscall.SIGTERM)
+		deadline := time.Now().Add(10 * time.Second)
+		for processAlive(st.PID) && time.Now().Before(deadline) {
+			time.Sleep(100 * time.Millisecond)
+		}
+		if processAlive(st.PID) {
+			_ = syscall.Kill(st.PID, syscall.SIGKILL)
+		}
+	}
+	if err := controller.Stop(serviceVM); err != nil && controller.isActive(serviceVM) {
+		fmt.Fprintln(os.Stderr, err)
+	}
+	if st, ok := controller.read(serviceMCP); ok {
+		if st.ManagedBy == serviceVM || st.ManagedBy == serviceSupervisor {
+			if controller.isActive(serviceMCP) {
+				_ = controller.Stop(serviceMCP)
+			} else {
+				controller.clear(serviceMCP)
+			}
+		}
+	}
+	if managedMCP {
+		_ = waitForMCP(false, 5*time.Second)
+	}
+	controller.clear(serviceSupervisor)
+	controller.clear(serviceVM)
 	fmt.Println("VM stopped.")
 	return exitOK
 }
 
 func restart(args []string) int {
-	_ = controller.Stop(serviceVM)
+	stop(args)
 	return start(args)
 }
 
 func status(args []string) int {
-	if controller.isActive(serviceVM) {
+	if controller.isActive(serviceSupervisor) || controller.isActive(serviceVM) {
 		code, _, _ := sshExec("true")
 		if code == 0 {
 			fmt.Println("VM Status: Running")
@@ -409,7 +495,7 @@ func sshCmd(args []string) int {
 		code, _, _ := sshExec("true")
 		if code != 0 {
 			fmt.Println("VM not running. Starting headless...")
-			if rc := start([]string{"--headless"}); rc != exitOK {
+			if rc := startVM([]string{"--headless", "--detach"}, true); rc != exitOK {
 				return rc
 			}
 		}
