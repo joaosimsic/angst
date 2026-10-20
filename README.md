@@ -343,7 +343,7 @@ age-encrypted secrets → decrypted at runtime into `~/.secrets/`. The master pa
 
 | Workflow | Runs |
 |---|---|
-| `checks.yml` | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the flake checks + nixfmt + shellfmt + Go (`gofmt`/`go vet`/`go test` across `runtime/{angst,vm,shell,analyze}`) |
+| `checks.yml` | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the flake checks + nixfmt + shellfmt + Go (`gofmt`/`go vet`/`go test` across `runtime/{angst,vm,shell,analyze}` and `domains/wm/i3/workspace-group`) |
 | `nvim-tests.yml` | Links `domains/editor/nvim/config` → `~/.config/nvim`, lazy-syncs plugins, runs the plenary adapter test suite |
 | `secret-scan.yml` | gitleaks-action (fetch-depth 0) + trufflehog (`--results=verified,unknown`) |
 | `openwiki-update.yml` | Daily cron + manual: runs `openwiki code --update --print`, opens a PR with `openwiki/` + agent doc changes |

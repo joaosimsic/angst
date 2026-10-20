@@ -125,9 +125,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Check runtime Go
+      - name: Check Go
         run: |
           nix develop .#dev --command bash -lc \
-            'for d in angst vm shell analyze; do echo "=== $d ==="; (cd runtime/$d && gofmt -l . && go vet ./... && go test ./...); done'
+            'for d in runtime/angst runtime/vm runtime/shell runtime/analyze domains/wm/i3/workspace-group; do echo "=== $d ==="; (cd "$d" && gofmt -l . && go vet ./... && go test ./...); done'
 
 
