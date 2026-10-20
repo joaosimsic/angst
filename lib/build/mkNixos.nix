@@ -26,18 +26,12 @@ let
   appNixosModules = map host.scan.domains.mkNixosSystemModule host.scan.domains.systemEntries;
   appHomeModules = map host.scan.domains.mkDomainModule host.scan.domains.homeEntries;
 
-  enabledFeatures =
-    let
-      profileEntries =
-        (import ../../profiles/default.nix {
-          inherit lib;
-          inherit (host) profiles scan;
-        }).enabled;
-      domainIds = map (
-        e: if e.category == e.name then e.category else "${e.category}.${e.name}"
-      ) profileEntries;
-    in
-    domainIds ++ map (n: "toolchain:${n}") (host.toolchainNames or [ ]);
+  persistPaths = import ../persist-paths.nix {
+    inherit lib host;
+    inherit (userCfg) homeDirectory;
+  };
+
+  inherit (persistPaths) enabledFeatures;
 
   themeModule = import ../../modules/home/themeModule.nix {
     inherit lib;

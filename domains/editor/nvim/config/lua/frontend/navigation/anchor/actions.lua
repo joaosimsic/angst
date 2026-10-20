@@ -3,6 +3,7 @@ local M = {}
 local group
 local set_window_title
 local do_anchor
+local pending = false
 
 function M.setup(logger)
 	group = vim.api.nvim_create_augroup("AnchorPlugin", { clear = true })
@@ -17,7 +18,16 @@ function M.setup(logger)
 	do_anchor = function()
 		local yazi_id = vim.g.yazi_process_id
 		if not yazi_id then
-			logger:warn("yazi.nvim not ready")
+			if not pending then
+				pending = true
+				logger:debug("yazi.nvim not ready, queuing anchor")
+				vim.defer_fn(function()
+					if pending then
+						pending = false
+						logger:warn("yazi.nvim not ready")
+					end
+				end, 2000)
+			end
 			return
 		end
 
@@ -60,6 +70,17 @@ function M.setup(logger)
 			vim.cmd("redrawstatus!")
 		end, 50)
 	end
+
+	vim.api.nvim_create_autocmd("User", {
+		group = group,
+		pattern = "YaziReady",
+		callback = function()
+			if pending then
+				pending = false
+				do_anchor()
+			end
+		end,
+	})
 
 	vim.api.nvim_create_autocmd("FileType", {
 		group = group,

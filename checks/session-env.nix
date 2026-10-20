@@ -39,10 +39,21 @@ let
       res = builtins.tryEval (
         let
           c = cfg.config;
+          nushellText =
+            let
+              f = c.xdg.configFile."nushell/hm-session-vars.nu" or null;
+            in
+            if f != null && f ? text then f.text else "";
+          dropNixLd = s: lib.replaceStrings [ "NIX_LD_LIBRARY_PATH" ] [ "" ] s;
+          ldLeaks = builtins.filter (
+            l: lib.hasInfix "LD_LIBRARY_PATH" (dropNixLd l) || lib.hasInfix "LD_PRELOAD" (dropNixLd l)
+          ) (lib.splitString "\n" nushellText);
           v = {
             globalEnv =
               renderEnv (c.home.sessionVariables or { }) ++ renderEnv (c.systemd.user.sessionVariables or { });
             services = hmSvcRows "user" (c.systemd.user.services or { });
+            inherit ldLeaks;
+            hasNushellVars = nushellText != "";
           };
         in
         builtins.deepSeq v v
@@ -54,6 +65,8 @@ let
       ok = res.success && drv.success;
       globalEnv = if res.success then res.value.globalEnv else [ ];
       services = if res.success then res.value.services else [ ];
+      ldLeaks = if res.success then res.value.ldLeaks else [ ];
+      hasNushellVars = if res.success then res.value.hasNushellVars else false;
       drvPath = if drv.success then drv.value else "";
     };
 
@@ -143,12 +156,20 @@ let
     map (h: "home\t${h.name}\t${if h.ok then "ok" else "FAIL"}") homeData
     ++ map (h: "system\t${h.name}\t${if h.ok then "ok" else "FAIL"}") systemData;
 
+  fileLeakRows = lib.concatMap (
+    h: map (line: "home\t${h.name}\t${lib.trim line}") h.ldLeaks
+  ) homeData;
+  nushellCoverage = lib.length (lib.filter (h: h.hasNushellVars) homeData);
+
   envManifest = pkgs.writeText "session-env-manifest" (builtins.concatStringsSep "\n" envRows + "\n");
   svcManifest = pkgs.writeText "session-svc-manifest" (builtins.concatStringsSep "\n" svcRows + "\n");
   infoManifest = pkgs.writeText "session-info-manifest" (
     builtins.concatStringsSep "\n" infoRows + "\n"
   );
   drvManifest = pkgs.writeText "session-drv-manifest" (builtins.concatStringsSep "\n" drvRows + "\n");
+  fileLeakManifest = pkgs.writeText "session-file-leak-manifest" (
+    builtins.concatStringsSep "\n" fileLeakRows + "\n"
+  );
 in
 pkgs.runCommand "check-session-env"
   {
@@ -190,6 +211,18 @@ pkgs.runCommand "check-session-env"
       fail "no global session env entries evaluated, gate is blind"
     fi
     ok "global session env clean ($count entries)"
+
+    echo "==> Checking generated shell files set no global loader vars..."
+    filecount=0
+    while IFS=$'\t' read -r kind host line; do
+      [ -z "$kind" ] && continue
+      filecount=$((filecount + 1))
+      fail "$kind/$host generated shell file sets loader var: ''${line:0:160}"
+    done < ${fileLeakManifest}
+    if [ "${toString nushellCoverage}" -eq 0 ]; then
+      fail "no generated nushell session files scanned, gate is blind"
+    fi
+    ok "generated shell files clean (${toString nushellCoverage} hosts scanned)"
 
     echo "==> Checking systemd services leak no loader vars (home + nixos)..."
     echo "    (stock nixpkgs NSS wiring on NixOS system services is exempt)"

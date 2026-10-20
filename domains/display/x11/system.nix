@@ -12,6 +12,7 @@ let
   cfg = config.domains.display.x11;
   t = themeSys.get theme;
   p = t.palette;
+  gtkTheme = if t.isDark then "Adwaita:dark" else "Adwaita";
   m = monitors.primary or { };
   xrandrLine = lib.optionalString (m ? name && m ? resolution) ''
     ${pkgs.xrandr}/bin/xrandr --output ${m.name} \
@@ -45,6 +46,11 @@ in
         name = "i3";
         start = ''
           #!${pkgs.bash}/bin/sh
+
+          export GTK_THEME="${gtkTheme}"
+          export SAL_USE_VCLPLUGIN=gtk3
+          export QT_QPA_PLATFORMTHEME=kde
+          export QT_STYLE_OVERRIDE=breeze
 
           ${xrandrLine}
 

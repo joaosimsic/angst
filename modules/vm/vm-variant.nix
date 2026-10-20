@@ -1,5 +1,6 @@
 {
   lib,
+  pkgs,
   userConfig,
   ...
 }:
@@ -10,6 +11,44 @@ in
 {
   virtualisation.vmVariant = {
     angst.isQemuVm = lib.mkForce true;
+
+    boot = {
+      initrd.kernelModules = lib.mkForce [ ];
+      kernelModules = lib.mkForce [ "virtio_gpu" ];
+      kernelParams = lib.mkForce [ ];
+    };
+
+    documentation.nixos.enable = lib.mkForce false;
+
+    domains.display.lightdm.enable = lib.mkForce false;
+
+    environment.systemPackages = [ pkgs.i3 ];
+
+    hardware = {
+      cpu.amd.updateMicrocode = lib.mkForce false;
+      graphics = {
+        enable = lib.mkForce true;
+        enable32Bit = lib.mkForce false;
+        extraPackages = lib.mkForce [ ];
+      };
+    };
+
+    services = {
+      displayManager.autoLogin = {
+        enable = lib.mkForce true;
+        user = lib.mkForce userConfig.username;
+      };
+
+      fstrim.enable = lib.mkForce false;
+
+      spice-vdagentd.enable = true;
+
+      xserver = {
+        enable = lib.mkForce true;
+        videoDrivers = lib.mkForce [ "modesetting" ];
+        windowManager.i3.enable = lib.mkForce false;
+      };
+    };
 
     virtualisation.fileSystems = {
       "/" = lib.mkForce {
@@ -44,7 +83,7 @@ in
       sharedDirectories.angst = {
         source = "\${ANGST_REPO:-$PWD}";
         target = "/host${userConfig.homeDirectory}/${repoPath}";
-        securityModel = "none";
+        writable = true;
       };
     };
   };

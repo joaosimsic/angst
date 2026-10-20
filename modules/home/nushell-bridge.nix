@@ -22,11 +22,6 @@ let
 in
 {
   xdg.configFile."nushell/hm-session-vars.nu".text = ''
-    $env.LD_LIBRARY_PATH = if ($env.LD_LIBRARY_PATH? | is-empty) {
-      "${nixLdPath}"
-    } else {
-      $"${nixLdPath}:($env.LD_LIBRARY_PATH)"
-    }
     $env.NIX_LD_LIBRARY_PATH = if ($env.NIX_LD_LIBRARY_PATH? | is-empty) {
       "${nixLdPath}"
     } else {

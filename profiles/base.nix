@@ -8,6 +8,7 @@
     "files.yazi"
     "git.lazygit"
     "nix.nh"
+    "nix.cleanup"
     "security.age"
     "kernel.network"
     "git.code"

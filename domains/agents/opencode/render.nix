@@ -2,6 +2,7 @@
   lib,
   themeSys,
   themeName,
+  host,
   store ? { },
   ...
 }:
@@ -98,6 +99,27 @@ let
         }
       else
         null;
+
+    rea =
+      if (store.hasRea or false) then
+        {
+          type = "local";
+          command = [
+            "${host.pkgs.nodejs_24}/bin/npx"
+            "-y"
+            "rea-agents@6.5.0"
+            "mcp"
+          ];
+          environment = {
+            GHIDRA_INSTALL_DIR = "${host.pkgs.ghidra-bin}/lib/ghidra";
+            JAVA_HOME = "${host.pkgs.openjdk21.home}";
+            REA_GHIDRA_STARTUP_TIMEOUT_MS = "900000";
+            GHIDRA_HEADLESS_MAXMEM = "4G";
+          };
+          enabled = true;
+        }
+      else
+        null;
   };
 
   opencodeConfig = builtins.toJSON (
@@ -115,6 +137,12 @@ let
         };
       };
       lsp = lspWithDisabled;
+      permission = {
+        external_directory = {
+          "/tmp/**" = "allow";
+          "/nix/**" = "allow";
+        };
+      };
       command = {
         caveman = {
           description = "Caveman voice: /caveman toggles on/off, or lite|full|ultra|off";

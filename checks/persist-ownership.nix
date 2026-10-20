@@ -12,11 +12,15 @@ let
   dataRoot = "/home/durable";
 
   enabledFeatures = [
+    "agents.opencode"
     "security.age"
     "browser.firefox"
+    "browser.google-chrome"
     "git.code"
     "git.projects"
+    "editor.nvim"
     "kernel.graphical"
+    "shell.nushell"
     "toolchain:rust"
   ];
 
@@ -82,7 +86,13 @@ let
         "${home}/.config/git",
         "${home}/.cargo",
         "${home}/.mozilla",
+        "${home}/.config/google-chrome",
         "${home}/.local/share/keyrings",
+        "${home}/.local/share/nushell",
+        "${home}/.local/share/opencode",
+        "${home}/.local/state/opencode",
+        "${home}/.local/share/nvim",
+        "${home}/.local/state/nvim",
         "${home}/projects",
         "${home}/.secrets",
         "${home}/.secrets/opencode-go-key",

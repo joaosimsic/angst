@@ -24,7 +24,7 @@ try {
   }
 
   const BROWSER_URL = "chrome://browser/content/browser.xhtml";
-  const REMOVED_IDS = ["key_gotoHistory", "focusURLBar"];
+  const REMOVED_IDS = ["focusURLBar"];
 
   const observer = {
     observe(win) {

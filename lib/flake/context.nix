@@ -35,10 +35,13 @@ let
 
   profilesFor =
     host:
-    import ../../profiles/default.nix {
-      inherit (host) profiles scan;
-      inherit lib;
-    };
+    if builtins.elem "vm" (host.profiles or [ ]) && host.hostname != "vm" then
+      throw "angst: the `vm` profile is guest-only and may only be enabled on hostname \"vm\" (got \"${host.hostname}\"). Remove \"vm\" from this host's profiles."
+    else
+      import ../../profiles/default.nix {
+        inherit (host) profiles scan;
+        inherit lib;
+      };
 
   enableModule =
     e:

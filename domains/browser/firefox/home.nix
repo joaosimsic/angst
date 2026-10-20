@@ -54,7 +54,11 @@ in
               settings = {
                 enabledByDefault = true;
                 enabledFor = [ ];
-                disabledFor = [ "github.com" ];
+                disabledFor = [
+                  "github.com"
+                  "*.github.com"
+                  "http://*"
+                ];
                 syncSettings = false;
               };
             };

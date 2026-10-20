@@ -295,8 +295,10 @@ let
     bind r reload
     bind R reloadhard
     " --- hints — open ---
-    bind f hint
+    bind f hint -JW open
     bind F hint -b
+    autocmd DocStart google.com/search js (()=>{const s="#search a[target=_blank]",f=()=>document.querySelectorAll(s).forEach(a=>a.removeAttribute("target")),o=new MutationObserver(f);f(),o.observe(document.documentElement,{childList:true,subtree:true}),document.addEventListener("click",e=>{const a=e.target instanceof Element?e.target.closest("#search a[href]"):null;a&&/^https?:/.test(a.href)&&(e.preventDefault(),e.stopImmediatePropagation(),location.href=a.href)},true)})()
+    autocmd DocStart google.com.br/search js (()=>{const s="#search a[target=_blank]",f=()=>document.querySelectorAll(s).forEach(a=>a.removeAttribute("target")),o=new MutationObserver(f);f(),o.observe(document.documentElement,{childList:true,subtree:true}),document.addEventListener("click",e=>{const a=e.target instanceof Element?e.target.closest("#search a[href]"):null;a&&/^https?:/.test(a.href)&&(e.preventDefault(),e.stopImmediatePropagation(),location.href=a.href)},true)})()
     " --- hints — yank / copy (no mouse) ---
     bind yy clipboard yank
     bind ys clipboard yankshort

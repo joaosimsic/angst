@@ -124,7 +124,7 @@ The domain framework (`lib/domains/`):
 
 Full 50-domain inventory: see [openwiki/domains.md](openwiki/domains.md).
 
-Domain categories: `agents/` (opencode, cursor-cli), `audio/` (easyeffects), `bar/` (i3status-rust), `browser/` (firefox), `capture/` (screenshot, obs), `chat/` (discord), `design/` (paper), `display/` (gpu, lightdm, ly, x11), `editor/` (lspmux, nvim), `embedded/` (arduino, vial), `files/` (yazi), `gamedev/` (env), `games/` (minecraft, steam), `git/` (code, lazygit, projects), `http-client/` (posting), `kernel/` (audio, clipboard, container, cursor, graphical, monitoring, network, search), `launcher/` (rofi), `network/` (vpn), `nix/` (nh), `notifications/`, `office/` (libreoffice), `remote/` (ftp, ssh), `security/` (age), `shell/` (carapace, nushell, starship), `sql-client/` (rainfrog, sqlit), `terminal/` (ghostty, tmux, zellij), `wm/` (i3).
+Domain categories: `agents/` (opencode, cursor-cli), `audio/` (easyeffects), `bar/` (i3status-rust), `browser/` (firefox), `capture/` (screenshot, obs), `chat/` (discord), `design/` (paper), `display/` (gpu, lightdm, ly, picom, x11), `editor/` (lspmux, nvim), `embedded/` (arduino, vial), `files/` (yazi), `gamedev/` (env), `games/` (minecraft, steam), `git/` (code, lazygit, projects), `http-client/` (posting), `kernel/` (audio, clipboard, container, cursor, graphical, monitoring, network, search), `launcher/` (rofi), `network/` (vpn), `nix/` (nh), `notifications/`, `office/` (libreoffice), `remote/` (ftp, ssh), `security/` (age), `shell/` (carapace, nushell, starship), `sql-client/` (rainfrog, sqlit), `terminal/` (ghostty, tmux, zellij), `wm/` (i3).
 
 Domains are enabled via **profile composition**, not per-host module files.
 
@@ -244,7 +244,7 @@ in-place decrypt never stages plaintext. All secrets are age-encrypted, so no so
 
 **`modules/home/`** — Base home-manager config: username, stateVersion, fontconfig, tree-sitter (`treesitter.nix`), login shell handling (`login-shell.nix`), secrets activation (`secrets-activation.nix`), theme option (`themeModule.nix`). (SSH client config + agent live in `domains/remote/ssh/`.)
 
-**`modules/vm/`** — Multi-layered VM support: internal `angst.isQemuVm` flag (declared — forced on by the `vm` profile and by `vmVariant`, never probed at eval time), conditional bootloader (`runtime.nix`), vmVariant resources (`vm-variant.nix` — tmpfs `/`, `/persist` ext4, SPICE, 9p host mount), declarative inbound auth + age-key injection (`vm-profile.nix` — `authorized_keys` baked from `secrets/ssh/*.pub`, `vm-age-key` consumes `/tmp/shared`), and host-repo symlink for live editing (`host-mount.nix`). `specialisation.nix` exists but is never imported (dead code).
+**`modules/vm/`** — Multi-layered VM support: internal `angst.isQemuVm` flag (declared — forced on only by `vmVariant`, never probed at eval time), conditional bootloader (`runtime.nix`), vmVariant resources and guest OS overrides (`vm-variant.nix` — tmpfs `/`, `/persist` ext4, SPICE, 9p host mount, guest boot/display settings), declarative inbound auth + age-key injection (`vm-profile.nix` — `authorized_keys` baked from `secrets/ssh/*.pub`, `vm-age-key` consumes `/tmp/shared`), and host-repo symlink for live editing (`host-mount.nix`). The `vm` profile is guest-only: profile resolution and `vm-profile.nix` reject it on any host other than `hostname = "vm"`. `specialisation.nix` exists but is never imported (dead code).
 
 **`modules/secrets.nix`** — age secrets integration per host: the master password (`secrets/master/<host>.age`, decrypted by `angst set-password-hash` at boot) and app secrets (e.g. `opencode-go-key` → `~/.secrets/opencode-go-key`, provisioned by `angst provision-app-secret`). Decryption is decided at runtime (age key at `~/.config/age/keys.txt`), never at eval — pure-`nix build` hosts like the VM still get secret wiring. See [openwiki/secrets.md](openwiki/secrets.md).
 
@@ -260,7 +260,7 @@ Profiles replace host-specific `home.nix` / `configuration.nix` files. Each is a
 | `desktop` | rofi, ghostty, x11, graphical, audio, clipboard |
 | `development` | opencode, cursor-cli, sqlit, rainfrog, posting, **git.projects** |
 | `server` | ssh (sshd is driven per-host via `host.ssh.server.enable`) |
-| `vm` | ssh + VM modules (runtime, variant, profile, host-mount) |
+| `vm` | ssh + guest VM modules (runtime, variant, profile, host-mount); restricted to hostname `vm` |
 | `obs` | obs (capture.obs) |
 
 > Note: `wm/i3` and `bar/i3status` exist as domains but are currently **commented out** in `profiles/desktop.nix`.

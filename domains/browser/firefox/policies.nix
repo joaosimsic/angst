@@ -1,5 +1,20 @@
+let
+  mimes = import ../../office/libreoffice/mime.nix;
+  officeMimes = mimes.writer ++ mimes.calc ++ mimes.impress;
+in
 {
   common = {
+    Handlers = {
+      mimeTypes = builtins.listToAttrs (
+        map (mime: {
+          name = mime;
+          value = {
+            action = "useSystemDefault";
+            ask = false;
+          };
+        }) officeMimes
+      );
+    };
     DisableTelemetry = true;
     DisableFirefoxStudies = true;
     DontCheckDefaultBrowser = true;

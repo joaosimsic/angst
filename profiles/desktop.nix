@@ -4,10 +4,12 @@
     "launcher.rofi"
     "terminal.ghostty"
     "display.x11"
-    "display.lightdm"
+    "display.picom"
+    "display.ly"
     "wm.i3"
     "bar.i3status-rust"
     "browser.firefox"
+    "browser.google-chrome"
     "chat.discord"
     "display.gpu"
     "kernel.graphical"
@@ -16,6 +18,7 @@
     "kernel.clipboard"
     "audio.easyeffects"
     "capture.screenshot"
+    "media.celluloid"
     "notifications"
   ];
 }

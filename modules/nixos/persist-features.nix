@@ -1,13 +1,32 @@
-# Persistence policy. Each feature declares the paths it owns; only features
-# that are actually enabled contribute. Hosts declare no dirs themselves.
-#
-# Durable entries land on `persist.dataRoot` (bind mount) when the host sets
-# one, and fall back to the impermanence root otherwise. Entries without
-# `durable` always go to the impermanence root.
-#
-# `name` is the directory under `persist.dataRoot` that backs the bind mount.
 {
   features = {
+    "agents.opencode" = [
+      {
+        dir = ".local/share/opencode";
+        name = "opencode";
+        durable = true;
+      }
+      {
+        dir = ".local/state/opencode";
+        name = "opencode-state";
+        durable = true;
+      }
+      {
+        dir = ".cache/opencode";
+      }
+    ];
+    "editor.nvim" = [
+      {
+        dir = ".local/share/nvim";
+        name = "nvim";
+        durable = true;
+      }
+      {
+        dir = ".local/state/nvim";
+        name = "nvim-state";
+        durable = true;
+      }
+    ];
     "security.age" = [
       {
         dir = ".config/age";
@@ -20,6 +39,13 @@
       {
         dir = ".mozilla";
         name = "mozilla";
+        durable = true;
+      }
+    ];
+    "browser.google-chrome" = [
+      {
+        dir = ".config/google-chrome";
+        name = "google-chrome";
         durable = true;
       }
     ];
@@ -41,6 +67,16 @@
       {
         dir = ".local/share/keyrings";
         name = "keyrings";
+        durable = true;
+      }
+      {
+        dir = ".cache/fontconfig";
+      }
+    ];
+    "shell.nushell" = [
+      {
+        dir = ".local/share/nushell";
+        name = "nushell";
         durable = true;
       }
     ];
