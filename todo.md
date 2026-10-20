@@ -12,7 +12,7 @@
 - [x] update scratch plugin to allow run compiler on it
 - [ ] better git handling(neogit/diffview)
 - [x] md handling(md-preview/render-md)
-- [ ] add file line length in heirline
+- [x] add file line length in heirline
 - [x] fix render md badge and move through zellij
 - [ ] add profiler, benchmark and assembly view for scratch plugin
 - [x] move adapter to use new toolchain definitions
