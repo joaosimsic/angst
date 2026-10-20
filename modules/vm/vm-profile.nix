@@ -35,6 +35,14 @@ in
   config = {
     assertions = [
       {
+        assertion = host.hostname == "vm";
+        message = ''
+          angst: the `vm` profile is guest-only and may only be enabled on hostname "vm" (got "${host.hostname}").
+
+          Remove "vm" from this host's profiles.
+        '';
+      }
+      {
         assertion = config.services.openssh.enable or false;
         message = ''
           angst: VM is running without SSH. Headless VM access requires an SSH server.
@@ -50,8 +58,6 @@ in
       }
     ];
 
-    documentation.nixos.enable = lib.mkForce false;
-
     environment.persistence."${host.persist.root}".directories = lib.mkIf (host.hostname == "vm") (
       lib.mkForce [
         "/var/lib/bluetooth"
@@ -59,30 +65,6 @@ in
         "/var/lib/systemd/coredump"
       ]
     );
-
-    boot = {
-      initrd.kernelModules = lib.mkForce [ ];
-      kernelModules = lib.mkForce [ "virtio_gpu" ];
-      kernelParams = lib.mkForce [ ];
-    };
-
-    services = {
-      xserver = {
-        enable = lib.mkForce true;
-        videoDrivers = lib.mkForce [ "modesetting" ];
-      };
-      fstrim.enable = lib.mkForce false;
-      spice-vdagentd.enable = true;
-    };
-
-    hardware = {
-      cpu.amd.updateMicrocode = lib.mkForce false;
-      graphics = {
-        enable = lib.mkForce true;
-        enable32Bit = lib.mkForce false;
-        extraPackages = lib.mkForce [ ];
-      };
-    };
 
     domains.remote.ssh.enable = lib.mkForce true;
     domains.remote.ssh.server.enable = lib.mkForce true;

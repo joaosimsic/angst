@@ -79,8 +79,8 @@ vault-decrypt path scope="personal" dir="":
 vault-status path=".":
     angst vault status {{ path }}
 
-vm host="nixos":
+vm host="vm":
     @NIX_DEFAULT_TARGET_HOST={{ host }} nix run .#vm -- start
 
-vm-ssh host="nixos":
+vm-ssh host="vm":
     @NIX_DEFAULT_TARGET_HOST={{ host }} nix run .#vm -- ssh --auto-start
