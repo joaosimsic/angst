@@ -1,0 +1,4 @@
+[[mgr.prepend_keymap]]
+on = "M"
+run = "plugin midpoint"
+desc = "Go to middle of content"
