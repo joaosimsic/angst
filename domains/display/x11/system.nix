@@ -14,12 +14,41 @@ let
   p = t.palette;
   gtkTheme = if t.isDark then "Adwaita:dark" else "Adwaita";
   m = monitors.primary or { };
-  xrandrLine = lib.optionalString (m ? name && m ? resolution) ''
-    ${pkgs.xrandr}/bin/xrandr --output ${m.name} \
-      --mode ${m.resolution} \
-      --rate ${toString (m.refreshRate or 60)} \
-      --pos ${m.position or "0x0"}
-  '';
+  xrandrLine =
+    if m ? name && m ? resolution then
+      if m.resolution == "auto" then
+        ''
+          ${pkgs.xrandr}/bin/xrandr --output ${m.name} \
+            --auto \
+            --pos ${m.position or "0x0"}
+        ''
+      else if m.resolution == "kernel" then
+        ''
+          res=""
+          for arg in $(${pkgs.coreutils}/bin/cat /proc/cmdline); do
+            case "$arg" in
+              video=${m.name}:*)
+                res="''${arg#video=${m.name}:}"
+                res="''${res%@*}"
+                ;;
+            esac
+          done
+          if [ -n "$res" ]; then
+            ${pkgs.xrandr}/bin/xrandr --output ${m.name} \
+              --mode "$res" \
+              --rate ${toString (m.refreshRate or 60)} \
+              --pos ${m.position or "0x0"}
+          fi
+        ''
+      else
+        ''
+          ${pkgs.xrandr}/bin/xrandr --output ${m.name} \
+            --mode ${m.resolution} \
+            --rate ${toString (m.refreshRate or 60)} \
+            --pos ${m.position or "0x0"}
+        ''
+    else
+      "";
 in
 {
   options.domains.display.x11 = {

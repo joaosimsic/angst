@@ -296,10 +296,11 @@ Toolchains are auto-discovered by `lib/resolve.nix` and selected via `toolchains
 
 **vm CLI** (`runtime/vm`, packaged as `vm` / `vm-tool`) — QEMU VM lifecycle with SSH (port 2222 → guest 22), headless mode for CI, automatic SSH key + age key injection, and an MCP server (port 8765, tools `vm_exec`/`vm_status`/`vm_restart`) for AI agent integration. Guest-side helpers (`age-key`, `ephemeral-ssh`, `home-manager-upgrade`, `nixos-switch`, `home-switch`) are `vm` subcommands (`runtime/vm/*.nix` wrappers).
 
-Commands: `start [--headless]`, `stop`, `restart`, `status`, `logs [-n]`, `ssh [--auto-start] [--tty]`, `exec -- <cmd>`, `copy-to`, `copy-from`, `health`, `mcp {start|stop|restart|status|logs|run-server [--port]}`.
+Commands: `start [--headless|--gtk] [--full-hd]`, `stop`, `restart [--headless|--gtk] [--full-hd]`, `status`, `logs [-n]`, `ssh [--auto-start] [--tty]`, `exec -- <cmd>`, `copy-to`, `copy-from`, `health`, `mcp {start|stop|restart|status|logs|run-server [--port]}`.
 
 ```bash
-nix run .#vm -- start --headless    # or: just vm; DISPLAY set → gtk UI
+nix run .#vm -- start --headless    # or: just vm; DISPLAY set → gtk UI; default 1280x720
+nix run .#vm -- start --gtk --full-hd  # 1920x1080
 nix run .#vm -- ssh                 # connect
 nix run .#vm -- health              # QEMU + port + SSH check
 ```

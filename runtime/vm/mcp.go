@@ -124,12 +124,13 @@ func handleToolCall(req mcpRequest) *mcpResponse {
 	case "vm_restart":
 		headless := true
 		var ha struct {
-			Headless bool `json:"headless"`
+			Headless *bool `json:"headless"`
+			FullHd   bool  `json:"fullHd"`
 		}
-		if err := json.Unmarshal(args, &ha); err == nil {
-			headless = ha.Headless
+		if err := json.Unmarshal(args, &ha); err == nil && ha.Headless != nil {
+			headless = *ha.Headless
 		}
-		return &mcpResponse{JSONRPC: "2.0", ID: req.ID, Result: mustJSON(runVmRestart(headless))}
+		return &mcpResponse{JSONRPC: "2.0", ID: req.ID, Result: mustJSON(runVmRestart(headless, ha.FullHd))}
 	default:
 		return &mcpResponse{JSONRPC: "2.0", ID: req.ID, Error: &mcpError{Code: -32602, Message: fmt.Sprintf("Tool '%s' not found", params.Name)}}
 	}
@@ -164,14 +165,20 @@ func runVmStatus() map[string]any {
 	return toolContent("VM systemd unit is active but SSH is unreachable", false)
 }
 
-func runVmRestart(headless bool) map[string]any {
+func runVmRestart(headless bool, fullHd bool) map[string]any {
 	_ = controller.Stop(serviceVM)
-	rc := start([]string{"--headless"})
+	args := []string{}
+	if headless {
+		args = append(args, "--headless")
+	} else {
+		args = append(args, "--gtk")
+	}
+	if fullHd {
+		args = append(args, "--full-hd")
+	}
+	rc := start(args)
 	if rc != exitOK {
 		return toolContent("VM restart failed", true)
-	}
-	if !headless {
-
 	}
 	return toolContent("VM restarting", false)
 }
@@ -202,6 +209,7 @@ func toolsList() map[string]any {
 					"type": "object",
 					"properties": map[string]any{
 						"headless": map[string]any{"type": "boolean", "description": "Whether to start the VM without a graphical display window."},
+						"fullHd":   map[string]any{"type": "boolean", "description": "Use 1920x1080 instead of the default 1280x720 display resolution."},
 					},
 				},
 			},

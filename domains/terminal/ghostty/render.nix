@@ -40,6 +40,7 @@ in
     path = "domains/terminal/ghostty/config/config.ghostty";
     text = ''
       config-file = colors.conf
+      gtk-single-instance = true
 
       font-family = ${fontFamily}
       font-size = 13

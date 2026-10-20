@@ -12,7 +12,14 @@
   ];
   toolchains = "*";
 
-  monitors = { };
+  monitors = {
+    primary = {
+      name = "Virtual-1";
+      resolution = "kernel";
+      refreshRate = 60;
+      position = "0x0";
+    };
+  };
 
   db = [ ];
   nixos = {

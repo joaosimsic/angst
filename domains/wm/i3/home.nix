@@ -9,7 +9,8 @@
 let
   cfg = config.domains.wm.i3;
 
-  workspaceGroup = pkgs.callPackage ./package.nix { };
+  i3Tools = pkgs.callPackage ./package.nix { };
+  mouseHide = pkgs.callPackage ./mouse-hide.nix { inherit i3Tools; };
 
   cap = config.domains.capture.screenshot or { enable = false; };
   notif = config.domains.notifications or { enable = false; };
@@ -23,7 +24,10 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
-    home.packages = [ workspaceGroup ];
+    home.packages = [
+      i3Tools
+      mouseHide
+    ];
 
     xdg.configFile = {
       "i3/screenshot.conf".text = lib.mkDefault (

@@ -83,6 +83,24 @@ in
       cmd = "pavucontrol"
 
       [[block]]
+      block = "custom"
+      interval = 1
+      json = true
+      shell = "/bin/sh"
+      if_command = "command -v i3-mouse-hide >/dev/null 2>&1"
+      command = "i3-mouse-hide status"
+      format = " $icon "
+      [block.theme_overrides]
+      good_fg = "#${t.ansi.success}"
+      good_bg = "#${p.background.base}"
+      critical_fg = "#${t.ansi.error}"
+      critical_bg = "#${p.background.base}"
+      [[block.click]]
+      button = "left"
+      cmd = "i3-mouse-hide toggle"
+      update = true
+
+      [[block]]
       block = "time"
       interval = 5
       format = " <span color='#${p.foreground.variant}'>$timestamp.datetime(f:'%Y-%m-%d %H:%M')</span> "

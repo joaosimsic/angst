@@ -49,6 +49,23 @@
         durable = true;
       }
     ];
+    "display.gpu" = [
+      {
+        dir = ".cache/mesa_shader_cache";
+      }
+      {
+        dir = ".cache/nvidia";
+      }
+      {
+        dir = ".nv/GLCache";
+      }
+      {
+        dir = ".nv/ComputeCache";
+      }
+      {
+        dir = ".nv/OptiXCache";
+      }
+    ];
     "chat.discord" = [
       {
         dir = ".config/discord";

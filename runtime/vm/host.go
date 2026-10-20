@@ -227,12 +227,16 @@ func prepareSharedDir(host string) (string, error) {
 func start(args []string) int {
 	headless := true
 	gtk := false
+	fullHD := false
 	for _, a := range args {
 		if a == "--headless" {
 			headless = true
 		}
 		if a == "--gtk" || a == "--display" {
 			gtk = true
+		}
+		if a == "--full-hd" {
+			fullHD = true
 		}
 	}
 	if gtk {
@@ -273,9 +277,13 @@ func start(args []string) int {
 	}
 	repo := repoRoot()
 	diskImg := envOr("NIX_DISK_IMAGE", fmt.Sprintf("%s/%s.qcow2", repo, host))
-	qemuOpts := ""
+	width, height := 1280, 720
+	if fullHD {
+		width, height = 1920, 1080
+	}
+	qemuOpts := fmt.Sprintf("-device virtio-gpu-pci,xres=%d,yres=%d", width, height)
 	if effectiveHeadless {
-		qemuOpts = "-display none"
+		qemuOpts = "-display none " + qemuOpts
 	}
 	env := []string{
 		"SHARED_DIR=" + sharedDir,
@@ -283,6 +291,7 @@ func start(args []string) int {
 		"NIX_DISK_IMAGE=" + diskImg,
 		"QEMU_NET_OPTS=hostfwd=tcp::2222-:22",
 		"QEMU_OPTS=" + qemuOpts,
+		fmt.Sprintf("QEMU_KERNEL_PARAMS=video=Virtual-1:%dx%d@60e", width, height),
 		"NIX_DEFAULT_TARGET_HOST=" + host,
 	}
 

@@ -25,7 +25,12 @@ let
     let
       m = monitors.${name};
     in
-    "exec --no-startup-id xrandr --output ${m.name} --mode ${m.resolution} --rate ${toString m.refreshRate} --pos ${m.position}";
+    if m.resolution == "auto" then
+      "exec --no-startup-id xrandr --output ${m.name} --auto --pos ${m.position}"
+    else if m.resolution == "kernel" then
+      "# ${m.name} resolution applied by the X session"
+    else
+      "exec --no-startup-id xrandr --output ${m.name} --mode ${m.resolution} --rate ${toString m.refreshRate} --pos ${m.position}";
 
   monitorsConf =
     if monitors == { } then
@@ -46,13 +51,13 @@ in
       font pango:${fontFamily} 10
 
 
-      default_border pixel 2
-      default_floating_border pixel 2
+      default_border pixel 0
+      default_floating_border pixel 0
       hide_edge_borders smart
 
-      client.focused          #${t.ansi.info} #${p.background.base} #${p.foreground.base} #${t.ansi.warn} #${t.ansi.info}
-      client.focused_inactive #${p.dim} #${p.background.base} #${p.accent.base} #${p.dim} #${p.dim}
-      client.unfocused        #${p.background.base} #${p.background.base} #${p.accent.base} #${p.background.base} #${p.background.base}
+      client.focused          #${p.background.base} #${p.background.variant} #${p.foreground.base} #${p.background.base} #${p.background.base}
+      client.focused_inactive #${p.background.base} #${p.background.base} #${p.dim} #${p.background.base} #${p.background.base}
+      client.unfocused        #${p.background.base} #${p.background.base} #${p.dim} #${p.background.base} #${p.background.base}
       client.urgent           #${t.ansi.error} #${p.background.base} #${t.ansi.error} #${t.ansi.warn} #${t.ansi.warn}
 
       set $mod Mod4
@@ -85,6 +90,7 @@ in
       bindsym $mod+Shift+space floating toggle
       bindsym $mod+Tab focus mode_toggle
       bindsym $mod+a focus parent
+      bindsym $mod+p exec --no-startup-id i3-mouse-hide toggle
 
       bindsym $mod+Control+1 exec --no-startup-id i3-workspace-group switch 1
       bindsym $mod+Control+2 exec --no-startup-id i3-workspace-group switch 2
@@ -151,7 +157,7 @@ in
       bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
       bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
       bindsym $mod+e exec --no-startup-id GDK_BACKEND=x11 ghostty -e yazi
-      exec_always --no-startup-id i3-workspace-group daemon
+      exec_always --no-startup-id env ANGST_INACTIVE_OPACITY=75 i3-workspace-group daemon
       exec_always --no-startup-id hsetroot -solid '#${p.background.base}'
       exec --no-startup-id dbus-update-activation-environment --systemd --all
       exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY PATH XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
@@ -167,8 +173,8 @@ in
               background #${p.background.base}
               statusline #${p.foreground.base}
               separator  #${p.accent.base}
-              focused_workspace  #${p.background.base} #${p.background.base} #${p.foreground.base}
-              active_workspace   #${p.background.base} #${p.background.base} #${p.accent.base}
+              focused_workspace  #${p.background.base} #${p.background.base} #${p.accent.base}
+              active_workspace   #${p.background.base} #${p.background.base} #${p.foreground.base}
               inactive_workspace #${p.accent.base} #${p.accent.base} #${p.background.base}
               urgent_workspace   #${t.ansi.error} #${p.background.base} #${p.foreground.base}
           }

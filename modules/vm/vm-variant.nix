@@ -73,7 +73,7 @@ in
       diskSize = 32768;
 
       qemu.options = [
-        "-device virtio-vga,xres=1920,yres=1080"
+        "-vga none"
         "-display gtk,zoom-to-fit=on,grab-on-hover=on"
         "-chardev qemu-vdagent,id=vdagent,name=vdagent,clipboard=on"
         "-device virtio-serial-pci"

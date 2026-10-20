@@ -15,8 +15,12 @@ func Daemon() error {
 	}
 	defer lock.Close()
 
+	if err := syncOpacity(); err != nil {
+		log.Printf("i3-workspace-group daemon: %v", err)
+	}
+
 	for {
-		receiver := i3.Subscribe(i3.WorkspaceEventType, i3.OutputEventType)
+		receiver := i3.Subscribe(i3.WorkspaceEventType, i3.OutputEventType, i3.WindowEventType)
 		triggers := make(chan struct{}, 1)
 		go collectTriggers(receiver, triggers)
 
@@ -45,11 +49,20 @@ func collectTriggers(receiver *i3.EventReceiver, triggers chan<- struct{}) {
 			}
 		case *i3.OutputEvent:
 			notifyTrigger(triggers)
+		case *i3.WindowEvent:
+			switch event.Change {
+			case "new", "close", "focus", "move", "floating", "fullscreen_mode":
+				notifyTrigger(triggers)
+			}
 		}
 	}
 }
 
 func syncOnce() error {
+	if err := syncOpacity(); err != nil {
+		log.Printf("i3-workspace-group daemon: %v", err)
+	}
+
 	workspaces, err := i3.GetWorkspaces()
 	if err != nil {
 		return fmt.Errorf("get workspaces: %w", err)
