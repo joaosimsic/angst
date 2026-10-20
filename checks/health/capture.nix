@@ -5,6 +5,7 @@
 let
   homeSrc = ../../domains/capture/screenshot/home.nix;
   i3Src = ../../domains/wm/i3/home.nix;
+  picomSrc = ../../domains/display/picom/home.nix;
   runtimeSrc = ../../runtime/capture-screenshot.nix;
 in
 {
@@ -21,6 +22,7 @@ in
 
         home="${homeSrc}"
         i3="${i3Src}"
+        picom="${picomSrc}"
         runtime="${runtimeSrc}"
 
         echo "==> check: no defaults in home.nix"
@@ -81,6 +83,13 @@ in
         if ! grep -Eq 'bindsym \$mod\+Print.*angst-screenshot-save window' "$i3"; then
           echo "missing i3 binding: mod+Print -> save window"
           grep -n "bindsym" "$i3" || true
+          exit 1
+        fi
+
+        echo "==> check: picom excludes slop selection overlay from blur"
+        if ! grep -q "class_g = 'slop'" "$picom"; then
+          echo "picom must exclude slop from blur-background or region selection blurs the whole screen"
+          grep -n "blur-background" "$picom" || true
           exit 1
         fi
 

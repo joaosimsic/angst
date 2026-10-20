@@ -30,6 +30,7 @@ lib.mkMerge [
         blur-method = "dual_kawase";
         blur-strength = 6;
         blur-background-fixed = true;
+        blur-background-exclude = [ "class_g = 'slop'" ];
       };
     };
   })
