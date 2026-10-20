@@ -30,6 +30,26 @@ func TestUpdateAndLoadState(t *testing.T) {
 	}
 }
 
+func TestUpdateStateRemovesInnerFromOtherOutputs(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state.json")
+	if err := updateState(path, 1, "DP-1", 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := updateState(path, 1, "HDMI-2", 2); err != nil {
+		t.Fatal(err)
+	}
+	state, err := loadState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := state.LastInner(1, "DP-1", 0); got != 0 {
+		t.Fatalf("LastInner(1, DP-1) = %d, want 0", got)
+	}
+	if got := state.LastInner(1, "HDMI-2", 0); got != 2 {
+		t.Fatalf("LastInner(1, HDMI-2) = %d, want 2", got)
+	}
+}
+
 func TestSeedState(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "state.json")
 	if err := seedState(path, map[int]map[string]int{

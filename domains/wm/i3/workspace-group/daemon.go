@@ -40,7 +40,7 @@ func collectTriggers(receiver *i3.EventReceiver, triggers chan<- struct{}) {
 	for receiver.Next() {
 		switch event := receiver.Event().(type) {
 		case *i3.WorkspaceEvent:
-			if event.Change == "focus" || event.Change == "init" {
+			if event.Change == "focus" || event.Change == "init" || event.Change == "move" {
 				notifyTrigger(triggers)
 			}
 		case *i3.OutputEvent:
@@ -55,25 +55,15 @@ func syncOnce() error {
 		return fmt.Errorf("get workspaces: %w", err)
 	}
 
-	if commands := PlanRepair(workspaces); len(commands) > 0 {
-		if err := runCommands(commands); err != nil {
-			return err
-		}
-		workspaces, err = i3.GetWorkspaces()
-		if err != nil {
-			return fmt.Errorf("get workspaces after repair: %w", err)
-		}
-	}
-
 	for _, workspace := range workspaces {
 		if !workspace.Visible {
 			continue
 		}
-		group, inner, output, ok := ParseWorkspace(workspace.Name)
+		group, inner, ok := ParseWorkspace(workspace.Name)
 		if !ok {
 			continue
 		}
-		if err := updateState(statePath(), group, output, inner); err != nil {
+		if err := updateState(statePath(), group, workspace.Output, inner); err != nil {
 			log.Printf("i3-workspace-group daemon: %v", err)
 		}
 	}
@@ -82,7 +72,7 @@ func syncOnce() error {
 	if !ok {
 		return nil
 	}
-	group, _, _, ok := ParseWorkspace(focused.Name)
+	group, _, ok := ParseWorkspace(focused.Name)
 	if !ok {
 		return nil
 	}

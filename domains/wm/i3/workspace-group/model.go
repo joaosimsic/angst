@@ -21,11 +21,27 @@ func Groups() []int {
 	return groups
 }
 
-func WorkspaceName(group, inner int, output string) string {
-	return fmt.Sprintf("%d:%d:%s", group, inner, output)
+func WorkspaceName(group, inner int) string {
+	return fmt.Sprintf("%d:%d", group, inner)
 }
 
-func ParseWorkspace(name string) (group, inner int, output string, ok bool) {
+func ParseWorkspace(name string) (group, inner int, ok bool) {
+	parts := strings.Split(name, ":")
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	group, groupErr := strconv.Atoi(parts[0])
+	inner, innerErr := strconv.Atoi(parts[1])
+	if groupErr != nil || innerErr != nil {
+		return 0, 0, false
+	}
+	if group < 1 || group > MaxGroup || inner < 1 || inner > MaxInner {
+		return 0, 0, false
+	}
+	return group, inner, true
+}
+
+func ParseSuffixedWorkspace(name string) (group, inner int, output string, ok bool) {
 	parts := strings.SplitN(name, ":", 3)
 	if len(parts) != 3 || parts[2] == "" {
 		return 0, 0, "", false

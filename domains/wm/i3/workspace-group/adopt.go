@@ -39,14 +39,14 @@ func Adopt() (int, error) {
 		if !workspace.Visible {
 			continue
 		}
-		group, inner, output, ok := ParseWorkspace(workspace.Name)
+		group, inner, ok := ParseWorkspace(workspace.Name)
 		if !ok {
 			continue
 		}
 		if seed[group] == nil {
 			seed[group] = make(map[string]int)
 		}
-		seed[group][output] = inner
+		seed[group][workspace.Output] = inner
 	}
 	if err := seedState(statePath(), seed); err != nil {
 		return renamed, fmt.Errorf("seed state: %w", err)

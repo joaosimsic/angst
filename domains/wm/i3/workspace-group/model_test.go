@@ -17,24 +17,32 @@ func TestParseWorkspace(t *testing.T) {
 		name  string
 		group int
 		inner int
-		out   string
 		ok    bool
 	}{
-		{name: "1:2:DP-1", group: 1, inner: 2, out: "DP-1", ok: true},
-		{name: "10:10:HDMI-2", group: 10, inner: 10, out: "HDMI-2", ok: true},
-		{name: "0:1:DP-1", ok: false},
-		{name: "1:0:DP-1", ok: false},
-		{name: "1:2:", ok: false},
-		{name: "1:2", ok: false},
-		{name: "foo:1:DP-1", ok: false},
+		{name: "1:2", group: 1, inner: 2, ok: true},
+		{name: "10:10", group: 10, inner: 10, ok: true},
+		{name: "0:1", ok: false},
+		{name: "1:0", ok: false},
+		{name: "1:2:DP-1", ok: false},
+		{name: "foo:1", ok: false},
 		{name: "1", ok: false},
 	}
 	for _, test := range tests {
-		group, inner, out, ok := ParseWorkspace(test.name)
-		if group != test.group || inner != test.inner || out != test.out || ok != test.ok {
-			t.Errorf("ParseWorkspace(%q) = (%d, %d, %q, %v), want (%d, %d, %q, %v)",
-				test.name, group, inner, out, ok, test.group, test.inner, test.out, test.ok)
+		group, inner, ok := ParseWorkspace(test.name)
+		if group != test.group || inner != test.inner || ok != test.ok {
+			t.Errorf("ParseWorkspace(%q) = (%d, %d, %v), want (%d, %d, %v)",
+				test.name, group, inner, ok, test.group, test.inner, test.ok)
 		}
+	}
+}
+
+func TestParseSuffixedWorkspace(t *testing.T) {
+	group, inner, output, ok := ParseSuffixedWorkspace("1:2:DP-1")
+	if !ok || group != 1 || inner != 2 || output != "DP-1" {
+		t.Fatalf("ParseSuffixedWorkspace() = (%d, %d, %q, %v), want (1, 2, DP-1, true)", group, inner, output, ok)
+	}
+	if _, _, _, ok := ParseSuffixedWorkspace("1:2"); ok {
+		t.Fatal("ParseSuffixedWorkspace accepted a global workspace")
 	}
 }
 

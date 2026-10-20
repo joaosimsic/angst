@@ -13,9 +13,9 @@
 - [ ] better git handling(neogit/diffview)
 - [x] md handling(md-preview/render-md)
 - [ ] add file line length in heirline
-- [ ] fix render md badge and move through zellij
+- [x] fix render md badge and move through zellij
 - [ ] add profiler, benchmark and assembly view for scratch plugin
-- [ ] move adapter to use new toolchain definitions
+- [x] move adapter to use new toolchain definitions
 - [ ] spring idea, pull the string until reach a file, then release it to return to where u first pulled. a quick recall
 
 # nu
@@ -43,7 +43,6 @@
 - [x] deprecating vm scripts to let rust tool handles it
 - [x] add a headless mode for launching the vm without gui
 - [x] ci tests
-- [?] mcp degradation
 - [x] static angst repo mounting
 
 # zellij
@@ -53,7 +52,7 @@
 # encryption
 
 - [x] stardand way to encrypt files and dirs
-- [ ] validate projects and ftp pipelines
+- [x] validate projects and ftp pipelines
 
 # miscellaneous
 
@@ -61,3 +60,17 @@
 - [x] firefox
 - [x] persistent and not persistent prints
 - [x] notifications and add print notifications
+
+# i3
+
+- [ ] mouse hide button
+- [ ] switch active and inactive ws number colors
+- [ ] better differentiate active and inactive windows
+
+# opencode
+
+- [ ] make add/remove diff lines be derived from ansi green/red and the bg colors
+
+# vial
+
+- [ ] handle portuguese

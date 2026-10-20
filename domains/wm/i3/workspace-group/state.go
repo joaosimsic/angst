@@ -137,6 +137,11 @@ func updateState(path string, group int, output string, inner int) error {
 	if state.Last[key] == nil {
 		state.Last[key] = make(map[string]int)
 	}
+	for outputName, currentInner := range state.Last[key] {
+		if outputName != output && currentInner == inner {
+			delete(state.Last[key], outputName)
+		}
+	}
 	state.Last[key][output] = inner
 	return writeStateFile(path, state)
 }

@@ -18,6 +18,11 @@ type RenamePlan struct {
 	New string
 }
 
+type innerSelection struct {
+	inner    int
+	moveFrom string
+}
+
 func activeOutputs(outputs []i3.Output) []i3.Output {
 	active := make([]i3.Output, 0, len(outputs))
 	for _, output := range outputs {
@@ -51,7 +56,95 @@ func parseFocusedWorkspace(workspaces []i3.Workspace) (group, inner int, output 
 	if !found {
 		return 0, 0, "", false
 	}
-	return ParseWorkspace(focused.Name)
+	group, inner, ok = ParseWorkspace(focused.Name)
+	if !ok {
+		return 0, 0, "", false
+	}
+	return group, inner, focused.Output, true
+}
+
+func existingGroupWorkspaces(workspaces []i3.Workspace, group int) map[int]i3.Workspace {
+	existing := make(map[int]i3.Workspace)
+	for _, workspace := range workspaces {
+		workspaceGroup, inner, ok := ParseWorkspace(workspace.Name)
+		if !ok || workspaceGroup != group {
+			continue
+		}
+		if _, found := existing[inner]; !found {
+			existing[inner] = workspace
+		}
+	}
+	return existing
+}
+
+func selectInner(output string, group int, workspaces []i3.Workspace, state State, used map[int]bool) (innerSelection, bool) {
+	existingOnOutput := make(map[int]bool)
+	existingGlobally := make(map[int]i3.Workspace)
+	for _, workspace := range workspaces {
+		workspaceGroup, inner, ok := ParseWorkspace(workspace.Name)
+		if !ok || workspaceGroup != group {
+			continue
+		}
+		if workspace.Output == output {
+			existingOnOutput[inner] = true
+		}
+		if _, found := existingGlobally[inner]; !found {
+			existingGlobally[inner] = workspace
+		}
+	}
+
+	preferred := state.LastInner(group, output, 0)
+	if preferred > 0 && !used[preferred] && existingOnOutput[preferred] {
+		return innerSelection{inner: preferred}, true
+	}
+	for inner := 1; inner <= MaxInner; inner++ {
+		if existingOnOutput[inner] && !used[inner] {
+			return innerSelection{inner: inner}, true
+		}
+	}
+	if preferred > 0 && !used[preferred] {
+		if _, exists := existingGlobally[preferred]; !exists {
+			return innerSelection{inner: preferred}, true
+		}
+	}
+	for inner := 1; inner <= MaxInner; inner++ {
+		if used[inner] {
+			continue
+		}
+		if _, exists := existingGlobally[inner]; !exists {
+			return innerSelection{inner: inner}, true
+		}
+	}
+	if preferred > 0 && !used[preferred] {
+		if workspace, exists := existingGlobally[preferred]; exists && workspace.Output != output {
+			return innerSelection{inner: preferred, moveFrom: workspace.Output}, true
+		}
+	}
+	for inner := 1; inner <= MaxInner; inner++ {
+		if used[inner] {
+			continue
+		}
+		if workspace, exists := existingGlobally[inner]; exists && workspace.Output != output {
+			return innerSelection{inner: inner, moveFrom: workspace.Output}, true
+		}
+	}
+	return innerSelection{}, false
+}
+
+func switchCommands(group int, output string, selection innerSelection) []string {
+	name := WorkspaceName(group, selection.inner)
+	if selection.moveFrom != "" && selection.moveFrom != output {
+		return []string{
+			SwitchWorkspaceCommand(name),
+			MoveWorkspaceToOutputCommand(output),
+			FocusOutputCommand(output),
+			SwitchWorkspaceCommand(name),
+		}
+	}
+	return []string{
+		FocusOutputCommand(output),
+		SwitchWorkspaceCommand(name),
+	}
 }
 
 func PlanSwitch(outputs []i3.Output, workspaces []i3.Workspace, state State, group int) SwitchPlan {
@@ -60,13 +153,14 @@ func PlanSwitch(outputs []i3.Output, workspaces []i3.Workspace, state State, gro
 		plan.OriginalOutput = focused.Output
 	}
 
+	used := make(map[int]bool)
 	for _, output := range activeOutputs(outputs) {
-		inner := state.LastInner(group, output.Name, 1)
-		plan.Commands = append(
-			plan.Commands,
-			FocusOutputCommand(output.Name),
-			SwitchWorkspaceCommand(WorkspaceName(group, inner, output.Name)),
-		)
+		selection, ok := selectInner(output.Name, group, workspaces, state, used)
+		if !ok {
+			continue
+		}
+		used[selection.inner] = true
+		plan.Commands = append(plan.Commands, switchCommands(group, output.Name, selection)...)
 	}
 	if len(plan.Commands) > 0 && plan.OriginalOutput != "" {
 		plan.Commands = append(plan.Commands, FocusOutputCommand(plan.OriginalOutput))
@@ -79,8 +173,14 @@ func PlanMoveTop(workspaces []i3.Workspace, state State, group int) (string, err
 	if !ok {
 		return "", fmt.Errorf("no focused workspace")
 	}
-	inner := state.LastInner(group, focused.Output, 1)
-	return MoveWindowToWorkspaceCommand(WorkspaceName(group, inner, focused.Output)), nil
+	selection, ok := selectInner(focused.Output, group, workspaces, state, make(map[int]bool))
+	if !ok {
+		return "", fmt.Errorf("no inner workspace available on %s", focused.Output)
+	}
+	if selection.moveFrom != "" {
+		return "", fmt.Errorf("no free inner workspace on %s", focused.Output)
+	}
+	return MoveWindowToWorkspaceCommand(WorkspaceName(group, selection.inner)), nil
 }
 
 func PlanInnerSwitch(workspaces []i3.Workspace, inner int) (string, int, string, error) {
@@ -88,32 +188,55 @@ func PlanInnerSwitch(workspaces []i3.Workspace, inner int) (string, int, string,
 	if !ok {
 		return "", 0, "", fmt.Errorf("focused workspace is not part of a workspace group")
 	}
-	return SwitchWorkspaceCommand(WorkspaceName(group, inner, output)), group, output, nil
+	name := WorkspaceName(group, inner)
+	for _, workspace := range workspaces {
+		if workspace.Name == name {
+			return SwitchWorkspaceCommand(name), group, workspace.Output, nil
+		}
+	}
+	return SwitchWorkspaceCommand(name), group, output, nil
 }
 
 func PlanInnerMove(workspaces []i3.Workspace, inner int) (string, error) {
-	group, _, output, ok := parseFocusedWorkspace(workspaces)
+	group, _, _, ok := parseFocusedWorkspace(workspaces)
 	if !ok {
 		return "", fmt.Errorf("focused workspace is not part of a workspace group")
 	}
-	return MoveWindowToWorkspaceCommand(WorkspaceName(group, inner, output)), nil
+	name := WorkspaceName(group, inner)
+	for _, workspace := range workspaces {
+		if workspace.Name == name {
+			return MoveWindowToWorkspaceCommand(name), nil
+		}
+	}
+	return MoveWindowToWorkspaceCommand(WorkspaceName(group, inner)), nil
 }
 
 func PlanAdopt(workspaces []i3.Workspace) []RenamePlan {
-	existing := make(map[string]bool, len(workspaces))
+	used := make(map[int]map[int]bool)
+	reserve := func(group, inner int) {
+		if used[group] == nil {
+			used[group] = make(map[int]bool)
+		}
+		used[group][inner] = true
+	}
 	for _, workspace := range workspaces {
-		existing[workspace.Name] = true
+		if group, inner, ok := ParseWorkspace(workspace.Name); ok {
+			reserve(group, inner)
+		}
 	}
 
 	planned := make([]RenamePlan, 0, len(workspaces))
-	seenTargets := make(map[string]bool)
 	for _, workspace := range workspaces {
-		if _, _, _, nested := ParseWorkspace(workspace.Name); nested {
+		if _, _, ok := ParseWorkspace(workspace.Name); ok {
 			continue
 		}
 
+		group := 1
 		inner := 0
-		if legacyGroup, _, legacy := ParseLegacyWorkspace(workspace.Name); legacy {
+		if legacyGroup, legacyInner, _, suffixed := ParseSuffixedWorkspace(workspace.Name); suffixed {
+			group = legacyGroup
+			inner = legacyInner
+		} else if legacyGroup, _, legacy := ParseLegacyWorkspace(workspace.Name); legacy {
 			inner = legacyGroup
 		} else if plain, plainOk := ParsePlainWorkspace(workspace.Name, workspace.Num); plainOk {
 			inner = plain
@@ -121,12 +244,24 @@ func PlanAdopt(workspaces []i3.Workspace) []RenamePlan {
 			continue
 		}
 
-		target := WorkspaceName(1, inner, workspace.Output)
-		if existing[target] || seenTargets[target] || workspace.Name == target {
-			continue
+		if used[group] == nil {
+			used[group] = make(map[int]bool)
 		}
+		if inner < 1 || used[group][inner] {
+			inner = 0
+			for candidate := 1; candidate <= MaxInner; candidate++ {
+				if !used[group][candidate] {
+					inner = candidate
+					break
+				}
+			}
+			if inner == 0 {
+				continue
+			}
+		}
+		target := WorkspaceName(group, inner)
+		used[group][inner] = true
 		planned = append(planned, RenamePlan{Old: workspace.Name, New: target})
-		seenTargets[target] = true
 	}
 	return planned
 }
@@ -138,7 +273,7 @@ func PlanBarState(outputs []i3.Output, workspaces []i3.Workspace) []i3.Workspace
 		if !ok {
 			continue
 		}
-		group, _, _, grouped := ParseWorkspace(visible.Name)
+		group, _, grouped := ParseWorkspace(visible.Name)
 		if !grouped {
 			state = append(state, i3.Workspace{
 				ID:     visible.ID,
@@ -164,8 +299,8 @@ func PlanBarState(outputs []i3.Output, workspaces []i3.Workspace) []i3.Workspace
 
 		inners := make([]i3.Workspace, 0)
 		for _, workspace := range workspaces {
-			workspaceGroup, inner, workspaceOutput, nested := ParseWorkspace(workspace.Name)
-			if !nested || workspaceGroup != group || workspaceOutput != output.Name {
+			workspaceGroup, inner, parsed := ParseWorkspace(workspace.Name)
+			if !parsed || workspaceGroup != group || workspace.Output != output.Name {
 				continue
 			}
 			workspace.Name = strconv.Itoa(inner)
@@ -192,21 +327,33 @@ func PlanSync(outputs []i3.Output, workspaces []i3.Workspace, state State, group
 		originalOutput = focused.Output
 	}
 
+	used := make(map[int]bool)
+	for _, output := range active {
+		visible, ok := visibleWorkspaceForOutput(workspaces, output.Name)
+		if !ok {
+			continue
+		}
+		visibleGroup, inner, parsed := ParseWorkspace(visible.Name)
+		if parsed && visibleGroup == group {
+			used[inner] = true
+		}
+	}
+
 	commands := make([]string, 0, len(active)*2+1)
 	for _, output := range active {
 		visible, ok := visibleWorkspaceForOutput(workspaces, output.Name)
 		if ok {
-			currentGroup, _, _, grouped := ParseWorkspace(visible.Name)
-			if grouped && currentGroup == group {
+			visibleGroup, _, parsed := ParseWorkspace(visible.Name)
+			if parsed && visibleGroup == group {
 				continue
 			}
 		}
-		inner := state.LastInner(group, output.Name, 1)
-		commands = append(
-			commands,
-			FocusOutputCommand(output.Name),
-			SwitchWorkspaceCommand(WorkspaceName(group, inner, output.Name)),
-		)
+		selection, ok := selectInner(output.Name, group, workspaces, state, used)
+		if !ok {
+			continue
+		}
+		used[selection.inner] = true
+		commands = append(commands, switchCommands(group, output.Name, selection)...)
 	}
 	if len(commands) > 0 && originalOutput != "" {
 		commands = append(commands, FocusOutputCommand(originalOutput))
@@ -214,29 +361,15 @@ func PlanSync(outputs []i3.Output, workspaces []i3.Workspace, state State, group
 	return commands
 }
 
-func PlanRepair(workspaces []i3.Workspace) []string {
-	for _, workspace := range workspaces {
-		if !workspace.Focused {
-			continue
-		}
-		_, _, suffix, ok := ParseWorkspace(workspace.Name)
-		if !ok || suffix == workspace.Output {
-			return nil
-		}
-		return []string{MoveWorkspaceToOutputCommand(suffix)}
-	}
-	return nil
-}
-
 func PlanInnerSwap(tree i3.Tree, workspaces []i3.Workspace, first, second int) ([]string, error) {
-	group, _, output, ok := parseFocusedWorkspace(workspaces)
+	group, _, _, ok := parseFocusedWorkspace(workspaces)
 	if !ok {
 		return nil, fmt.Errorf("focused workspace is not part of a workspace group")
 	}
 	return planSwapNames(
 		tree,
-		WorkspaceName(group, first, output),
-		WorkspaceName(group, second, output),
+		WorkspaceName(group, first),
+		WorkspaceName(group, second),
 	)
 }
 
