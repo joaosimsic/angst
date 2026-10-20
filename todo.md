@@ -69,7 +69,7 @@
 
 # opencode
 
-- [ ] make add/remove diff lines be derived from ansi green/red and the bg colors
+- [x] make add/remove diff lines be derived from ansi green/red and the bg colors
 
 # vial
 

@@ -11,6 +11,18 @@ let
   t = themesLib.get themeName;
   p = t.palette;
 
+  diffAlpha = if t.isDark then 0.22 else 0.14;
+  tint =
+    base: color:
+    let
+      mixed = themesLib.mix {
+        from = base;
+        to = color;
+        weight = diffAlpha;
+      };
+    in
+    "#${mixed}";
+
   theme = builtins.toJSON {
     theme = {
       primary = "#${p.accent.base}";
@@ -28,18 +40,18 @@ let
       border = "#${p.foreground.base}";
       borderActive = "#${p.accent.base}";
       borderSubtle = "#${p.accent.base}";
-      diffAdded = "#${p.background.base}";
-      diffRemoved = "#${p.background.base}";
+      diffAdded = "#${t.ansi.success}";
+      diffRemoved = "#${t.ansi.error}";
       diffContext = "#${p.background.variant}";
       diffHunkHeader = "#${p.foreground.base}";
-      diffHighlightAdded = "#${p.background.variant}";
-      diffHighlightRemoved = "#${p.background.variant}";
-      diffAddedBg = "#${t.ansi.success}";
-      diffRemovedBg = "#${t.ansi.error}";
+      diffHighlightAdded = "#${t.ansi.success}";
+      diffHighlightRemoved = "#${t.ansi.error}";
+      diffAddedBg = tint p.background.base t.ansi.success;
+      diffRemovedBg = tint p.background.base t.ansi.error;
       diffContextBg = "#${p.background.variant}";
       diffLineNumber = "#${p.foreground.variant}";
-      diffAddedLineNumberBg = "#${t.ansi.success}";
-      diffRemovedLineNumberBg = "#${t.ansi.error}";
+      diffAddedLineNumberBg = tint p.background.variant t.ansi.success;
+      diffRemovedLineNumberBg = tint p.background.variant t.ansi.error;
       markdownText = "#${p.foreground.variant}";
       markdownHeading = "#${p.accent.base}";
       markdownLink = "#${p.foreground.variant}";
