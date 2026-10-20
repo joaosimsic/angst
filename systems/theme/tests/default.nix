@@ -1,6 +1,5 @@
 {
   lib,
-  pkgs,
   themeSys,
   renderDomainOutputsFor,
 }:
@@ -18,7 +17,6 @@ let
   renderResults = import ./render.nix {
     inherit
       lib
-      pkgs
       themeSys
       renderDomainOutputsFor
       ;

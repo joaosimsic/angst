@@ -145,6 +145,7 @@ Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run
 | `check-secrets-encrypted` | Every `secrets/master/*.age` is age-encrypted |
 | `login-shell-valid` / `login-shell-invalid` | `shellOverride` handling |
 | `home-theme-override-test` | Builds a representative home config with an alternate theme |
+| `build-ci` | Builds the `ci` host's full NixOS toplevel |
 | `lint-nix` | `deadnix --fail` + `statix check .` |
 
 ---
@@ -343,7 +344,7 @@ age-encrypted secrets → decrypted at runtime into `~/.secrets/`. The master pa
 
 | Workflow | Runs |
 |---|---|
-| `checks.yml` | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the flake checks + nixfmt + shellfmt + Go (`gofmt`/`go vet`/`go test` across `runtime/{angst,vm,shell,analyze}`) |
+| `checks.yml` | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the flake checks + `build-ci` (real `ci` host toplevel build) + nixfmt + shellfmt + Go (`gofmt`/`go vet`/`go test` across `runtime/{angst,vm,shell,analyze}`) |
 | `nvim-tests.yml` | Links `domains/editor/nvim/config` → `~/.config/nvim`, lazy-syncs plugins, runs the plenary adapter test suite |
 | `secret-scan.yml` | gitleaks-action (fetch-depth 0) + trufflehog (`--results=verified,unknown`) |
 | `openwiki-update.yml` | Daily cron + manual: runs `openwiki code --update --print`, opens a PR with `openwiki/` + agent doc changes |
@@ -355,6 +356,7 @@ Nix CI uses DeterminateSystems `nix-installer-action` + `magic-nix-cache-action`
 ```bash
 just check                 # nix flake check
 just build nixos           # nix build .#nixosConfigurations.nixos.config.system.build.toplevel
+just build-ci              # nix build .#checks.x86_64-linux.build-ci (CI's host build)
 just hm nixos              # build home activation package
 just hm-switch nixos       # build + activate (run as your user, never sudo)
 just switch nixos          # sudo nixos-rebuild switch --flake .#nixos

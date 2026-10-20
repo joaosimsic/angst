@@ -26,6 +26,9 @@ hardware path="personal/nixos":
 build host="nixos":
     NIXPKGS_ALLOW_UNFREE=1 nix build .#nixosConfigurations.{{ host }}.config.system.build.toplevel --impure
 
+build-ci:
+    NIXPKGS_ALLOW_UNFREE=1 nix build '.#checks.x86_64-linux.build-ci' --impure
+
 switch host="nixos":
     sudo nixos-rebuild switch --flake .#{{ host }}
 

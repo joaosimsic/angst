@@ -21,7 +21,7 @@ in
     inherit (render) renderDomainOutputsFor renderDomainOutputFor renderProjectOutputs;
     themeLint =
       mkChecks.themeLint or (import ../../systems/theme/tests {
-        inherit lib pkgs themeSys;
+        inherit lib themeSys;
         inherit (render) renderDomainOutputsFor;
       });
   };

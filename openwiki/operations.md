@@ -40,14 +40,14 @@ Formatting is enforced by the `formatter` output (`nix fmt` → nixfmt) and CI a
 
 | Workflow | Triggers | What it runs |
 |---|---|---|
-| `checks.yml` | push (all branches) + PR | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the eval checks (themes, secrets encryption, projects/ftp pipelines, eval of all configs) + nixfmt + shellfmt + `shell-rust-fmt` + `vm-tests` (`cargo fmt --check && cargo test --workspace --locked` via `nix develop .#vm`) |
+| `checks.yml` | push (all branches, except docs-only commits: `**.md`, `justfile`) + PR | Per-check `nix build '.#checks.x86_64-linux.<name>'` jobs for the eval checks (themes, secrets encryption, projects/ftp pipelines, eval of all configs) + `build-ci` (real `ci` host toplevel build) + nixfmt + shellfmt + `shell-rust-fmt` + `vm-tests` (`cargo fmt --check && cargo test --workspace --locked` via `nix develop .#vm`) |
 | `nvim-tests.yml` | push + PR | Links `domains/editor/nvim/config` → `~/.config/nvim`, `nvim --headless '+Lazy! sync'`, then plenary adapter tests (`tests/adapters/init.lua`); lazy plugin cache keyed on `lazy-lock.json` |
 | `secret-scan.yml` | push + PR | gitleaks-action (fetch-depth 0) + trufflehog (`--results=verified,unknown`) |
 | `openwiki-update.yml` | daily cron + manual | Runs `openwiki code --update --print` (OpenRouter + LangSmith env) and opens a PR with `openwiki/`, `AGENTS.md`, `CLAUDE.md`, workflow changes |
 
 Nix CI uses DeterminateSystems `nix-installer-action` + `magic-nix-cache-action`.
 
-> CI gap: `home-theme-override-test` and `build-all` have dedicated jobs in `checks.yml`; `check-secrets-encrypted`, `check-ftp-encrypted`, and the three pipeline/declared checks run in the `eval-checks` matrix. Secret-hygiene regressions are additionally caught by gitleaks/trufflehog in `secret-scan.yml`. Functional `projects`/`ftp` checks use throwaway age keys — decryption keys never leave real hosts, so live FTP mounts remain a per-host runbook check.
+> CI gap: `home-theme-override-test` and `build-ci` have dedicated jobs in `checks.yml`; `check-secrets-encrypted`, `check-ftp-encrypted`, and the three pipeline/declared checks run in the `eval-checks` matrix. `eval-all` catches evaluation errors across every host/home config, while `build-ci` actually builds one full NixOS toplevel. Secret-hygiene regressions are additionally caught by gitleaks/trufflehog in `secret-scan.yml`. Functional `projects`/`ftp` checks use throwaway age keys — decryption keys never leave real hosts, so live FTP mounts remain a per-host runbook check.
 
 ## Git Hooks and Secret Hygiene
 

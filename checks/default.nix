@@ -15,7 +15,7 @@ let
   alternate = head (filter (n: n != host.theme) (attrNames themeSys.themes));
 
   themeLint = import ../systems/theme/tests {
-    inherit lib pkgs themeSys;
+    inherit lib themeSys;
     inherit (render) renderDomainOutputsFor;
   };
 
@@ -142,19 +142,12 @@ let
       builtins.concatStringsSep "\n" (builtins.attrValues (nixosToplevels // homeActivations))
     );
 
-  buildAllConfigs =
-    let
-      nixosDrvs = builtins.attrValues (
-        builtins.mapAttrs (_: c: c.config.system.build.toplevel) self.nixosConfigurations
-      );
-      homeDrvs = builtins.attrValues (
-        builtins.mapAttrs (_: c: c.activationPackage) (
-          builtins.removeAttrs self.homeConfigurations excludedHomes
-        )
-      );
-      allDrvs = nixosDrvs ++ homeDrvs;
-    in
-    pkgs.writeText "build-all-configs" (builtins.concatStringsSep "\n" (map (d: "${d}") allDrvs));
+  ciHost = lib.findFirst (h: h.hostname == "ci") null hostList;
+  buildCi =
+    if ciHost == null then
+      throw "checks.build-ci requires a host named \"ci\""
+    else
+      self.nixosConfigurations.${ciHost.hostname}.config.system.build.toplevel;
 in
 {
   check-password = checkPassword;
@@ -187,6 +180,6 @@ in
   login-shell-valid = loginShell.valid;
   login-shell-invalid = loginShell.invalid;
   eval-all = evalAllConfigs;
-  build-all = buildAllConfigs;
+  build-ci = buildCi;
 }
 // domainHealth
