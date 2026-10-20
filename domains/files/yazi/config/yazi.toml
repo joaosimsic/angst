@@ -1,5 +1,6 @@
 [mgr]
 show_hidden = true
+linemode = "persist"
 
 [opener]
 celluloid = [
