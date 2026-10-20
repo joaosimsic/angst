@@ -1,4 +1,4 @@
-go 1.22
+go 1.23.0
 
 use (
 	./runtime/angst
@@ -6,4 +6,5 @@ use (
 	./runtime/vm
 	./runtime/shell
 	./runtime/analyze
+	./domains/wm/i3/workspace-group
 )

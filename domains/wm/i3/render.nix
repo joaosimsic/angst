@@ -86,28 +86,50 @@ in
       bindsym $mod+Tab focus mode_toggle
       bindsym $mod+a focus parent
 
-      bindsym $mod+1 workspace number 1
-      bindsym $mod+2 workspace number 2
-      bindsym $mod+3 workspace number 3
-      bindsym $mod+4 workspace number 4
-      bindsym $mod+5 workspace number 5
-      bindsym $mod+6 workspace number 6
-      bindsym $mod+7 workspace number 7
-      bindsym $mod+8 workspace number 8
-      bindsym $mod+9 workspace number 9
-      bindsym $mod+0 workspace number 10
+      bindsym $mod+Control+1 exec --no-startup-id i3-workspace-group switch 1
+      bindsym $mod+Control+2 exec --no-startup-id i3-workspace-group switch 2
+      bindsym $mod+Control+3 exec --no-startup-id i3-workspace-group switch 3
+      bindsym $mod+Control+4 exec --no-startup-id i3-workspace-group switch 4
+      bindsym $mod+Control+5 exec --no-startup-id i3-workspace-group switch 5
+      bindsym $mod+Control+6 exec --no-startup-id i3-workspace-group switch 6
+      bindsym $mod+Control+7 exec --no-startup-id i3-workspace-group switch 7
+      bindsym $mod+Control+8 exec --no-startup-id i3-workspace-group switch 8
+      bindsym $mod+Control+9 exec --no-startup-id i3-workspace-group switch 9
+      bindsym $mod+Control+0 exec --no-startup-id i3-workspace-group switch 10
 
-      bindsym $mod+Shift+1 move container to workspace number 1
-      bindsym $mod+Shift+2 move container to workspace number 2
-      bindsym $mod+Shift+3 move container to workspace number 3
-      bindsym $mod+Shift+4 move container to workspace number 4
-      bindsym $mod+Shift+5 move container to workspace number 5
-      bindsym $mod+Shift+6 move container to workspace number 6
-      bindsym $mod+Shift+7 move container to workspace number 7
-      bindsym $mod+Shift+8 move container to workspace number 8
-      bindsym $mod+Shift+9 move container to workspace number 9
-      bindsym $mod+Shift+0 move container to workspace number 10
-      bindsym $mod+Shift+b exec --no-startup-id i3-swap-workspaces 1 2
+      bindsym $mod+Control+Shift+1 exec --no-startup-id i3-workspace-group move 1
+      bindsym $mod+Control+Shift+2 exec --no-startup-id i3-workspace-group move 2
+      bindsym $mod+Control+Shift+3 exec --no-startup-id i3-workspace-group move 3
+      bindsym $mod+Control+Shift+4 exec --no-startup-id i3-workspace-group move 4
+      bindsym $mod+Control+Shift+5 exec --no-startup-id i3-workspace-group move 5
+      bindsym $mod+Control+Shift+6 exec --no-startup-id i3-workspace-group move 6
+      bindsym $mod+Control+Shift+7 exec --no-startup-id i3-workspace-group move 7
+      bindsym $mod+Control+Shift+8 exec --no-startup-id i3-workspace-group move 8
+      bindsym $mod+Control+Shift+9 exec --no-startup-id i3-workspace-group move 9
+      bindsym $mod+Control+Shift+0 exec --no-startup-id i3-workspace-group move 10
+
+      bindsym $mod+1 exec --no-startup-id i3-workspace-group inner 1
+      bindsym $mod+2 exec --no-startup-id i3-workspace-group inner 2
+      bindsym $mod+3 exec --no-startup-id i3-workspace-group inner 3
+      bindsym $mod+4 exec --no-startup-id i3-workspace-group inner 4
+      bindsym $mod+5 exec --no-startup-id i3-workspace-group inner 5
+      bindsym $mod+6 exec --no-startup-id i3-workspace-group inner 6
+      bindsym $mod+7 exec --no-startup-id i3-workspace-group inner 7
+      bindsym $mod+8 exec --no-startup-id i3-workspace-group inner 8
+      bindsym $mod+9 exec --no-startup-id i3-workspace-group inner 9
+      bindsym $mod+0 exec --no-startup-id i3-workspace-group inner 10
+
+      bindsym $mod+Shift+1 exec --no-startup-id i3-workspace-group inner-move 1
+      bindsym $mod+Shift+2 exec --no-startup-id i3-workspace-group inner-move 2
+      bindsym $mod+Shift+3 exec --no-startup-id i3-workspace-group inner-move 3
+      bindsym $mod+Shift+4 exec --no-startup-id i3-workspace-group inner-move 4
+      bindsym $mod+Shift+5 exec --no-startup-id i3-workspace-group inner-move 5
+      bindsym $mod+Shift+6 exec --no-startup-id i3-workspace-group inner-move 6
+      bindsym $mod+Shift+7 exec --no-startup-id i3-workspace-group inner-move 7
+      bindsym $mod+Shift+8 exec --no-startup-id i3-workspace-group inner-move 8
+      bindsym $mod+Shift+9 exec --no-startup-id i3-workspace-group inner-move 9
+      bindsym $mod+Shift+0 exec --no-startup-id i3-workspace-group inner-move 10
+      bindsym $mod+Shift+b exec --no-startup-id i3-workspace-group inner-swap 1 2
 
       bindsym $mod+Shift+c reload
       bindsym $mod+Shift+r restart
@@ -129,6 +151,7 @@ in
       bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
       bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
       bindsym $mod+e exec --no-startup-id GDK_BACKEND=x11 ghostty -e yazi
+      exec_always --no-startup-id i3-workspace-group daemon
       exec_always --no-startup-id hsetroot -solid '#${p.background.base}'
       exec --no-startup-id dbus-update-activation-environment --systemd --all
       exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY PATH XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
@@ -137,6 +160,7 @@ in
 
       bar {
           status_command i3status-rs ~/.config/i3status-rust/config.toml
+          workspace_command i3-workspace-group bar
           position top
           font pango:${fontFamily} 10
           colors {
@@ -144,8 +168,8 @@ in
               statusline #${p.foreground.base}
               separator  #${p.accent.base}
               focused_workspace  #${p.background.base} #${p.background.base} #${p.foreground.base}
-              active_workspace   #${p.background.base} #${p.background.base} #${p.foreground.variant}
-              inactive_workspace #${p.background.base} #${p.background.base} #${p.accent.base}
+              active_workspace   #${p.background.base} #${p.background.base} #${p.accent.base}
+              inactive_workspace #${p.accent.base} #${p.accent.base} #${p.background.base}
               urgent_workspace   #${t.ansi.error} #${p.background.base} #${p.foreground.base}
           }
       }
