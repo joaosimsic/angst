@@ -50,12 +50,14 @@ in
       default_floating_border pixel 2
       hide_edge_borders smart
 
-      client.focused          #${t.ansi.info} #${p.background.base} #${p.foreground.base} #${t.ansi.info} #${t.ansi.info}
+      client.focused          #${t.ansi.info} #${p.background.base} #${p.foreground.base} #${t.ansi.warn} #${t.ansi.info}
       client.focused_inactive #${p.dim} #${p.background.base} #${p.accent.base} #${p.dim} #${p.dim}
       client.unfocused        #${p.background.base} #${p.background.base} #${p.accent.base} #${p.background.base} #${p.background.base}
       client.urgent           #${t.ansi.error} #${p.background.base} #${t.ansi.error} #${t.ansi.warn} #${t.ansi.warn}
 
       set $mod Mod4
+      floating_modifier $mod
+      tiling_drag modifier
 
       include ~/.config/i3/monitors.conf
       include ~/.config/i3/screenshot.conf

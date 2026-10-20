@@ -31,6 +31,8 @@ lib.mkMerge [
         blur-strength = 6;
         blur-background-fixed = true;
         blur-background-exclude = [ "class_g = 'slop'" ];
+        opacity-rule = [ "45:class_g = 'i3-drag'" ];
+        corner-radius-rules = [ "4:class_g = 'i3-drag'" ];
       };
     };
   })
