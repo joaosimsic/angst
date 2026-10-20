@@ -5,7 +5,7 @@
     "terminal.ghostty"
     "display.x11"
     "display.picom"
-    "display.lightdm"
+    "display.ly"
     "wm.i3"
     "bar.i3status-rust"
     "browser.firefox"
