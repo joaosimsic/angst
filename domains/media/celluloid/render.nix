@@ -1,11 +1,11 @@
 {
-  themesLib,
+  themeSys,
   themeName,
   checkHelpers,
 }:
 
 let
-  t = themesLib.get themeName;
+  t = themeSys.get themeName;
   inherit (checkHelpers) requireInfix;
 
   p = t.palette;
