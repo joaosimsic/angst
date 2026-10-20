@@ -15,6 +15,7 @@ let
     "agents.opencode"
     "security.age"
     "browser.firefox"
+    "browser.google-chrome"
     "git.code"
     "git.projects"
     "editor.nvim"
@@ -85,6 +86,7 @@ let
         "${home}/.config/git",
         "${home}/.cargo",
         "${home}/.mozilla",
+        "${home}/.config/google-chrome",
         "${home}/.local/share/keyrings",
         "${home}/.local/share/nushell",
         "${home}/.local/share/opencode",

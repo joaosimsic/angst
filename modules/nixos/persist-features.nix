@@ -42,6 +42,13 @@
         durable = true;
       }
     ];
+    "browser.google-chrome" = [
+      {
+        dir = ".config/google-chrome";
+        name = "google-chrome";
+        durable = true;
+      }
+    ];
     "git.code" = [
       {
         dir = ".config/git";

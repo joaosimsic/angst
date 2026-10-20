@@ -9,6 +9,7 @@
     "wm.i3"
     "bar.i3status-rust"
     "browser.firefox"
+    "browser.google-chrome"
     "chat.discord"
     "display.gpu"
     "kernel.graphical"
