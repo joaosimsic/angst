@@ -7,6 +7,7 @@
     ./nix-ld-compat.nix
     ./nushell-bridge.nix
     ./clean-desktop-shadows.nix
+    ./gtk-theme.nix
     ./qt-theme.nix
   ];
 
