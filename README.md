@@ -87,7 +87,7 @@ Optional siblings: `secrets/master/<host>.age` and `secrets/apps/` (age-encrypte
 | `nvme0n1p4` | `data` | `/home` | Nix store (`/home/nix`), games, `/home/durable` |
 | `nvme0n1p5/p6` | — | — | Windows, never touched |
 
-`/` and `/home/joao` are tmpfs. Only system state (machine-id, `/var/lib/*`, logs) persists on `state`. Durable user state — age identity (`/home/durable/age` → `~/.config/age`), git config, browser, keyrings, cargo, and projects — is bind-mounted from `data` (declared per feature in `modules/nixos/persist-features.nix`), so it survives reinstalls. `.ssh` and `.secrets` are rebuilt at boot from the age-encrypted repo stores.
+`/` and `/home/joao` are tmpfs. Only system state (machine-id, `/var/lib/*`, logs) persists on `state`. Durable user state — age identity (`/home/durable/age` → `~/.config/age`), git config, browser, Discord, keyrings, cargo, and projects — is bind-mounted from `data` (declared per feature in `modules/nixos/persist-features.nix`), so it survives reinstalls. `.ssh` and `.secrets` are rebuilt at boot from the age-encrypted repo stores.
 
 ```bash
 # New computer: boot the NixOS ISO, clone this repo, then

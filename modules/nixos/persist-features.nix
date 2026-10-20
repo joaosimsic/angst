@@ -49,6 +49,13 @@
         durable = true;
       }
     ];
+    "chat.discord" = [
+      {
+        dir = ".config/discord";
+        name = "discord";
+        durable = true;
+      }
+    ];
     "git.code" = [
       {
         dir = ".config/git";

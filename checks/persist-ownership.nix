@@ -16,6 +16,7 @@ let
     "security.age"
     "browser.firefox"
     "browser.google-chrome"
+    "chat.discord"
     "git.code"
     "git.projects"
     "editor.nvim"
@@ -87,6 +88,7 @@ let
         "${home}/.cargo",
         "${home}/.mozilla",
         "${home}/.config/google-chrome",
+        "${home}/.config/discord",
         "${home}/.local/share/keyrings",
         "${home}/.local/share/nushell",
         "${home}/.local/share/opencode",
@@ -104,6 +106,7 @@ let
     machine.succeed("runuser -u ${username} -- test -r ${home}/.secrets/opencode-go-key")
     machine.succeed("runuser -u ${username} -- test -w ${home}/.config")
     machine.succeed("runuser -u ${username} -- test -w ${home}/.config/age")
+    machine.succeed("runuser -u ${username} -- test -w ${home}/.config/discord")
     machine.succeed("runuser -u ${username} -- test -w ${home}/.secrets")
 
     # system-level persistence on the impermanence root stays root-owned
