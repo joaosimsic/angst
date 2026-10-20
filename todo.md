@@ -63,7 +63,7 @@
 
 # i3
 
-- [ ] mouse hide button
+- [ ] mouse hide button and i3 shortcut
 - [ ] switch active and inactive ws number colors
 - [ ] better differentiate active and inactive windows
 
