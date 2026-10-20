@@ -4,6 +4,35 @@ local Keybinder = require("common.Keybinder")
 ---@type Logger
 local Logger = require("common.Logger")
 
+local office_extensions = {
+	doc = true,
+	docx = true,
+	docm = true,
+	dot = true,
+	dotx = true,
+	dotm = true,
+	odt = true,
+	ott = true,
+	rtf = true,
+	xls = true,
+	xlsx = true,
+	xlsm = true,
+	xlt = true,
+	xltx = true,
+	xltm = true,
+	ods = true,
+	ots = true,
+	csv = true,
+	ppt = true,
+	pptx = true,
+	pptm = true,
+	pot = true,
+	potx = true,
+	potm = true,
+	odp = true,
+	otp = true,
+}
+
 ---@type Plugin
 return {
 	"mikavilpas/yazi.nvim",
@@ -11,6 +40,16 @@ return {
 	event = "VeryLazy",
 	opts = {
 		open_for_directories = false,
+		open_file_function = function(chosen_file, config, state)
+			local extension = vim.fn.fnamemodify(chosen_file, ":e"):lower()
+
+			if office_extensions[extension] then
+				vim.ui.open(chosen_file)
+				return
+			end
+
+			require("yazi.openers").open_file(chosen_file, config, state)
+		end,
 		keymaps = {
 			show_help = "<f1>",
 		},
