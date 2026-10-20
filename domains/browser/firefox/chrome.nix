@@ -493,9 +493,6 @@ let
       color: var(--angst-fg) !important;
       border: none !important;
     }
-    #TabsToolbar {
-      visibility: collapse !important;
-    }
     #PersonalToolbar {
       background: var(--angst-bg) !important;
       color: var(--angst-fg) !important;
