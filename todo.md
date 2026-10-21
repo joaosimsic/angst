@@ -78,6 +78,7 @@
 - [x] lock desktop key that goes to ly or DM
 - [x] weird icon on the right corner of 2nd monitor bar
 - [x] discord integration to see if im connected to a voice channel and if im muted or deaf
+- [ ] question bind like mod+? that shows the shortcut for i3 elements
 
 # opencode
 
@@ -87,7 +88,7 @@
 
 # vial
 
-- [ ] handle portuguese
+- [x] handle portuguese
 
 # install
 

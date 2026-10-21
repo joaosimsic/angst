@@ -87,7 +87,8 @@ in
       bindsym $mod+v split h
       bindsym $mod+b split v
       bindsym $mod+f fullscreen toggle
-      bindsym $mod+Shift+space floating toggle
+      bindsym $mod+Shift+f floating toggle
+      bindsym $mod+Control+s sticky toggle
       bindsym $mod+Tab focus mode_toggle
       bindsym $mod+a focus parent
       bindsym $mod+p exec --no-startup-id i3-mouse-hide toggle

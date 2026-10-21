@@ -154,7 +154,29 @@ func opacityTargets(root *i3.Node, activeWorkspace string) map[int64]bool {
 	}
 
 	walk(root)
+	for _, window := range stickyWindowIDs(root) {
+		targets[window] = true
+	}
 	return targets
+}
+
+func stickyWindowIDs(node *i3.Node) []int64 {
+	windows := make([]int64, 0)
+	var walk func(node *i3.Node)
+	walk = func(node *i3.Node) {
+		if node.Window != 0 && node.Sticky {
+			windows = append(windows, node.Window)
+			return
+		}
+		for _, child := range node.Nodes {
+			walk(child)
+		}
+		for _, child := range node.FloatingNodes {
+			walk(child)
+		}
+	}
+	walk(node)
+	return windows
 }
 
 func windowIDs(node *i3.Node) []int64 {
