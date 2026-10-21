@@ -1,70 +1,37 @@
 { lib }:
 
 let
-  schema = import ./schema.nix { inherit lib; };
-  color = import ./color.nix { inherit lib; };
+  color = import ./internal/color.nix { inherit lib; };
+  catalog = import ./internal/catalog.nix {
+    inherit lib;
+    themesDir = ./themes;
+  };
+  normalize = import ./internal/normalize.nix {
+    inherit lib;
+    inherit (color) stripHash hexToRgb;
+  };
 
   inherit (color)
-    stripHash
-    hexToRgb
-    relativeLuminance
-    contrastRatio
     ensureContrast
+    contrastRatio
+    relativeLuminance
     ;
 
-  themesDir = ./themes;
+  inherit (normalize)
+    normalizeTheme
+    withRgb
+    ;
 
-  themeFiles = lib.filterAttrs (
-    filename: type:
-    type == "regular"
-    && lib.hasSuffix ".nix" filename
-    && filename != "default.nix"
-    && filename != "schema.nix"
-  ) (builtins.readDir themesDir);
+  themes = lib.mapAttrs (_: entry: entry.value) catalog.index;
 
-  themes = lib.mapAttrs' (
-    filename: _:
-    let
-      name = lib.removeSuffix ".nix" filename;
-    in
-    lib.nameValuePair name (schema.validateOrThrow (import (themesDir + "/${filename}")))
-  ) themeFiles;
-
-  normalizeSub = sub: lib.mapAttrs (_: stripHash) sub;
-
-  normalizeTheme =
-    theme:
-    let
-      p = theme.palette;
-    in
-    {
-      palette = {
-        background = normalizeSub p.background;
-        surface = normalizeSub p.surface;
-        foreground = normalizeSub p.foreground;
-        accent = normalizeSub p.accent;
-        dim = stripHash p.dim;
-      };
-      ansi = lib.mapAttrs (_: stripHash) theme.ansi;
-    }
-    // builtins.removeAttrs theme [
-      "palette"
-      "ansi"
-    ];
-
-  withRgb =
-    theme:
-    let
-      walk =
-        prefix: value:
-        if builtins.isString value then
-          { "${prefix}_RGB" = hexToRgb value; }
-        else if builtins.isAttrs value then
-          lib.concatMapAttrs (key: sub: walk "${prefix}_${key}" sub) value
-        else
-          { };
-    in
-    theme // walk "" theme;
+  checkHelpers =
+    args:
+    import ./internal/check-helpers.nix (
+      {
+        inherit lib;
+      }
+      // args
+    );
 
   get =
     name:
@@ -122,14 +89,31 @@ let
       builtins.throw "Unknown theme '${name}'. Available themes: ${lib.concatStringsSep ", " (lib.attrNames themes)}";
 in
 {
+  inherit (catalog)
+    entries
+    index
+    diagnostics
+    ;
+
   inherit
     themes
     get
     normalizeTheme
     withRgb
+    checkHelpers
     ensureContrast
     contrastRatio
     relativeLuminance
     ;
+
+  contrast = {
+    inherit
+      ensureContrast
+      contrastRatio
+      relativeLuminance
+      ;
+  };
+
+  homeModules = [ ./home.nix ];
   default = "miasma";
 }

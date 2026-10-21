@@ -18,6 +18,8 @@ let
   inherit (pkgs) lib;
 
   effectiveTheme = if themeOverride != null then themeOverride else host.theme;
+  themeNames = lib.attrNames host.scan.themes.themes;
+  isDesktop = builtins.elem "desktop" host.profiles;
   userCfg = {
     inherit (host) username;
     homeDirectory = "/home/${host.username}";
@@ -32,12 +34,6 @@ let
   };
 
   inherit (persistPaths) enabledFeatures;
-
-  themeModule = import ../../modules/home/themeModule.nix {
-    inherit lib;
-    themeSys = host.scan.themes;
-    hostTheme = effectiveTheme;
-  };
 
   hardwarePath =
     let
@@ -77,7 +73,9 @@ inputs.nixpkgs.lib.nixosSystem {
     inherit (host.scan) themes;
     themeSys = host.scan.themes;
     userConfig = userCfg;
+    inherit isDesktop themeNames;
     theme = effectiveTheme;
+    themeDefault = effectiveTheme;
     flakeSelf = self;
     inherit inputs runtime store;
   };
@@ -165,7 +163,9 @@ inputs.nixpkgs.lib.nixosSystem {
           inherit (host.scan) themes;
           themeSys = host.scan.themes;
           userConfig = userCfg;
+          inherit isDesktop themeNames;
           theme = effectiveTheme;
+          themeDefault = effectiveTheme;
           flakeSelf = self;
           inherit inputs runtime store;
         };
@@ -173,8 +173,8 @@ inputs.nixpkgs.lib.nixosSystem {
         users.${host.username} = {
           imports = [
             ../../modules/home
-            themeModule
           ]
+          ++ host.scan.themes.homeModules
           ++ appHomeModules
           ++ hmModules
           ++ host.toolchainModules

@@ -1,7 +1,7 @@
 { lib }:
 
 let
-  color = import ../color.nix { inherit lib; };
+  color = import ../internal/color.nix { inherit lib; };
   inherit (color)
     stripHash
     hexToRgb

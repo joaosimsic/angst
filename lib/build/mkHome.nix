@@ -20,18 +20,14 @@ let
   inherit (pkgs) lib;
 
   effectiveTheme = if themeOverride != null then themeOverride else host.theme;
+  themeNames = lib.attrNames host.scan.themes.themes;
+  isDesktop = builtins.elem "desktop" host.profiles;
   userCfg = {
     inherit (host) username;
     homeDirectory = "/home/${host.username}";
   };
 
   appHomeModules = map host.scan.domains.mkDomainModule host.scan.domains.homeEntries;
-
-  themeModule = import ../../modules/home/themeModule.nix {
-    inherit lib;
-    themeSys = host.scan.themes;
-    hostTheme = effectiveTheme;
-  };
 
   secrets = import ../../modules/secrets.nix {
     inherit
@@ -62,15 +58,17 @@ inputs.home-manager.lib.homeManagerConfiguration {
     themeSys = host.scan.themes;
     hostName = host.hostname;
     userConfig = userCfg;
+    inherit isDesktop themeNames;
     theme = effectiveTheme;
+    themeDefault = effectiveTheme;
     flakeSelf = self;
     inherit inputs runtime store;
   };
 
   modules = [
     ../../modules/home
-    themeModule
   ]
+  ++ host.scan.themes.homeModules
   ++ appHomeModules
   ++ hmModules
   ++ host.toolchainModules

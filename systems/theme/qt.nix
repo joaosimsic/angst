@@ -1,14 +1,14 @@
 {
+  config,
+  isDesktop,
   lib,
   pkgs,
-  host,
-  theme,
   themeSys,
   ...
 }:
 
 let
-  t = themeSys.get theme;
+  t = themeSys.get config.theme;
 
   csv = key: lib.replaceStrings [ " " ] [ "," ] t."_${key}";
 
@@ -37,8 +37,8 @@ let
 
   kdeglobals = ''
     [General]
-    ColorScheme=${theme}
-    Name=${theme}
+    ColorScheme=${config.theme}
+    Name=${config.theme}
     accentColor=${csv "palette_accent_base_RGB"}
     shadeSortColumn=true
 
@@ -79,7 +79,7 @@ let
   '';
 in
 {
-  config = lib.mkIf (builtins.elem "desktop" host.profiles) {
+  config = lib.mkIf isDesktop {
     qt = {
       enable = true;
       platformTheme = {

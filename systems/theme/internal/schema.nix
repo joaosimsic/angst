@@ -1,9 +1,9 @@
 { lib }:
 
 let
-  t = import ../../lib/core/types.nix { inherit lib; };
-  result = import ../../lib/core/result.nix { inherit lib; };
-  schemaEngine = import ../../lib/core/schema { inherit lib; };
+  t = import ../../../lib/core/types.nix { inherit lib; };
+  result = import ../../../lib/core/result.nix { inherit lib; };
+  schemaEngine = import ../../../lib/core/schema { inherit lib; };
 
   hexColor = t.addCheck t.str (value: builtins.match "[#][0-9a-fA-F]{6}" value != null);
 

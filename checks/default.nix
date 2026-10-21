@@ -36,7 +36,7 @@ let
   };
 
   themeSemanticDistinct = import ../systems/theme/tests/semanticDistinct.nix {
-    inherit lib pkgs;
+    inherit pkgs;
     themeSys = host.scan.themes;
     themeName = host.theme;
   };
@@ -169,6 +169,7 @@ in
   check-tex = checkTex;
   check-session-env = checkSessionEnv;
   check-session-usability = checkSessionUsability;
+  inherit themeLint;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;
   lint-desktop = lintDesktop;
   lint-shell = lintShell;

@@ -4,8 +4,6 @@
 
 let
   inherit (context)
-    lib
-    themeSys
     pkgs
     mkChecks
     render
@@ -13,16 +11,12 @@ let
     ;
 in
 {
-  checks.${defaultSystem} = mkChecks;
+  checks.${defaultSystem} = removeAttrs mkChecks [ "themeLint" ];
 
   formatter.${defaultSystem} = pkgs.nixfmt;
 
   lib = {
     inherit (render) renderDomainOutputsFor renderDomainOutputFor renderProjectOutputs;
-    themeLint =
-      mkChecks.themeLint or (import ../../systems/theme/tests {
-        inherit lib themeSys;
-        inherit (render) renderDomainOutputsFor;
-      });
+    inherit (mkChecks) themeLint;
   };
 }

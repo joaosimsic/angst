@@ -35,10 +35,9 @@ rec {
     themeName:
     let
       themeSys = host.scan.themes;
-      checkHelpers = import ../systems/theme/assertions.nix {
-        inherit lib;
-        theme = themeSys.get themeName;
+      checkHelpers = themeSys.checkHelpers {
         inherit themeName;
+        theme = themeSys.get themeName;
       };
       domainRendererPaths = map (e: e.path + "/render.nix") (
         lib.filter (e: e.hasRender or false) host.scan.domains.homeEntries

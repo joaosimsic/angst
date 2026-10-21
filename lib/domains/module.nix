@@ -74,8 +74,7 @@ let
           store
           host
           ;
-        checkHelpers = import ../../systems/theme/assertions.nix {
-          inherit lib;
+        checkHelpers = themeSys.checkHelpers {
           themeName = config.theme;
           theme = themeSys.get config.theme;
         };

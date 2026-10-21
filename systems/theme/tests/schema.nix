@@ -1,7 +1,7 @@
 { lib }:
 
 let
-  themeSchema = import ../schema.nix { inherit lib; };
+  themeSchema = import ../internal/schema.nix { inherit lib; };
   result = import ../../../lib/core/result.nix { inherit lib; };
   match = import ../../../lib/core/match.nix { inherit lib; };
   types = import ../../../lib/core/types.nix { inherit lib; };

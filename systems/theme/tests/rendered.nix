@@ -8,7 +8,7 @@
 
 let
   theme = themeSys.get themeName;
-  inherit (import ../assertions.nix { inherit lib themeName theme; }) requireDistinct;
+  inherit (themeSys.checkHelpers { inherit themeName theme; }) requireDistinct;
 
   allOutputs = renderDomainOutputsFor themeName;
 

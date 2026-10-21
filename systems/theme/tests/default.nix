@@ -12,7 +12,8 @@ let
   unitResults =
     import ./color.nix { inherit lib; }
     ++ import ./schema.nix { inherit lib; }
-    ++ import ./themes.nix { inherit lib themeSys; };
+    ++ import ./themes.nix { inherit lib themeSys; }
+    ++ import ./catalog.nix { inherit lib themeSys; };
 
   renderResults = import ./render.nix {
     inherit

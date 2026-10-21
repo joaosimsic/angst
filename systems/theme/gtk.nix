@@ -1,19 +1,19 @@
 {
+  config,
+  isDesktop,
   lib,
-  host,
-  theme,
   themeSys,
   ...
 }:
 
 let
-  t = themeSys.get theme;
+  t = themeSys.get config.theme;
   gtkTheme = if t.isDark then "Adwaita:dark" else "Adwaita";
   colorScheme = if t.isDark then "prefer-dark" else "default";
   preferDark = if t.isDark then "1" else "0";
 in
 {
-  config = lib.mkIf (builtins.elem "desktop" host.profiles) {
+  config = lib.mkIf isDesktop {
     dconf.settings."org/gnome/desktop/interface" = {
       gtk-theme = lib.mkDefault "Adwaita";
       "color-scheme" = lib.mkDefault colorScheme;
