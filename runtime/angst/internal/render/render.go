@@ -117,7 +117,7 @@ func Render(args []string) int {
 		}
 	}
 	if themeName == "" {
-		themeName = "monochrome"
+		themeName = "miasma"
 	}
 
 	if _, err := os.Stat(filepath.Join(repoRoot, "domains")); err != nil {

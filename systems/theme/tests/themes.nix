@@ -46,13 +46,13 @@ let
       (assertTrue "${name}: isDark is bool" (builtins.isBool t.isDark))
     ];
 
-  monochrome = themeSys.get "monochrome";
+  miasma = themeSys.get "miasma";
 in
 [
-  (assertTrue "at least 9 bundled themes" (lib.length themeNames >= 9))
-  (assertTrue "monochrome present" (themeSys.themes ? monochrome))
-  (assertEq "default is monochrome" "monochrome" themeSys.default)
-  (assertEq "monochrome background stripped" "0a0a0a" monochrome.palette.background.base)
-  (assertEq "monochrome background RGB" "10 10 10" monochrome."_palette_background_base_RGB")
+  (assertTrue "at least 8 bundled themes" (lib.length themeNames >= 8))
+  (assertTrue "miasma present" (themeSys.themes ? miasma))
+  (assertEq "default is miasma" "miasma" themeSys.default)
+  (assertEq "miasma background stripped" "272727" miasma.palette.background.base)
+  (assertEq "miasma background RGB" "39 39 39" miasma."_palette_background_base_RGB")
 ]
 ++ lib.concatMap checkTheme themeNames

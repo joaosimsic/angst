@@ -29,33 +29,32 @@ angst has a **compact color-theme system** that powers consistent theming across
 | `ansi.info` | Information |
 | `ansi.success` | Success |
 
-## Available Themes (9)
+## Available Themes (8)
 
 Defined as plain attrsets in `/themes/<name>.nix`:
 
 | Theme | Style | Background | Accent |
 |-------|-------|------------|--------|
-| `monochrome` **(default)** | Pure grayscale | `#0a0a0a` | `#b3b3b3` |
 | `catppuccin-mocha` | Rich purples/blues | `#1e1e2e` | `#f9e2af` |
 | `github` | GitHub dark | `#010409` | `#ff7b72` |
 | `gotham` | Dark teal/blue-green | `#0c1014` | `#c23127` |
 | `kanagawa` | Warm earthy hues | `#181616` | `#c4b28a` |
 | `lotus` | Light/warm lotus | `#f2ecbc` | `#c84053` |
-| `miasma` | Earthy/desert tones | `#222222` | `#b36d43` |
+| `miasma` **(default)** | Earthy/desert tones | `#272727` | `#b36d43` |
 | `noctis` | Dark teal/blue | `#03191b` | `#e4b781` |
 | `rose-pine` | Rose-pine dusk | `#191724` | `#eb6f92` |
 
 ```nix
-# themes/monochrome.nix (excerpt)
+# themes/miasma.nix (excerpt)
 {
   palette = {
-    background = { base = "#0a0a0a"; variant = "#0a0a0a"; };
-    surface    = { base = "#858585"; variant = "#a7a7a7"; };
-    foreground = { base = "#8f8f8f"; variant = "#eeeeee"; };
-    accent     = { base = "#b3b3b3"; variant = "#919191"; };
-    dim = "#9b9b9b";
+    background = { base = "#272727"; variant = "#232323"; };
+    surface    = { base = "#78824b"; variant = "#5f875f"; };
+    foreground = { base = "#c9a554"; variant = "#d7c483"; };
+    accent     = { base = "#b36d43"; variant = "#bb7744"; };
+    dim = "#685742";
   };
-  ansi = { error = "#9b9b9b"; warn = "#b3b3b3"; info = "#8f8f8f"; success = "#a7a7a7"; };
+  ansi = { error = "#d9534f"; warn = "#df9f28"; info = "#5f9ea0"; success = "#6e9643"; };
 }
 ```
 
@@ -68,7 +67,7 @@ Defined as plain attrsets in `/themes/<name>.nix`:
 - `withRgb` — walks every token string and adds a `<path>_RGB` sibling (`"r g b"` integer triple) for apps that need numeric colors (e.g. i3);
 - `get name` — returns the theme plus `safe.*` contrast-checked tokens: `ensureContrast` computes contrast ratios (default threshold 4.5; e.g. `miasma` opts out via `contrastThreshold = 0`) and provides `surfaceVariantOnForegroundVariant` for foreground-on-surface combinations.
 
-All 9 themes must load (`checks/theme/entries.nix`); the four `ansi.*` roles must be mutually distinct (`checks/theme/semanticDistinct.nix`); every theme passes through the render checks (`checks/theme/rendered.nix`).
+All 8 themes must load (`checks/theme/entries.nix`); the four `ansi.*` roles must be mutually distinct (`checks/theme/semanticDistinct.nix`); every theme passes through the render checks (`checks/theme/rendered.nix`).
 
 ## Rendering Integration
 

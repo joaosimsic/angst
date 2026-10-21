@@ -92,7 +92,7 @@ in
     inherit system pkgs;
     hostname = decl.hostname or "nixos";
     username = decl.username or "user";
-    theme = decl.theme or "monochrome";
+    theme = decl.theme or "miasma";
 
     password =
       decl.password

@@ -53,7 +53,7 @@ nix run .#lint-themes                # fast, eval-only theme check
 
 ### `@hosts/` — Machine Declarations
 
-Each machine is `hosts/<domain>/<hostname>/default.nix`, a pure data decl. A directory of host directories is a domain (e.g. `personal/` contains `mint/` and `nixos/`). `lib/discover.nix` finds hosts recursively; `lib/resolve.nix` normalizes each decl into a `host` object with defaults (`system`, `hostname`, `username`, `theme = "monochrome"`, `profiles = ["base"]`, `type = "nixos"`, …).
+Each machine is `hosts/<domain>/<hostname>/default.nix`, a pure data decl. A directory of host directories is a domain (e.g. `personal/` contains `mint/` and `nixos/`). `lib/discover.nix` finds hosts recursively; `lib/resolve.nix` normalizes each decl into a `host` object with defaults (`system`, `hostname`, `username`, `theme = "miasma"`, `profiles = ["base"]`, `type = "nixos"`, …).
 
 ```nix
 {
@@ -270,7 +270,7 @@ Profiles replace host-specific `home.nix` / `configuration.nix` files. Each is a
 
 ### `@themes/` — Color Token Definitions
 
-9 themes, each a compact Nix attrset with 13 tokens (**9 palette + 4 ansi**): `background`, `surface`, `foreground`, `accent` (each `{ base, variant }`), `dim`, and `ansi.error/warn/info/success`. Available: `catppuccin-mocha`, `github`, `gotham`, `kanagawa`, `lotus`, `miasma`, `monochrome` (default), `noctis`, `rose-pine`.
+8 themes, each a compact Nix attrset with 13 tokens (**9 palette + 4 ansi**): `background`, `surface`, `foreground`, `accent` (each `{ base, variant }`), `dim`, and `ansi.error/warn/info/success`. Available: `catppuccin-mocha`, `github`, `gotham`, `kanagawa`, `lotus`, `miasma` (default), `noctis`, `rose-pine`.
 
 `themes/default.nix` normalizes (strips `#`, validates hex), enriches with RGB variants (`_RGB`) for apps that need integer colors, and provides contrast-checked `safe.*` tokens. Themes resolve at eval time via `themeSys.get "<name>"` and are rendered into every domain config. See [openwiki/themes.md](openwiki/themes.md).
 

@@ -56,7 +56,7 @@ let
 
     theme = mkOption {
       type = types.enum (builtins.attrNames themeSys.themes);
-      default = themeSys.default;
+      inherit (themeSys) default;
     };
 
     monitors = t.option t.attrsOf monitorType;

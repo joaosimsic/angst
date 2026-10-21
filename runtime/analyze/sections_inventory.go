@@ -55,7 +55,7 @@ func sectionHardcodedStrings() string {
 		{"x86_64", "architecture"},
 		{"allowUnfree", "nixpkgs config"},
 		{"generic", "default host"},
-		{"monochrome", "default theme"},
+		{"miasma", "default theme"},
 		{"NIX_", "nix env vars"},
 		{"ANGST_", "angst env vars"},
 	}
@@ -117,7 +117,7 @@ func sectionThemeInventory() string {
 	for _, t := range themes {
 		loc := len(strings.Split(readNix(filepath.Join(themesDir, t+".nix")), "\n"))
 		defaultMark := ""
-		if t == "monochrome" {
+		if t == "miasma" {
 			defaultMark = " (default)"
 		}
 		lines = append(lines, fmt.Sprintf("  - `%s` — %d LOC%s", t, loc, defaultMark))

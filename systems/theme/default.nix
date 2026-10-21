@@ -131,5 +131,5 @@ in
     contrastRatio
     relativeLuminance
     ;
-  default = "monochrome";
+  default = "miasma";
 }

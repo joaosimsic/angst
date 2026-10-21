@@ -3,7 +3,7 @@
   system = "x86_64-linux";
   hostname = "ci";
   username = "runner";
-  theme = "monochrome";
+  theme = "miasma";
   profiles = [ "ci" ];
   toolchains = [ "nix" ];
 }

@@ -45,8 +45,8 @@ let
   validate =
     value:
     engine.validate {
-      schema = themeSchema.schema;
-      value = value;
+      inherit (themeSchema) schema;
+      inherit value;
     };
 
   formatted = r: result.format r.error;
@@ -64,15 +64,15 @@ in
   )
 
   # --- structural failures ------------------------------------------------
-  (assertTrue "missing field fails" (!((validate (builtins.removeAttrs valid [ "ansi" ])).ok)))
+  (assertTrue "missing field fails" (!(validate (builtins.removeAttrs valid [ "ansi" ])).ok))
   (assertTrue "missing field message" (
     contains "missing required field" (formattedOf (builtins.removeAttrs valid [ "ansi" ]))
   ))
-  (assertTrue "unknown field fails" (!((validate (valid // { extra = true; })).ok)))
+  (assertTrue "unknown field fails" (!(validate (valid // { extra = true; })).ok))
   (assertTrue "unknown field message" (
     contains "unknown field" (formattedOf (valid // { extra = true; }))
   ))
-  (assertTrue "non-set root fails" (!((validate "nope").ok)))
+  (assertTrue "non-set root fails" (!(validate "nope").ok))
 
   # --- scalar failures ----------------------------------------------------
   (assertTrue "invalid hex fails" (
