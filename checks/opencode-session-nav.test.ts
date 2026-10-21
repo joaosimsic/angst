@@ -1,5 +1,7 @@
+import { CopyVisual } from "../domains/agents/opencode/config/tui-plugins/vim-copy.ts"
 import { describe, expect, test } from "bun:test"
 import plugin from "../domains/agents/opencode/config/tui-plugins/session-nav.ts"
+import { ChatVisual } from "../domains/agents/opencode/config/tui-plugins/vim-chat.ts"
 import { getMode } from "../domains/agents/opencode/config/tui-plugins/vim-mode.ts"
 
 type KeyInput = {
@@ -163,6 +165,81 @@ function fakePrompt(initial = "", cursor = 0) {
   }
 }
 
+function fakeChatRenderer() {
+  const calls = { start: 0, update: 0, clear: 0 }
+  const scrollCalls: number[] = []
+  const boxes = new Map<string, any>()
+  const children: any[] = []
+  let container: any = null
+  let selectionText = ""
+  const content: any = {
+    x: 0,
+    y: 0,
+    width: 30,
+    height: 20,
+    getChildren: () => children,
+    findDescendantById: (id: string) => boxes.get(id),
+  }
+  const scrollbox: any = {
+    x: 0,
+    y: 0,
+    width: 30,
+    height: 20,
+    content,
+    scrollBy(delta: number) {
+      scrollCalls.push(delta)
+      content.y -= delta
+      for (const child of children) child.y -= delta
+    },
+    getChildren: () => [content],
+  }
+  const root: any = {
+    getChildren: () => [scrollbox],
+    findDescendantById: (id: string) => boxes.get(id),
+  }
+  const renderer: any = {
+    root,
+    requestRender() {},
+    getSelection: () => ({ getSelectedText: () => selectionText }),
+    getSelectionContainer: () => container,
+    startSelection(anchor: any) {
+      calls.start += 1
+      container = anchor.parent ?? content
+    },
+    updateSelection(renderable: any) {
+      calls.update += 1
+      if (!renderable) container = content
+    },
+    clearSelection() {
+      calls.clear += 1
+      container = null
+    },
+  }
+  return {
+    renderer,
+    calls,
+    scrollCalls,
+    setSelectionText(text: string) {
+      selectionText = text
+    },
+    addUser(id: string, y: number, height = 2) {
+      const box: any = {
+        id,
+        x: 0,
+        y,
+        width: 30,
+        height,
+        selectable: true,
+        parent: content,
+        getChildren: () => [],
+      }
+      boxes.set(id, box)
+      children.push(box)
+      return box
+    },
+  }
+}
+
 type HarnessOptions = {
   route?: { name: string; params?: { sessionID?: unknown } }
   status?: { type?: string }
@@ -171,6 +248,9 @@ type HarnessOptions = {
   dialogOpen?: boolean
   mode?: string
   prompt?: Prompt | null
+  messages?: readonly { id: string; role: string }[]
+  parts?: Record<string, readonly { type?: string; text?: string; synthetic?: boolean }[]>
+  renderer?: any
 }
 
 function harness(options: HarnessOptions = {}) {
@@ -182,6 +262,8 @@ function harness(options: HarnessOptions = {}) {
     dialogOpen: options.dialogOpen ?? false,
     mode: options.mode ?? "base",
     prompt: options.prompt === undefined ? null : options.prompt,
+    messages: options.messages ?? [],
+    parts: options.parts ?? {},
   }
   const dispatches: string[] = []
   const toasts: Array<{ message: string }> = []
@@ -201,7 +283,9 @@ function harness(options: HarnessOptions = {}) {
         status: () => state.status,
         permission: () => state.permissions,
         question: () => state.questions,
+        messages: () => state.messages,
       },
+      part: (id: string) => state.parts[id] ?? [],
     },
     ui: {
       dialog: {
@@ -218,6 +302,7 @@ function harness(options: HarnessOptions = {}) {
       get currentFocusedEditor() {
         return state.prompt ?? undefined
       },
+      ...options.renderer,
     },
     keymap: {
       createKeyMatcher: (key: string) => (event: { name: string }) => event.name === key,
@@ -333,9 +418,8 @@ describe("vim modes", () => {
     expect(h.dispatches).toHaveLength(7)
   })
 
-  test("does not enter while busy, blocked, in a dialog, or outside a prompt route", async () => {
+  test("does not enter while blocked, in a dialog, or outside a prompt route", async () => {
     const cases = [
-      harness({ status: { type: "busy" } }),
       harness({ permissions: [{}] }),
       harness({ questions: [{}] }),
       harness({ dialogOpen: true }),
@@ -350,13 +434,23 @@ describe("vim modes", () => {
     }
   })
 
-  test("exits when the session becomes busy or the route changes", async () => {
-    const h = await loaded()
-    h.press("escape")
+  test("enters and stays normal while the session is busy", async () => {
+    const h = await loaded({ status: { type: "busy" } })
+    expect(h.press("escape")).toBe(1)
+    expect(getMode()).toBe("normal")
     h.emit("session.status", { sessionID: "s", status: { type: "busy" } })
-    expect(h.press("j")).toBe(0)
-    expect(h.dispatches).toHaveLength(0)
+    expect(h.press("j")).toBe(1)
+    expect(h.dispatches).toEqual(["session.line.down"])
+  })
 
+  test("Ctrl+C enters normal while busy", async () => {
+    const h = await loaded({ status: { type: "busy" } })
+    expect(h.press({ name: "c", ctrl: true })).toBe(1)
+    expect(getMode()).toBe("normal")
+  })
+
+  test("exits when the route changes", async () => {
+    const h = await loaded()
     h.press("escape")
     h.setRoute({ name: "home" })
     expect(h.press("j")).toBe(0)
@@ -447,6 +541,144 @@ describe("vim modes", () => {
     expect(getMode()).toBe("normal")
     h.press("i")
     expect(getMode()).toBe("insert")
+  })
+
+  test("Tab passes through in normal and insert", async () => {
+    const insert = await loaded()
+    expect(insert.press({ name: "tab" })).toBe(0)
+
+    const normal = await loaded()
+    normal.press("escape")
+    expect(normal.press({ name: "tab" })).toBe(0)
+    expect(normal.press({ name: "tab", shift: true })).toBe(0)
+    expect(normal.press({ name: "backtab" })).toBe(0)
+    expect(getMode()).toBe("normal")
+  })
+
+  test("Ctrl+C enters normal from insert and clears or exits in normal", async () => {
+    const text = await loaded({ prompt: fakePrompt("draft", 0) })
+    text.press("escape")
+    expect(text.press({ name: "c", ctrl: true })).toBe(1)
+    expect(text.dispatches).toContain("prompt.clear")
+    expect(getMode()).toBe("normal")
+
+    const empty = await loaded()
+    empty.press("escape")
+    expect(empty.press({ name: "c", ctrl: true })).toBe(0)
+    expect(getMode()).toBe("insert")
+
+    const insert = await loaded({ prompt: fakePrompt("draft", 0) })
+    insert.press("escape")
+    insert.press("i")
+    expect(insert.press({ name: "c", ctrl: true })).toBe(1)
+    expect(getMode()).toBe("normal")
+  })
+
+  test("chat visual selects whole turns", async () => {
+    const fake = fakeChatRenderer()
+    fake.addUser("u1", 1)
+    fake.addUser("u2", 8)
+    const messages = [
+      { id: "u1", role: "user" },
+      { id: "a1", role: "assistant" },
+      { id: "u2", role: "user" },
+      { id: "a2", role: "assistant" },
+    ]
+    const parts = {
+      u1: [{ type: "text", text: "first" }],
+      a1: [{ type: "text", text: "reply one" }],
+      u2: [{ type: "text", text: "second" }],
+      a2: [{ type: "text", text: "reply two" }],
+    }
+    const chat = new ChatVisual({
+      sessionID: () => "s",
+      renderer: fake.renderer,
+      messages: () => messages,
+      parts: (id) => parts[id as keyof typeof parts] ?? [],
+      requestRender() {},
+    })
+
+    expect(chat.enter()).toBe(true)
+    expect(chat.selectedText()).toBe("second\n\nreply two")
+    expect(fake.calls.start).toBeGreaterThan(0)
+
+    expect(chat.handle({ name: "k" })).toBe("stay")
+    expect(chat.selectedText()).toBe("first\n\nreply one\n\nsecond\n\nreply two")
+    expect(chat.handle({ name: "g" })).toBe("stay")
+    expect(chat.handle({ name: "g" })).toBe("stay")
+    expect(chat.selectedText()).toBe("first\n\nreply one")
+    expect(chat.handle({ name: "G" })).toBe("stay")
+    expect(chat.selectedText()).toBe("second\n\nreply two")
+    expect(chat.handle({ name: "y" })).toBe("copy")
+  })
+
+  test("empty prompt enters contextual chat visual", async () => {
+    const fake = fakeChatRenderer()
+    fake.addUser("u1", 1)
+    fake.addUser("u2", 8)
+    const h = await loaded({
+      prompt: fakePrompt("", 0),
+      renderer: fake.renderer,
+      messages: [
+        { id: "u1", role: "user" },
+        { id: "a1", role: "assistant" },
+        { id: "u2", role: "user" },
+        { id: "a2", role: "assistant" },
+      ],
+      parts: {
+        u1: [{ type: "text", text: "first" }],
+        a1: [{ type: "text", text: "reply one" }],
+        u2: [{ type: "text", text: "second" }],
+        a2: [{ type: "text", text: "reply two" }],
+      },
+    })
+    h.press("escape")
+    h.press("v")
+    expect(getMode()).toBe("visual-chat")
+    expect(fake.calls.start).toBeGreaterThan(0)
+    h.press("escape")
+    expect(getMode()).toBe("normal")
+    expect(fake.calls.clear).toBeGreaterThan(0)
+  })
+
+  test("V uses centered line copy with scrolling selection", async () => {
+    const fake = fakeChatRenderer()
+    fake.addUser("u1", 8, 5)
+    fake.setSelectionText("line one\nline two")
+    const h = await loaded({
+      prompt: fakePrompt("", 0),
+      renderer: fake.renderer,
+    })
+    h.press("escape")
+    h.press("V")
+    expect(getMode()).toBe("visual-copy")
+    expect(fake.calls.start).toBeGreaterThan(0)
+    expect(h.press({ name: "d", ctrl: true })).toBe(1)
+    expect(fake.scrollCalls.length).toBeGreaterThan(0)
+    h.press({ name: "g" })
+    h.press({ name: "g" })
+    h.press({ name: "G" })
+    h.press("escape")
+    expect(getMode()).toBe("normal")
+    expect(fake.calls.clear).toBeGreaterThan(0)
+  })
+
+  test("CopyVisual copies rendered selection text", () => {
+    const fake = fakeChatRenderer()
+    fake.addUser("u1", 8, 5)
+    fake.setSelectionText("assistant line\ncode line")
+    const copy = new CopyVisual({
+      renderer: fake.renderer,
+      requestRender() {},
+    })
+
+    expect(copy.enter()).toBe(true)
+    expect(copy.selectedText()).toBe("assistant line\ncode line")
+    expect(copy.handle({ name: "j" })).toBe("stay")
+    expect(fake.scrollCalls.length).toBeGreaterThan(0)
+    expect(copy.handle({ name: "o" })).toBe("stay")
+    expect(copy.handle({ name: "G" })).toBe("stay")
+    expect(copy.handle({ name: "y" })).toBe("copy")
   })
 
   test("help and command palette", async () => {

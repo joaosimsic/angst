@@ -62,6 +62,14 @@ let
           echo "workspace command did not use theme error color #${themeError} for urgent workspaces" >&2
           exit 1
         fi
+        if ! grep -qF 'bindsym $mod+u exec --no-startup-id i3-workspace-group urgent' i3.conf; then
+          echo "i3 config is missing the mod+u urgent bell binding" >&2
+          exit 1
+        fi
+        if ! grep -qF 'bindsym $mod+Escape exec --no-startup-id i3-lock' i3.conf; then
+          echo "i3 config is missing the mod+Escape lock binding" >&2
+          exit 1
+        fi
 
         echo "Validating Ghostty config for theme ${themeName}..."
         HOME="$PWD/home" XDG_CONFIG_HOME="$PWD/home/.config" ghostty +validate-config --config-file="$PWD/ghostty.conf"
