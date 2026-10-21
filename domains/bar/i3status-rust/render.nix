@@ -20,13 +20,16 @@ let
     shell = "/bin/sh"
     if_command = "command -v angst-ftp-status >/dev/null 2>&1"
     command = "angst-ftp-status"
-    hide_when_empty = true
     format = " $icon $text "
     [block.theme_overrides]
     good_fg = "#${t.ansi.success}"
     good_bg = "#${p.background.base}"
     warning_fg = "#${p.background.base}"
     warning_bg = "#${t.ansi.warn}"
+    [[block.click]]
+    button = "left"
+    cmd = "angst-ftp-status toggle"
+    update = true
   '';
 in
 [

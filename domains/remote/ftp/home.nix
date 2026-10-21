@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ftp,
   flakeSelf,
   runtime,
@@ -12,9 +13,18 @@ let
   cfg = config.angst.ftp;
   ftpEnabled = config.domains.remote.ftp.enable;
 
-  secretPath =
-    m:
-    ".secrets/ftp/${lib.removeSuffix ".conf" (lib.removeSuffix ".age" (baseNameOf m.configFile))}.conf";
+  configName = m: lib.removeSuffix ".conf" (lib.removeSuffix ".age" (baseNameOf m.configFile));
+  serviceName = m: "angst-ftp-${configName m}";
+
+  ftpStatus = pkgs.callPackage ./status.nix {
+    inherit lib;
+    mounts = map (m: {
+      inherit (m) mountPoint;
+      service = serviceName m;
+    }) cfg.mounts;
+  };
+
+  secretPath = m: ".secrets/ftp/${configName m}.conf";
 
   secretsDecrypt = runtime.ftp-secrets-home {
     inherit (userConfig) homeDirectory;
@@ -27,15 +37,15 @@ let
   mountService =
     m:
     let
-      name = lib.removeSuffix ".conf" (lib.removeSuffix ".age" (baseNameOf m.configFile));
       mount = runtime.ftp-mount {
         inherit (m) mountPoint remotePath;
         configFile = secretPath m;
       };
     in
-    lib.nameValuePair "angst-ftp-${name}" {
+    lib.nameValuePair (serviceName m) {
       Unit = {
         Description = "Mount FTP server at ${m.mountPoint}";
+        ConditionPathExists = "%t/angst/ftp-enabled";
         After = [ "network-online.target" ];
         Wants = [ "network-online.target" ];
       };
@@ -44,6 +54,7 @@ let
         ExecStart = "${mount.bin} mount";
         Restart = "on-failure";
         RestartSec = "10s";
+        SuccessExitStatus = [ "SIGTERM" ];
       };
       Install = {
         WantedBy = [ "default.target" ];
@@ -81,6 +92,8 @@ in
   };
 
   config = lib.mkIf (ftpEnabled && cfg.mounts != [ ]) {
+    home.packages = [ ftpStatus ];
+
     home.activation.ensureFtpMountDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       rmdir "$HOME/secrets/angst" "$HOME/secrets" 2>/dev/null || true
       ${lib.concatMapStringsSep "\n" (m: ''
