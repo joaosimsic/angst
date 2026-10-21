@@ -109,6 +109,13 @@ const sessionNav = async (api: Api) => {
     return typeof id === "string" && id ? id : undefined
   }
 
+  const sessionActive = () => {
+    const id = sessionID()
+    if (!id) return false
+    const status = api.state.session.status(id)
+    return status !== undefined && status.type !== "idle"
+  }
+
   const chat = new ChatVisual({
     sessionID,
     renderer: api.renderer as any,
@@ -291,6 +298,16 @@ const sessionNav = async (api: Api) => {
     if (!canContinue()) {
       exit()
       return
+    }
+
+    if (mode === "normal" && isEscape(key)) {
+      const state = engine.state()
+      if (!state.pending && !state.operator && !state.count && sessionActive()) {
+        if (runSession("session.interrupt")) {
+          ctx.consume()
+          return
+        }
+      }
     }
 
     if (isTab(key)) {

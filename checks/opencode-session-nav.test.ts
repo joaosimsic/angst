@@ -443,6 +443,49 @@ describe("vim modes", () => {
     expect(h.dispatches).toEqual(["session.line.down"])
   })
 
+  test("normal escape interrupts a busy session", async () => {
+    const h = await loaded({ status: { type: "busy" } })
+    h.press("escape")
+    expect(h.press("escape")).toBe(1)
+    expect(getMode()).toBe("normal")
+    expect(h.dispatches).toEqual(["session.interrupt"])
+  })
+
+  test("normal escape interrupts a retrying session", async () => {
+    const h = await loaded({ status: { type: "retry" } })
+    h.press("escape")
+    expect(h.press("escape")).toBe(1)
+    expect(getMode()).toBe("normal")
+    expect(h.dispatches).toEqual(["session.interrupt"])
+  })
+
+  test("normal escape returns to insert when idle", async () => {
+    const h = await loaded()
+    h.press("escape")
+    expect(h.press("escape")).toBe(1)
+    expect(getMode()).toBe("insert")
+    expect(h.dispatches).toHaveLength(0)
+  })
+
+  test("normal escape clears pending state without interrupting", async () => {
+    const h = await loaded({ status: { type: "busy" } })
+    h.press("escape")
+    h.press("2")
+    expect(h.press("escape")).toBe(1)
+    expect(getMode()).toBe("normal")
+    expect(h.dispatches).toHaveLength(0)
+  })
+
+  test("visual escape does not interrupt a busy session", async () => {
+    const h = await loaded({ status: { type: "busy" }, prompt: fakePrompt("abc", 0) })
+    h.press("escape")
+    h.press("v")
+    expect(getMode()).toBe("visual")
+    expect(h.press("escape")).toBe(1)
+    expect(getMode()).toBe("normal")
+    expect(h.dispatches).toHaveLength(0)
+  })
+
   test("Ctrl+C enters normal while busy", async () => {
     const h = await loaded({ status: { type: "busy" } })
     expect(h.press({ name: "c", ctrl: true })).toBe(1)
