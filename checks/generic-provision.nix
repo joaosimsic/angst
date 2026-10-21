@@ -5,6 +5,7 @@
 
 let
   generic = self.nixosConfigurations.generic;
+
   genericToplevel = generic.config.system.build.toplevel;
   genericKernel = "${generic.config.system.build.kernel}/${generic.config.system.boot.loader.kernelFile}";
   genericInitrd = "${generic.config.system.build.initialRamdisk}/${generic.config.system.boot.loader.initrdFile}";
@@ -109,20 +110,25 @@ pkgs.testers.runNixOSTest {
         return machine.succeed(f"sha256sum {shlex.quote(path)}").split()[0]
 
     machine.wait_for_unit("multi-user.target")
+    machine.succeed("test -e ${genericToplevel}")
     machine.succeed("mkdir -p /root/angst")
     machine.succeed("cp -a ${repo}/. /root/angst")
     machine.succeed("mkdir -p /root/angst/hosts/personal/generic")
 
     # Source ESP shared with a Windows-like bootloader.
-    machine.succeed("mkfs.vfat -F 32 -n TESTESP /dev/vde")
-    machine.succeed("mkdir -p /boot && mount /dev/vde /boot")
+    machine.succeed("sgdisk --zap-all /dev/vde")
+    machine.succeed("sgdisk -n 1:0:0 -t 1:ef00 -c 1:boot /dev/vde")
+    machine.succeed("partx -u /dev/vde")
+    machine.succeed("udevadm settle")
+    machine.succeed("mkfs.vfat -F 32 -n TESTESP /dev/vde1")
+    machine.succeed("mkdir -p /boot && mount -t vfat /dev/vde1 /boot")
     machine.succeed("mkdir -p /boot/EFI/Microsoft/Boot")
     machine.succeed("printf 'windows-bootmgr\\n' > /boot/EFI/Microsoft/Boot/bootmgfw.efi")
     machine.succeed("printf 'windows-bcd\\n' > /boot/EFI/Microsoft/Boot/BCD")
     shared_before = machine.succeed(
         "find /boot/EFI/Microsoft -type f -print0 | sort -z | xargs -0 sha256sum"
     )
-    esp_uuid_before = machine.succeed("blkid -s UUID -o value /dev/vde").strip()
+    esp_uuid_before = machine.succeed("blkid -s UUID -o value /dev/vde1").strip()
 
     # Separate Windows-like disk: ESP + MSR + Windows data partition.
     machine.succeed("sgdisk --zap-all /dev/vdd")
@@ -157,24 +163,26 @@ pkgs.testers.runNixOSTest {
     machine.succeed(f"test \"$(sha256sum /root/angst/hosts/personal/generic/storage.nix | cut -d' ' -f1)\" = \"{storage_before}\"")
 
     # Real migration.
-    run("cd /root/angst && printf 'MIGRATE\\n' | ${provision} > /tmp/provision.out 2>&1 || { cat /tmp/provision.out; exit 1; }")
+    status, output = machine.execute(
+        "cd /root/angst && printf 'MIGRATE\\n' | ${provision} > /tmp/provision.out 2>&1"
+    )
+    print(output)
+    print(machine.succeed("cat /root/angst/hosts/personal/generic/storage.nix"))
+    assert status == 0, machine.succeed("cat /tmp/provision.out")
 
     machine.succeed("sgdisk --backup=/tmp/root.gpt.after /dev/vdc")
     machine.succeed("cmp /tmp/root.gpt.before /tmp/root.gpt.after")
     machine.succeed("sgdisk --backup=/tmp/windows.gpt.after /dev/vdd")
     machine.succeed("cmp /tmp/windows.gpt.before /tmp/windows.gpt.after")
     machine.succeed(f"test \"$(sha256sum /dev/vdd | cut -d' ' -f1)\" = \"{windows_raw_before}\"")
-    machine.succeed(f"test \"$(blkid -s UUID -o value /dev/vde)\" = \"{esp_uuid_before}\"")
-    machine.succeed("printf '%s\\n' " + shlex.quote(shared_before) + " > /tmp/shared.before")
+    machine.succeed(f"test \"$(blkid -s UUID -o value /dev/vde1)\" = \"{esp_uuid_before}\"")
+    machine.succeed("printf '%s' " + shlex.quote(shared_before) + " > /tmp/shared.before")
     machine.succeed("find /boot/EFI/Microsoft -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/shared.after")
     machine.succeed("cmp /tmp/shared.before /tmp/shared.after")
     machine.succeed("efibootmgr -v > /tmp/efi.after")
     machine.succeed("grep -F 'Windows Boot Manager' /tmp/efi.after")
 
-    machine.succeed("test -d /run/angst-btrfs/@root")
-    machine.succeed("test -d /run/angst-btrfs/@home")
-    machine.succeed("test -d /run/angst-btrfs/@nix")
-    machine.succeed("test -d /run/angst-btrfs/@state")
+    machine.succeed("btrfs subvolume list / | grep -E 'path @(root|home|nix|state)$' | wc -l | grep -qx 4")
     machine.succeed("grep -F 'subvol=@root' /root/angst/hosts/personal/generic/storage.nix")
     machine.succeed("grep -F 'subvol=@home' /root/angst/hosts/personal/generic/storage.nix")
     machine.succeed("grep -F 'subvol=@nix' /root/angst/hosts/personal/generic/storage.nix")
@@ -186,9 +194,13 @@ pkgs.testers.runNixOSTest {
 
     # Reboot into the migrated root with kexec (the test framework direct-boots).
     machine.execute("kexec -l ${genericKernel} --initrd=${genericInitrd} --append='init=${genericToplevel}/init root=fstab'")
-    machine.execute("kexec -e")
-    time.sleep(5)
-    machine.wait_for_unit("multi-user.target")
+    try:
+        machine.execute("kexec -e")
+    except Exception as error:
+        print(f"kexec disconnected the test shell: {error}")
+    time.sleep(10)
+    machine.connect()
+    machine.wait_for_unit("multi-user.target", timeout=180)
 
     machine.succeed("test \"$(cat /etc/hostname)\" = generic")
     machine.succeed("findmnt -no FSTYPE / | grep -qx btrfs")

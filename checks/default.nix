@@ -126,6 +126,8 @@ let
 
   checkOpencodeAttention = import ./opencode.nix { inherit pkgs; };
 
+  checkOpencodeSessionNav = import ./opencode-session-nav.nix { inherit pkgs; };
+
   checkOpencodeSecret = import ./opencode-secret.nix {
     inherit pkgs;
     opencodeConfig = render.renderDomainOutputFor host.theme "domains/agents/opencode/config/opencode.jsonc";
@@ -211,6 +213,7 @@ in
   check-tex = checkTex;
   check-zellij = checkZellij;
   check-opencode-attention = checkOpencodeAttention;
+  check-opencode-session-nav = checkOpencodeSessionNav;
   check-opencode-secret = checkOpencodeSecret;
   check-session-env = checkSessionEnv;
   check-session-usability = checkSessionUsability;

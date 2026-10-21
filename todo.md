@@ -74,6 +74,7 @@
 - [~] make windows/workspaces that have an update blink, so its better visually to know when do i need to callback to something
 - [x] remove dark bg in memory section in status bar when memory > 20%
 - [x] mute bind aware of running media just so it can stop them instead of only blindely muting the whole system
+- [ ] lock desktop key that goes to ly or DM
 
 # opencode
 
