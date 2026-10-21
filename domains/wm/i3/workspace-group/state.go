@@ -5,16 +5,23 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
 type State struct {
-	Last map[string]map[string]int `json:"last"`
+	Last      map[string]map[string]int `json:"last"`
+	Urgent    map[string]int64          `json:"urgent,omitempty"`
+	UrgentSeq int64                     `json:"urgent_seq,omitempty"`
 }
 
 func newState() State {
-	return State{Last: make(map[string]map[string]int)}
+	return State{
+		Last:   make(map[string]map[string]int),
+		Urgent: make(map[string]int64),
+	}
 }
 
 func (state State) LastInner(group int, output string, fallback int) int {
@@ -52,6 +59,9 @@ func readStateFile(path string) (State, error) {
 	}
 	if state.Last == nil {
 		state.Last = make(map[string]map[string]int)
+	}
+	if state.Urgent == nil {
+		state.Urgent = make(map[string]int64)
 	}
 	return state, nil
 }
@@ -167,4 +177,70 @@ func seedState(path string, values map[int]map[string]int) error {
 		}
 	}
 	return writeStateFile(path, state)
+}
+
+func bellKey(session string, tabID uint32) string {
+	return "z\x1f" + session + "\x1f" + strconv.FormatUint(uint64(tabID), 10)
+}
+
+func parseBellKey(key string) (string, uint32, bool) {
+	const prefix = "z\x1f"
+	if !strings.HasPrefix(key, prefix) {
+		return "", 0, false
+	}
+	index := strings.LastIndexByte(key, '\x1f')
+	if index < len(prefix) {
+		return "", 0, false
+	}
+	tabID, err := strconv.ParseUint(key[index+1:], 10, 32)
+	if err != nil {
+		return "", 0, false
+	}
+	return key[len(prefix):index], uint32(tabID), true
+}
+
+func updateUrgent(path string, current map[string]bool, preserveZellij bool) (State, error) {
+	lock, err := lockState(path, true)
+	if err != nil {
+		return newState(), err
+	}
+	defer unlockState(lock)
+
+	state, err := readStateFile(path)
+	if err != nil {
+		state = newState()
+	}
+	changed := false
+
+	for key := range state.Urgent {
+		if current[key] {
+			continue
+		}
+		if preserveZellij && strings.HasPrefix(key, "z\x1f") {
+			continue
+		}
+		delete(state.Urgent, key)
+		changed = true
+	}
+
+	keys := make([]string, 0, len(current))
+	for key := range current {
+		if _, found := state.Urgent[key]; !found {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		state.UrgentSeq++
+		state.Urgent[key] = state.UrgentSeq
+		changed = true
+	}
+
+	if !changed {
+		return state, nil
+	}
+	if err := writeStateFile(path, state); err != nil {
+		return state, err
+	}
+	return state, nil
 }

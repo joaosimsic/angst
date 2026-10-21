@@ -24,19 +24,35 @@ func Daemon() error {
 	if err := syncOpacity(); err != nil {
 		log.Printf("i3-workspace-group daemon: %v", err)
 	}
+	if _, _, err := syncAttention(); err != nil {
+		log.Printf("i3-workspace-group daemon: attention: %v", err)
+	}
 
 	for {
 		receiver := i3.Subscribe(i3.WorkspaceEventType, i3.OutputEventType, i3.WindowEventType)
 		triggers := make(chan struct{}, 1)
 		go collectTriggers(receiver, triggers)
 
-		for range triggers {
-			time.Sleep(25 * time.Millisecond)
-			drainTriggers(triggers)
-			if err := syncOnce(); err != nil {
-				log.Printf("i3-workspace-group daemon: %v", err)
+		ticker := time.NewTicker(time.Second)
+	loop:
+		for {
+			select {
+			case _, ok := <-triggers:
+				if !ok {
+					break loop
+				}
+				time.Sleep(25 * time.Millisecond)
+				drainTriggers(triggers)
+				if err := syncOnce(); err != nil {
+					log.Printf("i3-workspace-group daemon: %v", err)
+				}
+			case <-ticker.C:
+				if _, _, err := syncAttention(); err != nil {
+					log.Printf("i3-workspace-group daemon: attention: %v", err)
+				}
 			}
 		}
+		ticker.Stop()
 
 		if err := receiver.Close(); err != nil {
 			log.Printf("i3-workspace-group daemon: subscription: %v", err)

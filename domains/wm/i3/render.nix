@@ -91,6 +91,7 @@ in
       bindsym $mod+Tab focus mode_toggle
       bindsym $mod+a focus parent
       bindsym $mod+p exec --no-startup-id i3-mouse-hide toggle
+      bindsym $mod+u exec --no-startup-id i3-workspace-group urgent
 
       bindsym $mod+Control+1 exec --no-startup-id i3-workspace-group switch 1
       bindsym $mod+Control+2 exec --no-startup-id i3-workspace-group switch 2

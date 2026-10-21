@@ -74,6 +74,11 @@ func Run(args []string) int {
 			fmt.Fprintf(os.Stderr, "i3-workspace-group inner-swap: %v\n", err)
 			return 1
 		}
+	case "urgent":
+		if err := FocusOldest(); err != nil {
+			fmt.Fprintf(os.Stderr, "i3-workspace-group urgent: %v\n", err)
+			return 1
+		}
 	case "adopt":
 		renamed, err := Adopt()
 		if err != nil {
@@ -154,6 +159,7 @@ func usage(output *os.File) {
   i3-workspace-group inner INNER
   i3-workspace-group inner-move INNER
   i3-workspace-group inner-swap INNER_A INNER_B
+  i3-workspace-group urgent
   i3-workspace-group adopt
   i3-workspace-group bar URGENT_COLOR
   i3-workspace-group daemon
