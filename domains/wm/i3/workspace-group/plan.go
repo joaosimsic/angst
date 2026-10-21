@@ -311,8 +311,8 @@ func PlanBarState(outputs []i3.Output, workspaces []i3.Workspace) []i3.Workspace
 		sort.Slice(inners, func(first, second int) bool {
 			return inners[first].Num < inners[second].Num
 		})
-		state = append(state, inners...)
 		state = append(state, urgentGroupBadges(workspaces, output.Name, group)...)
+		state = append(state, inners...)
 	}
 	return state
 }

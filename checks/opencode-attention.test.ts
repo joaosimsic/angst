@@ -2,31 +2,27 @@ import { expect, test } from "bun:test"
 import { AttentionPlugin } from "../domains/agents/opencode/config/plugins/attention.ts"
 
 function harness() {
-  const commands: string[] = []
-  const $ = ((strings: TemplateStringsArray, ...values: unknown[]) => {
-    commands.push(strings.join("") + values.join(""))
-    const promise = Promise.resolve({ stdout: "", exitCode: 0 }) as any
-    promise.quiet = () => promise
-    promise.nothrow = () => promise
-    return promise
-  }) as any
-  return { $, commands }
+  let rings = 0
+  return {
+    ring: () => {
+      rings += 1
+    },
+    count: () => rings,
+  }
 }
 
 test("rings on permission", async () => {
   const h = harness()
-  const plugin = await AttentionPlugin({ $: h.$ })
+  const plugin = await AttentionPlugin({ ring: h.ring })
   await plugin.event!({ event: { type: "permission.updated", properties: { sessionID: "s" } } })
-  expect(h.commands).toHaveLength(1)
-  expect(h.commands[0]).toContain('printf "\\a"')
-  expect(h.commands[0]).toContain("/dev/tty")
+  expect(h.count()).toBe(1)
 })
 
 test("rings only on busy to idle", async () => {
   const h = harness()
-  const plugin = await AttentionPlugin({ $: h.$ })
+  const plugin = await AttentionPlugin({ ring: h.ring })
   await plugin.event!({ event: { type: "session.idle", properties: { sessionID: "s" } } })
-  expect(h.commands).toHaveLength(0)
+  expect(h.count()).toBe(0)
   await plugin.event!({
     event: { type: "session.status", properties: { sessionID: "s", status: { type: "busy" } } },
   })
@@ -34,12 +30,12 @@ test("rings only on busy to idle", async () => {
     event: { type: "session.status", properties: { sessionID: "s", status: { type: "idle" } } },
   })
   await plugin.event!({ event: { type: "session.idle", properties: { sessionID: "s" } } })
-  expect(h.commands).toHaveLength(1)
+  expect(h.count()).toBe(1)
 })
 
 test("ignores unrelated events", async () => {
   const h = harness()
-  const plugin = await AttentionPlugin({ $: h.$ })
+  const plugin = await AttentionPlugin({ ring: h.ring })
   await plugin.event!({ event: { type: "message.updated", properties: { sessionID: "s" } } })
-  expect(h.commands).toHaveLength(0)
+  expect(h.count()).toBe(0)
 })

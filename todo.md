@@ -51,7 +51,8 @@
 # zellij
 
 - [x] screen freeze when exit or close last pane
-- [x] make ctrl up/down got to the first or last window
+- [x] make ctrl j/k got to the first or last tab
+- [ ] add ctrl m to go to the middle tab
 
 # encryption
 
@@ -72,7 +73,7 @@
 - [x] better differentiate active and inactive windows
 - [~] make windows/workspaces that have an update blink, so its better visually to know when do i need to callback to something
 - [x] remove dark bg in memory section in status bar when memory > 20%
-- [ ] mute bind aware of running media just so it can stop them instead of only blindely muting the whole system
+- [x] mute bind aware of running media just so it can stop them instead of only blindely muting the whole system
 
 # opencode
 

@@ -183,7 +183,7 @@ func TestPlanBarStateLegacyFallback(t *testing.T) {
 	}
 }
 
-func TestPlanBarStateAppendsUrgentGroupBadges(t *testing.T) {
+func TestPlanBarStatePlacesUrgentGroupBadgesAfterGroupLabel(t *testing.T) {
 	workspaces := testWorkspaces()
 	workspaces[4].Urgent = true
 	workspaces[5].Urgent = true
@@ -192,11 +192,17 @@ func TestPlanBarStateAppendsUrgentGroupBadges(t *testing.T) {
 	if len(state) != 8 {
 		t.Fatalf("PlanBarState len = %d, want 8", len(state))
 	}
-	if state[2].ID != 5 || state[2].Name != "2" || state[2].Output != "DP-1" || !state[2].Urgent {
-		t.Fatalf("state[2] = %#v, want DP-1 urgent group 2 badge", state[2])
+	if state[1].ID != 5 || state[1].Name != "2" || state[1].Output != "DP-1" || !state[1].Urgent {
+		t.Fatalf("state[1] = %#v, want DP-1 urgent group 2 badge", state[1])
 	}
-	if state[7].ID != 6 || state[7].Name != "2" || state[7].Output != "HDMI-2" || !state[7].Urgent {
-		t.Fatalf("state[7] = %#v, want HDMI-2 urgent group 2 badge", state[7])
+	if state[2].ID != 1 || state[2].Name != "1" || state[2].Output != "DP-1" {
+		t.Fatalf("state[2] = %#v, want DP-1 inner workspace after badge", state[2])
+	}
+	if state[4].ID != 6 || state[4].Name != "2" || state[4].Output != "HDMI-2" || !state[4].Urgent {
+		t.Fatalf("state[4] = %#v, want HDMI-2 urgent group 2 badge", state[4])
+	}
+	if state[5].ID != 2 || state[5].Name != "2" || state[5].Output != "HDMI-2" {
+		t.Fatalf("state[5] = %#v, want HDMI-2 inner workspace after badge", state[5])
 	}
 }
 
@@ -210,8 +216,8 @@ func TestPlanBarStateUrgentGroupBadgeOncePerGroup(t *testing.T) {
 	if len(state) != 7 {
 		t.Fatalf("PlanBarState len = %d, want 7", len(state))
 	}
-	if state[2].ID != 5 || state[2].Name != "2" || state[2].Output != "DP-1" {
-		t.Fatalf("state[2] = %#v, want only DP-1 urgent group 2 badge", state[2])
+	if state[1].ID != 5 || state[1].Name != "2" || state[1].Output != "DP-1" {
+		t.Fatalf("state[1] = %#v, want only DP-1 urgent group 2 badge", state[1])
 	}
 }
 

@@ -1,11 +1,4 @@
-type ShellResult = { stdout: string; exitCode: number }
-type ShellPromise = Promise<ShellResult> & {
-  quiet: () => ShellPromise
-  nothrow: () => ShellPromise
-}
-type Shell = (strings: TemplateStringsArray, ...values: unknown[]) => ShellPromise
-
-type PluginInput = { $: Shell }
+type PluginInput = { ring?: () => void }
 type EventInput = {
   event?: {
     type?: string
@@ -25,15 +18,21 @@ const ATTENTION_EVENTS = new Set([
 
 const COOLDOWN_MS = 1000
 
-export const AttentionPlugin = async ({ $ }: PluginInput) => {
+const writeBell = () => {
+  try {
+    process.stdout.write("\x07")
+  } catch {}
+}
+
+export const AttentionPlugin = async ({ ring = writeBell }: PluginInput = {}) => {
   const busy = new Set<string>()
   let lastRing = 0
 
-  const ring = async () => {
+  const ringBell = async () => {
     const now = Date.now()
     if (now - lastRing < COOLDOWN_MS) return
     lastRing = now
-    await $`sh -c 'printf "\\a" > /dev/tty'`.quiet().nothrow()
+    ring()
   }
 
   return {
@@ -47,17 +46,17 @@ export const AttentionPlugin = async ({ $ }: PluginInput) => {
         if (status === "busy" || status === "retry") {
           busy.add(sessionID)
         } else if (status === "idle" && busy.delete(sessionID)) {
-          await ring()
+          await ringBell()
         }
         return
       }
 
       if (type === "session.idle") {
-        if (sessionID && busy.delete(sessionID)) await ring()
+        if (sessionID && busy.delete(sessionID)) await ringBell()
         return
       }
 
-      if (ATTENTION_EVENTS.has(type)) await ring()
+      if (ATTENTION_EVENTS.has(type)) await ringBell()
     },
   }
 }

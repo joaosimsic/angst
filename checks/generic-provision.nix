@@ -33,9 +33,17 @@ pkgs.testers.runNixOSTest {
         cores = 4;
         diskSize = 2048;
         useDefaultFilesystems = false;
-        rootDevice = "/dev/vdb";
+        rootDevice = "/dev/vdc";
         useNixStoreImage = true;
+        writableStore = true;
         useEFIBoot = true;
+        additionalPaths = [
+          genericToplevel
+          repo
+          provision
+          switch
+        ]
+        ++ inputPaths;
         emptyDiskImages = [
           40960
           256
@@ -55,7 +63,7 @@ pkgs.testers.runNixOSTest {
           enable = true;
           repart = {
             enable = true;
-            device = "/dev/vdb";
+            device = "/dev/vdc";
             empty = "allow";
           };
         };
@@ -92,7 +100,10 @@ pkgs.testers.runNixOSTest {
     import time
 
     def run(cmd):
-        return machine.succeed(cmd)
+        status, output = machine.execute(cmd)
+        print(output)
+        assert status == 0, output
+        return output
 
     def checksum(path):
         return machine.succeed(f"sha256sum {shlex.quote(path)}").split()[0]
@@ -103,40 +114,40 @@ pkgs.testers.runNixOSTest {
     machine.succeed("mkdir -p /root/angst/hosts/personal/generic")
 
     # Source ESP shared with a Windows-like bootloader.
-    machine.succeed("mkfs.vfat -F 32 -n TESTESP /dev/vdd")
-    machine.succeed("mkdir -p /boot && mount /dev/vdd /boot")
+    machine.succeed("mkfs.vfat -F 32 -n TESTESP /dev/vde")
+    machine.succeed("mkdir -p /boot && mount /dev/vde /boot")
     machine.succeed("mkdir -p /boot/EFI/Microsoft/Boot")
     machine.succeed("printf 'windows-bootmgr\\n' > /boot/EFI/Microsoft/Boot/bootmgfw.efi")
     machine.succeed("printf 'windows-bcd\\n' > /boot/EFI/Microsoft/Boot/BCD")
     shared_before = machine.succeed(
         "find /boot/EFI/Microsoft -type f -print0 | sort -z | xargs -0 sha256sum"
     )
-    esp_uuid_before = machine.succeed("blkid -s UUID -o value /dev/vdd").strip()
+    esp_uuid_before = machine.succeed("blkid -s UUID -o value /dev/vde").strip()
 
     # Separate Windows-like disk: ESP + MSR + Windows data partition.
-    machine.succeed("sgdisk --zap-all /dev/vdc")
-    machine.succeed("sgdisk -n 1:0:+32M -t 1:ef00 -c 1:WINESP /dev/vdc")
-    machine.succeed("sgdisk -n 2:0:+16M -t 2:0c01 -c 2:MSR /dev/vdc")
-    machine.succeed("sgdisk -n 3:0:0 -t 3:0700 -c 3:Windows /dev/vdc")
-    machine.succeed("partx -u /dev/vdc")
+    machine.succeed("sgdisk --zap-all /dev/vdd")
+    machine.succeed("sgdisk -n 1:0:+32M -t 1:ef00 -c 1:WINESP /dev/vdd")
+    machine.succeed("sgdisk -n 2:0:+16M -t 2:0c01 -c 2:MSR /dev/vdd")
+    machine.succeed("sgdisk -n 3:0:0 -t 3:0700 -c 3:Windows /dev/vdd")
+    machine.succeed("partx -u /dev/vdd")
     machine.succeed("udevadm settle")
-    machine.succeed("mkfs.vfat -F 32 -n WINESP /dev/vdc1")
-    machine.succeed("mkdir -p /mnt/winesp && mount /dev/vdc1 /mnt/winesp")
+    machine.succeed("mkfs.vfat -F 32 -n WINESP /dev/vdd1")
+    machine.succeed("mkdir -p /mnt/winesp && mount -t vfat /dev/vdd1 /mnt/winesp")
     machine.succeed("mkdir -p /mnt/winesp/EFI/Microsoft/Boot")
     machine.succeed("printf 'other-windows-bootmgr\\n' > /mnt/winesp/EFI/Microsoft/Boot/bootmgfw.efi")
     machine.succeed("umount /mnt/winesp")
-    machine.succeed("sgdisk --backup=/tmp/windows.gpt.before /dev/vdc")
-    windows_raw_before = checksum("/dev/vdc")
-    windows_esp_before = checksum("/dev/vdc1")
+    machine.succeed("sgdisk --backup=/tmp/windows.gpt.before /dev/vdd")
+    windows_raw_before = checksum("/dev/vdd")
+    windows_esp_before = checksum("/dev/vdd1")
 
     # Fake Windows NVRAM entry.
     machine.succeed(
         "efibootmgr --create --label 'Windows Boot Manager' "
-        "--disk /dev/vdc --part 1 --loader '\\\\EFI\\\\Microsoft\\\\Boot\\\\bootmgfw.efi'"
+        "--disk /dev/vdd --part 1 --loader '\\\\EFI\\\\Microsoft\\\\Boot\\\\bootmgfw.efi'"
     )
     efibootmgr_before = machine.succeed("efibootmgr -v")
 
-    root_gpt_before = machine.succeed("sgdisk --backup=/tmp/root.gpt.before /dev/vdb")
+    root_gpt_before = machine.succeed("sgdisk --backup=/tmp/root.gpt.before /dev/vdc")
     storage_before = checksum("/root/angst/hosts/personal/generic/storage.nix")
 
     # Dry run must not create subvolumes or write storage/boot entries.
@@ -146,14 +157,14 @@ pkgs.testers.runNixOSTest {
     machine.succeed(f"test \"$(sha256sum /root/angst/hosts/personal/generic/storage.nix | cut -d' ' -f1)\" = \"{storage_before}\"")
 
     # Real migration.
-    run("cd /root/angst && printf 'MIGRATE\\n' | ${provision} > /tmp/provision.out 2>&1")
+    run("cd /root/angst && printf 'MIGRATE\\n' | ${provision} > /tmp/provision.out 2>&1 || { cat /tmp/provision.out; exit 1; }")
 
-    machine.succeed("sgdisk --backup=/tmp/root.gpt.after /dev/vdb")
+    machine.succeed("sgdisk --backup=/tmp/root.gpt.after /dev/vdc")
     machine.succeed("cmp /tmp/root.gpt.before /tmp/root.gpt.after")
-    machine.succeed("sgdisk --backup=/tmp/windows.gpt.after /dev/vdc")
+    machine.succeed("sgdisk --backup=/tmp/windows.gpt.after /dev/vdd")
     machine.succeed("cmp /tmp/windows.gpt.before /tmp/windows.gpt.after")
-    machine.succeed(f"test \"$(sha256sum /dev/vdc | cut -d' ' -f1)\" = \"{windows_raw_before}\"")
-    machine.succeed(f"test \"$(blkid -s UUID -o value /dev/vdd)\" = \"{esp_uuid_before}\"")
+    machine.succeed(f"test \"$(sha256sum /dev/vdd | cut -d' ' -f1)\" = \"{windows_raw_before}\"")
+    machine.succeed(f"test \"$(blkid -s UUID -o value /dev/vde)\" = \"{esp_uuid_before}\"")
     machine.succeed("printf '%s\\n' " + shlex.quote(shared_before) + " > /tmp/shared.before")
     machine.succeed("find /boot/EFI/Microsoft -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/shared.after")
     machine.succeed("cmp /tmp/shared.before /tmp/shared.after")
@@ -196,9 +207,9 @@ pkgs.testers.runNixOSTest {
     machine.succeed("systemctl is-active home-manager-user.service")
 
     # Windows/ESP preservation after boot.
-    machine.succeed("sgdisk --backup=/tmp/windows.gpt.reboot /dev/vdc")
+    machine.succeed("sgdisk --backup=/tmp/windows.gpt.reboot /dev/vdd")
     machine.succeed("cmp /tmp/windows.gpt.before /tmp/windows.gpt.reboot")
-    machine.succeed(f"test \"$(sha256sum /dev/vdc | cut -d' ' -f1)\" = \"{windows_raw_before}\"")
+    machine.succeed(f"test \"$(sha256sum /dev/vdd | cut -d' ' -f1)\" = \"{windows_raw_before}\"")
     machine.succeed("find /boot/EFI/Microsoft -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/shared.reboot")
     machine.succeed("cmp /tmp/shared.before /tmp/shared.reboot")
     machine.succeed("efibootmgr -v > /tmp/efi.reboot")
@@ -206,9 +217,9 @@ pkgs.testers.runNixOSTest {
 
     # Generic switch must preserve the same invariants.
     run("cd /root/angst && printf 'generic\\n' | ${switch} > /tmp/switch.out 2>&1")
-    machine.succeed("sgdisk --backup=/tmp/windows.gpt.switch /dev/vdc")
+    machine.succeed("sgdisk --backup=/tmp/windows.gpt.switch /dev/vdd")
     machine.succeed("cmp /tmp/windows.gpt.before /tmp/windows.gpt.switch")
-    machine.succeed(f"test \"$(sha256sum /dev/vdc | cut -d' ' -f1)\" = \"{windows_raw_before}\"")
+    machine.succeed(f"test \"$(sha256sum /dev/vdd | cut -d' ' -f1)\" = \"{windows_raw_before}\"")
     machine.succeed("find /boot/EFI/Microsoft -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/shared.switch")
     machine.succeed("cmp /tmp/shared.before /tmp/shared.switch")
     machine.succeed("efibootmgr -v > /tmp/efi.switch")

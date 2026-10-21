@@ -13,6 +13,7 @@ let
   i3Tools = pkgs.callPackage ./package.nix { };
   mouseHide = pkgs.callPackage ./mouse-hide.nix { inherit i3Tools; };
   vmGrab = pkgs.callPackage ./vm-grab.nix { };
+  audioMute = pkgs.callPackage ./audio-mute.nix { };
 
   cap = config.domains.capture.screenshot or { enable = false; };
   notif = config.domains.notifications or { enable = false; };
@@ -30,7 +31,8 @@ in
       i3Tools
       mouseHide
       vmGrab
-    ];
+    ]
+    ++ lib.optionals shouldBindAudio [ audioMute ];
 
     systemd.user = lib.mkIf (host.hostname != "vm") {
       paths.i3-vm-grab = {
@@ -78,11 +80,11 @@ in
           ''
             bindsym XF86AudioRaiseVolume exec --no-startup-id wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
             bindsym XF86AudioLowerVolume exec --no-startup-id wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
-            bindsym XF86AudioMute exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+            bindsym XF86AudioMute exec --no-startup-id i3-audio-mute
             bindsym XF86AudioMicMute exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
             bindsym $mod+plus exec --no-startup-id wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
             bindsym $mod+minus exec --no-startup-id wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
-            bindsym $mod+m exec --no-startup-id wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+            bindsym $mod+m exec --no-startup-id i3-audio-mute
           ''
         else
           ""

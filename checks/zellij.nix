@@ -24,5 +24,6 @@ pkgs.runCommand "check-zellij-keybinds"
     ${pkgs.zellij}/bin/zellij --config ${actualConfigFile} setup --check > setup-check.out
     grep -F 'CONFIG FILE]: Well defined.' setup-check.out
     python3 ${./zellij-keybinds.py} ${pkgs.zellij}/bin/zellij
+    python3 ${./zellij-bell.py} ${pkgs.zellij}/bin/zellij
     touch $out
   ''
