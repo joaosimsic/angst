@@ -126,6 +126,16 @@ let
 
             bind "Ctrl k" { GoToTab 1; GoToPreviousTab; }
 
+            bind "Ctrl 1" { GoToTab 1; }
+            bind "Ctrl 2" { GoToTab 2; }
+            bind "Ctrl 3" { GoToTab 3; }
+            bind "Ctrl 4" { GoToTab 4; }
+            bind "Ctrl 5" { GoToTab 5; }
+            bind "Ctrl 6" { GoToTab 6; }
+            bind "Ctrl 7" { GoToTab 7; }
+            bind "Ctrl 8" { GoToTab 8; }
+            bind "Ctrl 9" { GoToTab 9; }
+
             bind "Ctrl l" {
                 MessagePlugin "vim-navigator" {
                     name "move_focus_or_tab";
@@ -213,6 +223,9 @@ in
       (requireInfix configText ''bind "Ctrl k" { GoToTab 1; GoToPreviousTab; }''
         "zellij Ctrl+k should jump to the last tab"
       )
+      (requireInfix configText ''bind "Ctrl 1" { GoToTab 1; }'' "zellij Ctrl+1 should jump to tab 1")
+      (requireInfix configText ''bind "Ctrl 2" { GoToTab 2; }'' "zellij Ctrl+2 should jump to tab 2")
+      (requireInfix configText ''bind "Ctrl 9" { GoToTab 9; }'' "zellij Ctrl+9 should jump to tab 9")
     ];
   }
   {

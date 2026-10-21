@@ -52,7 +52,7 @@
 
 - [x] screen freeze when exit or close last pane
 - [x] make ctrl j/k got to the first or last tab
-- [ ] add ctrl m to go to the middle tab
+- [x] add ctrl+number to go to tab N
 
 # encryption
 

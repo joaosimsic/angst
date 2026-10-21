@@ -24,6 +24,15 @@ keybinds clear-defaults=true {
     shared_except "locked" {
         bind "Ctrl j" { GoToTab 1; }
         bind "Ctrl k" { GoToTab 1; GoToPreviousTab; }
+        bind "Ctrl 1" { GoToTab 1; }
+        bind "Ctrl 2" { GoToTab 2; }
+        bind "Ctrl 3" { GoToTab 3; }
+        bind "Ctrl 4" { GoToTab 4; }
+        bind "Ctrl 5" { GoToTab 5; }
+        bind "Ctrl 6" { GoToTab 6; }
+        bind "Ctrl 7" { GoToTab 7; }
+        bind "Ctrl 8" { GoToTab 8; }
+        bind "Ctrl 9" { GoToTab 9; }
     }
 }
 """
@@ -137,6 +146,9 @@ try:
     cases = [
         ("Ctrl+j", b"\x0a", 0),
         ("Ctrl+k", b"\x0b", 2),
+        ("Ctrl+1", b"\x1b[49;5u", 0),
+        ("Ctrl+3", b"\x1b[51;5u", 2),
+        ("Ctrl+2", b"\x1b[50;5u", 1),
     ]
     for label, sequence, expected in cases:
         os.write(master, sequence)
