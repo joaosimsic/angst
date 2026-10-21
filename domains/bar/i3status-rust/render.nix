@@ -99,6 +99,26 @@ in
       interval = 1
       json = true
       shell = "/bin/sh"
+      if_command = "command -v angst-discord-voice >/dev/null 2>&1"
+      command = "angst-discord-voice status"
+      hide_when_empty = true
+      format = " $icon $text "
+      [block.theme_overrides]
+      good_fg = "#${t.ansi.success}"
+      good_bg = "#${p.background.base}"
+      warning_fg = "#${t.ansi.warn}"
+      warning_bg = "#${p.background.base}"
+      critical_fg = "#${t.ansi.error}"
+      critical_bg = "#${p.background.base}"
+      [[block.click]]
+      button = "left"
+      cmd = "i3-msg -q '[class=\"Discord\"] focus' 2>/dev/null || discord"
+
+      [[block]]
+      block = "custom"
+      interval = 1
+      json = true
+      shell = "/bin/sh"
       if_command = "command -v i3-mouse-hide >/dev/null 2>&1"
       command = "i3-mouse-hide status"
       format = " $icon "

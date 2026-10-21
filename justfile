@@ -60,10 +60,10 @@ verify:
     NIXPKGS_ALLOW_UNFREE=1 nix flake check --no-build --impure
 
 go-fmt:
-    for d in runtime/angst runtime/vm runtime/shell runtime/analyze domains/wm/i3/workspace-group; do echo "=== $d ==="; (cd $d && gofmt -l . && go vet ./...); done
+    for d in runtime/angst runtime/vm runtime/shell runtime/analyze domains/wm/i3/workspace-group domains/chat/discord/voice-status; do echo "=== $d ==="; (cd $d && gofmt -l . && CGO_ENABLED=0 go vet ./...); done
 
 go-test:
-    for d in runtime/angst runtime/vm runtime/shell runtime/analyze domains/wm/i3/workspace-group; do echo "=== $d ==="; (cd $d && go test ./...); done
+    for d in runtime/angst runtime/vm runtime/shell runtime/analyze domains/wm/i3/workspace-group domains/chat/discord/voice-status; do echo "=== $d ==="; (cd $d && CGO_ENABLED=0 go test ./...); done
 
 vault-test:
     cd runtime/angst && go test ./internal/vault/... -v

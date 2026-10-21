@@ -72,6 +72,9 @@
         name = "discord";
         durable = true;
       }
+      {
+        dir = ".local/state/angst/discord-voice";
+      }
     ];
     "git.code" = [
       {
