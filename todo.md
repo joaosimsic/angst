@@ -71,15 +71,19 @@
 - [x] mouse hide button and i3 shortcut
 - [x] switch active and inactive ws number colors
 - [x] better differentiate active and inactive windows
-- [~] make windows/workspaces that have an update blink, so its better visually to know when do i need to callback to something
+- [x] make windows/workspaces that have an update blink, so its better visually to know when do i need to callback to something
 - [x] remove dark bg in memory section in status bar when memory > 20%
 - [x] mute bind aware of running media just so it can stop them instead of only blindely muting the whole system
-- [ ] lock desktop key that goes to ly or DM
+- [x] mod+u to go to the oldest urgent bell(ws group/ws/zellij tab)
+- [x] lock desktop key that goes to ly or DM
+- [x] weird icon on the right corner of 2nd monitor bar
+- [x] discord integration to see if im connected to a voice channel and if im muted or deaf
 
 # opencode
 
 - [x] make add/remove diff lines be derived from ansi green/red and the bg colors
 - [x] add gg and G binds to go to top and bottom of chat
+- [ ] accept all mode
 
 # vial
 
@@ -87,6 +91,6 @@
 
 # install
 
-- [ ] generic host
-- [ ] auto partition calamares disk
-- [ ] heavy testing of auto partition
+- [~] generic host
+- [~] auto partition calamares disk
+- [~] heavy testing of auto partition

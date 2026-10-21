@@ -141,6 +141,7 @@ in
       bindsym $mod+Shift+c reload
       bindsym $mod+Shift+r restart
       bindsym $mod+Shift+e exec i3-nagbar -t warning -m 'Exit i3?' -B 'Yes' 'i3-msg exit'
+      bindsym $mod+Escape exec --no-startup-id i3-lock
 
       mode "resize" {
           bindsym h resize shrink width 10 px or 10 ppt
@@ -169,6 +170,7 @@ in
           status_command i3status-rs ~/.config/i3status-rust/config.toml
           workspace_command i3-workspace-group bar ${t.ansi.error}
           position top
+          tray_output none
           font pango:${fontFamily} 10
           colors {
               background #${p.background.base}

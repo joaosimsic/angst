@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  themesLib,
   store,
   host,
   ...
@@ -14,6 +15,9 @@ let
   mouseHide = pkgs.callPackage ./mouse-hide.nix { inherit i3Tools; };
   vmGrab = pkgs.callPackage ./vm-grab.nix { };
   audioMute = pkgs.callPackage ./audio-mute.nix { };
+  lock = pkgs.callPackage ./lock.nix {
+    theme = themesLib.get config.theme;
+  };
 
   cap = config.domains.capture.screenshot or { enable = false; };
   notif = config.domains.notifications or { enable = false; };
@@ -31,6 +35,7 @@ in
       i3Tools
       mouseHide
       vmGrab
+      lock
     ]
     ++ lib.optionals shouldBindAudio [ audioMute ];
 
