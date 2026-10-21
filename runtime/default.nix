@@ -37,7 +37,9 @@ let
       --prefix PATH : ${
         lib.makeBinPath [
           pkgs.age
+          pkgs.git
           pkgs.openssh
+          pkgs.xdotool
         ]
       }
   '';
@@ -92,6 +94,8 @@ let
           pkgs.bash
           pkgs.nix
           pkgs.age
+          pkgs.git
+          pkgs.xdotool
         ]
       }
   '';

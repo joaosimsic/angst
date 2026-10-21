@@ -113,9 +113,6 @@ let
 
 
         shared_except "locked" {
-            bind "Ctrl Up" { GoToTab 1; }
-            bind "Ctrl Down" { GoToTab 1; GoToPreviousTab; }
-
             bind "Ctrl h" {
                 MessagePlugin "vim-navigator" {
                     name "move_focus_or_tab";
@@ -125,23 +122,9 @@ let
                 };
             }
 
-            bind "Ctrl j" {
-                MessagePlugin "vim-navigator" {
-                    name "move_focus";
-                    payload "down";
-                    move_mod "ctrl";
-                    use_arrow_keys "false";
-                };
-            }
+            bind "Ctrl j" { GoToTab 1; }
 
-            bind "Ctrl k" {
-                MessagePlugin "vim-navigator" {
-                    name "move_focus";
-                    payload "up";
-                    move_mod "ctrl";
-                    use_arrow_keys "false";
-                };
-            }
+            bind "Ctrl k" { GoToTab 1; GoToPreviousTab; }
 
             bind "Ctrl l" {
                 MessagePlugin "vim-navigator" {
@@ -224,11 +207,11 @@ in
         "zellij config should select the custom default layout"
       )
       (requireInfix configText "visual_bell true" "zellij visual bell should be enabled")
-      (requireInfix configText ''bind "Ctrl Up" { GoToTab 1; }''
-        "zellij Ctrl Up should jump to the first tab"
+      (requireInfix configText ''bind "Ctrl j" { GoToTab 1; }''
+        "zellij Ctrl+j should jump to the first tab"
       )
-      (requireInfix configText ''bind "Ctrl Down" { GoToTab 1; GoToPreviousTab; }''
-        "zellij Ctrl Down should jump to the last tab"
+      (requireInfix configText ''bind "Ctrl k" { GoToTab 1; GoToPreviousTab; }''
+        "zellij Ctrl+k should jump to the last tab"
       )
     ];
   }
@@ -276,15 +259,11 @@ in
       (require (
         p.accent.base != p.background.variant
       ) "zellij inactive tab text and bar surface must differ in ${themeName}")
-      (requireInfix layoutText "tab_normal_bell"
-        "zjstatus should render a persistent bell tab state"
-      )
+      (requireInfix layoutText "tab_normal_bell" "zjstatus should render a persistent bell tab state")
       (requireInfix layoutText "tab_normal_flashing_bell"
         "zjstatus should render a flashing bell tab state"
       )
-      (requireInfix layoutText "tab_bell_indicator"
-        "zjstatus should render a bell indicator"
-      )
+      (requireInfix layoutText "tab_bell_indicator" "zjstatus should render a bell indicator")
       (require (
         t.ansi.error != p.background.base
       ) "zellij bell tab background must differ from bar surface in ${themeName}")

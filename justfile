@@ -11,6 +11,12 @@ bootstrap-secrets host="nixos":
 install-nixos *args:
     sudo nix run .#install-nixos -- {{ args }}
 
+generic-provision *args:
+    sudo nix --extra-experimental-features 'nix-command flakes' run .#generic-provision -- {{ args }}
+
+generic-switch *args:
+    nix --extra-experimental-features 'nix-command flakes' run .#generic-switch -- {{ args }}
+
 reinstall *args:
     sudo nix run .#install-nixos -- --fresh --yes {{ args }}
 

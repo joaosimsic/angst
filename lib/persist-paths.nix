@@ -6,7 +6,7 @@
 }:
 
 let
-  persist = host.persist;
+  inherit (host) persist;
 
   resolvedEnabledFeatures =
     if enabledFeatures != null then

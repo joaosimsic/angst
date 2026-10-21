@@ -15,6 +15,7 @@ in
 {
   imports = [
     ./font.nix
+    ./generic-host.nix
     (lib.mkAliasOptionModule [ "keyboardLayout" ] [ "angst" "keyboardLayout" ])
   ];
 

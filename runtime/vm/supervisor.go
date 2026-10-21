@@ -173,9 +173,13 @@ func restartSupervisedVM(vm *vmProcess, opts *supervisorOptions, stdout, stderr 
 
 	opts.Headless = req.Headless
 	opts.FullHD = req.FullHD
+	fmt.Printf("Display: %s\n", displayMode(opts.Headless))
 	next, err := startVMProcess(*opts, stdout, stderr)
 	if err != nil {
 		return nil, err
+	}
+	if !opts.Headless {
+		focusQemuWindow(10 * time.Second)
 	}
 	return next, nil
 }
@@ -234,6 +238,9 @@ func runSupervisor(opts supervisorOptions) int {
 		fmt.Fprintln(os.Stderr, err)
 		controller.clear(serviceVM)
 		return exitError
+	}
+	if !opts.Headless {
+		focusQemuWindow(10 * time.Second)
 	}
 	defer func() {
 		if vm != nil {

@@ -16,16 +16,23 @@ pkgs.writeShellApplication {
 
     qemu_window() {
       local id name
-      for id in $(xdotool search --onlyvisible --class qemu 2>/dev/null || true); do
+      for id in $(xdotool search --class qemu 2>/dev/null || true); do
         name=$(xdotool getwindowname "$id" 2>/dev/null || true)
         case "$name" in
-          QEMU*)
+          QEMU\ \(*\))
+            case "$name" in
+              *": "*) continue ;;
+            esac
             printf '%s\n' "$id"
             return 0
             ;;
         esac
       done
-      for id in $(xdotool search --onlyvisible --name '^QEMU' 2>/dev/null || true); do
+      for id in $(xdotool search --name '^QEMU \(' 2>/dev/null || true); do
+        name=$(xdotool getwindowname "$id" 2>/dev/null || true)
+        case "$name" in
+          *": "*) continue ;;
+        esac
         printf '%s\n' "$id"
         return 0
       done
@@ -51,10 +58,10 @@ pkgs.writeShellApplication {
     print_state() {
       case "$1" in
         grabbed)
-          printf '{"icon":"keyboard","state":"Critical","text":"release"}\n'
+          printf '{"icon":"gpu","state":"Critical","text":"Super+G"}\n'
           ;;
         *)
-          printf '{"icon":"keyboard","state":"Good","text":"grab"}\n'
+          printf '{"icon":"gpu","state":"Good","text":"Super+G"}\n'
           ;;
       esac
     }

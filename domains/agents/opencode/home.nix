@@ -5,10 +5,16 @@
   ...
 }:
 
+let
+  opencode = import ./wrapper.nix {
+    inherit pkgs;
+    opencodePackage = pkgs.opencode;
+  };
+in
 {
   config = lib.mkIf config.domains.agents.opencode.enable {
     home.packages = [
-      pkgs.opencode
+      opencode
       pkgs.rtk
     ];
 

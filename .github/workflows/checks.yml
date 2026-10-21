@@ -43,6 +43,10 @@ jobs:
           - theme-override
           - theme-semantic-distinct
           - check-password
+          - generic-host-isolation
+          - generic-host-contract
+          - generic-host-guard
+          - generic-provision-safety
           - check-secrets-encrypted
           - check-projects-encrypted
           - check-ssh-keys
@@ -76,6 +80,19 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: NIXPKGS_ALLOW_UNFREE=1 nix build '.#tests.x86_64-linux.persist-ownership' --impure --no-link --print-build-logs
+
+  generic-provision:
+    name: generic-provision
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docs == 'false' || needs.changes.outputs.tools == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      # Both tests exercise real btrfs/VM boot behavior and require KVM.
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: NIXPKGS_ALLOW_UNFREE=1 nix build '.#tests.x86_64-linux.generic-provision-no-btrfs' --impure --no-link --print-build-logs
+      - run: NIXPKGS_ALLOW_UNFREE=1 nix build '.#tests.x86_64-linux.generic-provision' --impure --no-link --print-build-logs
 
   build-all:
     runs-on: ubuntu-latest

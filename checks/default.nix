@@ -64,6 +64,22 @@ let
     inherit pkgs lib hostList;
   };
 
+  checkGenericHostIsolation = import ./generic-host-isolation.nix {
+    inherit self lib pkgs;
+  };
+
+  checkGenericHostContract = import ./generic-host-contract.nix {
+    inherit self lib pkgs;
+  };
+
+  checkGenericHostGuard = import ./generic-host-guard.nix {
+    inherit lib pkgs;
+  };
+
+  checkGenericProvisionSafety = import ./generic-provision-safety.nix {
+    inherit pkgs;
+  };
+
   checkTreesitter = import ./treesitter.nix {
     inherit
       pkgs
@@ -100,7 +116,20 @@ let
 
   checkTex = import ./tex.nix { inherit pkgs lib; };
 
+  checkZellij = import ./zellij.nix {
+    inherit
+      pkgs
+      host
+      render
+      ;
+  };
+
   checkOpencodeAttention = import ./opencode.nix { inherit pkgs; };
+
+  checkOpencodeSecret = import ./opencode-secret.nix {
+    inherit pkgs;
+    opencodeConfig = render.renderDomainOutputFor host.theme "domains/agents/opencode/config/opencode.jsonc";
+  };
 
   checkSessionEnv = import ./session-env.nix {
     inherit pkgs lib self;
@@ -160,6 +189,10 @@ let
 in
 {
   check-password = checkPassword;
+  generic-host-isolation = checkGenericHostIsolation;
+  generic-host-contract = checkGenericHostContract;
+  generic-host-guard = checkGenericHostGuard;
+  generic-provision-safety = checkGenericProvisionSafety;
   check-secrets-encrypted = checkSecretsEncrypted.secrets;
   check-projects-encrypted = checkSecretsEncrypted.projects;
   check-db-encrypted = checkSecretsEncrypted.db;
@@ -176,7 +209,9 @@ in
   check-treesitter = checkTreesitter;
   check-rust = checkRust;
   check-tex = checkTex;
+  check-zellij = checkZellij;
   check-opencode-attention = checkOpencodeAttention;
+  check-opencode-secret = checkOpencodeSecret;
   check-session-env = checkSessionEnv;
   check-session-usability = checkSessionUsability;
   lint-themes = pkgs.writeText "lint-themes-check" themeLint;

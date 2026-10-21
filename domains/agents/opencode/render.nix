@@ -144,7 +144,7 @@ let
       provider = {
         opencode-go = {
           options = {
-            apiKey = "{file:~/.secrets/opencode-go-key}";
+            apiKey = "{env:OPENCODE_GO_API_KEY}";
           };
         };
       };

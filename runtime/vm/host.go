@@ -74,6 +74,52 @@ func detectDisplay() bool {
 	return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
 }
 
+func displayMode(headless bool) string {
+	if headless {
+		return "none"
+	}
+	return "gtk"
+}
+
+func findQemuWindow() (string, string, bool) {
+	out, err := exec.Command("xdotool", "search", "--name", "^QEMU \\(").Output()
+	if err != nil {
+		return "", "", false
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		id := strings.TrimSpace(line)
+		if id == "" {
+			continue
+		}
+		name, err := exec.Command("xdotool", "getwindowname", id).Output()
+		if err != nil {
+			continue
+		}
+		title := strings.TrimSpace(string(name))
+		if strings.Contains(title, ": ") {
+			continue
+		}
+		return id, title, true
+	}
+	return "", "", false
+}
+
+func focusQemuWindow(timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		id, title, ok := findQemuWindow()
+		if ok {
+			_ = exec.Command("xdotool", "windowactivate", "--sync", id).Run()
+			_ = exec.Command("xdotool", "windowraise", id).Run()
+			fmt.Printf("QEMU window: %s\n", title)
+			return true
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	fmt.Fprintln(os.Stderr, "warn: QEMU is running but no graphical window was found; check 'vm logs'.")
+	return false
+}
+
 func sshExec(command string) (int, string, string) {
 	port := envOr("VM_SSH_PORT", "2222")
 	user := resolveUsername()
@@ -155,8 +201,40 @@ func findRunner(host string) string {
 	return ""
 }
 
+func untrackedFlakeInputs(repo string) ([]string, error) {
+	out, err := exec.Command("git", "-C", repo, "ls-files", "--others", "--exclude-standard", "-z").Output()
+	if err != nil {
+		return nil, err
+	}
+	raw := strings.TrimSuffix(string(out), "\x00")
+	if raw == "" {
+		return nil, nil
+	}
+	return strings.Split(raw, "\x00"), nil
+}
+
+func ensureTrackedFlakeInputs(repo string) error {
+	files, err := untrackedFlakeInputs(repo)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warn: could not check for untracked flake inputs: %v\n", err)
+		return nil
+	}
+	if len(files) == 0 {
+		return nil
+	}
+	fmt.Fprintln(os.Stderr, "error: untracked files are not visible to the Nix flake:")
+	for _, file := range files {
+		fmt.Fprintf(os.Stderr, "  %s\n", file)
+	}
+	fmt.Fprintln(os.Stderr, "Stage them with 'git add <path>' or ignore them, then retry.")
+	return fmt.Errorf("untracked flake inputs")
+}
+
 func buildVm(host string) error {
 	repo := repoRoot()
+	if err := ensureTrackedFlakeInputs(repo); err != nil {
+		return err
+	}
 	username := envOr("ANGST_USERNAME", resolveUsername())
 	args := []string{"build", "--refresh", "--no-write-lock-file",
 		fmt.Sprintf(".#nixosConfigurations.%s.config.system.build.vm", host)}
@@ -261,9 +339,9 @@ func buildVMEnv(host, repo, sharedDir, diskImg string, headless, fullHD bool) []
 	if fullHD {
 		width, height = 1920, 1080
 	}
-	qemuOpts := fmt.Sprintf("-device virtio-gpu-pci,xres=%d,yres=%d", width, height)
+	qemuOpts := fmt.Sprintf("-display gtk,zoom-to-fit=on,grab-on-hover=off -device virtio-gpu-pci,xres=%d,yres=%d", width, height)
 	if headless {
-		qemuOpts = "-display none " + qemuOpts
+		qemuOpts = fmt.Sprintf("-display none -device virtio-gpu-pci,xres=%d,yres=%d", width, height)
 	}
 	return []string{
 		"SHARED_DIR=" + sharedDir,
@@ -334,6 +412,7 @@ func startVM(args []string, ensureMCP bool) int {
 		fmt.Fprintln(os.Stderr, "warn: --gtk requested but no DISPLAY/WAYLAND_DISPLAY; falling back to headless")
 		effectiveHeadless = true
 	}
+	fmt.Printf("Display: %s\n", displayMode(effectiveHeadless))
 
 	runner := findRunner(host)
 	if runner == "" {
@@ -376,6 +455,9 @@ func startVM(args []string, ensureMCP bool) int {
 			return exitError
 		}
 		fmt.Printf("VM Started! (PID %d) Validating connection status...\n", pid)
+		if !effectiveHeadless {
+			focusQemuWindow(10 * time.Second)
+		}
 		return waitForVMReady()
 	}
 
