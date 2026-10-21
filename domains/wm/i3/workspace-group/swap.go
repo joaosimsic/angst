@@ -7,9 +7,9 @@ import (
 )
 
 func InnerSwap(first, second int) error {
-	workspaces, err := i3.GetWorkspaces()
+	workspaces, err := groupedWorkspaces()
 	if err != nil {
-		return fmt.Errorf("get workspaces: %w", err)
+		return err
 	}
 	tree, err := i3.GetTree()
 	if err != nil {

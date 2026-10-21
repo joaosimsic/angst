@@ -1,9 +1,11 @@
 package i3workspacegroup
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func Run(args []string) int {
@@ -80,7 +82,12 @@ func Run(args []string) int {
 		}
 		fmt.Fprintf(os.Stderr, "i3-workspace-group adopt: renamed %d workspace(s)\n", renamed)
 	case "bar":
-		if err := Bar(); err != nil {
+		urgentColor, err := singleArgColor(args[1:])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 2
+		}
+		if err := Bar(urgentColor); err != nil {
 			fmt.Fprintf(os.Stderr, "i3-workspace-group bar: %v\n", err)
 			return 1
 		}
@@ -114,6 +121,20 @@ func singleArgInner(args []string) (int, error) {
 	return parseInner(args[0])
 }
 
+func singleArgColor(args []string) (string, error) {
+	if len(args) != 1 {
+		return "", fmt.Errorf("expected one six-digit hex color argument")
+	}
+	value := strings.TrimPrefix(args[0], "#")
+	if len(value) != 6 {
+		return "", fmt.Errorf("bar urgent color must be a six-digit hex color")
+	}
+	if _, err := hex.DecodeString(value); err != nil {
+		return "", fmt.Errorf("bar urgent color must be a six-digit hex color")
+	}
+	return "#" + value, nil
+}
+
 func parseInner(value string) (int, error) {
 	return parseNumber(value, MaxInner, "inner workspace")
 }
@@ -134,7 +155,7 @@ func usage(output *os.File) {
   i3-workspace-group inner-move INNER
   i3-workspace-group inner-swap INNER_A INNER_B
   i3-workspace-group adopt
-  i3-workspace-group bar
+  i3-workspace-group bar URGENT_COLOR
   i3-workspace-group daemon
 `)
 }

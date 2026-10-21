@@ -12,7 +12,7 @@ import (
 
 const barBlinkInterval = 600 * time.Millisecond
 
-func Bar() error {
+func Bar(urgentColor string) error {
 	for {
 		receiver := i3.Subscribe(i3.WorkspaceEventType, i3.OutputEventType, i3.WindowEventType)
 		events := make(chan struct{}, 1)
@@ -24,7 +24,7 @@ func Bar() error {
 
 		ticker := time.NewTicker(barBlinkInterval)
 		blink := false
-		hasUrgent, err := emitBar(blink)
+		hasUrgent, err := emitBar(blink, urgentColor)
 		if err != nil {
 			log.Printf("i3-workspace-group bar: %v", err)
 		}
@@ -33,7 +33,7 @@ func Bar() error {
 		for {
 			select {
 			case <-events:
-				hasUrgent, err = emitBar(blink)
+				hasUrgent, err = emitBar(blink, urgentColor)
 				if err != nil {
 					log.Printf("i3-workspace-group bar: %v", err)
 				}
@@ -43,7 +43,7 @@ func Bar() error {
 					continue
 				}
 				blink = !blink
-				hasUrgent, err = emitBar(blink)
+				hasUrgent, err = emitBar(blink, urgentColor)
 				if err != nil {
 					log.Printf("i3-workspace-group bar: %v", err)
 				}
@@ -76,7 +76,7 @@ func collectBarEvents(receiver *i3.EventReceiver, events chan<- struct{}) {
 	}
 }
 
-func emitBar(showUrgent bool) (bool, error) {
+func emitBar(showUrgent bool, urgentColor string) (bool, error) {
 	outputs, err := i3.GetOutputs()
 	if err != nil {
 		return false, fmt.Errorf("get outputs: %w", err)
@@ -86,7 +86,7 @@ func emitBar(showUrgent bool) (bool, error) {
 		return false, fmt.Errorf("get workspaces: %w", err)
 	}
 
-	state, hasUrgent := applyBarBlink(PlanBarState(outputs, workspaces), showUrgent)
+	state, hasUrgent := applyBarBlink(PlanBarState(outputs, workspaces), showUrgent, urgentColor)
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetEscapeHTML(false)
 	if err := encoder.Encode(state); err != nil {

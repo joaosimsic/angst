@@ -12,6 +12,7 @@ func TestOpacityTargetsSingleWindowWorkspace(t *testing.T) {
 		Nodes: []*i3.Node{
 			{
 				Type:  i3.WorkspaceNode,
+				Name:  "1",
 				Focus: []i3.NodeID{20},
 				Nodes: []*i3.Node{
 					{Type: i3.Con, ID: 20, Window: 200},
@@ -20,7 +21,7 @@ func TestOpacityTargetsSingleWindowWorkspace(t *testing.T) {
 		},
 	}
 
-	targets := opacityTargets(root)
+	targets := opacityTargets(root, "1")
 	if !targets[200] {
 		t.Fatalf("single workspace window = %#v, want focused", targets)
 	}
@@ -32,6 +33,7 @@ func TestOpacityTargetsDimsUnfocusedWorkspaceWindows(t *testing.T) {
 		Nodes: []*i3.Node{
 			{
 				Type:  i3.WorkspaceNode,
+				Name:  "1",
 				Focus: []i3.NodeID{12, 10},
 				Nodes: []*i3.Node{
 					{Type: i3.Con, ID: 10, Window: 100},
@@ -41,7 +43,7 @@ func TestOpacityTargetsDimsUnfocusedWorkspaceWindows(t *testing.T) {
 		},
 	}
 
-	targets := opacityTargets(root)
+	targets := opacityTargets(root, "1")
 	if !targets[120] {
 		t.Fatalf("focused window = %#v, want focused", targets)
 	}
@@ -56,6 +58,7 @@ func TestOpacityTargetsNestedFocus(t *testing.T) {
 		Nodes: []*i3.Node{
 			{
 				Type:  i3.WorkspaceNode,
+				Name:  "1",
 				Focus: []i3.NodeID{30},
 				Nodes: []*i3.Node{
 					{
@@ -72,7 +75,7 @@ func TestOpacityTargetsNestedFocus(t *testing.T) {
 		},
 	}
 
-	targets := opacityTargets(root)
+	targets := opacityTargets(root, "1")
 	if !targets[310] {
 		t.Fatalf("nested focused window = %#v, want focused", targets)
 	}
@@ -81,12 +84,13 @@ func TestOpacityTargetsNestedFocus(t *testing.T) {
 	}
 }
 
-func TestOpacityTargetsPerWorkspace(t *testing.T) {
+func TestOpacityTargetsOnlyDimsActiveWorkspace(t *testing.T) {
 	root := &i3.Node{
 		Type: i3.Root,
 		Nodes: []*i3.Node{
 			{
 				Type:  i3.WorkspaceNode,
+				Name:  "1",
 				Focus: []i3.NodeID{12, 10},
 				Nodes: []*i3.Node{
 					{Type: i3.Con, ID: 10, Window: 100},
@@ -95,20 +99,30 @@ func TestOpacityTargetsPerWorkspace(t *testing.T) {
 			},
 			{
 				Type:  i3.WorkspaceNode,
-				Focus: []i3.NodeID{20},
+				Name:  "2",
+				Focus: []i3.NodeID{22, 20},
 				Nodes: []*i3.Node{
 					{Type: i3.Con, ID: 20, Window: 200},
+					{Type: i3.Con, ID: 22, Window: 220},
 				},
 			},
 		},
 	}
 
-	targets := opacityTargets(root)
-	if !targets[120] || !targets[200] {
-		t.Fatalf("workspace focus targets = %#v, want both focused", targets)
+	targets := opacityTargets(root, "1")
+	if !targets[120] || targets[100] {
+		t.Fatalf("active workspace targets = %#v, want 120 focused and 100 dimmed", targets)
 	}
-	if targets[100] {
-		t.Fatalf("workspace focus targets = %#v, want 100 dimmed", targets)
+	if !targets[200] || !targets[220] {
+		t.Fatalf("inactive workspace targets = %#v, want all windows full opacity", targets)
+	}
+
+	targets = opacityTargets(root, "2")
+	if !targets[220] || targets[200] {
+		t.Fatalf("active secondary workspace targets = %#v, want 220 focused and 200 dimmed", targets)
+	}
+	if !targets[100] || !targets[120] {
+		t.Fatalf("inactive primary workspace targets = %#v, want all windows full opacity", targets)
 	}
 }
 

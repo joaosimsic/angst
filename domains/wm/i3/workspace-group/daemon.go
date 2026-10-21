@@ -15,6 +15,12 @@ func Daemon() error {
 	}
 	defer lock.Close()
 
+	if renamed, err := AdoptIfNeeded(); err != nil {
+		log.Printf("i3-workspace-group daemon: adopt: %v", err)
+	} else if renamed > 0 {
+		log.Printf("i3-workspace-group daemon: adopted %d workspace(s)", renamed)
+	}
+
 	if err := syncOpacity(); err != nil {
 		log.Printf("i3-workspace-group daemon: %v", err)
 	}
@@ -61,6 +67,12 @@ func collectTriggers(receiver *i3.EventReceiver, triggers chan<- struct{}) {
 func syncOnce() error {
 	if err := syncOpacity(); err != nil {
 		log.Printf("i3-workspace-group daemon: %v", err)
+	}
+
+	if renamed, err := AdoptIfNeeded(); err != nil {
+		log.Printf("i3-workspace-group daemon: adopt: %v", err)
+	} else if renamed > 0 {
+		log.Printf("i3-workspace-group daemon: adopted %d workspace(s)", renamed)
 	}
 
 	workspaces, err := i3.GetWorkspaces()

@@ -16,6 +16,17 @@ func loadCurrentState() State {
 	return state
 }
 
+func groupedWorkspaces() ([]i3.Workspace, error) {
+	if _, err := AdoptIfNeeded(); err != nil {
+		return nil, fmt.Errorf("adopt workspaces: %w", err)
+	}
+	workspaces, err := i3.GetWorkspaces()
+	if err != nil {
+		return nil, fmt.Errorf("get workspaces: %w", err)
+	}
+	return workspaces, nil
+}
+
 func rememberFocused(workspaces []i3.Workspace) {
 	group, inner, output, ok := parseFocusedWorkspace(workspaces)
 	if !ok {
@@ -27,9 +38,9 @@ func rememberFocused(workspaces []i3.Workspace) {
 }
 
 func Switch(group int) error {
-	workspaces, err := i3.GetWorkspaces()
+	workspaces, err := groupedWorkspaces()
 	if err != nil {
-		return fmt.Errorf("get workspaces: %w", err)
+		return err
 	}
 	rememberFocused(workspaces)
 
@@ -51,9 +62,9 @@ func Switch(group int) error {
 }
 
 func MoveTop(group int) error {
-	workspaces, err := i3.GetWorkspaces()
+	workspaces, err := groupedWorkspaces()
 	if err != nil {
-		return fmt.Errorf("get workspaces: %w", err)
+		return err
 	}
 	command, err := PlanMoveTop(workspaces, loadCurrentState(), group)
 	if err != nil {
@@ -63,9 +74,9 @@ func MoveTop(group int) error {
 }
 
 func Inner(inner int) error {
-	workspaces, err := i3.GetWorkspaces()
+	workspaces, err := groupedWorkspaces()
 	if err != nil {
-		return fmt.Errorf("get workspaces: %w", err)
+		return err
 	}
 	command, group, output, err := PlanInnerSwitch(workspaces, inner)
 	if err != nil {
@@ -81,9 +92,9 @@ func Inner(inner int) error {
 }
 
 func InnerMove(inner int) error {
-	workspaces, err := i3.GetWorkspaces()
+	workspaces, err := groupedWorkspaces()
 	if err != nil {
-		return fmt.Errorf("get workspaces: %w", err)
+		return err
 	}
 	command, err := PlanInnerMove(workspaces, inner)
 	if err != nil {

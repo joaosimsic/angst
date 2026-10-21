@@ -30,7 +30,17 @@ func syncOpacity() error {
 		return fmt.Errorf("get tree: %w", err)
 	}
 
-	targets := opacityTargets(tree.Root)
+	workspaces, err := i3.GetWorkspaces()
+	if err != nil {
+		return fmt.Errorf("get workspaces: %w", err)
+	}
+
+	activeWorkspace := ""
+	if focused, ok := focusedWorkspace(workspaces); ok {
+		activeWorkspace = focused.Name
+	}
+
+	targets := opacityTargets(tree.Root, activeWorkspace)
 	inactive := inactiveOpacity()
 
 	for window, focused := range targets {
@@ -113,7 +123,7 @@ func opacityConnection() (*xgb.Conn, xproto.Atom, error) {
 	return opacityConn, opacityAtom, nil
 }
 
-func opacityTargets(root *i3.Node) map[int64]bool {
+func opacityTargets(root *i3.Node, activeWorkspace string) map[int64]bool {
 	targets := make(map[int64]bool)
 
 	var walk func(node *i3.Node)
@@ -121,6 +131,12 @@ func opacityTargets(root *i3.Node) map[int64]bool {
 		if node.Type == i3.WorkspaceNode {
 			windows := windowIDs(node)
 			if len(windows) == 0 {
+				return
+			}
+			if node.Name != activeWorkspace {
+				for _, window := range windows {
+					targets[window] = true
+				}
 				return
 			}
 			focused := focusedWindowID(node)

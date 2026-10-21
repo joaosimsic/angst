@@ -2,6 +2,7 @@ package i3workspacegroup
 
 import (
 	"fmt"
+	"html"
 	"sort"
 	"strconv"
 
@@ -21,6 +22,12 @@ type RenamePlan struct {
 type innerSelection struct {
 	inner    int
 	moveFrom string
+}
+
+type barWorkspace struct {
+	i3.Workspace
+	groupBadge bool
+	urgent     bool
 }
 
 func activeOutputs(outputs []i3.Output) []i3.Output {
@@ -266,8 +273,8 @@ func PlanAdopt(workspaces []i3.Workspace) []RenamePlan {
 	return planned
 }
 
-func PlanBarState(outputs []i3.Output, workspaces []i3.Workspace) []i3.Workspace {
-	state := make([]i3.Workspace, 0)
+func PlanBarState(outputs []i3.Output, workspaces []i3.Workspace) []barWorkspace {
+	state := make([]barWorkspace, 0)
 	for _, output := range activeOutputs(outputs) {
 		visible, ok := visibleWorkspaceForOutput(workspaces, output.Name)
 		if !ok {
@@ -275,29 +282,32 @@ func PlanBarState(outputs []i3.Output, workspaces []i3.Workspace) []i3.Workspace
 		}
 		group, _, grouped := ParseWorkspace(visible.Name)
 		if !grouped {
-			state = append(state, i3.Workspace{
+			state = append(state, barWorkspace{Workspace: i3.Workspace{
 				ID:     visible.ID,
 				Num:    -1,
 				Name:   "1",
 				Output: output.Name,
-			})
+			}})
 			for _, workspace := range workspaces {
 				if workspace.Output == output.Name {
 					workspace.Visible = true
-					state = append(state, workspace)
+					state = append(state, barWorkspace{
+						Workspace: workspace,
+						urgent:    workspace.Urgent,
+					})
 				}
 			}
 			continue
 		}
 
-		state = append(state, i3.Workspace{
+		state = append(state, barWorkspace{Workspace: i3.Workspace{
 			ID:     visible.ID,
 			Num:    -1,
 			Name:   strconv.Itoa(group),
 			Output: output.Name,
-		})
+		}})
 
-		inners := make([]i3.Workspace, 0)
+		inners := make([]barWorkspace, 0)
 		for _, workspace := range workspaces {
 			workspaceGroup, inner, parsed := ParseWorkspace(workspace.Name)
 			if !parsed || workspaceGroup != group || workspace.Output != output.Name {
@@ -306,7 +316,10 @@ func PlanBarState(outputs []i3.Output, workspaces []i3.Workspace) []i3.Workspace
 			workspace.Name = strconv.Itoa(inner)
 			workspace.Num = int64(inner)
 			workspace.Visible = true
-			inners = append(inners, workspace)
+			inners = append(inners, barWorkspace{
+				Workspace: workspace,
+				urgent:    workspace.Urgent,
+			})
 		}
 		sort.Slice(inners, func(first, second int) bool {
 			return inners[first].Num < inners[second].Num
@@ -317,7 +330,7 @@ func PlanBarState(outputs []i3.Output, workspaces []i3.Workspace) []i3.Workspace
 	return state
 }
 
-func urgentGroupBadges(workspaces []i3.Workspace, output string, activeGroup int) []i3.Workspace {
+func urgentGroupBadges(workspaces []i3.Workspace, output string, activeGroup int) []barWorkspace {
 	urgent := make(map[int]i3.Workspace)
 	for _, workspace := range workspaces {
 		if workspace.Output != output || !workspace.Urgent {
@@ -338,32 +351,45 @@ func urgentGroupBadges(workspaces []i3.Workspace, output string, activeGroup int
 	}
 	sort.Ints(groups)
 
-	badges := make([]i3.Workspace, 0, len(groups))
+	badges := make([]barWorkspace, 0, len(groups))
 	for _, group := range groups {
 		workspace := urgent[group]
-		badges = append(badges, i3.Workspace{
-			ID:     workspace.ID,
-			Num:    -1,
-			Name:   strconv.Itoa(group),
-			Output: output,
-			Urgent: true,
+		badges = append(badges, barWorkspace{
+			Workspace: i3.Workspace{
+				ID:     workspace.ID,
+				Num:    -1,
+				Name:   strconv.Itoa(group),
+				Output: output,
+				Urgent: true,
+			},
+			groupBadge: true,
+			urgent:     true,
 		})
 	}
 	return badges
 }
 
-func applyBarBlink(state []i3.Workspace, showUrgent bool) ([]i3.Workspace, bool) {
+func applyBarBlink(state []barWorkspace, showUrgent bool, urgentColor string) ([]barWorkspace, bool) {
 	hasUrgent := false
 	for index := range state {
-		if !state[index].Urgent {
+		if !state[index].urgent {
 			continue
 		}
 		hasUrgent = true
-		if !showUrgent {
-			state[index].Urgent = false
+		if state[index].groupBadge {
+			state[index].Urgent = showUrgent
+			continue
+		}
+		state[index].Urgent = false
+		if showUrgent {
+			state[index].Name = urgentWorkspaceName(state[index].Name, urgentColor)
 		}
 	}
 	return state, hasUrgent
+}
+
+func urgentWorkspaceName(name, color string) string {
+	return fmt.Sprintf(`<span foreground="%s">%s</span>`, color, html.EscapeString(name))
 }
 
 func PlanSync(outputs []i3.Output, workspaces []i3.Workspace, state State, group int) []string {

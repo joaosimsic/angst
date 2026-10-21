@@ -166,7 +166,7 @@ in
 
       bar {
           status_command i3status-rs ~/.config/i3status-rust/config.toml
-          workspace_command i3-workspace-group bar
+          workspace_command i3-workspace-group bar ${t.ansi.error}
           position top
           font pango:${fontFamily} 10
           colors {

@@ -108,10 +108,10 @@ let
               fullPath = "${toString dirPath}/${subName}";
               relPath = p + subName;
             in
-            if subType == "directory" then
-              go fullPath (relPath + "/")
-            else if isSkippable subName (toString fullPath) then
+            if isSkippable subName (toString fullPath) then
               [ ]
+            else if subType == "directory" then
+              go fullPath (relPath + "/")
             else
               [
                 {

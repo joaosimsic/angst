@@ -1,7 +1,9 @@
 package i3workspacegroup
 
 import (
+	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"go.i3wm.org/i3/v4"
@@ -136,6 +138,62 @@ func TestPlanAdopt(t *testing.T) {
 	}
 }
 
+func TestPlanAdoptPlainWorkspaces(t *testing.T) {
+	workspaces := []i3.Workspace{
+		{ID: 1, Name: "1", Num: 1, Output: "DP-1", Visible: true, Focused: true},
+		{ID: 2, Name: "2", Num: 2, Output: "HDMI-2", Visible: true},
+	}
+	want := []RenamePlan{
+		{Old: "1", New: "1:1"},
+		{Old: "2", New: "1:2"},
+	}
+	if got := PlanAdopt(workspaces); !reflect.DeepEqual(got, want) {
+		t.Fatalf("PlanAdopt() = %#v, want %#v", got, want)
+	}
+}
+
+func TestPlanAdoptCurrentLayout(t *testing.T) {
+	workspaces := []i3.Workspace{
+		{ID: 1, Name: "1", Num: 1, Output: "DP-1", Urgent: true},
+		{ID: 2, Name: "1:1", Num: 1, Output: "DP-1", Visible: true},
+		{ID: 3, Name: "1:2", Num: 1, Output: "HDMI-2", Visible: true},
+		{ID: 4, Name: "2", Num: 2, Output: "HDMI-2"},
+		{ID: 5, Name: "2:1", Num: 2, Output: "DP-1"},
+	}
+	want := []RenamePlan{
+		{Old: "1", New: "1:3"},
+		{Old: "2", New: "1:4"},
+	}
+	if got := PlanAdopt(workspaces); !reflect.DeepEqual(got, want) {
+		t.Fatalf("PlanAdopt() = %#v, want %#v", got, want)
+	}
+}
+
+func TestPlanAdoptEnablesInnerSwitch(t *testing.T) {
+	workspaces := []i3.Workspace{
+		{ID: 1, Name: "1", Num: 1, Output: "DP-1", Visible: true, Focused: true},
+		{ID: 2, Name: "2", Num: 2, Output: "HDMI-2", Visible: true},
+	}
+	renames := make(map[string]string)
+	for _, plan := range PlanAdopt(workspaces) {
+		renames[plan.Old] = plan.New
+	}
+	for index := range workspaces {
+		workspaces[index].Name = renames[workspaces[index].Name]
+	}
+
+	command, group, output, err := PlanInnerSwitch(workspaces, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `workspace --no-auto-back-and-forth "1:3"`; command != want {
+		t.Fatalf("PlanInnerSwitch() = %q, want %q", command, want)
+	}
+	if group != 1 || output != "DP-1" {
+		t.Fatalf("PlanInnerSwitch() = (%d, %q), want (1, DP-1)", group, output)
+	}
+}
+
 func TestPlanBarState(t *testing.T) {
 	state := PlanBarState(testOutputs(), testWorkspaces())
 	if len(state) != 6 {
@@ -235,7 +293,15 @@ func TestPlanBarStateDoesNotBadgeActiveGroup(t *testing.T) {
 }
 
 func TestApplyBarBlink(t *testing.T) {
-	state, hasUrgent := applyBarBlink([]i3.Workspace{{Urgent: true}, {Urgent: false}}, false)
+	badge := func() barWorkspace {
+		return barWorkspace{
+			Workspace:  i3.Workspace{Name: "2", Urgent: true},
+			groupBadge: true,
+			urgent:     true,
+		}
+	}
+
+	state, hasUrgent := applyBarBlink([]barWorkspace{badge()}, false, "#ff0000")
 	if !hasUrgent {
 		t.Fatal("applyBarBlink hasUrgent = false, want true")
 	}
@@ -243,9 +309,75 @@ func TestApplyBarBlink(t *testing.T) {
 		t.Fatalf("applyBarBlink state[0].Urgent = true, want masked")
 	}
 
-	state, hasUrgent = applyBarBlink([]i3.Workspace{{Urgent: true}}, true)
+	state, hasUrgent = applyBarBlink([]barWorkspace{badge()}, true, "#ff0000")
 	if !hasUrgent || !state[0].Urgent {
 		t.Fatalf("applyBarBlink() = (%#v, %v), want visible urgent", state, hasUrgent)
+	}
+}
+
+func TestApplyBarBlinkStylesInnerUrgentWorkspaceWithForegroundMarkup(t *testing.T) {
+	inner := func() barWorkspace {
+		return barWorkspace{
+			Workspace: i3.Workspace{
+				ID:      7,
+				Num:     2,
+				Name:    "2",
+				Visible: true,
+				Urgent:  true,
+			},
+			urgent: true,
+		}
+	}
+
+	state, hasUrgent := applyBarBlink([]barWorkspace{inner()}, true, "#d20f39")
+	if !hasUrgent {
+		t.Fatal("applyBarBlink hasUrgent = false, want true")
+	}
+	if state[0].Urgent {
+		t.Fatal("applyBarBlink requested urgent background, want foreground only")
+	}
+	if want := `<span foreground="#d20f39">2</span>`; state[0].Name != want {
+		t.Fatalf("applyBarBlink state[0].Name = %q, want %q", state[0].Name, want)
+	}
+
+	state, hasUrgent = applyBarBlink([]barWorkspace{inner()}, false, "#d20f39")
+	if !hasUrgent {
+		t.Fatal("applyBarBlink hasUrgent = false, want true")
+	}
+	if state[0].Urgent {
+		t.Fatal("applyBarBlink requested urgent background, want foreground only")
+	}
+	if state[0].Name != "2" {
+		t.Fatalf("applyBarBlink state[0].Name = %q, want plain name", state[0].Name)
+	}
+}
+
+func TestUrgentWorkspaceNameEscapesMarkup(t *testing.T) {
+	got := urgentWorkspaceName(`a&b<c>"d"`, "#ff0000")
+	want := `<span foreground="#ff0000">a&amp;b&lt;c&gt;&#34;d&#34;</span>`
+	if got != want {
+		t.Fatalf("urgentWorkspaceName() = %q, want %q", got, want)
+	}
+}
+
+func TestBarWorkspaceJSONKeepsWorkspaceFieldsTopLevel(t *testing.T) {
+	encoded, err := json.Marshal(barWorkspace{Workspace: i3.Workspace{
+		ID:      7,
+		Num:     2,
+		Name:    "2",
+		Visible: true,
+		Output:  "DP-1",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{`"id":7`, `"num":2`, `"name":"2"`, `"visible":true`, `"output":"DP-1"`} {
+		if !strings.Contains(string(encoded), field) {
+			t.Fatalf("barWorkspace JSON %s does not contain %s", encoded, field)
+		}
+	}
+	if strings.Contains(string(encoded), "groupBadge") || strings.Contains(string(encoded), `"urgent":true`) {
+		t.Fatalf("barWorkspace JSON %s leaked internal fields", encoded)
 	}
 }
 

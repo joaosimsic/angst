@@ -6,6 +6,17 @@ import (
 	"go.i3wm.org/i3/v4"
 )
 
+func AdoptIfNeeded() (int, error) {
+	workspaces, err := i3.GetWorkspaces()
+	if err != nil {
+		return 0, fmt.Errorf("get workspaces: %w", err)
+	}
+	if len(PlanAdopt(workspaces)) == 0 {
+		return 0, nil
+	}
+	return Adopt()
+}
+
 func Adopt() (int, error) {
 	workspaces, err := i3.GetWorkspaces()
 	if err != nil {
