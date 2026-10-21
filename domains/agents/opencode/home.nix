@@ -18,7 +18,12 @@ in
       pkgs.rtk
     ];
 
-    xdg.configFile = import ./skills.nix { inherit lib pkgs; };
+    xdg.configFile = (import ./skills.nix { inherit lib pkgs; }) // {
+      "opencode/tui-plugins" = {
+        source = ./config/tui-plugins;
+        recursive = true;
+      };
+    };
 
     home.sessionVariables = {
       OPENCODE_EXPERIMENTAL_LSP_TOOL = "true";

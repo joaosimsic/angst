@@ -81,7 +81,10 @@ let
   tuiConfig = builtins.toJSON {
     theme = "angst";
     "$schema" = "https://opencode.ai/tui.json";
-    plugin = [ "./tui-plugins/session-nav.ts" ];
+    plugin = [
+      "./tui-plugins/session-nav.ts"
+      "./tui-plugins/vim-indicator.tsx"
+    ];
     keybinds = {
       messages_half_page_up = "ctrl+u";
       messages_half_page_down = "ctrl+d";

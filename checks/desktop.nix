@@ -58,6 +58,10 @@ let
           echo "urgent workspace background did not use theme error color #${themeError}" >&2
           exit 1
         fi
+        if ! grep -qF "workspace_command i3-workspace-group bar ${themeError}" i3.conf; then
+          echo "workspace command did not use theme error color #${themeError} for urgent workspaces" >&2
+          exit 1
+        fi
 
         echo "Validating Ghostty config for theme ${themeName}..."
         HOME="$PWD/home" XDG_CONFIG_HOME="$PWD/home/.config" ghostty +validate-config --config-file="$PWD/ghostty.conf"

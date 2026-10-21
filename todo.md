@@ -79,7 +79,7 @@
 # opencode
 
 - [x] make add/remove diff lines be derived from ansi green/red and the bg colors
-- [ ] add gg and G binds to go to top and bottom of chat
+- [x] add gg and G binds to go to top and bottom of chat
 
 # vial
 
