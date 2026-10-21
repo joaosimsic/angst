@@ -156,6 +156,7 @@ in
       bindsym $mod+r mode "resize"
 
       for_window [class=".*"] title_format %title
+      for_window [class="^i3-hardware-menu$"] floating enable, border none, sticky enable
 
       bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
       bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
@@ -166,6 +167,7 @@ in
       exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY PATH XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
       exec --no-startup-id systemctl --user start graphical-session.target
       bindsym $mod+space exec --no-startup-id rofi -show drun
+      bindsym --release $mod+i exec --no-startup-id i3-hardware-menu
 
       bar {
           status_command i3status-rs ~/.config/i3status-rust/config.toml
@@ -183,6 +185,136 @@ in
               urgent_workspace   #${t.ansi.error} #${t.ansi.error} #${p.background.base}
           }
       }
+    '';
+  }
+  {
+    path = "domains/wm/i3/config/hardware-menu.conky";
+    text = ''
+      conky.config = {
+        alignment = 'top_right',
+        gap_x = 20,
+        gap_y = 42,
+        xinerama_head = 0,
+        minimum_width = 420,
+        maximum_width = 420,
+        own_window = true,
+        own_window_type = 'normal',
+        own_window_class = 'i3-hardware-menu',
+        own_window_title = 'i3-hardware-menu',
+        own_window_hints = 'undecorated,above,sticky,skip_taskbar,skip_pager',
+        own_window_argb_visual = true,
+        own_window_transparent = true,
+        background = false,
+        double_buffer = true,
+        use_xft = true,
+        override_utf8_locale = true,
+        font = '${fontFamily}:size=10',
+        update_interval = 1.0,
+        total_run_times = 0,
+        default_color = '#${p.foreground.base}',
+        color0 = '#${p.accent.base}',
+        color1 = '#${t.ansi.warn}',
+        color2 = '#${t.ansi.error}',
+        color3 = '#${t.ansi.success}',
+        border_inner_margin = 12,
+        border_outer_margin = 0,
+        border_width = 0,
+        draw_borders = false,
+        draw_graph_borders = false,
+        draw_shades = false,
+        default_bar_height = 5,
+        default_bar_width = 180,
+        format_human_readable = true,
+        short_units = true,
+        pad_percents = 3,
+        use_spacer = 'left',
+        text_buffer_size = 512,
+        lua_load = 'hardware-menu.lua',
+        lua_draw_hook_pre = 'draw_bg',
+      };
+
+      conky.text = [[
+      ''${color0}HARDWARE''${color}''${alignr}''${color0}''${time %H:%M:%S}''${color}
+      ''${color0}''${hr 1}''${color}
+      ''${color0}CPU''${color}''${goto 70}''${cpubar 5,180}''${goto 260}''${cpu}%''${goto 315}''${freq_g}GHz
+      ''${color0}LOAD''${color}''${goto 315}''${loadavg}
+      ''${color0}RAM''${color}''${goto 70}''${membar 5,180}''${goto 260}''${memperc}%''${goto 315}''${mem}/''${memmax}
+      ''${color0}SWAP''${color}''${goto 70}''${swapbar 5,180}''${goto 260}''${swapperc}%''${goto 315}''${swap}/''${swapmax}
+      ''${if_mounted /home}''${color0}HOME''${color}''${goto 70}''${fs_bar 5,180 /home}''${goto 260}''${fs_used_perc /home}%''${goto 315}''${fs_used /home}/''${fs_size /home}
+      ''${endif}''${if_mounted /state}''${color0}STATE''${color}''${goto 70}''${fs_bar 5,180 /state}''${goto 260}''${fs_used_perc /state}%''${goto 315}''${fs_used /state}/''${fs_size /state}
+      ''${endif}''${if_mounted /boot}''${color0}BOOT''${color}''${goto 70}''${fs_bar 5,180 /boot}''${goto 260}''${fs_used_perc /boot}%''${goto 315}''${fs_used /boot}/''${fs_size /boot}
+      ''${endif}''${if_match "''${execi 2 i3-hardware-metrics --gpu-percent}" != "n/a"}''${color0}GPU''${color}''${goto 70}''${execibar 2 5,180 i3-hardware-metrics --gpu-percent}''${goto 260}''${execi 2 i3-hardware-metrics --gpu-percent-padded}%''${goto 315}''${execi 2 i3-hardware-metrics --gpu-mem}''${endif}
+      ''${if_existing /sys/class/power_supply/BAT0}''${color0}BAT''${color}''${goto 70}''${battery_bar 5,180}''${goto 260}''${battery_percent}%''${goto 315}''${battery_time}
+      ''${endif}''${color0}UP''${color}''${goto 315}''${uptime}
+      ]];
+    '';
+  }
+  {
+    path = "domains/wm/i3/config/hardware-menu.lua";
+    text = ''
+      require("cairo")
+      require("cairo_xlib")
+
+      local base = "${p.background.base}"
+      local accent = "${p.accent.base}"
+      local warn = "${t.ansi.warn}"
+      local crit = "${t.ansi.error}"
+
+      local runtime = os.getenv("XDG_RUNTIME_DIR") or "/tmp"
+      local state_path = runtime .. "/i3-hardware-state"
+
+      local function hex(c)
+        return tonumber(c:sub(1, 2), 16) / 255,
+               tonumber(c:sub(3, 4), 16) / 255,
+               tonumber(c:sub(5, 6), 16) / 255
+      end
+
+      local function read_state()
+        local f = io.open(state_path, "r")
+        if not f then return "idle" end
+        local line = f:read("*l") or ""
+        f:close()
+        local state, ts = line:match("^(%a+)%s+(%d+)$")
+        if not state or not ts then return "idle" end
+        if os.time() - tonumber(ts) > 15 then return "idle" end
+        return state:lower()
+      end
+
+      function conky_draw_bg()
+        if not conky_window then return end
+        local w = conky_window.width or 420
+        local h = conky_window.height or 240
+        local surface = cairo_xlib_surface_create(
+          conky_window.display,
+          conky_window.drawable,
+          conky_window.visual,
+          w,
+          h
+        )
+        local cr = cairo_create(surface)
+        local state = read_state()
+        local r, g, b = hex(base)
+        cairo_set_source_rgba(cr, r, g, b, 1)
+        cairo_rectangle(cr, 0, 0, w, h)
+        cairo_fill(cr)
+        local tr, tg, tb = hex(accent)
+        if state == "warning" then
+          tr, tg, tb = hex(warn)
+        elseif state == "critical" then
+          tr, tg, tb = hex(crit)
+        end
+        if state == "warning" or state == "critical" then
+          cairo_set_source_rgba(cr, tr, tg, tb, 0.22)
+          cairo_rectangle(cr, 0, 0, w, h)
+          cairo_fill(cr)
+        end
+        cairo_set_source_rgba(cr, tr, tg, tb, 1)
+        cairo_set_line_width(cr, 1)
+        cairo_rectangle(cr, 0.5, 0.5, w - 1, h - 1)
+        cairo_stroke(cr)
+        cairo_destroy(cr)
+        cairo_surface_destroy(surface)
+      end
     '';
   }
 ]

@@ -15,6 +15,8 @@ let
   mouseHide = pkgs.callPackage ./mouse-hide.nix { inherit i3Tools; };
   vmGrab = pkgs.callPackage ./vm-grab.nix { };
   audioMute = pkgs.callPackage ./audio-mute.nix { };
+  hardwareMetrics = pkgs.callPackage ../../bar/i3status-rust/hardware-metrics.nix { };
+  hardwareMenu = pkgs.callPackage ./hardware-menu.nix { inherit hardwareMetrics; };
   lock = pkgs.callPackage ./lock.nix {
     theme = themesLib.get config.theme;
   };
@@ -36,6 +38,7 @@ in
       mouseHide
       vmGrab
       lock
+      hardwareMenu
     ]
     ++ lib.optionals shouldBindAudio [ audioMute ];
 
