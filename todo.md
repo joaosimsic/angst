@@ -78,13 +78,13 @@
 - [x] lock desktop key that goes to ly or DM
 - [x] weird icon on the right corner of 2nd monitor bar
 - [x] discord integration to see if im connected to a voice channel and if im muted or deaf
-- [ ] question bind like mod+? that shows the shortcut for i3 elements
+- [x] question bind like mod+? that shows the shortcut for i3 elements
 
 # opencode
 
 - [x] make add/remove diff lines be derived from ansi green/red and the bg colors
 - [x] add gg and G binds to go to top and bottom of chat
-- [ ] accept all mode
+- [x] accept all mode
 
 # vial
 

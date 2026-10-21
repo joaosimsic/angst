@@ -85,6 +85,39 @@ func TestOpacityTargetsKeepsStickyWindowsFocused(t *testing.T) {
 	}
 }
 
+func TestOpacityTargetsKeepsFloatingWindowsFocused(t *testing.T) {
+	root := &i3.Node{
+		Type: i3.Root,
+		Nodes: []*i3.Node{
+			{
+				Type:  i3.WorkspaceNode,
+				Name:  "1",
+				Focus: []i3.NodeID{20},
+				Nodes: []*i3.Node{
+					{Type: i3.Con, ID: 20, Window: 200},
+				},
+				FloatingNodes: []*i3.Node{
+					{
+						Type: i3.FloatingCon,
+						ID:   30,
+						Nodes: []*i3.Node{
+							{Type: i3.Con, ID: 31, Window: 310},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	targets := opacityTargets(root, "1")
+	if !targets[200] {
+		t.Fatalf("focused window = %#v, want focused", targets)
+	}
+	if !targets[310] {
+		t.Fatalf("floating window = %#v, want full opacity", targets)
+	}
+}
+
 func TestOpacityTargetsNestedFocus(t *testing.T) {
 	root := &i3.Node{
 		Type: i3.Root,

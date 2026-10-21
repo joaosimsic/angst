@@ -2,13 +2,19 @@
   lib,
   themesLib,
   themeName,
+  host,
   fontFamily,
   monitors ? { },
+  homeDirectory,
 }:
 
 let
   t = themesLib.get themeName;
   p = t.palette;
+
+  ftpBind = lib.optionalString ((host.ftp.mounts or [ ]) != [ ]) ''
+    bindsym $mod+Shift+p exec --no-startup-id angst-ftp-status toggle
+  '';
 
   monitorOrder = lib.unique (
     lib.filter (n: lib.hasAttr n monitors) (
@@ -92,6 +98,7 @@ in
       bindsym $mod+Tab focus mode_toggle
       bindsym $mod+a focus parent
       bindsym $mod+p exec --no-startup-id i3-mouse-hide toggle
+      ${ftpBind}
       bindsym $mod+u exec --no-startup-id i3-workspace-group urgent
 
       bindsym $mod+Control+1 exec --no-startup-id i3-workspace-group switch 1
@@ -157,6 +164,8 @@ in
 
       for_window [class=".*"] title_format %title
       for_window [class="^i3-hardware-menu$"] floating enable, border none, sticky enable
+      for_window [class="^i3-cheatsheet$"] floating enable, border none, move to workspace current, move position center
+      no_focus [class="^i3-cheatsheet$"]
 
       bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
       bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
@@ -168,6 +177,7 @@ in
       exec --no-startup-id systemctl --user start graphical-session.target
       bindsym $mod+space exec --no-startup-id rofi -show drun
       bindsym --release $mod+i exec --no-startup-id i3-hardware-menu
+      bindsym --release $mod+Shift+slash exec --no-startup-id i3-cheatsheet toggle
 
       bar {
           status_command i3status-rs ~/.config/i3status-rust/config.toml
@@ -312,6 +322,94 @@ in
         cairo_set_line_width(cr, 1)
         cairo_rectangle(cr, 0.5, 0.5, w - 1, h - 1)
         cairo_stroke(cr)
+        cairo_destroy(cr)
+        cairo_surface_destroy(surface)
+      end
+    '';
+  }
+  {
+    path = "domains/wm/i3/config/cheatsheet.conky";
+    text = ''
+      conky.config = {
+        alignment = 'middle_middle',
+        gap_x = 0,
+        gap_y = -12,
+        xinerama_head = 0,
+        minimum_width = 1060,
+        maximum_width = 1060,
+        own_window = true,
+        own_window_type = 'normal',
+        own_window_class = 'i3-cheatsheet',
+        own_window_title = 'i3-cheatsheet',
+        own_window_hints = 'undecorated,above,skip_taskbar,skip_pager',
+        own_window_argb_visual = true,
+        own_window_transparent = true,
+        background = false,
+        double_buffer = true,
+        use_xft = true,
+        override_utf8_locale = true,
+        font = '${fontFamily}:size=10',
+        update_interval = 1.0,
+        total_run_times = 0,
+        default_color = '#${p.foreground.base}',
+        color0 = '#${p.accent.base}',
+        color1 = '#${p.foreground.variant}',
+        border_inner_margin = 16,
+        border_outer_margin = 0,
+        border_width = 0,
+        draw_borders = false,
+        draw_shades = false,
+        draw_graph_borders = false,
+        max_text_width = 0,
+        text_buffer_size = 4096,
+        max_user_text = 65536,
+        lua_load = '${homeDirectory}/.config/i3/cheatsheet.lua',
+        lua_draw_hook_pre = 'draw_bg',
+      };
+
+      conky.text = [[
+      ''${execpi 1 cat ${homeDirectory}/.cache/i3-cheatsheet.txt}
+      ]];
+    '';
+  }
+  {
+    path = "domains/wm/i3/config/cheatsheet.lua";
+    text = ''
+      require("cairo")
+      require("cairo_xlib")
+
+      local base = "${p.background.base}"
+      local accent = "${p.accent.base}"
+
+      local function hex(c)
+        return tonumber(c:sub(1, 2), 16) / 255,
+               tonumber(c:sub(3, 4), 16) / 255,
+               tonumber(c:sub(5, 6), 16) / 255
+      end
+
+      function conky_draw_bg()
+        if not conky_window then return end
+        local w = conky_window.width or 1060
+        local h = conky_window.height or 600
+        local surface = cairo_xlib_surface_create(
+          conky_window.display,
+          conky_window.drawable,
+          conky_window.visual,
+          w,
+          h
+        )
+        local cr = cairo_create(surface)
+        local r, g, b = hex(base)
+        cairo_set_source_rgba(cr, r, g, b, 1)
+        cairo_rectangle(cr, 0, 0, w, h)
+        cairo_fill(cr)
+        local ar, ag, ab = hex(accent)
+        cairo_set_source_rgba(cr, ar, ag, ab, 1)
+        cairo_set_line_width(cr, 1)
+        cairo_rectangle(cr, 0.5, 0.5, w - 1, h - 1)
+        cairo_stroke(cr)
+        cairo_rectangle(cr, 0, 0, w, 2)
+        cairo_fill(cr)
         cairo_destroy(cr)
         cairo_surface_destroy(surface)
       end
