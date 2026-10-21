@@ -138,27 +138,21 @@ let
     }
     {
       name = "opencode config";
-      ok =
-        lib.hasInfix "OPENCODE_GO_API_KEY"
-          (getHm [ "home" "file" ".config/opencode/opencode.jsonc" "text" ] "");
+      ok = lib.hasInfix "OPENCODE_GO_API_KEY" (
+        getHm [ "home" "file" ".config/opencode/opencode.jsonc" "text" ] ""
+      );
     }
     {
       name = "i3 status command";
-      ok =
-        lib.hasInfix "i3status-rs"
-          (getHm [ "home" "file" ".config/i3/config" "text" ] "");
+      ok = lib.hasInfix "i3status-rs" (getHm [ "home" "file" ".config/i3/config" "text" ] "");
     }
     {
       name = "i3 ghostty binding";
-      ok =
-        lib.hasInfix "ghostty"
-          (getHm [ "home" "file" ".config/i3/config" "text" ] "");
+      ok = lib.hasInfix "ghostty" (getHm [ "home" "file" ".config/i3/config" "text" ] "");
     }
     {
       name = "i3 workspace group";
-      ok =
-        lib.hasInfix "i3-workspace-group"
-          (getHm [ "home" "file" ".config/i3/config" "text" ] "");
+      ok = lib.hasInfix "i3-workspace-group" (getHm [ "home" "file" ".config/i3/config" "text" ] "");
     }
   ];
 

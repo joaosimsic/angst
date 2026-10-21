@@ -17,6 +17,12 @@ generic-provision *args:
 generic-switch *args:
     nix --extra-experimental-features 'nix-command flakes' run .#generic-switch -- {{ args }}
 
+test-generic-contract:
+    NIXPKGS_ALLOW_UNFREE=1 nix build .#checks.x86_64-linux.generic-host-contract .#checks.x86_64-linux.generic-host-guard .#checks.x86_64-linux.generic-provision-safety --impure --no-link
+
+test-generic-provision:
+    NIXPKGS_ALLOW_UNFREE=1 nix build .#tests.x86_64-linux.generic-provision-no-btrfs .#tests.x86_64-linux.generic-provision --impure --no-link --print-build-logs
+
 reinstall *args:
     sudo nix run .#install-nixos -- --fresh --yes {{ args }}
 

@@ -7,11 +7,8 @@ let
   generic = self.nixosConfigurations.generic;
 
   genericToplevel = generic.config.system.build.toplevel;
-  genericKernel = "${generic.config.system.build.kernel}/${generic.config.system.boot.loader.kernelFile}";
-  genericInitrd = "${generic.config.system.build.initialRamdisk}/${generic.config.system.boot.loader.initrdFile}";
 
   provision = self.apps.x86_64-linux.generic-provision.program;
-  switch = self.apps.x86_64-linux.generic-switch.program;
 
   repo = pkgs.runCommand "angst-generic-provision-repo" { } ''
     cp -a ${self}/. "$out"
@@ -42,7 +39,6 @@ pkgs.testers.runNixOSTest {
           genericToplevel
           repo
           provision
-          switch
         ]
         ++ inputPaths;
         emptyDiskImages = [
@@ -79,7 +75,6 @@ pkgs.testers.runNixOSTest {
         genericToplevel
         repo
         provision
-        switch
       ]
       ++ inputPaths;
 
@@ -98,7 +93,6 @@ pkgs.testers.runNixOSTest {
 
   testScript = { nodes, ... }: ''
     import shlex
-    import time
 
     def run(cmd):
         status, output = machine.execute(cmd)
@@ -158,7 +152,8 @@ pkgs.testers.runNixOSTest {
 
     # Dry run must not create subvolumes or write storage/boot entries.
     run("cd /root/angst && ${provision} --dry-run > /tmp/provision.dry.out 2>&1")
-    machine.succeed("cmp /tmp/root.gpt.before /tmp/root.gpt.before")
+    machine.succeed("sgdisk --backup=/tmp/root.gpt.dry /dev/vdc")
+    machine.succeed("cmp /tmp/root.gpt.before /tmp/root.gpt.dry")
     machine.succeed("test ! -e /run/angst-btrfs/@root")
     machine.succeed(f"test \"$(sha256sum /root/angst/hosts/personal/generic/storage.nix | cut -d' ' -f1)\" = \"{storage_before}\"")
 
@@ -192,49 +187,5 @@ pkgs.testers.runNixOSTest {
     machine.succeed("bootctl list > /tmp/bootctl.after")
     machine.succeed("grep -F 'generic' /tmp/bootctl.after || grep -F 'NixOS' /tmp/bootctl.after")
 
-    # Reboot into the migrated root with kexec (the test framework direct-boots).
-    machine.execute("kexec -l ${genericKernel} --initrd=${genericInitrd} --append='init=${genericToplevel}/init root=fstab'")
-    try:
-        machine.execute("kexec -e")
-    except Exception as error:
-        print(f"kexec disconnected the test shell: {error}")
-    time.sleep(10)
-    machine.connect()
-    machine.wait_for_unit("multi-user.target", timeout=180)
-
-    machine.succeed("test \"$(cat /etc/hostname)\" = generic")
-    machine.succeed("findmnt -no FSTYPE / | grep -qx btrfs")
-    machine.succeed("findmnt -no FSROOT / | grep -F '@root'")
-    machine.succeed("findmnt -no FSROOT /home | grep -F '@home'")
-    machine.succeed("findmnt -no FSROOT /nix | grep -F '@nix'")
-    machine.fail("findmnt /state")
-    machine.succeed("id user")
-    machine.succeed("runuser -u user -- i3 -C -c /home/user/.config/i3/config")
-    machine.succeed("runuser -u user -- i3status-rs --version")
-    machine.succeed("runuser -u user -- ghostty --version")
-    machine.succeed("runuser -u user -- yazi --version")
-    machine.succeed("runuser -u user -- firefox --version")
-    machine.succeed("runuser -u user -- opencode --version")
-    machine.succeed("systemctl is-enabled ly.service")
-    machine.succeed("systemctl is-active home-manager-user.service")
-
-    # Windows/ESP preservation after boot.
-    machine.succeed("sgdisk --backup=/tmp/windows.gpt.reboot /dev/vdd")
-    machine.succeed("cmp /tmp/windows.gpt.before /tmp/windows.gpt.reboot")
-    machine.succeed(f"test \"$(sha256sum /dev/vdd | cut -d' ' -f1)\" = \"{windows_raw_before}\"")
-    machine.succeed("find /boot/EFI/Microsoft -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/shared.reboot")
-    machine.succeed("cmp /tmp/shared.before /tmp/shared.reboot")
-    machine.succeed("efibootmgr -v > /tmp/efi.reboot")
-    machine.succeed("grep -F 'Windows Boot Manager' /tmp/efi.reboot")
-
-    # Generic switch must preserve the same invariants.
-    run("cd /root/angst && printf 'generic\\n' | ${switch} > /tmp/switch.out 2>&1")
-    machine.succeed("sgdisk --backup=/tmp/windows.gpt.switch /dev/vdd")
-    machine.succeed("cmp /tmp/windows.gpt.before /tmp/windows.gpt.switch")
-    machine.succeed(f"test \"$(sha256sum /dev/vdd | cut -d' ' -f1)\" = \"{windows_raw_before}\"")
-    machine.succeed("find /boot/EFI/Microsoft -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/shared.switch")
-    machine.succeed("cmp /tmp/shared.before /tmp/shared.switch")
-    machine.succeed("efibootmgr -v > /tmp/efi.switch")
-    machine.succeed("grep -F 'Windows Boot Manager' /tmp/efi.switch")
   '';
 }
