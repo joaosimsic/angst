@@ -159,6 +159,16 @@ let
           "/nix/**" = "allow";
         };
       };
+      agent = {
+        "Auto" = {
+          description = "Auto-approve all permission requests.";
+          mode = "primary";
+          color = "warning";
+          permission = {
+            "*" = "allow";
+          };
+        };
+      };
       command = {
         caveman = {
           description = "Caveman voice: /caveman toggles on/off, or lite|full|ultra|off";
