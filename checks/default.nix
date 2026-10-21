@@ -22,6 +22,7 @@ let
   lintDesktop = import ./desktop.nix {
     inherit lib pkgs themesLib;
     inherit (render) renderDomainOutputFor;
+    ftpMounts = map (m: m.mountPoint) (host.ftp.mounts or [ ]);
   };
 
   lintShell = import ./shell.nix {
@@ -128,6 +129,8 @@ let
 
   checkOpencodeSessionNav = import ./opencode-session-nav.nix { inherit pkgs; };
 
+  checkOpencodeMux = import ./opencode-mux.nix { inherit pkgs; };
+
   checkOpencodeSecret = import ./opencode-secret.nix {
     inherit pkgs;
     opencodeConfig = render.renderDomainOutputFor host.theme "domains/agents/opencode/config/opencode.jsonc";
@@ -214,6 +217,7 @@ in
   check-zellij = checkZellij;
   check-opencode-attention = checkOpencodeAttention;
   check-opencode-session-nav = checkOpencodeSessionNav;
+  check-opencode-mux = checkOpencodeMux;
   check-opencode-secret = checkOpencodeSecret;
   check-session-env = checkSessionEnv;
   check-session-usability = checkSessionUsability;
