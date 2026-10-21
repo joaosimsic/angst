@@ -107,6 +107,7 @@
   projects = [
     "angst"
     "advent-of-code"
+    "boring"
     "stealing-eye"
     "datapath"
     "llm-ruler"

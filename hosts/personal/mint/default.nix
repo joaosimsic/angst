@@ -92,6 +92,7 @@
   projects = [
     "angst"
     "advent-of-code"
+    "boring"
     "datapath"
     "llm-ruler"
     "agent"
