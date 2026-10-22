@@ -8,11 +8,15 @@
 let
   cfg = config.domains.gamedev.blender;
   mcp = pkgs.callPackage ./mcp-for-blender.nix { };
-  blenderUserDir = ".config/blender/${lib.versions.majorMinor pkgs.blender.version}";
+  blender = config.lib.nixGL.wrap pkgs.blender;
+  blenderUserDir = ".config/blender/${lib.versions.majorMinor blender.version}";
 in
 {
   config = lib.mkIf cfg.enable {
-    home.packages = [ mcp ];
+    home.packages = [
+      blender
+      mcp
+    ];
 
     home.file = {
       "${blenderUserDir}/scripts/addons/blender_mcp.py".source =
