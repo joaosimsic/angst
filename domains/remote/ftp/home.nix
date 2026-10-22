@@ -92,18 +92,22 @@ in
   };
 
   config = lib.mkIf (ftpEnabled && cfg.mounts != [ ]) {
-    home.packages = [ ftpStatus ];
+    home = {
+      packages = [ ftpStatus ];
 
-    home.activation.ensureFtpMountDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      rmdir "$HOME/secrets/angst" "$HOME/secrets" 2>/dev/null || true
-      ${lib.concatMapStringsSep "\n" (m: ''
-        mkdir -p "$HOME/${m.mountPoint}" 2>/dev/null || true
-      '') cfg.mounts}
-    '';
+      activation = {
+        ensureFtpMountDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          rmdir "$HOME/secrets/angst" "$HOME/secrets" 2>/dev/null || true
+          ${lib.concatMapStringsSep "\n" (m: ''
+            mkdir -p "$HOME/${m.mountPoint}" 2>/dev/null || true
+          '') cfg.mounts}
+        '';
 
-    home.activation.angstFtpSecrets = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      ${secretsDecrypt.bin}
-    '';
+        angstFtpSecrets = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          ${secretsDecrypt.bin}
+        '';
+      };
+    };
 
     systemd.user.services = lib.listToAttrs (map mountService cfg.mounts);
   };

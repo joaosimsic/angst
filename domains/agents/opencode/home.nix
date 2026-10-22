@@ -10,7 +10,7 @@ let
   cfg = config.domains.agents.opencode;
   muxEnabled = cfg.mux.enable;
   mux = import ./mux.nix {
-    inherit config lib pkgs;
+    inherit config pkgs;
     opencodePackage = pkgs.opencode;
     portStart = cfg.mux.portStart;
     portEnd = cfg.mux.portEnd;
@@ -20,7 +20,7 @@ let
     inherit pkgs lib;
     opencodePackage = pkgs.opencode;
     muxPackage = mux;
-    muxEnabled = muxEnabled;
+    inherit muxEnabled;
     muxFallback = cfg.mux.fallbackStandalone;
   };
 in
@@ -83,40 +83,46 @@ in
       OPENCODE_MUX = if muxEnabled then "1" else "0";
     };
 
-    systemd.user.services."opencode-mux@" = lib.mkIf muxEnabled {
-      Unit = {
-        Description = "OpenCode project server (%i)";
-      };
-      Service = {
-        Type = "simple";
-        ExecStart = "${mux}/bin/opencode-mux server";
-        EnvironmentFile = "%t/opencode-mux/%i/server.env";
-        Restart = "on-failure";
-        RestartSec = "2s";
-        TimeoutStopSec = "10s";
-      };
-    };
+    systemd = {
+      user = {
+        services = {
+          "opencode-mux@" = lib.mkIf muxEnabled {
+            Unit = {
+              Description = "OpenCode project server (%i)";
+            };
+            Service = {
+              Type = "simple";
+              ExecStart = "${mux}/bin/opencode-mux server";
+              EnvironmentFile = "%t/opencode-mux/%i/server.env";
+              Restart = "on-failure";
+              RestartSec = "2s";
+              TimeoutStopSec = "10s";
+            };
+          };
 
-    systemd.user.services.opencode-mux-reap = lib.mkIf muxEnabled {
-      Unit = {
-        Description = "Reap idle OpenCode project servers";
-      };
-      Service = {
-        Type = "oneshot";
-        ExecStart = "${mux}/bin/opencode-mux reap";
-      };
-    };
+          opencode-mux-reap = lib.mkIf muxEnabled {
+            Unit = {
+              Description = "Reap idle OpenCode project servers";
+            };
+            Service = {
+              Type = "oneshot";
+              ExecStart = "${mux}/bin/opencode-mux reap";
+            };
+          };
+        };
 
-    systemd.user.timers.opencode-mux-reap = lib.mkIf muxEnabled {
-      Unit = {
-        Description = "Periodically reap idle OpenCode project servers";
+        timers.opencode-mux-reap = lib.mkIf muxEnabled {
+          Unit = {
+            Description = "Periodically reap idle OpenCode project servers";
+          };
+          Timer = {
+            OnBootSec = "2min";
+            OnUnitActiveSec = "2min";
+            Unit = "opencode-mux-reap.service";
+          };
+          Install.WantedBy = [ "timers.target" ];
+        };
       };
-      Timer = {
-        OnBootSec = "2min";
-        OnUnitActiveSec = "2min";
-        Unit = "opencode-mux-reap.service";
-      };
-      Install.WantedBy = [ "timers.target" ];
     };
   };
 }

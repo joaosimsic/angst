@@ -10,7 +10,6 @@ let
 
   mux = import ../domains/agents/opencode/mux.nix {
     inherit pkgs;
-    lib = pkgs.lib;
     opencodePackage = fakeOpencode;
     config = {
       home.homeDirectory = "$TMPDIR/home";

@@ -59,10 +59,14 @@
         "md_mod"
       ];
 
-      hardware.enableRedistributableFirmware = true;
-      hardware.cpu.intel.updateMicrocode = true;
-      hardware.cpu.amd.updateMicrocode = true;
-      hardware.graphics.enable = true;
+      hardware = {
+        enableRedistributableFirmware = true;
+        cpu = {
+          intel.updateMicrocode = true;
+          amd.updateMicrocode = true;
+        };
+        graphics.enable = true;
+      };
       zramSwap.enable = true;
 
       environment.systemPackages = with pkgs; [

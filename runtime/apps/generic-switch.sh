@@ -4,12 +4,12 @@ set -euo pipefail
 export NIX_CONFIG='experimental-features = nix-command flakes'
 
 die() {
-  printf 'error: %s\n' "$*" >&2
-  exit 1
+    printf 'error: %s\n' "$*" >&2
+    exit 1
 }
 
 usage() {
-  cat <<'EOF'
+    cat <<'EOF'
 Usage: generic-switch [nixos-rebuild options]
 
 Switches the running generic host to the current flake state after a
@@ -21,16 +21,16 @@ EOF
 }
 
 case "${1:-}" in
-  -h | --help)
+-h | --help)
     usage
     exit 0
     ;;
 esac
 
 if REPO_DIR="$(git rev-parse --show-toplevel 2>/dev/null)"; then
-  :
+    :
 else
-  REPO_DIR="$PWD"
+    REPO_DIR="$PWD"
 fi
 
 cd "$REPO_DIR"
@@ -44,8 +44,8 @@ HOST_NAME="$(cat /etc/hostname 2>/dev/null || true)"
 
 ROOT_FSROOT="$(findmnt -n -o FSROOT / || true)"
 case "$ROOT_FSROOT" in
-  *@root*) ;;
-  *)
+*@root*) ;;
+*)
     die "the current root is not @root; run generic-provision and reboot first"
     ;;
 esac
@@ -65,7 +65,7 @@ NIXOS_REBUILD="$(command -v nixos-rebuild)"
 SUDO="$(command -v sudo || true)"
 
 if [ "$(id -u)" -eq 0 ]; then
-  exec "$NIXOS_REBUILD" switch --flake "path:$REPO_DIR#generic" "$@"
+    exec "$NIXOS_REBUILD" switch --flake "path:$REPO_DIR#generic" "$@"
 fi
 
 [ -n "$SUDO" ] || die "sudo not found and current user is not root"

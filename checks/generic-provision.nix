@@ -91,7 +91,7 @@ pkgs.testers.runNixOSTest {
       ];
     };
 
-  testScript = { nodes, ... }: ''
+  testScript = _: ''
     import shlex
 
     def run(cmd):

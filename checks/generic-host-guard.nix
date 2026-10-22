@@ -5,17 +5,19 @@
 
 let
   baseModule = {
-    options.networking.hostName = lib.mkOption {
-      type = lib.types.str;
-      default = "nixos";
-    };
-    options.assertions = lib.mkOption {
-      type = lib.types.listOf lib.types.anything;
-      default = [ ];
-    };
-    options.warnings = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
+    options = {
+      networking.hostName = lib.mkOption {
+        type = lib.types.str;
+        default = "nixos";
+      };
+      assertions = lib.mkOption {
+        type = lib.types.listOf lib.types.anything;
+        default = [ ];
+      };
+      warnings = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+      };
     };
   };
 
