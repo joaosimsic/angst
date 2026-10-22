@@ -105,7 +105,19 @@ let
     };
   };
 
+  mcpForBlender = host.pkgs.callPackage ../../gamedev/blender/mcp-for-blender.nix { };
+
   mcpServers = lib.filterAttrs (_: v: v != null) {
+    blender =
+      if (store.hasBlender or false) then
+        {
+          type = "local";
+          command = [ "${mcpForBlender}/bin/mcp-for-blender" ];
+          enabled = true;
+        }
+      else
+        null;
+
     paper =
       if (store.hasPaper or false) then
         {
