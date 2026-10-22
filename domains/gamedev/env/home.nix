@@ -31,6 +31,8 @@ let
     mesa
   ];
 
+  bevyBrpMcp = pkgs.callPackage ../bevy-brp-mcp.nix { };
+
   bevyLdPath = lib.makeLibraryPath bevyLibs;
   hostLdPath = "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/local/lib:/usr/lib";
   rustRpath = "${pkgs.glibc}/lib:${pkgs.stdenv.cc.cc.lib}/lib";
@@ -49,6 +51,7 @@ in
         pkg-config
         dioxus-cli
         git-lfs
+        bevyBrpMcp
       ]
       ++ bevyLibs;
 

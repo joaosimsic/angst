@@ -106,8 +106,19 @@ let
   };
 
   mcpForBlender = host.pkgs.callPackage ../../gamedev/blender/mcp-for-blender.nix { };
+  bevyBrpMcp = host.pkgs.callPackage ../../gamedev/bevy-brp-mcp.nix { };
 
   mcpServers = lib.filterAttrs (_: v: v != null) {
+    brp =
+      if (store.hasGamedevEnv or false) then
+        {
+          type = "local";
+          command = [ "${bevyBrpMcp}/bin/bevy_brp_mcp" ];
+          enabled = true;
+        }
+      else
+        null;
+
     blender =
       if (store.hasBlender or false) then
         {
