@@ -35,6 +35,7 @@ pkgs.writeShellApplication {
 
     runtime_root="''${XDG_RUNTIME_DIR:-/tmp/opencode-mux-$(id -u)}/opencode-mux"
     lock_file="$runtime_root/lock"
+    client_marker=""
 
     ensure_dirs() {
       mkdir -p "$state_root" "$runtime_root"
@@ -226,7 +227,7 @@ pkgs.writeShellApplication {
       local original=("$@")
       local dir="$PWD"
       local -a args=()
-      local hash state marker port unit
+      local hash state port unit
 
       if [ "$#" -gt 0 ] && [ "''${1#-}" = "$1" ] && [ -d "$1" ]; then
         dir="$(realpath "$1")"
@@ -237,12 +238,12 @@ pkgs.writeShellApplication {
       hash="$(project_hash "$dir")"
       state="$runtime_root/$hash"
       mkdir -p "$state/clients"
-      marker="$state/clients/$$"
-      : > "$marker"
+      client_marker="$state/clients/$$"
+      : > "$client_marker"
       rm -f "$state/empty_since"
 
       cleanup_marker() {
-        rm -f "$marker"
+        rm -f -- "''${client_marker:-}"
       }
       trap cleanup_marker EXIT
 
