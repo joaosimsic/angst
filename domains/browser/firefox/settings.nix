@@ -11,6 +11,12 @@
   "browser.bookmarks.restore_default_bookmarks" = false;
   "browser.bookmarks.addedImportButton" = true;
   "browser.sessionstore.resume_from_crash" = true;
+  "browser.sessionstore.restore_on_demand" = true;
+  "browser.tabs.unloadOnLowMemory" = true;
+  "browser.tabs.unloadTabInContextMenu" = true;
+  "angst.tabs.idleUnload.enabled" = true;
+  "angst.tabs.idleUnload.minutes" = 60;
+  "angst.tabs.idleUnload.allowlist" = "web.whatsapp.com";
   "browser.warnOnQuit" = true;
   "browser.tabs.warnOnClose" = true;
   "browser.tabs.warnOnCloseOtherTabs" = true;

@@ -17,8 +17,19 @@ let
 
   uc = pkgs.writeText "userChrome.css" userChrome;
   ucontent = pkgs.writeText "userContent.css" userContent;
+  extraPrefs = ../../domains/browser/firefox/extra-prefs.js;
 in
 {
+  firefox-autoconfig =
+    pkgs.runCommand "firefox-autoconfig-check"
+      {
+        nativeBuildInputs = [ pkgs.nodejs ];
+      }
+      ''
+        node --check ${extraPrefs}
+        touch $out
+      '';
+
   firefox-css =
     pkgs.runCommand "firefox-css-check"
       {
