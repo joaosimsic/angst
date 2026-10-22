@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	reError = regexp.MustCompile(`(?i)(error|panic|failed|fatal|invalid nushell)`)
+	reError = regexp.MustCompile(`(?i)(?:^|\[|\s)(?:error|panic|fatal)(?:\]|:|\s|$)|(?:^|[^a-z0-9_])failed\b|invalid nushell`)
 	reWarn  = regexp.MustCompile(`(?i)warn`)
 	reStep  = regexp.MustCompile(`(?i)(starting home manager|activating|symlinking|setting up|creating|installing)`)
 )
