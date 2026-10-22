@@ -19,6 +19,7 @@ in
     (lib.mkIf (cfg.enable && primary != null) {
       programs.git = {
         enable = true;
+        lfs.enable = true;
         settings = [
           {
             user = {

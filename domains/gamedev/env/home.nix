@@ -48,6 +48,7 @@ in
         sccache
         pkg-config
         dioxus-cli
+        git-lfs
       ]
       ++ bevyLibs;
 
