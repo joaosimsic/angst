@@ -134,6 +134,13 @@ let
         color = "warning";
         permission = {
           "*" = "allow";
+          # Match build's explicit allows (question, plan_enter) so Auto
+          # is a superset of build, not more restrictive. Also allow
+          # plan_exit so the model can leave plan mode itself instead of
+          # getting trapped when a session switches plan -> Auto.
+          "question" = "allow";
+          "plan_enter" = "allow";
+          "plan_exit" = "allow";
         };
       };
     };
