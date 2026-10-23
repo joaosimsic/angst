@@ -105,108 +105,51 @@ let
     };
   };
 
-  mcpForBlender = host.pkgs.callPackage ../../gamedev/blender/mcp-for-blender.nix { };
-  bevyBrpMcp = host.pkgs.callPackage ../../gamedev/bevy-brp-mcp.nix { };
+  # MCPs are project-local (repo-root opencode.json), not global HM config —
+  # see lib/render.nix (vm) and per-project configs under ~/projects.
+  opencodeConfig = builtins.toJSON {
+    "$schema" = "https://opencode.ai/config.json";
+    compaction = {
+      auto = true;
+      reserved = 10000;
+    };
+    provider = {
+      opencode-go = {
+        options = {
+          apiKey = "{env:OPENCODE_GO_API_KEY}";
+        };
+      };
+    };
+    lsp = lspWithDisabled;
+    permission = {
+      external_directory = {
+        "/tmp/**" = "allow";
+        "/nix/**" = "allow";
+      };
+    };
+    agent = {
+      "Auto" = {
+        description = "Auto-approve all permission requests.";
+        mode = "primary";
+        color = "warning";
+        permission = {
+          "*" = "allow";
+        };
+      };
+    };
+    command = {
+      caveman = {
+        description = "Caveman voice: /caveman toggles on/off, or lite|full|ultra|off";
+        template = ''
+          Caveman control. Argument: "$ARGUMENTS"
 
-  mcpServers = lib.filterAttrs (_: v: v != null) {
-    brp =
-      if (store.hasGamedevEnv or false) then
-        {
-          type = "local";
-          command = [ "${bevyBrpMcp}/bin/bevy_brp_mcp" ];
-          enabled = true;
-        }
-      else
-        null;
-
-    blender =
-      if (store.hasBlender or false) then
-        {
-          type = "local";
-          command = [ "${mcpForBlender}/bin/mcp-for-blender" ];
-          enabled = true;
-        }
-      else
-        null;
-
-    paper =
-      if (store.hasPaper or false) then
-        {
-          type = "remote";
-          url = "http://127.0.0.1:29979/mcp";
-          enabled = true;
-        }
-      else
-        null;
-
-    rea =
-      if (store.hasRea or false) then
-        {
-          type = "local";
-          command = [
-            "${host.pkgs.nodejs_24}/bin/npx"
-            "-y"
-            "rea-agents@6.5.0"
-            "mcp"
-          ];
-          environment = {
-            GHIDRA_INSTALL_DIR = "${host.pkgs.ghidra-bin}/lib/ghidra";
-            JAVA_HOME = "${host.pkgs.openjdk21.home}";
-            REA_GHIDRA_STARTUP_TIMEOUT_MS = "900000";
-            GHIDRA_HEADLESS_MAXMEM = "4G";
-          };
-          enabled = true;
-        }
-      else
-        null;
+          The caveman plugin already applied the mode.
+          Reply with exactly one line using the Caveman level from your system instructions:
+          Caveman level: <level>
+        '';
+      };
+    };
   };
-
-  opencodeConfig = builtins.toJSON (
-    {
-      "$schema" = "https://opencode.ai/config.json";
-      compaction = {
-        auto = true;
-        reserved = 10000;
-      };
-      provider = {
-        opencode-go = {
-          options = {
-            apiKey = "{env:OPENCODE_GO_API_KEY}";
-          };
-        };
-      };
-      lsp = lspWithDisabled;
-      permission = {
-        external_directory = {
-          "/tmp/**" = "allow";
-          "/nix/**" = "allow";
-        };
-      };
-      agent = {
-        "Auto" = {
-          description = "Auto-approve all permission requests.";
-          mode = "primary";
-          color = "warning";
-          permission = {
-            "*" = "allow";
-          };
-        };
-      };
-      command = {
-        caveman = {
-          description = "Caveman voice: /caveman toggles on/off, or lite|full|ultra|off";
-          template = ''
-            Caveman control. Argument: "$ARGUMENTS"
-
-            The caveman plugin already applied the mode.
-            Reply with exactly one line using the Caveman level from your system instructions:
-            Caveman level: <level>
-          '';
-        };
-      };
-    }
-    // lib.optionalAttrs (mcpServers != { }) { mcp = mcpServers; }
-  );
 in
 [
   {
