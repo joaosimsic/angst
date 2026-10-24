@@ -66,6 +66,13 @@
         dir = ".nv/OptiXCache";
       }
     ];
+    "gamedev.blender" = [
+      {
+        dir = ".config/blender";
+        name = "blender";
+        durable = true;
+      }
+    ];
     "chat.discord" = [
       {
         dir = ".config/discord";
