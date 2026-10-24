@@ -6,12 +6,12 @@
 
 python3Packages.buildPythonApplication rec {
   pname = "mcp-for-blender";
-  version = "2.2.2";
+  version = "2.2.3";
   pyproject = true;
 
   src = fetchurl {
-    url = "https://files.pythonhosted.org/packages/61/f5/2dbb6662804de487a8951a9f8fd124fc4ec576d5f5b0a84244f5ce9cc7bf/mcp_for_blender-${version}.tar.gz";
-    hash = "sha256-j6l+iiydunDKH07QkGV4Ck0yuIve4d+9mcEZUSi1tnc=";
+    url = "https://files.pythonhosted.org/packages/45/e3/d09f156a433c2bd259969e72c6458456f213e444762f502c91b41d692549/mcp_for_blender-${version}.tar.gz";
+    hash = "sha256-g+eK6QNkTQOlXAylVJVBdc/ybt4Nym9dXbIGiV2O2jQ=";
   };
 
   build-system = [ python3Packages.setuptools ];
