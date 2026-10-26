@@ -164,7 +164,8 @@ host
 
 Rules:
 
-- packages never contain build scripts except `source` references
+- packages contain selection/config metadata plus an optional self-contained `package.nix`; no other build scripts
+- `package.nix` takes explicit inputs only; never reads `host`, profiles, capabilities, or other packages
 - packages never import `systems/`
 - derivations never know host, profile, package ID, target, or capability
 - derivations never import `systems/` or `packages/`
@@ -172,6 +173,47 @@ Rules:
 - `source.kind = "nixpkgs"` does not create a local derivation
 - `source.kind = "none"` means the feature is module-only
 - feature side files are adapters, not derivations
+
+### Self-contained feature packages
+
+Each feature directory may ship its own build as a real Nix package.
+The package stays self-contained: `src/` lives inside the package directory
+and all inputs are explicit function arguments.
+
+```nix
+# packages/features/<category>/<name>/package.nix
+{ lib, stdenv, theme, toolchains, src }:
+stdenv.mkDerivation {
+  pname = "<name>";
+  version = "0.1.0";
+  inherit src;
+  nativeBuildInputs = [ ];
+  buildPhase = ''...'';
+  installPhase = ''mkdir -p $out/...; cp -r ... $out/...'';
+}
+```
+
+Rules:
+
+- `package.nix` is a function; its arguments are its only inputs.
+- allowed inputs are nixpkgs build inputs (`lib`, `stdenv`, compilers) plus
+  declared domain inputs: `theme`, `toolchains`, `src`, derived facts.
+- `src` defaults to the package-local directory (`./src`); the caller passes
+  the source path, the package never reaches outside its own directory.
+- `theme` is the normalized value from `systems/theme` (`palette`, `ansi`,
+  `isDark`, contrast helpers), not theme internals.
+- `toolchains` is the list of full `mkToolchain` outputs selected for the
+  host (`home.packages`, `toolchains.treesitterGrammars`,
+  `toolchains.editor.lsp`); the package picks what it needs, the resolver
+  decides the selection.
+- the caller (`systems/packages` via `systems/outputs`) resolves `theme` and
+  `toolchains` from host context and invokes `package.nix` with
+  `callPackage`-style argument filtering, so each package declares only the
+  inputs it uses.
+- one derivation per package directory; recipes shared by several packages
+  stay in `derivations/`.
+- the build output lands in `packages.${system}.<category>-<name>` and enters
+  a host closure only when the package is selected.
 
 Examples:
 
@@ -1546,6 +1588,7 @@ facts the graph cannot know.
 | both sides | `sides.home` + `sides.system` |
 | conditional side | `sides.system.when = { fact = "host.ssh.server.enable"; equals = true; }` |
 | custom build | `source.derivation` |
+| self-contained build | `package.nix` + local `src/`, explicit `theme` / `toolchains` inputs |
 | custom XDG | `placement.customXdg` |
 | mutable config | `placement.mutable` |
 | target-specific | `targets = [ "generic-linux" ]` |
