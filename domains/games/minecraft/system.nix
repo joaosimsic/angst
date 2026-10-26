@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 
@@ -12,5 +13,11 @@ in
 
   config = lib.mkIf cfg.enable {
     networking.firewall.allowedTCPPorts = [ 25565 ];
+
+    environment.systemPackages = [
+      (pkgs.writeShellScriptBin "java8" ''
+        exec ${pkgs.jdk8}/bin/java "$@"
+      '')
+    ];
   };
 }
