@@ -13,6 +13,7 @@ let
 
   inherit (color)
     ensureContrast
+    pickContrast
     contrastRatio
     relativeLuminance
     ;
@@ -39,52 +40,46 @@ let
       let
         raw = themes.${name};
         threshold = raw.contrastThreshold or 4.5;
-        theme = withRgb (normalizeTheme raw);
-        p = theme.palette;
+        base = normalizeTheme raw;
+        p = base.palette;
         isDark = relativeLuminance p.background.base < 0.179;
         colorScheme = if isDark then "dark" else "light";
-      in
-      theme
-      // {
-        inherit isDark colorScheme;
-        safe = {
-          foregroundOnSurfaceVariant = ensureContrast {
-            fg = p.foreground.variant;
-            bg = p.surface.variant;
-            fallback = p.background.base;
-            inherit threshold;
-          };
-          foregroundOnSurfaceBase = ensureContrast {
-            fg = p.foreground.variant;
-            bg = p.surface.base;
-            fallback = p.background.base;
-            inherit threshold;
-          };
-          foregroundOnAccentVariant = ensureContrast {
-            fg = p.foreground.variant;
-            bg = p.accent.variant;
-            fallback = p.background.base;
-            inherit threshold;
-          };
-          foregroundOnAccentBase = ensureContrast {
-            fg = p.foreground.variant;
-            bg = p.accent.base;
-            fallback = p.background.base;
-            inherit threshold;
-          };
-          foregroundOnBgVariant = ensureContrast {
-            fg = p.foreground.variant;
-            bg = p.background.variant;
-            fallback = p.background.base;
-            inherit threshold;
-          };
-          surfaceVariantOnForegroundVariant =
-            if contrastRatio p.surface.variant p.foreground.variant >= threshold then
-              p.foreground.variant
-            else
-              p.background.base;
+        # Text candidates in intent order: light text first, then dark
+        # surfaces. pickContrast keeps the first passing candidate and
+        # falls back to the highest-ratio one when none pass.
+        textOn = bg: pickContrast {
+          candidates = [
+            p.foreground.variant
+            p.foreground.base
+            p.background.base
+            p.background.variant
+          ];
+          inherit bg threshold;
         };
-      }
+        full = base // {
+          inherit isDark colorScheme;
+          safe = {
+            foregroundOnSurfaceVariant = textOn p.surface.variant;
+            foregroundOnSurfaceBase = textOn p.surface.base;
+            foregroundOnAccentVariant = textOn p.accent.variant;
+            foregroundOnAccentBase = textOn p.accent.base;
+            foregroundOnBgVariant = textOn p.background.variant;
+            surfaceVariantOnForegroundVariant = pickContrast {
+              candidates = [
+                p.foreground.variant
+                p.background.base
+              ];
+              bg = p.surface.variant;
+              inherit threshold;
+            };
+            # Arbitrary-bg text: textOn bg returns the first passing
+            # candidate (intent order) or the highest-ratio one.
+            textOn = textOn;
+          };
+        };
+      in
+      # withRgb last so safe.* tokens get _RGB siblings too.
+      withRgb full
     else
       builtins.throw "Unknown theme '${name}'. Available themes: ${lib.concatStringsSep ", " (lib.attrNames themes)}";
 in
@@ -102,6 +97,7 @@ in
     withRgb
     checkHelpers
     ensureContrast
+    pickContrast
     contrastRatio
     relativeLuminance
     ;
@@ -109,6 +105,7 @@ in
   contrast = {
     inherit
       ensureContrast
+      pickContrast
       contrastRatio
       relativeLuminance
       ;

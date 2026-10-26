@@ -2,14 +2,14 @@
   palette = {
     background = {
       base = "#0c1014";
-      variant = "#0c1014";
+      variant = "#10151b";
     };
     surface = {
       base = "#33859e";
       variant = "#2aa889";
     };
     foreground = {
-      base = "#195466";
+      base = "#5e93a3";
       variant = "#99d1ce";
     };
     accent = {

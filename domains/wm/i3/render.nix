@@ -146,7 +146,7 @@ in
               focused_workspace  #${p.background.base} #${p.background.base} #${p.foreground.base}
               active_workspace   #${p.background.base} #${p.background.base} #${p.foreground.variant}
               inactive_workspace #${p.background.base} #${p.background.base} #${p.accent.base}
-              urgent_workspace   #${t.ansi.error} #${p.background.base} #${p.foreground.base}
+              urgent_workspace   #${t.ansi.error} #${p.background.base} #${t.safe.textOn t.ansi.error}
           }
       }
     '';

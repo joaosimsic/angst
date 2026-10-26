@@ -8,10 +8,19 @@ defines the target and the migration path.
 - `systems/` contains bounded contexts and framework systems.
 - `systems/monads/` is the edge: ports, interpreters, effect composition, and
   one central test suite.
-- `packages/` contains feature packages, toolchain specs, and runtime tool
-  records.
-- Feature implementations are co-located with their package records.
-- `derivations/` contains pure Nix build recipes.
+- `packages/` contains self-contained feature derivations, toolchain specs,
+  and runtime tool builds. Each package directory is a real Nix package:
+  `src/` lives inside it, inputs (`theme`, `toolchains`) are explicit
+  function arguments, and theme/toolchain values are baked into the store
+  output.
+- Feature implementations are co-located with their package builds.
+- `features/` is the new name for what is currently `domains/`: the unit of
+  configuration, moved under `packages/` as
+  `packages/features/<category>/<name>/`.
+- Package versions are git-derived (flake `self.shortRev` /
+  `self.dirtyShortRev`, fallback `"dev"`); no hardcoded versions.
+- No separate `derivations/` directory. Shared build helpers are consumed via
+  `callPackage` dependencies, not via a shared recipe directory.
 - `lib/` contains only shared utilities.
 - Profiles are graph nodes with requirements and constraints.
 - Systems are the only modules allowed to import `systems/monads`.
@@ -63,9 +72,10 @@ packages/
   features/
     <category>/<name>/
       default.nix
+      package.nix
+      src/
       home.nix
       system.nix
-      render.nix
       checks.nix
       config/
   toolchains/
@@ -73,8 +83,10 @@ packages/
     _schema.nix
     <language>.nix
   runtime/
-    activation.nix
-    <tool>.nix
+    <tool>/
+      default.nix
+      package.nix
+      src/
 
 secrets/                     # encrypted data only
 
@@ -97,10 +109,6 @@ systems/
   validation/
   outputs/
 
-derivations/
-  runtime/{angst,angst-switch,angst-projects,angst-secrets,angst-vm,angst-shell,angst-analyze,angst-hm-switch,angst-log}.nix
-  paper.nix
-  treesitter.nix
 lib/
 githooks/
 .github/
@@ -117,28 +125,18 @@ Removed root directories:
 
 `nixpkgs-config.nix` lives at the repository root, outside `lib/`.
 
-## Packages vs Derivations
+## Packages are derivations
 
-The boundary is explicit:
+One directory is one derivation. There is no separate `derivations/`
+directory and no `source.kind` indirection:
 
-- `packages/` describes **what is selected, why, and how it is configured**.
-- `derivations/` describes **how bytes are built into Nix store outputs**.
-
-A package is a logical component. A derivation is a build recipe. One package
-may reference zero, one, or many derivations.
-
-| Concern | `packages/` | `derivations/` |
-|---|---|---|
-| Identity | package ID, type, description | no package identity |
-| Selection | profiles, graph, requirements, conflicts | no selection |
-| Capabilities | `provides`, `requires` | no capabilities |
-| Target support | `targets`, `sides` | no host/profile awareness |
-| Configuration | `home.nix`, `system.nix`, `render.nix`, `config/` | no NixOS/home-manager modules |
-| Persistence | `persist` entries | no persistence policy |
-| Checks | feature `checks.nix` | build-time derivation checks only |
-| Build inputs | semantic package dependencies | concrete Nix build inputs |
-| Output | metadata plus feature adapters | one or more derivations |
-| Nix store output | only by reference (`source`) | the actual build result |
+- `packages/features/<category>/<name>/` holds the record (`default.nix`),
+  the build (`package.nix` + `src/`), and the adapters (`home.nix`,
+  `system.nix`, `config/`, `checks.nix`).
+- `packages/runtime/<tool>/` holds the record (`default.nix`) and the build
+  (`package.nix` + `src/`) for each runtime binary.
+- `packages/toolchains/` holds declarative toolchain specs; `mkToolchain`
+  stays a pure helper there, not a derivation.
 
 Flow:
 
@@ -147,46 +145,41 @@ host
   -> profiles
   -> package graph
   -> selected package
-       -> source.kind = "nixpkgs"
-            -> pkgs.<name>
-       -> source.kind = "derivation"
-            -> derivations/<name>.nix
-                 -> Nix store path
-       -> source.kind = "none"
-            -> module-only feature
+       -> packages/features/<category>/<name>/package.nix
+            (theme + toolchains baked in)
+            -> Nix store path
   -> systems/modules
-       -> home-manager / NixOS modules
-       -> rendered config outputs
+       -> home-manager / NixOS modules install the built store path
+       -> rendered config outputs come from the build, not eval text
   -> systems/host
        -> final system
 ```
 
-
 Rules:
 
-- packages contain selection/config metadata plus an optional self-contained `package.nix`; no other build scripts
-- `package.nix` takes explicit inputs only; never reads `host`, profiles, capabilities, or other packages
-- packages never import `systems/`
-- derivations never know host, profile, package ID, target, or capability
-- derivations never import `systems/` or `packages/`
-- derivations may be used by multiple packages
-- `source.kind = "nixpkgs"` does not create a local derivation
-- `source.kind = "none"` means the feature is module-only
-- feature side files are adapters, not derivations
+- each feature directory is exactly one derivation; each runtime tool
+  directory is exactly one derivation.
+- `package.nix` takes explicit inputs only; never reads `host`, profiles,
+  capabilities, or other packages.
+- packages never import `systems/`.
+- shared build helpers are consumed via `callPackage` dependencies, not via
+  a shared recipe directory.
+- feature side files (`home.nix`, `system.nix`) are adapters that install the
+  built store path; they are not derivations themselves.
 
 ### Self-contained feature packages
 
-Each feature directory may ship its own build as a real Nix package.
+Each feature directory ships its own build as a real Nix package.
 The package stays self-contained: `src/` lives inside the package directory
-and all inputs are explicit function arguments.
+and all inputs are explicit function arguments. Theme and toolchain values
+are baked into the store output at build time, not rendered as eval text.
 
 ```nix
 # packages/features/<category>/<name>/package.nix
-{ lib, stdenv, theme, toolchains, src }:
+{ lib, stdenv, theme, toolchains, src, upstream, version }:
 stdenv.mkDerivation {
   pname = "<name>";
-  version = "0.1.0";
-  inherit src;
+  inherit src version;
   nativeBuildInputs = [ ];
   buildPhase = ''...'';
   installPhase = ''mkdir -p $out/...; cp -r ... $out/...'';
@@ -197,39 +190,66 @@ Rules:
 
 - `package.nix` is a function; its arguments are its only inputs.
 - allowed inputs are nixpkgs build inputs (`lib`, `stdenv`, compilers) plus
-  declared domain inputs: `theme`, `toolchains`, `src`, derived facts.
-- `src` defaults to the package-local directory (`./src`); the caller passes
-  the source path, the package never reaches outside its own directory.
+  declared domain inputs: `theme`, `toolchains`, `src`, `upstream`,
+  `version`, derived facts.
+- `src` is the package-local directory (`./src`); the package never reaches
+  outside its own directory.
 - `theme` is the normalized value from `systems/theme` (`palette`, `ansi`,
-  `isDark`, contrast helpers), not theme internals.
+  `isDark`, contrast helpers), not theme internals. It is baked into the
+  output (for example a generated `palette` file or prompt config).
 - `toolchains` is the list of full `mkToolchain` outputs selected for the
   host (`home.packages`, `toolchains.treesitterGrammars`,
   `toolchains.editor.lsp`); the package picks what it needs, the resolver
-  decides the selection.
-- the caller (`systems/packages` via `systems/outputs`) resolves `theme` and
-  `toolchains` from host context and invokes `package.nix` with
-  `callPackage`-style argument filtering, so each package declares only the
-  inputs it uses.
-- one derivation per package directory; recipes shared by several packages
-  stay in `derivations/`.
+  decides the selection. Bake derived values in (for example enabled adapter
+  lists, grammar sets).
+- `version` is git-derived, resolved once by the caller from flake `self`
+  (`self.shortRev` / `self.dirtyShortRev`, fallback `"dev"`). No hardcoded
+  versions in `package.nix`.
+- `upstream` is set only for thin wrappers over nixpkgs binaries (see below);
+  custom builds omit it.
+- the caller (`systems/packages` via `systems/outputs`) resolves `theme`,
+  `toolchains`, `upstream`, `src`, and `version` from host context and
+  invokes `package.nix` with `callPackage`-style argument filtering, so each
+  package declares only the inputs it uses.
 - the build output lands in `packages.${system}.<category>-<name>` and enters
-  a host closure only when the package is selected.
+  a host closure only when the package is selected. Per-host baked variants
+  are exposed as
+  `packages.${system}."<hostname>--<category>-<name>"` aliases.
+
+Thin wrappers over nixpkgs binaries still get a `package.nix`. A wrapper
+declares `upstream = pkgs.<name>`, pins no source of its own, wraps via
+`symlinkJoin` + `wrapProgram`/`makeWrapper`, and bakes its config into
+`$out` alongside the wrapped binary:
+
+```nix
+# packages/features/git/lazygit/package.nix
+{ lib, stdenv, symlinkJoin, makeWrapper, upstream, theme, version }:
+symlinkJoin {
+  name = "lazygit-${version}";
+  paths = [ upstream ];
+  nativeBuildInputs = [ makeWrapper ];
+  postBuild = ''
+    # bake config under $out, wrap $out/bin/<name> with --add-flags/--set
+  '';
+  passthru.upstreamVersion = upstream.version;
+}
+```
 
 Examples:
 
 | Path | Role |
 |---|---|
-| `packages/features/wm/i3/default.nix` | package record; graph requirements; no build |
-| `packages/features/wm/i3/home.nix` | home-manager adapter |
-| `packages/features/design/paper/default.nix` | feature record; `source.derivation = "derivations/paper.nix"` |
-| `derivations/paper.nix` | fetch/wrap AppImage |
-| `packages/runtime/vm.nix` | runtime tool record; `source.derivation = "derivations/runtime/angst-vm.nix"` |
-| `derivations/runtime/angst-vm.nix` | Go build and wrapper |
+| `packages/features/wm/i3/default.nix` | package record; graph requirements |
+| `packages/features/wm/i3/package.nix` | derivation; builds helper scripts + baked bindings |
+| `packages/features/design/paper/package.nix` | derivation; fetch/wrap AppImage + baked flags |
+| `packages/features/git/lazygit/package.nix` | thin wrapper over `pkgs.lazygit` + baked config |
+| `packages/features/terminal/ghostty/package.nix` | thin wrapper over `pkgs.ghostty` + baked config |
+| `packages/runtime/vm/default.nix` | runtime tool record; gating capability |
+| `packages/runtime/vm/package.nix` | Go build and wrapper |
 | `packages/toolchains/rust.nix` | toolchain bundle spec |
-| `derivations/treesitter.nix` | grammar build recipe |
 
 `mkToolchain` is a pure helper, not a derivation. It lives with toolchain
-specs, not in `derivations/`.
+specs.
 
 ## Catalog Discovery
 
@@ -258,7 +278,7 @@ Use explicit imports for code composition:
 | `systems/cli` command registry | binaries and runtime capabilities |
 | `systems/monads` ports/interpreters | contracts and test doubles |
 | `systems/outputs` | public flake surface |
-| Derivations | called by source references, not global discovery |
+| `package.nix` builds | invoked per selected package with explicit args, not global discovery |
 | Cross-system validation | explicit public-facade imports |
 
 Discovered does not mean enabled. Discovery builds a catalog. Hosts, profiles,
@@ -313,7 +333,7 @@ Rules:
 - no static language list
 - toolchain specs may import local `_builder.nix`
 - toolchain specs do not import `systems/`
-- `mkToolchain` stays out of `derivations/`
+- `mkToolchain` stays a pure helper; it is not a package build
 
 ### Features Like Themes
 
@@ -393,7 +413,6 @@ flake.nix
        -> systems/cli
        -> systems/theme
        -> systems/log
-       -> derivations/
        -> packages/
        -> profiles/
        -> lib/
@@ -430,17 +449,17 @@ Rules:
 
 | Area | Rule |
 |---|---|
-| `systems/monads` | The edge. Imported only by files under `systems/`. Never imported by packages, profiles, hosts, secrets, or derivations. |
+| `systems/monads` | The edge. Imported only by files under `systems/`. Never imported by packages, profiles, hosts, or secrets. |
 | `systems/*/default.nix` | Public API only. Returns plain data, modules, packages, diagnostics, or monadic programs for systems. Never leaks internals. |
 | `systems/*/internal/` | Private to that system. No other module may import it. |
-| `lib/` | Imports only `lib/` and nixpkgs lib. Never imports `systems/`, `packages/`, `profiles/`, or `derivations/`. |
+| `lib/` | Imports only `lib/` and nixpkgs lib. Never imports `systems/`, `packages/`, or `profiles/`. |
 | `packages/features/*/default.nix` | Pure package data. No imports from `systems/`; no executable logic. |
-| `packages/features/*/{home,system,render}.nix` | Nix module adapters. Local imports only; no imports from `systems/`. |
+| `packages/features/*/package.nix` | Pure build function. Explicit inputs only (`theme`, `toolchains`, `src`, `upstream`, `version`, nixpkgs inputs); no imports from `systems/`; never reads `host` or profiles. |
+| `packages/features/*/{home,system}.nix` | Nix module adapters installing the built store path. Local imports only; no imports from `systems/`. |
 | `packages/toolchains/` | Declarative toolchain specs. Local `_builder.nix`/`_schema.nix` imports only; no imports from `systems/`. |
-| `packages/runtime/` | Pure runtime tool records. No imports from `systems/`. |
+| `packages/runtime/` | Runtime tool records plus `package.nix` builds. No imports from `systems/`. |
 | `profiles/` | Pure graph data. No imports from `systems/`; no executable logic. |
 | `secrets/` | Encrypted data only. No code. |
-| `derivations/` | Pure build recipes. No imports from `systems/`; callers pass source paths and arguments. |
 | `hosts/` | Pure desired data plus generated tracked observations. No code. |
 
 Architecture checks enforce these rules with a static import scan. Dynamic
@@ -1011,13 +1030,15 @@ Rules:
 
 Generic package-to-module engine:
 
-- pair selected package records with co-located side files
-- validate `home.nix`, `system.nix`, `render.nix`, `checks.nix`, `config/`
+- pair selected package records with co-located side files and builds
+- validate `home.nix`, `system.nix`, `package.nix`, `checks.nix`, `config/`
+- invoke `package.nix` per selected package with the host's `theme`,
+  `toolchains`, `upstream`, `src`, and git-derived `version`
 - select sides for the target
 - generate home-manager modules
 - generate NixOS modules
-- render theme-aware outputs
-- validate placement and render contracts
+- install the built store path; theme-aware outputs come from the build
+- validate placement and build contracts
 
 It does not own platform modules. Those live in their bounded contexts.
 
@@ -1247,20 +1268,24 @@ Thin output layer:
 
 ## Packages
 
-Each feature is exactly one package directory:
+Each feature is exactly one package directory. `features/` is the new name
+for what is currently `domains/`.
 
 ```text
 packages/features/wm/i3/
   default.nix
+  package.nix
+  src/
   home.nix
   system.nix
-  render.nix
   checks.nix
   config/
 ```
 
-`default.nix` is pure package data. Side files are Nix module adapters and may
-import only local helpers, not `systems/`.
+`default.nix` is pure package data. `package.nix` is the build. Side files
+are Nix module adapters installing the built store path and may import only
+local helpers, not `systems/`. Theme-aware outputs are baked by
+`package.nix` at build time; there is no separate `render.nix`.
 
 `packages/features/wm/i3/default.nix`:
 
@@ -1268,8 +1293,6 @@ import only local helpers, not `systems/`.
 {
   type = "window-manager";
   description = "i3 window manager";
-
-  source.kind = "none";
 
   placement.xdg = "i3";
 
@@ -1300,11 +1323,6 @@ import only local helpers, not `systems/`.
   type = "development-tool";
   description = "Lazygit TUI";
 
-  source = {
-    kind = "nixpkgs";
-    name = "lazygit";
-  };
-
   placement.xdg = "lazygit";
 
   sides.home = { };
@@ -1314,11 +1332,20 @@ import only local helpers, not `systems/`.
 }
 ```
 
-Source kinds:
+`packages/features/git/lazygit/package.nix` is a thin wrapper: it takes
+`upstream = pkgs.lazygit`, wraps it with `symlinkJoin` + `wrapProgram`,
+bakes the config into `$out`, and sets
+`passthru.upstreamVersion = upstream.version`. The wrapper still owns its
+config even though the binary comes from nixpkgs.
 
-- `nixpkgs`: select `pkgs.<name>`.
-- `derivation`: load a recipe from `derivations/`.
-- `none`: feature installs through its module, or installs nothing.
+Build outputs:
+
+- `packages.${system}.<category>-<name>`: built for the representative host
+  (its theme + toolchains).
+- `packages.${system}."<hostname>--<category>-<name>"`: per-host baked
+  variant (that host's theme + toolchains).
+- `version` is git-derived in all cases (`self.shortRev` /
+  `self.dirtyShortRev`, fallback `"dev"`).
 
 Fields:
 
@@ -1327,7 +1354,6 @@ Fields:
 - `sides`: `home`, `system`, or both.
 - `sides.home` / `sides.system`: side availability and requirements.
 - `sides.system.when`: declarative condition for conditional sides.
-- `source`: `nixpkgs`, `derivation`, or `none`.
 - `placement`: `xdg`, `xdgFile`, `customXdg`, `mutable`.
 - `requires.packages`: package IDs.
 - `requires.capabilities`: capability names.
@@ -1375,27 +1401,31 @@ A toolchain is a declarative spec, not a normal feature package:
 `packages/toolchains/_builder.nix` provides `mkToolchain` as a pure helper.
 `systems/packages` exposes the tree-sitter home adapter.
 
-There is no root `toolchains/`, no `systems/toolchains`, and no
-`derivations/toolchain.nix`.
+There is no root `toolchains/` and no `systems/toolchains`.
 
 ### Runtime Package Records
 
-Runtime tools are package records under `packages/runtime/`, so the resolver
-gates binaries and closures:
+Runtime tools live under `packages/runtime/<tool>/` with a record plus a
+build, so the resolver gates binaries and closures:
 
 ```nix
-# packages/runtime/vm.nix
+# packages/runtime/vm/default.nix
 {
   type = "runtime-tool";
   description = "VM lifecycle and MCP server";
-
-  source.derivation = "derivations/runtime/angst-vm.nix";
 
   targets = [ "nixos" ];
   sides.home = { };
 
   provides.runtime-vm = { };
 }
+```
+
+```text
+packages/runtime/vm/
+  default.nix
+  package.nix   # Go build and wrapper
+  src/
 ```
 
 Rules:
@@ -1582,17 +1612,16 @@ facts the graph cannot know.
 
 | Shape | Model |
 |---|---|
-| package only | `source.nixpkgs`, no sides |
+| package only | `package.nix` build, no sides |
 | home only | `sides.home` |
 | system only | `sides.system`, `targets = [ "nixos" ]` |
 | both sides | `sides.home` + `sides.system` |
 | conditional side | `sides.system.when = { fact = "host.ssh.server.enable"; equals = true; }` |
-| custom build | `source.derivation` |
-| self-contained build | `package.nix` + local `src/`, explicit `theme` / `toolchains` inputs |
+| custom build | `package.nix` + local `src/`, explicit `theme` / `toolchains` inputs, baked output |
+| thin wrapper | `package.nix` with `upstream = pkgs.<name>`, baked config, `passthru.upstreamVersion` |
 | custom XDG | `placement.customXdg` |
 | mutable config | `placement.mutable` |
 | target-specific | `targets = [ "generic-linux" ]` |
-| external package input | `source.derivation` plus injected args |
 | fact-dependent behavior | capabilities plus derived facts |
 | feature check | `checks.nix` beside the feature |
 | runtime tools | `packages/runtime/*`, built by `systems/cli`, gated by runtime capabilities |
@@ -1613,8 +1642,8 @@ Examples:
   on capabilities.
 - `agents.opencode`: uses `editorLsp`, `hasLspmux`, `hasPaper`, and `hasRea`
   facts.
-- `editor.nvim`: source none, home side, render, mutable lockfile.
-- `design.paper`: source derivation.
+- `editor.nvim`: home side, baked config, mutable lockfile.
+- `design.paper`: custom `package.nix` build (fetch/wrap AppImage).
 - `games.steam`, `kernel.audio`, `kernel.container`: system side NixOS only.
 
 ## Logging
@@ -1726,7 +1755,9 @@ Record per-host enabled/package sets and rendered output hashes.
 ### Phase 5: Systems split and modules
 
 - Move `lib/domains/*` and `lib/render.nix` into `systems/modules/internal`.
-- Expose pairing, target-aware side selection, module generation, and rendering.
+- Expose pairing, target-aware side selection, module generation, and build
+  invocation (`package.nix` per selected package with host `theme` +
+  `toolchains`).
 - Move base home/NixOS modules to `systems/platform`.
 - Move theme/Gtk/Qt modules to `systems/theme`.
 - Move login shell to `systems/activation`.
@@ -1737,7 +1768,7 @@ Record per-host enabled/package sets and rendered output hashes.
 - Move project/db/vault/FTP runtime code to `systems/projects`.
 - Move tree-sitter adapter to `systems/packages`.
 - Delete root `modules/`.
-- Compare rendered config hashes before and after.
+- Compare built store-path config hashes before and after.
 
 ### Phase 6: Host and outputs
 
@@ -1764,12 +1795,16 @@ Record per-host enabled/package sets and rendered output hashes.
   `vm`, `angst-shell`, `analyze`, `hm-switch`, `nixos-switch`.
 - Move Nix activation glue to `systems/cli/wrappers/` or
   `systems/cli/internal/`.
-- Move build recipes to `derivations/runtime/`.
-- Add `packages/runtime/*.nix` records and gate binaries through runtime
-  capabilities.
-- Move `domains/design/paper/package.nix` to `derivations/paper.nix`.
+- Move each Go tool build into its owning `packages/runtime/<tool>/`
+  (`default.nix` record plus `package.nix` build plus `src/`); no separate
+  recipe directory.
+- Gate binaries through runtime capabilities.
+- Move `domains/design/paper/package.nix` to
+  `packages/features/design/paper/package.nix` and fold the wrapper flags
+  into the same build.
 - Move `lib/toolchain.nix` to `packages/toolchains/_builder.nix`.
-- Move `lib/treesitter.nix` to `derivations/treesitter.nix`.
+- Move `lib/treesitter.nix` into the owning feature package build
+  (grammar set baked in via the `toolchains` input).
 - Wire adapters in context, secrets, VM, activation, projects, and log.
 - Add `systems/state` with atomic writes, locks, schema versions, and
   `ANGST_STATE_DIR`.
@@ -1796,8 +1831,7 @@ Add `systems/validation/internal/architecture.nix`:
 
 - no `systems/monads` outside `systems/`
 - no `systems/<name>/internal` outside `systems/<name>/`
-- no `systems/` imports from `lib/`, `packages/`, `profiles/`, or
-  `derivations/`
+- no `systems/` imports from `lib/`, `packages/`, or `profiles/`
 - no imports inside `packages/features/*/default.nix` or `profiles/`
 - every `systems/<name>/` has `default.nix`
 - no root `domains/`, `modules/`, `checks/`, `runtime/`, `toolchains/`, or
@@ -1877,7 +1911,7 @@ Additional checks:
 - state schemas, freshness, permissions, and ownership are valid
 - state files and logs contain no secret values
 - feature checks are co-located and aggregated
-- rendered config hashes unchanged after structural moves
+- built store-path config hashes unchanged after structural moves
 - no feature module imports `systems/monads` or system internals
 - context tests prove unknown is distinct from false
 - log tests prove secret values are redacted

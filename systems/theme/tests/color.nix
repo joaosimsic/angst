@@ -9,6 +9,7 @@ let
     relativeLuminance
     contrastRatio
     ensureContrast
+    pickContrast
     ;
 
   inherit (import ./assert.nix { inherit lib; })
@@ -55,4 +56,28 @@ in
   (assertTrue "contrastRatio symmetric" (
     contrastRatio "#ffffff" "#000000" == contrastRatio "#000000" "#ffffff"
   ))
+  (assertEq "pickContrast keeps first passing candidate" "#ffffff" (pickContrast {
+    candidates = [
+      "#ffffff"
+      "#ff0000"
+    ];
+    bg = "#000000";
+    threshold = 4.5;
+  }))
+  (assertEq "pickContrast skips failing first candidate" "#ffffff" (pickContrast {
+    candidates = [
+      "#111111"
+      "#ffffff"
+    ];
+    bg = "#000000";
+    threshold = 4.5;
+  }))
+  (assertEq "pickContrast best-effort when none pass" "#777777" (pickContrast {
+    candidates = [
+      "#111111"
+      "#777777"
+    ];
+    bg = "#000000";
+    threshold = 21.5;
+  }))
 ]

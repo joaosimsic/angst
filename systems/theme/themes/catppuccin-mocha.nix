@@ -2,7 +2,7 @@
   palette = {
     background = {
       base = "#1e1e2e";
-      variant = "#1e1e2e";
+      variant = "#181825";
     };
     surface = {
       base = "#89b4fa";

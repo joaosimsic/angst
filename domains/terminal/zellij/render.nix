@@ -14,17 +14,17 @@ let
   activeTab = "bg=#${t.safe.surfaceVariantOnForegroundVariant},fg=#${p.surface.variant},bold";
 
   modeNormal = "bg=#${p.surface.variant},fg=#${t.safe.foregroundOnSurfaceVariant},bold";
-  modeLocked = "bg=#${p.dim},fg=#${p.background.base},bold";
+  modeLocked = "bg=#${p.dim},fg=#${t.safe.textOn p.dim},bold";
   modePane = "bg=#${p.surface.base},fg=#${t.safe.foregroundOnSurfaceBase},bold";
   modeTab = "bg=#${p.accent.variant},fg=#${t.safe.foregroundOnAccentVariant},bold";
-  modeScroll = "bg=#${p.accent.base},fg=#${p.background.base},bold";
-  modeSearch = "bg=#${p.accent.variant},fg=#${p.background.base},bold";
-  modeResize = "bg=#${p.accent.base},fg=#${p.background.base},bold";
-  modeRename = "bg=#${p.accent.variant},fg=#${p.background.base},bold";
-  modeMove = "bg=#${p.accent.base},fg=#${p.background.base},bold";
-  modeSession = "bg=#${p.surface.base},fg=#${p.background.base},bold";
-  modePrompt = "bg=#${t.ansi.success},fg=#${p.background.base},bold";
-  modeTmux = "bg=#${p.foreground.base},fg=#${p.background.base},bold";
+  modeScroll = "bg=#${p.accent.base},fg=#${t.safe.textOn p.accent.base},bold";
+  modeSearch = "bg=#${p.accent.variant},fg=#${t.safe.textOn p.accent.variant},bold";
+  modeResize = "bg=#${p.accent.base},fg=#${t.safe.textOn p.accent.base},bold";
+  modeRename = "bg=#${p.accent.variant},fg=#${t.safe.textOn p.accent.variant},bold";
+  modeMove = "bg=#${p.accent.base},fg=#${t.safe.textOn p.accent.base},bold";
+  modeSession = "bg=#${p.surface.base},fg=#${t.safe.textOn p.surface.base},bold";
+  modePrompt = "bg=#${t.ansi.success},fg=#${t.safe.textOn t.ansi.success},bold";
+  modeTmux = "bg=#${p.foreground.base},fg=#${t.safe.textOn p.foreground.base},bold";
 
   fmtLeft = "{mode}";
   fmtCenter = "#[${standard}]{command_cwd}";
@@ -225,14 +225,14 @@ in
         "zellij native text should render ${themeName} foreground.base"
       )
       (requireInfix themeText
-        "ribbon_selected {\n            base \"#${p.background.base}\"\n            background \"#${p.accent.base}\""
-        "zellij selected ribbon should render ${themeName} accent.base"
+        "ribbon_selected {\n            base \"#${t.safe.textOn p.accent.base}\"\n            background \"#${p.accent.base}\""
+        "zellij selected ribbon should render ${themeName} safe text on accent.base"
       )
       (requireInfix themeText "frame_unselected {\n            base \"#${p.foreground.base}\""
         "zellij inactive frame should render ${themeName} foreground.base"
       )
-      (requireInfix themeText "frame_selected {\n            base \"#${p.accent.base}\""
-        "zellij active frame should render ${themeName} accent.base"
+      (requireInfix themeText "frame_selected {\n            base \"#${t.safe.textOn p.background.base}\""
+        "zellij active frame should render ${themeName} safe text on background.base"
       )
       (requireInfix themeText "frame_highlight {\n            base \"#${t.ansi.warn}\""
         "zellij highlighted frame should render ${themeName} ansi.warn"
@@ -246,6 +246,12 @@ in
       (require (
         t.ansi.warn != p.background.base
       ) "zellij highlighted frame must differ from background in ${themeName}")
+      (require (
+        themeSys.contrast.contrastRatio (t.safe.textOn p.accent.base) p.accent.base >= 3.0
+      ) "zellij selected-row text must reach contrast floor 3.0 in ${themeName}")
+      (require (
+        themeSys.contrast.contrastRatio (t.safe.textOn p.background.base) p.background.base >= 3.0
+      ) "zellij frame/title text must reach contrast floor 3.0 in ${themeName}")
     ];
   }
   {

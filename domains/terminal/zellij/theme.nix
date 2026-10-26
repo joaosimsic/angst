@@ -16,7 +16,7 @@
           }
 
           text_selected {
-              base "#${p.background.base}"
+              base "#${t.safe.textOn p.accent.base}"
               background "#${p.accent.base}"
               emphasis_0 "#${t.ansi.error}"
               emphasis_1 "#${t.ansi.warn}"
@@ -25,7 +25,7 @@
           }
 
           ribbon_unselected {
-              base "#${p.accent.base}"
+              base "#${t.safe.textOn p.background.variant}"
               background "#${p.background.variant}"
               emphasis_0 "#${t.ansi.error}"
               emphasis_1 "#${t.ansi.warn}"
@@ -34,7 +34,7 @@
           }
 
           ribbon_selected {
-              base "#${p.background.base}"
+              base "#${t.safe.textOn p.accent.base}"
               background "#${p.accent.base}"
               emphasis_0 "#${t.ansi.error}"
               emphasis_1 "#${t.ansi.warn}"
@@ -43,7 +43,7 @@
           }
 
           table_title {
-              base "#${p.accent.base}"
+              base "#${t.safe.textOn p.background.base}"
               background "#${p.background.base}"
               emphasis_0 "#${t.ansi.error}"
               emphasis_1 "#${t.ansi.warn}"
@@ -61,7 +61,7 @@
           }
 
           table_cell_selected {
-              base "#${p.background.base}"
+              base "#${t.safe.textOn p.accent.base}"
               background "#${p.accent.base}"
               emphasis_0 "#${t.ansi.error}"
               emphasis_1 "#${t.ansi.warn}"
@@ -79,7 +79,7 @@
           }
 
           list_selected {
-              base "#${p.background.base}"
+              base "#${t.safe.textOn p.accent.base}"
               background "#${p.accent.base}"
               emphasis_0 "#${t.ansi.error}"
               emphasis_1 "#${t.ansi.warn}"
@@ -97,7 +97,7 @@
           }
 
           frame_selected {
-              base "#${p.accent.base}"
+              base "#${t.safe.textOn p.background.base}"
               background "#${p.background.base}"
               emphasis_0 "#${t.ansi.error}"
               emphasis_1 "#${t.ansi.warn}"

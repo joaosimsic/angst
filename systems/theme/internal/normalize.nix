@@ -26,12 +26,15 @@ let
   withRgb =
     theme:
     let
+      isHex = value: builtins.match "[0-9a-fA-F]{6}" value != null;
       walk =
         prefix: value:
         if builtins.isString value then
-          { "${prefix}_RGB" = hexToRgb value; }
+          if isHex value then { "${prefix}_RGB" = hexToRgb value; } else { }
         else if builtins.isAttrs value then
           lib.concatMapAttrs (key: sub: walk "${prefix}_${key}" sub) value
+        else if builtins.isFunction value then
+          { }
         else
           { };
     in

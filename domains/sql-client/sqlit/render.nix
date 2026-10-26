@@ -37,7 +37,7 @@ let
         "variables": {
           "border": "#${p.surface.base}",
           "block-cursor-background": "#${p.accent.base}",
-          "block-cursor-foreground": "#${p.background.base}",
+          "block-cursor-foreground": "#${t.safe.textOn p.accent.base}",
           "block-cursor-text-style": "bold"
         }
       }
@@ -98,6 +98,12 @@ in
       (requireInfix themeFileText ''"border": "#${p.surface.base}"''
         "sqlit border variable should render ${themeName} surface.base"
       )
+      (requireInfix themeFileText ''"block-cursor-foreground": "#${t.safe.textOn p.accent.base}"''
+        "sqlit block-cursor text should render ${themeName} safe text on accent.base"
+      )
+      (require (
+        themeSys.contrast.contrastRatio (t.safe.textOn p.accent.base) p.accent.base >= 3.0
+      ) "sqlit block-cursor text must reach contrast floor 3.0 in ${themeName}")
       (require (
         p.surface.base != p.accent.variant
       ) "sqlit primary surface.base and secondary accent.variant must differ in ${themeName}")

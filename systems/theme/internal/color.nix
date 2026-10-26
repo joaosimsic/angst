@@ -53,6 +53,12 @@ let
         + hexValues.${lib.toLower (lib.substring 5 1 val)};
     };
 
+  # sRGB -> linear per WCAG (exponent 2.4). Nix has no pow builtin,
+  # so x^2.4 is computed as x^2 * fifthRoot(x^2) via Newton iteration.
+  fifthRoot =
+    y:
+    lib.foldl' (z: _: (4 * z + y / (z * z * z * z)) / 5) 1.0 (lib.range 1 10);
+
   srgbToLinearChannel =
     c:
     let
@@ -64,8 +70,9 @@ let
       (
         let
           x = (cNorm + 0.055) / 1.055;
+          sq = x * x;
         in
-        x * x
+        sq * fifthRoot sq
       );
 
   relativeLuminance =
@@ -95,6 +102,30 @@ let
       threshold ? 4.5,
     }:
     if contrastRatio fg bg >= threshold then fg else fallback;
+
+  # Ordered candidate pick: first candidate passing threshold wins
+  # (preserves designer intent); if none pass, the highest-ratio
+  # candidate wins instead of a blind fallback that may also fail.
+  pickContrast =
+    {
+      candidates,
+      bg,
+      threshold ? 4.5,
+    }:
+    let
+      ranked = lib.sort (a: b: a.ratio > b.ratio) (
+        map (c: {
+          value = c;
+          ratio = contrastRatio c bg;
+        }) candidates
+      );
+      passing = lib.filter (e: e.ratio >= threshold) ranked;
+      orderedPassing = lib.filter (c: contrastRatio c bg >= threshold) candidates;
+    in
+    if orderedPassing != [ ] then
+      builtins.head orderedPassing
+    else
+      (builtins.head ranked).value;
 in
 {
   inherit
@@ -104,5 +135,6 @@ in
     relativeLuminance
     contrastRatio
     ensureContrast
+    pickContrast
     ;
 }

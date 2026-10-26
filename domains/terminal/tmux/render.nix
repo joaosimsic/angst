@@ -26,7 +26,7 @@ in
       set -g status-left-length 100
       set -g status-interval 5
 
-      set -g window-status-current-style "bg=#${p.accent.base},fg=#${p.background.base},bold"
+      set -g window-status-current-style "bg=#${p.accent.base},fg=#${t.safe.textOn p.accent.base},bold"
       set -g window-status-style "bg=#${p.surface.variant},fg=#${t.safe.foregroundOnSurfaceVariant}"
       set -g window-status-format " #I:#W "
       set -g window-status-current-format " #I:#W "

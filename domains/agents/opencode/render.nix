@@ -2,6 +2,7 @@
   lib,
   themeSys,
   themeName,
+  checkHelpers,
   host,
   store ? { },
   ...
@@ -10,6 +11,7 @@
 let
   t = themeSys.get themeName;
   p = t.palette;
+  inherit (checkHelpers) require requireInfix;
 
   theme = builtins.toJSON {
     theme = {
@@ -28,8 +30,8 @@ let
       border = "#${p.foreground.base}";
       borderActive = "#${p.accent.base}";
       borderSubtle = "#${p.accent.base}";
-      diffAdded = "#${p.background.base}";
-      diffRemoved = "#${p.background.base}";
+      diffAdded = "#${t.safe.textOn t.ansi.success}";
+      diffRemoved = "#${t.safe.textOn t.ansi.error}";
       diffContext = "#${p.background.variant}";
       diffHunkHeader = "#${p.foreground.base}";
       diffHighlightAdded = "#${p.background.variant}";
@@ -44,7 +46,7 @@ let
       markdownHeading = "#${p.accent.base}";
       markdownLink = "#${p.foreground.variant}";
       markdownLinkText = "#${p.accent.base}";
-      markdownCode = "#${p.surface.variant}";
+      markdownCode = "#${t.safe.textOn p.background.base}";
       markdownBlockQuote = "#${p.dim}";
       markdownEmph = "#${p.accent.base}";
       markdownStrong = "#${p.foreground.variant}";
@@ -167,6 +169,20 @@ in
   {
     path = "domains/agents/opencode/config/themes/angst.json";
     text = theme;
+    checks = [
+      (requireInfix theme ''"diffAdded":"#${t.safe.textOn t.ansi.success}"''
+        "opencode diffAdded text should render ${themeName} safe text on ansi.success"
+      )
+      (requireInfix theme ''"diffRemoved":"#${t.safe.textOn t.ansi.error}"''
+        "opencode diffRemoved text should render ${themeName} safe text on ansi.error"
+      )
+      (require (
+        themeSys.contrast.contrastRatio (t.safe.textOn t.ansi.success) t.ansi.success >= 3.0
+      ) "opencode diffAdded text must reach contrast floor 3.0 in ${themeName}")
+      (require (
+        themeSys.contrast.contrastRatio (t.safe.textOn t.ansi.error) t.ansi.error >= 3.0
+      ) "opencode diffRemoved text must reach contrast floor 3.0 in ${themeName}")
+    ];
   }
   {
     path = "domains/agents/opencode/config/opencode.jsonc";

@@ -40,7 +40,7 @@ nix run .#lint-themes                # fast, eval-only theme check
 @modules/        core NixOS/home/VM modules + age secrets integration
 @profiles/       reusable composition units — selected via the host decl's `profiles` list
 @runtime/        runtime tooling as Nix functions + Go CLIs (angst, vm, angst-shell, analyze)
-@themes/         color token definitions (9 themes, strict 13-token schema)
+@themes/         color token definitions (8 themes, strict 13-token schema)
 @toolchains/     language-domain tooling (24 languages: runtime/LSP/formatter/linter/grammar)
 @runtime/angst/  Go CLI `angst` (render, watch, projects, vault, ftp, ssh-key, system, boot) — core host orchestration
 @runtime/vm/     Go CLI `vm` (unified guest+host + MCP) — QEMU VM lifecycle; guest scripts in `runtime/vm/*.nix`
@@ -134,7 +134,7 @@ Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run
 
 | Check | Validates |
 |---|---|
-| `lint-themes` | All 9 themes load and validate (eval-only, fast) |
+| `lint-themes` | All 8 themes load and validate (eval-only, fast) |
 | `lint-desktop` | i3 + i3status configs parse per theme |
 | `lint-shell` | starship.toml + nushell colors per theme |
 | `theme-rendered` | Rendered domain configs contain expected theme tokens |

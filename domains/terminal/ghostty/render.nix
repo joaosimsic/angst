@@ -7,7 +7,7 @@
 
 let
   t = themeSys.get themeName;
-  inherit (checkHelpers) requireInfix;
+  inherit (checkHelpers) require requireInfix;
 
   p = t.palette;
 
@@ -16,7 +16,7 @@ let
     foreground           = ${p.foreground.variant}
     cursor-color         = ${p.foreground.variant}
     selection-background = ${p.accent.base}
-    selection-foreground = ${p.foreground.variant}
+    selection-foreground = ${t.safe.textOn p.accent.base}
     palette = 0=#${p.background.variant}
     palette = 1=#${p.dim}
     palette = 2=#${p.surface.variant}
@@ -85,6 +85,9 @@ in
       (requireInfix colorsText "palette = 1=#${p.dim}"
         "ghostty palette slot 1 should render ${themeName} dim"
       )
+      (require (
+        themeSys.contrast.contrastRatio (t.safe.textOn p.accent.base) p.accent.base >= 3.0
+      ) "ghostty selection text must reach contrast floor 3.0 in ${themeName}")
     ];
   }
 ]

@@ -1,7 +1,8 @@
-{ themeSys, themeName }:
+{ themeSys, themeName, checkHelpers }:
 
 let
   t = themeSys.get themeName;
+  inherit (checkHelpers) require requireInfix;
 
   p = t.palette;
   a = t.ansi;
@@ -20,15 +21,15 @@ let
         optionsTextColor:
           - "#${p.foreground.variant}"
         selectedLineBgColor:
-          - "#${p.surface.variant}"
+          - "#${p.background.variant}"
         inactiveViewSelectedLineBgColor:
           - bold
         cherryPickedCommitFgColor:
-          - "#${p.foreground.base}"
+          - "#${t.safe.textOn p.accent.base}"
         cherryPickedCommitBgColor:
           - "#${p.accent.base}"
         markedBaseCommitFgColor:
-          - "#${p.foreground.base}"
+          - "#${t.safe.textOn p.accent.variant}"
         markedBaseCommitBgColor:
           - "#${p.accent.variant}"
         unstagedChangesColor:
@@ -335,5 +336,19 @@ in
   {
     path = "domains/git/lazygit/config/config.yml";
     text = config;
+    checks = [
+      (requireInfix config ''- "#${p.background.variant}"''
+        "lazygit selected line background should render ${themeName} background.variant"
+      )
+      (requireInfix config ''- "#${t.safe.textOn p.accent.base}"''
+        "lazygit cherry-picked commit text should render ${themeName} safe text on accent.base"
+      )
+      (require (
+        themeSys.contrast.contrastRatio (t.safe.textOn p.accent.base) p.accent.base >= 3.0
+      ) "lazygit cherry-picked commit text must reach contrast floor 3.0 in ${themeName}")
+      (require (
+        themeSys.contrast.contrastRatio (t.safe.textOn p.accent.variant) p.accent.variant >= 3.0
+      ) "lazygit marked-base commit text must reach contrast floor 3.0 in ${themeName}")
+    ];
   }
 ]

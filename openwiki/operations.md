@@ -18,7 +18,7 @@ Standalone: `nix run .#shell -- dev` / `nix profile install .#shell && shell dev
 
 | Check | Validates |
 |---|---|
-| `lint-themes` | All 9 themes load and validate (eval-only, fast) |
+| `lint-themes` | All 8 themes load and validate (eval-only, fast) |
 | `lint-desktop` | i3 + i3status configs parse per theme |
 | `lint-shell` | starship.toml (`taplo check`) + nushell colors per theme |
 | `theme-rendered` | Rendered domain configs contain expected theme tokens (`checks/theme/rendered.nix`) |

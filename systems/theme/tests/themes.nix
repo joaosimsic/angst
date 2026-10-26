@@ -37,6 +37,9 @@ let
         t ? "_palette_background_base_RGB"
       ))
       (assertMatch "${name}: RGB is int triple" "[0-9]+ [0-9]+ [0-9]+" t."_palette_background_base_RGB")
+      (assertTrue "${name}: safe tokens have _RGB siblings" (
+        t ? "_safe_foregroundOnSurfaceVariant_RGB"
+      ))
       (assertTrue "${name}: colorScheme set" (
         builtins.elem t.colorScheme [
           "dark"
