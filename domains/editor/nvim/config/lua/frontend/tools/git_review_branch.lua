@@ -205,8 +205,26 @@ function M.pick_target(cb)
 			branches = res
 		end
 	end
+	-- Comparing a branch against itself is always empty: drop the
+	-- current branch (and its remote tracking twin) from the choices.
+	local own = nil
+	if type(review_files) == "table" and type(review_files.current_branch) == "function" then
+		local ok, res = pcall(review_files.current_branch, cwd)
+		if ok and type(res) == "string" and res ~= "" then
+			own = res
+		end
+	end
+	if own ~= nil then
+		local kept = {}
+		for _, b in ipairs(branches) do
+			if b ~= own and b ~= "origin/" .. own then
+				kept[#kept + 1] = b
+			end
+		end
+		branches = kept
+	end
 	if #branches == 0 then
-		vim.notify("Git branch diff: no branches found", vim.log.levels.WARN)
+		vim.notify("Git branch diff: no other branches found", vim.log.levels.WARN)
 		cb(nil)
 		return
 	end
@@ -442,11 +460,11 @@ function M.render_all(file_abs, eidx)
 	M.paint_current()
 end
 
-function M.refresh()
-	local target = M.target() or state.target
-	if target == nil or target == "" then
-		return
-	end
+-- Synchronous collection for `target`: toplevels plus branch entries
+-- plus the deduped file list. Never touches the quickfix list.
+---@param target string
+---@return string[] tops, table[] entries, table[] files
+local function collect_entries(target)
 	local review_files = package.loaded["frontend.tools.git_review_files"]
 	if review_files == nil then
 		review_files = require("frontend.tools.git_review_files")
@@ -465,9 +483,6 @@ function M.refresh()
 			entries = res
 		end
 	end
-	state.tops = tops
-	state.entries = entries
-	state.target = target
 	local files, seen = {}, {}
 	for _, e in ipairs(entries) do
 		local abs = vim.fn.fnamemodify(e.filename, ":p")
@@ -476,6 +491,18 @@ function M.refresh()
 			files[#files + 1] = { filename = abs, lnum = e.lnum and e.lnum > 0 and e.lnum or 1 }
 		end
 	end
+	return tops, entries, files
+end
+
+function M.refresh()
+	local target = M.target() or state.target
+	if target == nil or target == "" then
+		return
+	end
+	local tops, entries, files = collect_entries(target)
+	state.tops = tops
+	state.entries = entries
+	state.target = target
 	state.files = files
 	M.render()
 end
@@ -512,6 +539,10 @@ function M.entry_jump(dir)
 	end
 	if not M.is_open() then
 		M.open()
+	end
+	-- open() auto-disables on empty ranges (with its own notice).
+	if not M.is_enabled() then
+		return
 	end
 	if #state.entries == 0 then
 		M.refresh()
@@ -589,6 +620,10 @@ function M.next_file()
 	if not M.is_open() then
 		M.open()
 	end
+	-- open() auto-disables on empty ranges (with its own notice).
+	if not M.is_enabled() then
+		return
+	end
 	if #state.files == 0 then
 		M.refresh()
 	end
@@ -616,6 +651,10 @@ function M.prev_file()
 	end
 	if not M.is_open() then
 		M.open()
+	end
+	-- open() auto-disables on empty ranges (with its own notice).
+	if not M.is_enabled() then
+		return
 	end
 	if #state.files == 0 then
 		M.refresh()
@@ -700,7 +739,28 @@ local function setup_pane_win(win)
 	pcall(vim.api.nvim_win_set_option, win, "statusline", " ")
 end
 
+-- A normal code window (not a sidebar pane, not a float): the only
+-- safe place to park focus after (re)building the column.
+---@param win integer|nil
+---@return boolean
+local function is_code_win(win)
+	if not valid_win(win) then
+		return false
+	end
+	if win == state.files_win or win == state.diffs_win then
+		return false
+	end
+	local ok, cfg = pcall(vim.api.nvim_win_get_config, win)
+	if not ok or (cfg.relative ~= nil and cfg.relative ~= "") then
+		return false
+	end
+	local buf = vim.api.nvim_win_get_buf(win)
+	local ft = vim.bo[buf].filetype
+	return ft ~= M.FILES_FILETYPE and ft ~= M.DIFFS_FILETYPE
+end
+
 ---@param target? string branch to diff against (defaults to the stored target)
+---@return integer|nil files window, nil when the range is empty (auto-disabled)
 function M.open(target)
 	if target ~= nil and target ~= "" then
 		M.enable(target)
@@ -709,10 +769,27 @@ function M.open(target)
 	if active == nil or active == "" then
 		return nil
 	end
+	-- Collect before building windows: an empty range (bad target,
+	-- self-compare, merged away) auto-disables with a clear notice
+	-- instead of stranding navigation on placeholders.
+	local tops, entries, files = collect_entries(active)
+	if #entries == 0 then
+		vim.notify(
+			string.format("Git branch diff: no changes between HEAD and %s", active),
+			vim.log.levels.WARN
+		)
+		M.disable()
+		return nil
+	end
 	ensure_autocmd()
 	badge:show("git-branch-diff", "⇄ " .. active)
+	state.tops = tops
+	state.entries = entries
+	state.target = active
+	state.files = files
 	if M.is_open() then
-		M.refresh()
+		M.render()
+		M.paint_current()
 		return state.files_win
 	end
 	pcall(vim.cmd, "cclose")
@@ -734,15 +811,40 @@ function M.open(target)
 	setup_pane_win(state.diffs_win)
 	local total = vim.api.nvim_win_get_height(state.files_win) + vim.api.nvim_win_get_height(state.diffs_win) + 1
 	pcall(vim.api.nvim_win_set_height, state.files_win, math.max(1, math.floor(total * M.FILES_SHARE)))
-	if valid_win(code_win) then
+	if is_code_win(code_win) then
 		pcall(vim.api.nvim_set_current_win, code_win)
 	else
-		pcall(vim.cmd, "wincmd p")
-		pcall(vim.cmd, "wincmd p")
+		local parked = false
+		for _, win in ipairs(vim.api.nvim_list_wins()) do
+			if is_code_win(win) then
+				parked = pcall(vim.api.nvim_set_current_win, win)
+				break
+			end
+		end
+		if not parked then
+			pcall(vim.cmd, "wincmd p")
+		end
 	end
-	state.target = active
-	M.refresh()
 	M.render_all(vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p"), state.context.eidx)
+	-- The current file may sit outside the branch range (e.g. reached
+	-- via worktree n/N): say so once instead of leaving h/l mute.
+	local cur = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p")
+	local found = false
+	for _, f in ipairs(state.files) do
+		if f.filename == cur then
+			found = true
+			break
+		end
+	end
+	if not found and #state.files > 0 then
+		vim.notify(
+			string.format(
+				"Git branch diff: no hunks in this file — n/N jumps to %s",
+				vim.fn.fnamemodify(state.files[1].filename, ":t")
+			),
+			vim.log.levels.INFO
+		)
+	end
 	return state.files_win
 end
 

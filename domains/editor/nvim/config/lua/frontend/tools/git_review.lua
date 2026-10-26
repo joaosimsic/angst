@@ -215,10 +215,16 @@ local function toggle_branch_diff()
 		if target == nil or target == "" then
 			return
 		end
-		branch.enable(target)
 		pages.close()
 		pcall(vim.cmd, "cclose")
-		branch.open(target)
+		-- Empty ranges auto-disable inside open() (with their own
+		-- notice); fall back to the worktree panes then.
+		if branch.open(target) == nil then
+			if vim.g.active_hydra ~= nil and vim.g.active_hydra.name == "Git" then
+				pages.open()
+			end
+			return
+		end
 		vim.notify("Git branch diff vs " .. target, vim.log.levels.INFO)
 	end)
 end
@@ -325,18 +331,22 @@ local function setup()
 			hunk_display.apply()
 			pcall(vim.cmd, "cclose")
 			if branch.is_enabled() then
-				branch.open()
+				-- A stale enable (e.g. target merged away) auto-disables
+				-- inside open(); fall back to the worktree panes then.
+				if branch.open() == nil then
+					pages.open()
+				end
 			else
 				pages.open()
 			end
 		end,
 		on_exit = function()
 			pages.close()
-			-- Leave the branch column open while its mode persists;
-			-- it only closes on Tab (disable).
-			if not branch.is_enabled() then
-				branch.close()
-			end
+			-- Visible quit: the branch column always closes, but the
+			-- enabled flag and target persist so the next enter
+			-- restores it until Tab disables it. Badge and code
+			-- tints stay as the persisted-mode indicator.
+			branch.close()
 			pcall(vim.cmd, "cclose")
 		end,
 		heads = {

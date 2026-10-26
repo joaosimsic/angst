@@ -1004,7 +1004,7 @@ return function()
 			press("q")
 			assert(vim.g.active_hydra == nil, "q head never exited review mode")
 			assert(branch.is_enabled(), "branch mode must persist after hydra exit")
-			assert(branch.is_open(), "branch column must stay open after hydra exit")
+			assert(not branch.is_open(), "q must close the branch column")
 			assert(
 				branch._badge.entries["git-branch-diff"] == "⇄ main",
 				"badge must persist after hydra exit"
@@ -1029,6 +1029,119 @@ return function()
 			assert(
 				#vim.api.nvim_buf_get_extmarks(buf, branch_hunks.ns, 0, -1, {}) == 0,
 				"disable must clear the branch overlay"
+			)
+			press("q")
+
+			branch._reset()
+			pages_mod._reset()
+			vim.g.angst_git_branch_diff_enabled = nil
+			vim.g.angst_git_branch_diff_target = nil
+			vim.cmd("cd " .. vim.fn.fnameescape(saved_cwd))
+			package.loaded["gitsigns"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			package.loaded["frontend.tools.git_review_branch"] = nil
+			vim.api.nvim_buf_delete(buf, { force = true })
+			vim.fn.setqflist({}, "r")
+			vim.fn.delete(root, "rf")
+		end)
+
+		it("branch toggle skips the current branch and auto-disables on empty ranges", function()
+			vim.g.mapleader = " "
+			assert(vim.fn.executable("git") == 1, "git binary required for fixture")
+
+			local saved_cwd = vim.fn.getcwd()
+			local root = vim.fn.tempname() .. "_gitbranch_empty"
+			vim.fn.mkdir(root, "p")
+			local function git(args)
+				local cmd = { "git", "-C", root }
+				vim.list_extend(cmd, args)
+				local out = vim.fn.system(cmd)
+				assert(
+					vim.v.shell_error == 0,
+					"fixture git failed: " .. table.concat(cmd, " ") .. "\n" .. out
+				)
+			end
+			git({ "init", "-b", "main" })
+			git({ "config", "user.email", "test@local" })
+			git({ "config", "user.name", "test" })
+			local fh = assert(io.open(root .. "/a.txt", "w"))
+			fh:write("one\n")
+			fh:close()
+			git({ "add", "." })
+			git({ "commit", "-m", "base" })
+			git({ "checkout", "-qb", "feature" })
+
+			package.loaded["gitsigns"] = {
+				toggle_deleted = function() end,
+				toggle_linehl = function() end,
+				toggle_word_diff = function() end,
+			}
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			package.loaded["frontend.tools.git_hunk_display"] = nil
+			package.loaded["frontend.tools.git_review_files"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			package.loaded["frontend.tools.git_review_branch"] = nil
+			package.loaded["frontend.tools.git_review"] = nil
+			vim.g.angst_git_branch_diff_enabled = nil
+			vim.g.angst_git_branch_diff_target = nil
+			require("frontend.tools.git_review").config()
+			local branch = require("frontend.tools.git_review_branch")
+			local pages_mod = require("frontend.tools.git_review_pages")
+
+			vim.cmd("cd " .. vim.fn.fnameescape(root))
+			vim.cmd("edit " .. vim.fn.fnameescape(root .. "/a.txt"))
+			local buf = vim.api.nvim_get_current_buf()
+
+			-- The picker must not offer the current branch:
+			-- self-compare is always empty.
+			package.preload["fzf-lua"] = function()
+				error("fzf must stay out of the picker test")
+			end
+			local picked_items = nil
+			local orig_select = vim.ui.select
+			vim.ui.select = function(items, _, on_choice)
+				picked_items = items
+				on_choice(nil)
+			end
+			branch._pick_override = nil
+			local chosen = "unset"
+			branch.pick_target(function(target)
+				chosen = target
+			end)
+			assert(chosen == nil, "cancelling the picker must yield nil")
+			assert(picked_items ~= nil, "picker must list branches")
+			assert(
+				not vim.tbl_contains(picked_items, "feature"),
+				"picker must skip the current branch, got: " .. vim.inspect(picked_items)
+			)
+			assert(
+				vim.tbl_contains(picked_items, "main"),
+				"picker must keep other branches, got: " .. vim.inspect(picked_items)
+			)
+			vim.ui.select = orig_select
+			package.preload["fzf-lua"] = nil
+
+			-- Enabling against the current branch finds no changes:
+			-- auto-disable with a notice, worktree column restored.
+			press(" g")
+			local notes = {}
+			local orig_notify = vim.notify
+			vim.notify = function(msg, ...)
+				notes[#notes + 1] = tostring(msg)
+			end
+			branch._pick_override = function(cb)
+				cb("feature")
+			end
+			press("<Tab>")
+			vim.notify = orig_notify
+			assert(not branch.is_enabled(), "empty range must auto-disable branch mode")
+			assert(not branch.is_open(), "empty range must not leave a branch column")
+			assert(next(branch._badge.entries) == nil, "empty range must not show a badge")
+			assert(pages_mod.is_open(), "empty range must restore the worktree column")
+			assert(
+				table.concat(notes, "\n"):find("no changes between HEAD and feature", 1, true),
+				"empty range must explain itself, got: " .. vim.inspect(notes)
 			)
 			press("q")
 
