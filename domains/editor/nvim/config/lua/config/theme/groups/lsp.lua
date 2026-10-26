@@ -1,3 +1,6 @@
+local palette = require("config.theme.palette")
+local p, a = palette.p, palette.a
+
 local M = {}
 
 ---@return HighlightGroups
@@ -27,10 +30,10 @@ M.get = function()
 		DiagnosticFloatingHint = { link = "DiagnosticHint" },
 		DiagnosticFloatingOk = { link = "DiagnosticOk" },
 
-		DiagnosticUnderlineError = { link = "SpellBad" },
-		DiagnosticUnderlineWarn = { link = "SpellCap" },
-		DiagnosticUnderlineInfo = { link = "SpellLocal" },
-		DiagnosticUnderlineHint = { link = "SpellRare" },
+		DiagnosticUnderlineError = { sp = a.error, underline = true },
+		DiagnosticUnderlineWarn = { sp = a.warn, underline = true },
+		DiagnosticUnderlineInfo = { sp = a.info, underline = true },
+		DiagnosticUnderlineHint = { sp = p.accent.variant, underline = true },
 		DiagnosticUnderlineOk = { link = "Underlined" },
 		DiagnosticUnnecessary = { link = "Comment" },
 		DiagnosticDeprecated = { link = "@markup.strikethrough" },

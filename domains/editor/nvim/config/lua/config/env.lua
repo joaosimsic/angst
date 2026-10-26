@@ -31,5 +31,13 @@ return {
 		vim.opt.splitright = true
 		vim.opt.splitbelow = true
 		vim.opt.signcolumn = "yes"
+		-- Spellcheck is opt-in: only markdown buffers enable it (see below).
+		vim.opt.spell = false
+		vim.api.nvim_create_autocmd("FileType", {
+			pattern = { "markdown", "markdown.mdx" },
+			callback = function()
+				vim.opt_local.spell = true
+			end,
+		})
 	end,
 }

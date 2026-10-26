@@ -58,30 +58,24 @@ end
 
 ---@param toplevel string
 ---@param diff_args string[]
----@param prefix string "Staged" | "Unstaged" | "Unpushed"
----@return ReviewExtraEntry[]
-local function parse_diff(toplevel, diff_args, prefix)
+---@return ReviewExtraEntry[] entries with compact "lnum(signN) kind" text
+local function parse_diff(toplevel, diff_args)
 	local cmd = { "-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "-U0" }
 	vim.list_extend(cmd, diff_args)
 
 	local entries = {}
 	local path = nil
-	local pending_a, pending_c, sample = nil, nil, nil
+	local pending_c, pending_sign, pending_n, pending_kind = nil, nil, nil, nil
 
 	local function flush()
 		if path ~= nil and pending_c ~= nil then
 			entries[#entries + 1] = {
 				filename = path,
 				lnum = pending_c,
-				text = ("%s (-%s +%s)%s"):format(
-					prefix,
-					pending_a or "?",
-					pending_c,
-					sample and (": " .. sample) or ""
-				),
+				text = ("%d: (%s%d) %s"):format(pending_c, pending_sign, pending_n, pending_kind),
 			}
 		end
-		pending_a, pending_c, sample = nil, nil, nil
+		pending_c, pending_sign, pending_n, pending_kind = nil, nil, nil, nil
 	end
 
 	for _, line in ipairs(git_lines(toplevel, cmd)) do
@@ -98,12 +92,20 @@ local function parse_diff(toplevel, diff_args, prefix)
 				path = nil
 			end
 		elseif path then
-			local a, c = line:match("^@@ %-(%d+)[,]?%d* %+(%d+)[,]?%d* @@")
+			local a, an_s, c, cm_s = line:match("^@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@")
 			if a then
 				flush()
-				pending_a, pending_c = a, tonumber(c)
-			elseif pending_c and not sample and line:sub(1, 1) == "+" then
-				sample = line:sub(2, 120)
+				local an = an_s == "" and 1 or tonumber(an_s)
+				local cm = cm_s == "" and 1 or tonumber(cm_s)
+				pending_c = tonumber(c)
+				if an == 0 then
+					pending_sign, pending_n, pending_kind = "+", cm, "A"
+				elseif cm == 0 then
+					pending_sign, pending_n, pending_kind = "-", an, "D"
+				else
+					-- Changed hunk: N counts the landing (added) side.
+					pending_sign, pending_n, pending_kind = "~", cm, "M"
+				end
 			end
 		end
 	end
@@ -143,11 +145,22 @@ local function untracked_entries(toplevel)
 				rel = unquoted
 			end
 			if rel ~= nil and rel ~= "" then
-				entries[#entries + 1] = {
-					filename = toplevel .. "/" .. rel,
-					lnum = 1,
-					text = "Untracked",
-				}
+				local abs = toplevel .. "/" .. rel
+				-- Streamed count: no whole-file read for big files.
+				-- Unreadable files are skipped, like deleted ones.
+				local fh = io.open(abs, "r")
+				if fh ~= nil then
+					local n = 0
+					for _ in fh:lines() do
+						n = n + 1
+					end
+					fh:close()
+					entries[#entries + 1] = {
+						filename = abs,
+						lnum = 1,
+						text = ("1: (+%d) ??"):format(n),
+					}
+				end
 			end
 		end
 	end
@@ -173,35 +186,27 @@ local function worktree_entries()
 				for _, h in ipairs(hunks) do
 					if type(h) == "table" and type(h.added) == "table"
 						and type(h.removed) == "table" then
-						local kind = h.type == "add" and "Added"
-							or h.type == "delete" and "Removed" or "Changed"
-						local added, removed = nil, nil
-						if type(h.lines) == "table" then
-							for _, l in ipairs(h.lines) do
-								if type(l) == "string" then
-									if l:sub(1, 1) == "+" and added == nil then
-										added = l:sub(2, 120)
-									elseif l:sub(1, 1) == "-" and removed == nil then
-										removed = l:sub(2, 120)
-									end
-								end
-							end
+						-- Same rule as parse_diff: rc/cm are the removed
+						-- and added (landing) side counts; N counts the
+						-- landing side, the letter is the hunk kind.
+						local rc = tonumber(h.removed.count) or 0
+						local ac = tonumber(h.added.count) or 0
+						local sign, n, kind
+						if rc == 0 then
+							sign, n, kind = "+", ac, "A"
+						elseif ac == 0 then
+							sign, n, kind = "-", rc, "D"
+						else
+							sign, n, kind = "~", ac, "M"
 						end
-						local sample = added or removed
-						local function span(n)
-							return n ~= 1 and "," .. tostring(n) or ""
+						local start = tonumber(h.added.start) or 0
+						if start <= 0 then
+							start = 1
 						end
 						entries[#entries + 1] = {
 							bufnr = buf,
-							lnum = h.added.start > 0 and h.added.start or 1,
-							text = ("%s (-%s%s +%s%s)%s"):format(
-								kind,
-								tostring(h.removed.start),
-								span(h.removed.count),
-								tostring(h.added.start),
-								span(h.added.count),
-								sample and (": " .. sample) or ""
-							),
+							lnum = start,
+							text = ("%d: (%s%d) %s"):format(start, sign, n, kind),
 						}
 					end
 				end
@@ -212,21 +217,22 @@ local function worktree_entries()
 end
 
 ---@param toplevels string[]
----@return ReviewExtraEntry[] unstaged + staged + unpushed + untracked entries
+---@return ReviewExtraEntry[] unstaged + staged + unpushed + untracked entries,
+---each shaped "lnum: (signN) kind" (e.g. "121: (-4) D", "11: (~5) M")
 function M.extra_entries_for(toplevels)
 	local entries = {}
 	for _, top in ipairs(toplevels) do
 		-- Unstaged first: it mirrors the open buffer, so on overlap
 		-- lines it wins the file+lnum dedupe over staged below.
-		for _, e in ipairs(parse_diff(top, {}, "Unstaged")) do
+		for _, e in ipairs(parse_diff(top, {})) do
 			entries[#entries + 1] = e
 		end
-		for _, e in ipairs(parse_diff(top, { "--cached" }, "Staged")) do
+		for _, e in ipairs(parse_diff(top, { "--cached" })) do
 			entries[#entries + 1] = e
 		end
 		local base = unpushed_base(top)
 		if base then
-			for _, e in ipairs(parse_diff(top, { base .. "..HEAD" }, "Unpushed")) do
+			for _, e in ipairs(parse_diff(top, { base .. "..HEAD" })) do
 				entries[#entries + 1] = e
 			end
 		end

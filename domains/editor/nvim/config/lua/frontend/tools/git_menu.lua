@@ -10,7 +10,7 @@ return {
 	config = function()
 		local binder = Keybinder.new(nil, "GIT-MENU")
 
-		binder:nmap("<leader>g", function()
+		binder:nmap("<leader>gl", function()
 			local all_actions = require("frontend.tools.git_menu_actions")
 
 			local attached = pcall(require, "gitsigns")

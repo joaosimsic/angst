@@ -9,13 +9,12 @@ local pages = require("frontend.tools.git_review_pages")
 local palette = require("config.theme.palette")
 local p = palette.p
 
--- Minimal code-buffer review: background-only hunk display with a
--- flat file list. `j`/`k` stay normal cursor motion.
--- `d` toggles the bg diff (deleted overlay + line bg; added/removed text
--- is real buffer text), `h`/`l` cycle diffs in the same file only,
--- `p` toggles the file list (all changed files on top, current file's
--- diffs in a bottom section; the list highlights without ever taking
--- focus), `n` / `N` step files. No floating preview anywhere.
+-- Minimal code-buffer review: background-only hunk display with
+-- always-on side panes (changed files on top, current file's diffs
+-- below; the panes highlight without ever taking focus). `j`/`k` stay
+-- normal cursor motion. `d` toggles the bg diff (deleted overlay + line
+-- bg; added/removed text is real buffer text), `h`/`l` cycle diffs in
+-- the same file only, `n` / `N` step files. No floating preview anywhere.
 
 local function gs()
 	local ok, gitsigns = pcall(require, "gitsigns")
@@ -171,12 +170,6 @@ local function toggle_hunks()
 	hunk_display.toggle()
 end
 
-local function toggle_pages()
-	ensure_files_or_collect(function()
-		pages.toggle()
-	end)
-end
-
 -- Jump to the first quickfix entry of `abs_path` (cc index).
 ---@param abs_path string
 ---@return integer|nil landed quickfix index
@@ -250,23 +243,24 @@ local function setup()
 
 	Hydra.new({
 		name = "Git",
-		fg_color = p.accent.base,
-		bg_color = p.background.base,
-		enter = "<leader>G",
+		fg_color = p.background.variant,
+		bg_color = p.accent.base,
+		enter = "<leader>g",
 		global = true,
 		persist = true,
 		logger = logger,
 		on_enter = function()
-			-- Fully lazy: enter arms the hydra only and touches nothing,
-			-- so no file list or quickfix window can ever appear
-			-- uninvited. Collection happens on first p/n/N/h/l via
-			-- ensure_files_or_collect; `p` toggles the pane.
+			-- The panes open with the hydra (empty placeholders until
+			-- the first collect); the quickfix window never appears.
+			-- Collection stays lazy: it happens on first n/N/h/l via
+			-- ensure_files_or_collect, never on enter.
 			-- Respect the global hunk switch (default-on): toggles are
 			-- global and may have changed since the last session.
 			-- Hint stays hidden: `?` toggles the help float.
 			-- `j`/`k` are intentionally unbound: normal motion.
 			hunk_display.apply()
 			pcall(vim.cmd, "cclose")
+			pages.open()
 		end,
 		on_exit = function()
 			pages.close()
@@ -276,7 +270,6 @@ local function setup()
 			{ "d", toggle_hunks, "Diff bg on/off" },
 			{ "h", function() entry_jump(-1) end, "Prev diff" },
 			{ "l", function() entry_jump(1) end, "Next diff" },
-			{ "p", toggle_pages, "File list" },
 			{ "n", next_file, "Next file" },
 			{ "N", prev_file, "Prev file" },
 			{

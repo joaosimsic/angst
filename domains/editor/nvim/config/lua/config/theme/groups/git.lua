@@ -54,17 +54,6 @@ M.get = function()
 		GitSignsDeleteInline = { bg = delete_bg },
 		GitSignsChangeInline = { bg = change_bg },
 
-		DiffviewNormal = { link = "Normal" },
-		DiffviewCursorLine = { link = "CursorLine" },
-		DiffviewWinSeparator = { link = "WinSeparator" },
-		DiffviewFilePanelTitle = { fg = p.foreground.variant, bold = true },
-		DiffviewFilePanelCounter = { fg = p.dim },
-		DiffviewFilePanelFileName = { fg = p.foreground.base },
-		DiffviewDiffAdd = { link = "DiffAdd" },
-		DiffviewDiffDelete = { link = "DiffDelete" },
-		DiffviewDiffChange = { link = "DiffChange" },
-		DiffviewDiffText = { link = "DiffText" },
-
 		NeogitBranch = { fg = a.info, bold = true },
 		NeogitRemote = { fg = p.accent.base },
 		NeogitHunkHeader = { fg = p.foreground.variant, bg = p.background.variant, bold = true },
@@ -117,6 +106,23 @@ M.get = function()
 		GitCommitNewFile = { fg = a.success, bold = true },
 		GitCommitDeleted = { fg = a.error, bold = true },
 		GitCommitRenamed = { fg = p.accent.base, bold = true },
+
+		-- Review side panes: the parked row shouts (PmenuSel formula
+		-- plus bold), headers whisper in accent.
+		GitReviewCursor = { fg = p.background.variant, bg = p.accent.base, bold = true },
+		GitReviewHeader = { fg = p.accent.base, bold = true },
+		-- Parked diff-row cursor takes the hunk kind color instead of
+		-- the accent block, so selection and change read as one.
+		GitReviewCursorAdded = { bg = add_bg, bold = true },
+		GitReviewCursorChanged = { bg = change_bg, bold = true },
+		GitReviewCursorDeleted = { bg = delete_bg, bold = true },
+		GitReviewCursorUntracked = { bg = p.background.variant, bold = true },
+		-- Diff row kind tints: full-line hunk backgrounds, code `fg`
+		-- untouched, mirroring the gitsigns hunk palette.
+		GitReviewAdded = { link = "GitSignsAddLn" },
+		GitReviewChanged = { link = "GitSignsChangeLn" },
+		GitReviewDeleted = { link = "GitSignsDeleteLn" },
+		GitReviewUntracked = { link = "GitSignsUntrackedLn" },
 	}
 end
 

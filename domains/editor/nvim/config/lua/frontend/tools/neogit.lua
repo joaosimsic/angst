@@ -6,7 +6,6 @@ return {
 	"NeogitOrg/neogit",
 	dependencies = {
 		"nvim-lua/plenary.nvim",
-		"sindrets/diffview.nvim",
 	},
 	event = "VeryLazy",
 	cmd = {
@@ -26,7 +25,7 @@ return {
 				recent_commit_count = 10,
 			},
 			integrations = {
-				diffview = true,
+				diffview = false,
 				telescope = false,
 			},
 		})
@@ -41,7 +40,7 @@ return {
 			vim.cmd("Neogit commit")
 		end, { desc = "Git commit" })
 
-		binder:nmap("<leader>gl", function()
+		binder:nmap("<leader>gm", function()
 			vim.cmd("Neogit log")
 		end, { desc = "Git log" })
 	end,
