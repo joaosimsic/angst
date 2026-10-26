@@ -38,3 +38,7 @@ jobs:
         run: |
           nix develop .#safe --command bash -c \
             "cd domains/editor/nvim/config && nvim --headless -u NONE -l tests/adapters/init.lua"
+      - name: Run Neovim frontend tests
+        run: |
+          nix develop .#safe --command bash -c \
+            "cd domains/editor/nvim/config && nvim --headless -u NONE -l tests/frontend/init.lua"

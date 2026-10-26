@@ -35,6 +35,7 @@
     "xml"
     "editorconfig"
     "blade"
+    "scm"
   ];
   db = [ "work/intelligence-metadata" ];
   env = {
