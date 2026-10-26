@@ -114,6 +114,78 @@ local function parse_diff(toplevel, diff_args)
 end
 
 ---@param toplevel string
+---@param diff_args string[]
+---@return ReviewExtraEntry[] entries with compact "lnum(signN) kind" text
+function M.diff_entries_for(toplevel, diff_args)
+	return parse_diff(toplevel, diff_args)
+end
+
+---@param toplevel string
+---@param target string
+---@return string? merge-base of HEAD and target, nil when unresolvable
+local function branch_base(toplevel, target)
+	local mb = git_lines(toplevel, { "merge-base", "HEAD", target })
+	if #mb == 0 then
+		return nil
+	end
+	return mb[1]
+end
+
+-- Branch-to-branch entries: changes unique to HEAD since it diverged
+-- from `target` (`base..HEAD` when a merge-base exists, else
+-- `target..HEAD`). Same compact row shape as every other source so the
+-- panes tint without new highlight groups.
+---@param toplevels string[]
+---@param target string
+---@return ReviewExtraEntry[]
+function M.branch_entries_for(toplevels, target)
+	if target == nil or target == "" then
+		return {}
+	end
+	local entries = {}
+	for _, top in ipairs(toplevels) do
+		local base = branch_base(top, target)
+		local range
+		if base ~= nil and base ~= "" then
+			range = base .. "..HEAD"
+		else
+			range = target .. "..HEAD"
+		end
+		for _, e in ipairs(parse_diff(top, { range })) do
+			entries[#entries + 1] = e
+		end
+	end
+	return entries
+end
+
+---@param cwd? string
+---@return string[] local + remote short branch names, deduped
+function M.list_branches(cwd)
+	local out, seen = {}, {}
+	for _, line in ipairs(git_lines(cwd or vim.fn.getcwd(), { "branch", "-a", "--format=%(refname:short)" })) do
+		if not line:find(" -> ", 1, true) then
+			local b = line:gsub("^%*%s+", ""):gsub("^%s+", ""):gsub("%s+$", "")
+			if b ~= "" and b ~= "HEAD" and not seen[b] then
+				seen[b] = true
+				out[#out + 1] = b
+			end
+		end
+	end
+	return out
+end
+
+---@param cwd? string
+---@return string? current branch name, nil when detached or outside a repo
+function M.current_branch(cwd)
+	local lines = git_lines(cwd or vim.fn.getcwd(), { "rev-parse", "--abbrev-ref", "HEAD" })
+	local b = lines[1]
+	if b == nil or b == "" or b == "HEAD" then
+		return nil
+	end
+	return b
+end
+
+---@param toplevel string
 ---@return string? merge-base of HEAD and upstream, nil when nothing unpushed
 local function unpushed_base(toplevel)
 	local up = git_lines(toplevel, { "rev-parse", "--verify", "@{u}" })

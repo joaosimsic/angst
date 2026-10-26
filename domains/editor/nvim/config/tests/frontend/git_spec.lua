@@ -296,7 +296,7 @@ return function()
 
 			local review_source = spec_source("git_review")
 			local pages_source = spec_source("git_review_pages")
-			for _, lhs in ipairs({ '"d"', '"h"', '"l"', '"n"', '"N"', '"q"' }) do
+			for _, lhs in ipairs({ '"d"', '"<Tab>"', '"h"', '"l"', '"n"', '"N"', '"q"' }) do
 				assert(review_source:find(lhs, 1, true), lhs .. " must be a hydra head")
 			end
 			for _, lhs in ipairs({ '"j"', '"k"', '"f"', '"s"', '"u"', '"x"', '"v"', '"b"', '"r"', '"p"' }) do
@@ -309,7 +309,30 @@ return function()
 			assert(not review_source:find("nav_hunk", 1, true), "h/l must step quickfix diffs, not gitsigns hunks")
 			assert(review_source:find('"cc "', 1, true), "h/l must step quickfix entries via cc")
 			assert(review_source:find("git_review_pages", 1, true), "hydra must drive the page pane")
+			assert(review_source:find("git_review_branch", 1, true), "hydra must drive the branch pane")
 			assert(review_source:find("on_exit", 1, true), "hydra must close the pane on every exit path")
+			local branch_source = spec_source("git_review_branch")
+			assert(
+				branch_source:find("angst_git_branch_diff_enabled", 1, true),
+				"branch mode must persist in vim.g across hydra exits"
+			)
+			assert(
+				branch_source:find("angst-git-branch-files", 1, true),
+				"branch column must use its own files pane"
+			)
+			assert(
+				branch_source:find("angst-git-branch-diffs", 1, true),
+				"branch column must use its own diffs pane"
+			)
+			assert(
+				branch_source:find("common.Badge", 1, true),
+				"branch mode must badge the target markdown-style"
+			)
+			assert(branch_source:find('"⇄ "', 1, true), "badge must show the compared-against branch")
+			assert(
+				branch_source:find("git_branch_hunks", 1, true),
+				"branch mode must tint code hunks bg-only"
+			)
 			assert(
 				pages_source:find("botright vertical", 1, true),
 				"file list must open as a right-side vertical column"
@@ -866,6 +889,160 @@ return function()
 			package.loaded["gitsigns"] = nil
 			package.loaded["frontend.tools.git_review_pages"] = nil
 			vim.api.nvim_buf_delete(buf_a, { force = true })
+		end)
+
+		it("Tab swaps the whole column to a branch diff that persists across hydra exits", function()
+			vim.g.mapleader = " "
+			assert(vim.fn.executable("git") == 1, "git binary required for fixture")
+
+			local saved_cwd = vim.fn.getcwd()
+			local root = vim.fn.tempname() .. "_gitbranch_tab"
+			vim.fn.mkdir(root, "p")
+			local function git(args)
+				local cmd = { "git", "-C", root }
+				vim.list_extend(cmd, args)
+				local out = vim.fn.system(cmd)
+				assert(
+					vim.v.shell_error == 0,
+					"fixture git failed: " .. table.concat(cmd, " ") .. "\n" .. out
+				)
+			end
+			local function write(path, text)
+				local fh = assert(io.open(path, "w"))
+				fh:write(text)
+				fh:close()
+			end
+			git({ "init", "-b", "main" })
+			git({ "config", "user.email", "test@local" })
+			git({ "config", "user.name", "test" })
+			write(root .. "/a.txt", "one\ntwo\nthree\nfour\n")
+			git({ "add", "." })
+			git({ "commit", "-m", "base" })
+			git({ "checkout", "-qb", "feature" })
+			write(root .. "/a.txt", "one\nTWO\nthree\nfour\nfive\n")
+			git({ "add", "a.txt" })
+			git({ "commit", "-m", "feature change" })
+
+			package.loaded["gitsigns"] = {
+				toggle_deleted = function() end,
+				toggle_linehl = function() end,
+				toggle_word_diff = function() end,
+			}
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			package.loaded["frontend.tools.git_review_files"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			package.loaded["frontend.tools.git_review_branch"] = nil
+			package.loaded["frontend.tools.git_review"] = nil
+			vim.g.angst_git_branch_diff_enabled = nil
+			vim.g.angst_git_branch_diff_target = nil
+			require("frontend.tools.git_review").config()
+			local branch = require("frontend.tools.git_review_branch")
+			local pages_mod = require("frontend.tools.git_review_pages")
+
+			vim.cmd("cd " .. vim.fn.fnameescape(root))
+			vim.cmd("edit " .. vim.fn.fnameescape(root .. "/a.txt"))
+			local buf = vim.api.nvim_get_current_buf()
+
+			press(" g")
+			assert(pages_mod.is_open(), "enter must open the worktree panes")
+			assert(not branch.is_enabled(), "branch mode must start disabled")
+
+			branch._pick_override = function(cb)
+				cb("main")
+			end
+			press("<Tab>")
+			assert(branch.is_enabled(), "Tab must enable branch mode")
+			assert(branch.target() == "main", "Tab must diff against the picked branch")
+			assert(branch.is_open(), "Tab must open the branch column")
+			assert(not pages_mod.is_open(), "Tab must replace the whole worktree column")
+			local branch_files = branch.ordered_files()
+			assert(
+				#branch_files == 1 and branch_files[1].filename == root .. "/a.txt",
+				"branch column must list the branch-changed file"
+			)
+
+			-- Markdown-style badge shows the compared-against branch.
+			assert(
+				branch._badge.entries["git-branch-diff"] == "⇄ main",
+				"badge must show the diff target, got: " .. vim.inspect(branch._badge.entries)
+			)
+
+			-- Bg-tint overlay paints the branch hunks in the code
+			-- buffer (feature changed line 2, added line 5).
+			local branch_hunks = require("frontend.tools.git_branch_hunks")
+			local function tint_groups()
+				local seen = {}
+				for _, m in ipairs(vim.api.nvim_buf_get_extmarks(buf, branch_hunks.ns, 0, -1, { details = true })) do
+					seen[m[4].line_hl_group] = true
+				end
+				return seen
+			end
+			local tints = tint_groups()
+			assert(
+				tints["GitSignsChangeLn"] and tints["GitSignsAddLn"],
+				"code buffer must tint branch hunks bg-only, got: " .. vim.inspect(tints)
+			)
+
+			vim.fn.setqflist({}, "r")
+			press("l")
+			assert(vim.api.nvim_get_current_buf() == buf, "branch l must not leave the file")
+			assert(
+				vim.fn.getqflist({ size = 0 }).size == 0,
+				"branch navigation must not touch the worktree quickfix"
+			)
+			assert(next(tint_groups()) ~= nil, "branch l must keep the overlay painted")
+
+			-- `d` flips the branch overlay together with gitsigns.
+			vim.b[buf].gitsigns_status_dict = {}
+			press("d")
+			assert(next(tint_groups()) == nil, "d off must clear the branch overlay")
+			press("d")
+			assert(next(tint_groups()) ~= nil, "d on must restore the branch overlay")
+			vim.b[buf].gitsigns_status_dict = nil
+
+			press("q")
+			assert(vim.g.active_hydra == nil, "q head never exited review mode")
+			assert(branch.is_enabled(), "branch mode must persist after hydra exit")
+			assert(branch.is_open(), "branch column must stay open after hydra exit")
+			assert(
+				branch._badge.entries["git-branch-diff"] == "⇄ main",
+				"badge must persist after hydra exit"
+			)
+			assert(next(tint_groups()) ~= nil, "overlay must persist after hydra exit")
+
+			press(" g")
+			assert(branch.is_open(), "re-enter must reopen the branch column")
+			assert(not pages_mod.is_open(), "re-enter must not reopen worktree panes while branch persists")
+
+			branch._pick_override = function()
+				error("picker must not run on disable")
+			end
+			press("<Tab>")
+			assert(not branch.is_enabled(), "second Tab must disable branch mode")
+			assert(not branch.is_open(), "second Tab must close the branch column")
+			assert(pages_mod.is_open(), "second Tab must restore the worktree column")
+			assert(
+				next(branch._badge.entries) == nil,
+				"disable must hide the badge, got: " .. vim.inspect(branch._badge.entries)
+			)
+			assert(
+				#vim.api.nvim_buf_get_extmarks(buf, branch_hunks.ns, 0, -1, {}) == 0,
+				"disable must clear the branch overlay"
+			)
+			press("q")
+
+			branch._reset()
+			pages_mod._reset()
+			vim.g.angst_git_branch_diff_enabled = nil
+			vim.g.angst_git_branch_diff_target = nil
+			vim.cmd("cd " .. vim.fn.fnameescape(saved_cwd))
+			package.loaded["gitsigns"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			package.loaded["frontend.tools.git_review_branch"] = nil
+			vim.api.nvim_buf_delete(buf, { force = true })
+			vim.fn.setqflist({}, "r")
+			vim.fn.delete(root, "rf")
 		end)
 
 		it("hydra runs on_exit when deactivating", function()

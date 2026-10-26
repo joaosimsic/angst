@@ -231,18 +231,10 @@ in
         "zellij config should select the custom default layout"
       )
       (requireInfix configText "visual_bell true" "zellij visual bell should be enabled")
-      (requireInfix configText ''bind "Ctrl j"''
-        "zellij Ctrl+j should navigate down"
-      )
-      (requireInfix configText ''payload "down"''
-        "zellij Ctrl+j should move focus down"
-      )
-      (requireInfix configText ''bind "Ctrl k"''
-        "zellij Ctrl+k should navigate up"
-      )
-      (requireInfix configText ''payload "up"''
-        "zellij Ctrl+k should move focus up"
-      )
+      (requireInfix configText ''bind "Ctrl j"'' "zellij Ctrl+j should navigate down")
+      (requireInfix configText ''payload "down"'' "zellij Ctrl+j should move focus down")
+      (requireInfix configText ''bind "Ctrl k"'' "zellij Ctrl+k should navigate up")
+      (requireInfix configText ''payload "up"'' "zellij Ctrl+k should move focus up")
       (requireInfix configText ''bind "Ctrl 1" { GoToTab 1; }'' "zellij Ctrl+1 should jump to tab 1")
       (requireInfix configText ''bind "Ctrl 2" { GoToTab 2; }'' "zellij Ctrl+2 should jump to tab 2")
       (requireInfix configText ''bind "Ctrl 9" { GoToTab 9; }'' "zellij Ctrl+9 should jump to tab 9")

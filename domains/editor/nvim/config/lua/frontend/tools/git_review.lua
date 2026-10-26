@@ -5,6 +5,7 @@ local Logger = require("common.Logger")
 local review_files = require("frontend.tools.git_review_files")
 local hunk_display = require("frontend.tools.git_hunk_display")
 local pages = require("frontend.tools.git_review_pages")
+local branch = require("frontend.tools.git_review_branch")
 
 local palette = require("config.theme.palette")
 local p = palette.p
@@ -15,6 +16,9 @@ local p = palette.p
 -- normal cursor motion. `d` toggles the bg diff (deleted overlay + line
 -- bg; added/removed text is real buffer text), `h`/`l` cycle diffs in
 -- the same file only, `n` / `N` step files. No floating preview anywhere.
+-- `<Tab>` swaps the whole column to a branch-diff view (current branch
+-- vs a picked branch) that persists across hydra exits until `<Tab>`
+-- disables it again.
 
 local function gs()
 	local ok, gitsigns = pcall(require, "gitsigns")
@@ -60,10 +64,23 @@ end
 local function leave_pages_win()
 	-- open() leaves focus in code, but the user may have moved
 	-- into a pane with `wincmd l`: come back before jumping.
+	-- Branch panes replace the whole column, so they count too.
 	local filetype = vim.bo[vim.api.nvim_get_current_buf()].filetype
-	if filetype == "angst-git-files" or filetype == "angst-git-diffs" then
+	if
+		filetype == "angst-git-files"
+		or filetype == "angst-git-diffs"
+		or filetype == "angst-git-branch-files"
+		or filetype == "angst-git-branch-diffs"
+	then
 		pcall(vim.cmd, "wincmd p")
 	end
+end
+
+-- Branch-diff mode replaces the whole column: while enabled, h/l and
+-- n/N navigate branch entries (never the worktree quickfix), and the
+-- mode survives hydra exits via vim.g until Tab disables it again.
+local function branch_mode()
+	return branch.is_enabled()
 end
 
 -- Single synchronous collection, one writer, one tick: worktree hunks
@@ -101,6 +118,10 @@ end
 -- the bg diff plus the list highlight show where you are.
 local function entry_jump(dir)
 	leave_pages_win()
+	if branch_mode() then
+		branch.entry_jump(dir)
+		return
+	end
 	ensure_files_or_collect(function()
 		local cur_buf = vim.api.nvim_get_current_buf()
 		local cur = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(cur_buf), ":p")
@@ -168,6 +189,38 @@ local function toggle_hunks()
 		return
 	end
 	hunk_display.toggle()
+	-- The `d` switch drives gitsigns; re-apply the branch overlay so
+	-- both surfaces flip together while branch mode is active.
+	if branch_mode() then
+		branch.paint_current()
+	end
+end
+
+-- Tab toggles the branch-diff column: enable picks the other branch
+-- once, then the whole sidebar shows branch files/diffs until Tab
+-- disables it again. Enable/disable swaps the column immediately;
+-- the vim.g flag keeps the mode across hydra exits.
+local function toggle_branch_diff()
+	if branch.is_enabled() then
+		branch.disable()
+		branch.close()
+		pcall(vim.cmd, "cclose")
+		if vim.g.active_hydra ~= nil and vim.g.active_hydra.name == "Git" then
+			pages.open()
+		end
+		vim.notify("Git branch diff off", vim.log.levels.INFO)
+		return
+	end
+	branch.pick_target(function(target)
+		if target == nil or target == "" then
+			return
+		end
+		branch.enable(target)
+		pages.close()
+		pcall(vim.cmd, "cclose")
+		branch.open(target)
+		vim.notify("Git branch diff vs " .. target, vim.log.levels.INFO)
+	end)
 end
 
 -- Jump to the first quickfix entry of `abs_path` (cc index).
@@ -188,6 +241,10 @@ end
 -- n/N step files in quickfix order (one stop per file).
 local function next_file()
 	leave_pages_win()
+	if branch_mode() then
+		branch.next_file()
+		return
+	end
 	ensure_files_or_collect(function()
 		if not pages.is_open() then
 			pages.open()
@@ -214,6 +271,10 @@ end
 
 local function prev_file()
 	leave_pages_win()
+	if branch_mode() then
+		branch.prev_file()
+		return
+	end
 	ensure_files_or_collect(function()
 		if not pages.is_open() then
 			pages.open()
@@ -254,20 +315,33 @@ local function setup()
 			-- the first collect); the quickfix window never appears.
 			-- Collection stays lazy: it happens on first n/N/h/l via
 			-- ensure_files_or_collect, never on enter.
+			-- Branch-diff mode replaces the whole column and persists
+			-- in vim.g across hydra exits: re-enter reopens it instead
+			-- of the worktree panes until Tab disables it.
 			-- Respect the global hunk switch (default-on): toggles are
 			-- global and may have changed since the last session.
 			-- Hint stays hidden: `?` toggles the help float.
 			-- `j`/`k` are intentionally unbound: normal motion.
 			hunk_display.apply()
 			pcall(vim.cmd, "cclose")
-			pages.open()
+			if branch.is_enabled() then
+				branch.open()
+			else
+				pages.open()
+			end
 		end,
 		on_exit = function()
 			pages.close()
+			-- Leave the branch column open while its mode persists;
+			-- it only closes on Tab (disable).
+			if not branch.is_enabled() then
+				branch.close()
+			end
 			pcall(vim.cmd, "cclose")
 		end,
 		heads = {
 			{ "d", toggle_hunks, "Diff bg on/off" },
+			{ "<Tab>", toggle_branch_diff, "Branch diff on/off" },
 			{ "h", function() entry_jump(-1) end, "Prev diff" },
 			{ "l", function() entry_jump(1) end, "Next diff" },
 			{ "n", next_file, "Next file" },
