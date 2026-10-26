@@ -122,9 +122,23 @@ let
                 };
             }
 
-            bind "Ctrl j" { GoToTab 1; }
+            bind "Ctrl j" {
+                MessagePlugin "vim-navigator" {
+                    name "move_focus";
+                    payload "down";
+                    move_mod "ctrl";
+                    use_arrow_keys "false";
+                };
+            }
 
-            bind "Ctrl k" { GoToTab 1; GoToPreviousTab; }
+            bind "Ctrl k" {
+                MessagePlugin "vim-navigator" {
+                    name "move_focus";
+                    payload "up";
+                    move_mod "ctrl";
+                    use_arrow_keys "false";
+                };
+            }
 
             bind "Ctrl 1" { GoToTab 1; }
             bind "Ctrl 2" { GoToTab 2; }
@@ -217,11 +231,17 @@ in
         "zellij config should select the custom default layout"
       )
       (requireInfix configText "visual_bell true" "zellij visual bell should be enabled")
-      (requireInfix configText ''bind "Ctrl j" { GoToTab 1; }''
-        "zellij Ctrl+j should jump to the first tab"
+      (requireInfix configText ''bind "Ctrl j"''
+        "zellij Ctrl+j should navigate down"
       )
-      (requireInfix configText ''bind "Ctrl k" { GoToTab 1; GoToPreviousTab; }''
-        "zellij Ctrl+k should jump to the last tab"
+      (requireInfix configText ''payload "down"''
+        "zellij Ctrl+j should move focus down"
+      )
+      (requireInfix configText ''bind "Ctrl k"''
+        "zellij Ctrl+k should navigate up"
+      )
+      (requireInfix configText ''payload "up"''
+        "zellij Ctrl+k should move focus up"
       )
       (requireInfix configText ''bind "Ctrl 1" { GoToTab 1; }'' "zellij Ctrl+1 should jump to tab 1")
       (requireInfix configText ''bind "Ctrl 2" { GoToTab 2; }'' "zellij Ctrl+2 should jump to tab 2")

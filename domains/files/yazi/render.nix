@@ -9,6 +9,7 @@
 let
   t = themesLib.get themeName;
   p = t.palette;
+  a = t.ansi;
 
   persistPaths = import ../../../lib/persist-paths.nix {
     inherit lib host homeDirectory;
@@ -36,6 +37,15 @@ in
 
       [app]
       overall = { bg = "#${p.background.base}" }
+
+      [git]
+      ignored   = { fg = "#${p.dim}" }
+      untracked = { fg = "#${a.info}" }
+      unstaged  = { fg = "#${a.warn}" }
+      staged    = { fg = "#${a.success}" }
+      added     = { fg = "#${a.success}" }
+      deleted   = { fg = "#${a.error}" }
+      updated   = { fg = "#${a.warn}" }
     '';
   }
   {
@@ -49,6 +59,8 @@ in
         icon = "󰋊",
         fg = "#${p.accent.variant}",
       })
+
+      require("git"):setup({ order = 1500 })
 
       function Linemode:persist()
         return persist.marker(self._file.url, self._file.is_hovered)

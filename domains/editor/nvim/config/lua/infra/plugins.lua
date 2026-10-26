@@ -18,6 +18,8 @@ return {
 			require("gitsigns").setup({
 				on_attach = function(bufnr)
 					local gs = require("gitsigns")
+					-- Respect the global hunk switch on every attach.
+					pcall(require("frontend.tools.git_hunk_display").apply)
 					local binder = Keybinder.new(bufnr, "GITSIGNS")
 
 					binder:nmap("]c", function()
@@ -37,8 +39,7 @@ return {
 					end, { desc = "Previous hunk" })
 
 					binder:nmap("<leader>gp", function()
-						local preview_inline = gs.preview_hunk_inline or gs.preview_hunk
-						preview_inline()
+						gs.preview_hunk()
 					end, { desc = "Preview hunk" })
 
 					binder:nmap("<leader>gb", function()
@@ -70,7 +71,12 @@ return {
 					untracked = { text = "┆" },
 				},
 				update_debounce = 100,
+				-- Bg-only hunks: word diff recolors code text.
 				word_diff = false,
+				preview_config = {
+					border = "single",
+					style = "minimal",
+				},
 			})
 		end,
 	},

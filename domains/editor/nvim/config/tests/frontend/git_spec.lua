@@ -23,6 +23,32 @@ end
 
 return function()
 	describe("git review tooling", function()
+		-- Invoke mapping callbacks directly: headless typeahead does not
+		-- dispatch fed keys, but this exercises the identical code path.
+		local function press(lhs)
+			local map = vim.fn.maparg(lhs, "n", false, true)
+			assert(
+				type(map) == "table"
+					and next(map) ~= nil
+					and type(map.callback) == "function",
+				"expected a lua mapping for " .. lhs
+			)
+			map.callback()
+		end
+		local function hint_win(text)
+			for _, win in ipairs(vim.api.nvim_list_wins()) do
+				local ok, cfg = pcall(vim.api.nvim_win_get_config, win)
+				if ok and cfg.relative ~= "" then
+					local lines =
+						vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(win), 0, -1, false)
+					if table.concat(lines, "\n"):find(text, 1, true) then
+						return win
+					end
+				end
+			end
+			return nil
+		end
+
 		it("diffview spec points at sindrets/diffview with plenary dep", function()
 			package.loaded["frontend.tools.diffview"] = nil
 			local spec = require("frontend.tools.diffview")
@@ -80,6 +106,12 @@ return function()
 				assert(source:find(lhs, 1, true), "gitsigns on_attach missing key " .. lhs)
 			end
 			assert(source:find("Gitsigns setqflist all", 1, true), "quickfix must span all hunks")
+			assert(source:find("word_diff = false", 1, true), "gitsigns must keep word_diff off (bg-only hunks)")
+			assert(source:find("preview_config", 1, true), "gitsigns must style floating preview")
+			assert(
+				source:find("git_hunk_display", 1, true),
+				"gitsigns on_attach must respect the global hunk switch"
+			)
 		end)
 
 		it("grug-far moved off <leader>g so git owns it", function()
@@ -245,6 +277,1147 @@ return function()
 			vim.api.nvim_buf_delete(other, { force = true })
 		end)
 
+		it("git review hydra is minimal with d/h/l/p/n/N and a flat filenames-only list", function()
+			vim.g.mapleader = " "
+
+			local calls = {}
+			local function log(name)
+				return function(...)
+					calls[#calls + 1] = name
+				end
+			end
+			package.loaded["gitsigns"] = {
+				setqflist = log("setqflist"),
+				nav_hunk = log("nav_hunk"),
+				toggle_deleted = function(v)
+					calls[#calls + 1] = "deleted:" .. tostring(v)
+				end,
+				toggle_linehl = function(v)
+					calls[#calls + 1] = "linehl:" .. tostring(v)
+				end,
+				toggle_word_diff = function(v)
+					calls[#calls + 1] = "word:" .. tostring(v)
+				end,
+			}
+			-- Stub the file supplement: real git must not leak into asserts.
+			package.loaded["frontend.tools.git_review_files"] = {
+				repo_toplevels = function()
+					return {}
+				end,
+				extra_entries_for = function()
+					return {}
+				end,
+				append_missing = function()
+					calls[#calls + 1] = "append"
+					return 0
+				end,
+				collect = function()
+					calls[#calls + 1] = "collect"
+					return vim.fn.getqflist({ size = 0 }).size
+				end,
+			}
+
+			-- Evict framework modules: the harness may hand us preloaded
+			-- copies, and the spec must bind against the working tree.
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			package.loaded["frontend.tools.git_hunk_display"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			package.loaded["frontend.tools.git_review"] = nil
+			vim.g.angst_git_hunks_enabled = nil
+			local spec = require("frontend.tools.git_review")
+			assert(spec.virtual == true, "review must be a virtual spec")
+			assert(type(spec.config) == "function", "review spec must define config()")
+			spec.config()
+			local pages_mod = require("frontend.tools.git_review_pages")
+
+			local enter = vim.fn.maparg("<leader>G", "n", false, true)
+			assert(
+				type(enter) == "table" and next(enter) ~= nil,
+				"review hydra must bind <leader>G"
+			)
+			assert(
+				type(enter.callback) == "function",
+				"review enter must be a lua callback"
+			)
+
+			local review_source = spec_source("git_review")
+			local pages_source = spec_source("git_review_pages")
+			for _, lhs in ipairs({ '"d"', '"h"', '"l"', '"p"', '"n"', '"N"', '"q"' }) do
+				assert(review_source:find(lhs, 1, true), lhs .. " must be a hydra head")
+			end
+			for _, lhs in ipairs({ '"j"', '"k"', '"f"', '"s"', '"u"', '"x"', '"v"', '"b"', '"r"' }) do
+				assert(not review_source:find(lhs, 1, true), lhs .. " must not be a hydra head")
+			end
+			assert(not review_source:find('"D"', 1, true), "D diffview head must be gone")
+			assert(
+				not review_source:find("nav_hunk", 1, true),
+				"h/l must step quickfix diffs, not gitsigns hunks"
+			)
+			assert(review_source:find('"cc "', 1, true), "h/l must step quickfix entries via cc")
+			assert(
+				not review_source:find("preview_hunk", 1, true),
+				"hydra must never pop a hunk preview"
+			)
+			assert(
+				not review_source:find("nav_hunk", 1, true),
+				"h/l must step quickfix diffs, not gitsigns hunks"
+			)
+			assert(review_source:find('"cc "', 1, true), "h/l must step quickfix entries via cc")
+			assert(review_source:find("git_review_pages", 1, true), "hydra must drive the page pane")
+			assert(review_source:find("on_exit", 1, true), "hydra must close the pane on every exit path")
+			assert(
+				pages_source:find("botright vertical", 1, true),
+				"file list must open as a right-side vertical column"
+			)
+			assert(
+				pages_source:find("belowright split", 1, true),
+				"diffs must open as a second pane below the file list"
+			)
+			assert(pages_source:find("Changed files", 1, true), "pane must list every changed file")
+			assert(pages_source:find("Diffs in", 1, true), "diffs pane must show the current file diffs")
+			assert(not pages_source:find("Page ", 1, true), "pane must have no pages")
+			assert(
+				pages_source:find("render_all", 1, true),
+				"panes must rebuild around the current file"
+			)
+			assert(
+				not pages_source:find("set_extmark", 1, true),
+				"hover must not use extmarks (end_row bled onto the row below)"
+			)
+			assert(
+				pages_source:find("cursorline", 1, true),
+				"each pane must hover with its own cursorline"
+			)
+			assert(pages_source:find('":t"', 1, true), "pane must show filenames only")
+			assert(
+				not review_source:find("toggle_word_diff(true)", 1, true),
+				"word diff must never be enabled (bg-only hunks)"
+			)
+
+			press(" G")
+			assert(
+				vim.g.active_hydra ~= nil and vim.g.active_hydra.name == "Git",
+				"Git hydra never activated"
+			)
+			assert(hint_win("Prev diff") == nil, "Git hydra hint must stay hidden by default")
+			assert(not vim.tbl_contains(calls, "setqflist"), "enter must not populate the file list")
+			assert(vim.g.angst_git_hunks_enabled == true, "hunk switch must default on")
+			assert(vim.tbl_contains(calls, "deleted:true"), "enter must enable deleted overlay")
+			assert(vim.tbl_contains(calls, "linehl:true"), "enter must enable line bg")
+			assert(vim.tbl_contains(calls, "word:false"), "enter must force word diff off (bg-only)")
+			assert(not vim.tbl_contains(calls, "word:true"), "word diff must never turn on")
+			assert(
+				vim.fn.getqflist({ winid = 0 }).winid == 0,
+				"enter must not open a quickfix window (pages replace it)"
+			)
+			assert(not pages_mod.is_open(), "enter must not auto-open the page pane")
+
+			press("?")
+			assert(hint_win("Prev diff") ~= nil, "? must open hint float")
+			press("?")
+			assert(hint_win("Prev diff") == nil, "? must close hint float again")
+
+			local buf_a = vim.api.nvim_create_buf(false, true)
+			local buf_b = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_buf_set_name(buf_a, "/tmp/gitpages_aaa.lua")
+			vim.api.nvim_buf_set_name(buf_b, "/tmp/gitpages_bbb.lua")
+			vim.fn.setqflist({
+				{ bufnr = buf_a, lnum = 1, text = "a1" },
+				{ bufnr = buf_a, lnum = 2, text = "a2" },
+				{ bufnr = buf_b, lnum = 1, text = "b" },
+			})
+			vim.cmd("cc 1")
+			vim.b[buf_a].gitsigns_status_dict = {}
+			vim.b[buf_b].gitsigns_status_dict = {}
+
+			-- `j`/`k` stay normal cursor motion: no hydra heads bound.
+			for _, lhs in ipairs({ "j", "k" }) do
+				local got = vim.fn.maparg(lhs, "n", false, true)
+				assert(
+					type(got) ~= "table" or got.callback == nil,
+					lhs .. " must not be a hydra head"
+				)
+			end
+
+			-- h/l cycle diffs in the same file only, never leaving it.
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 1, "fixture must start on the first diff")
+			calls = {}
+			press("l")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 2, "l must step to the next diff in the file")
+			assert(
+				vim.api.nvim_get_current_buf() == buf_a,
+				"l must not leave the file"
+			)
+			assert(not vim.tbl_contains(calls, "nav_hunk"), "l must not use gitsigns hunk nav")
+			calls = {}
+			press("l")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 1, "l must wrap to the first diff")
+			calls = {}
+			press("h")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 2, "h must wrap to the last diff")
+			assert(
+				vim.api.nvim_get_current_buf() == buf_a,
+				"h must not leave the file"
+			)
+			assert(not vim.tbl_contains(calls, "nav_hunk"), "h must not use gitsigns hunk nav")
+
+			calls = {}
+			press("d")
+			assert(vim.g.angst_git_hunks_enabled == false, "d must flip the global hunk switch off")
+			assert(
+				vim.tbl_contains(calls, "deleted:false"),
+				"d head never disabled deleted overlay"
+			)
+			assert(vim.tbl_contains(calls, "linehl:false"), "d off must clear line bg")
+			assert(not vim.tbl_contains(calls, "nav_hunk"), "d must not touch hunk nav")
+
+			-- Diff steps still move while hunks are off.
+			calls = {}
+			press("l")
+			assert(
+				vim.fn.getqflist({ idx = 0 }).idx == 1,
+				"l must still step diffs while hunks are off"
+			)
+			assert(
+				vim.api.nvim_get_current_buf() == buf_a,
+				"l must not leave the file"
+			)
+			assert(not vim.tbl_contains(calls, "nav_hunk"), "l must not use gitsigns hunk nav")
+
+			-- `p` opens two stacked panes on the right: files over diffs.
+			press("p")
+			assert(pages_mod.is_open(), "p must open the panes")
+			local files_win, files_buf, diffs_win, diffs_buf = nil, nil, nil, nil
+			for _, win in ipairs(vim.api.nvim_list_wins()) do
+				local buf = vim.api.nvim_win_get_buf(win)
+				if vim.bo[buf].filetype == "angst-git-files" then
+					files_win, files_buf = win, buf
+				elseif vim.bo[buf].filetype == "angst-git-diffs" then
+					diffs_win, diffs_buf = win, buf
+				end
+			end
+			assert(files_win ~= nil, "files pane window missing")
+			assert(diffs_win ~= nil, "diffs pane window missing")
+			for _, win in ipairs({ files_win, diffs_win }) do
+				assert(
+					vim.api.nvim_win_get_width(win) == 30,
+					"panes must be narrow, got width " .. vim.api.nvim_win_get_width(win)
+				)
+				assert(vim.wo[win].cursorline == true, "each pane must hover with its own cursorline")
+			end
+			local files_h = vim.api.nvim_win_get_height(files_win)
+			local diffs_h = vim.api.nvim_win_get_height(diffs_win)
+			local share = files_h / (files_h + diffs_h)
+			assert(files_h > diffs_h, "files pane must be taller than the diffs pane")
+			assert(share > 0.6 and share < 0.8, "panes must split 70/30, got share " .. share)
+
+			local file_lines = vim.api.nvim_buf_get_lines(files_buf, 0, -1, false)
+			assert(
+				vim.inspect(file_lines)
+					== vim.inspect({ "Changed files (2)", "gitpages_aaa.lua", "gitpages_bbb.lua" }),
+				"files pane must list every changed file, got: " .. vim.inspect(file_lines)
+			)
+			local diff_lines = vim.api.nvim_buf_get_lines(diffs_buf, 0, -1, false)
+			assert(
+				vim.inspect(diff_lines)
+					== vim.inspect({ "Diffs in gitpages_aaa.lua (2)", "> 1: a1", "  2: a2" }),
+				"diffs pane must list the current-file diffs, got: " .. vim.inspect(diff_lines)
+			)
+			for _, win in ipairs({ files_win, diffs_win }) do
+				assert(vim.api.nvim_get_current_win() ~= win, "focus must stay in the code window")
+			end
+
+			local function files_row()
+				return vim.api.nvim_win_get_cursor(files_win)[1]
+			end
+			local function diffs_row()
+				return vim.api.nvim_win_get_cursor(diffs_win)[1]
+			end
+			assert(files_row() == 2, "files pane must highlight the current file on open")
+			assert(diffs_row() == 2, "diffs pane must mark the current diff on open")
+
+			-- `n` / `N` step files; both panes follow, focus stays put.
+			press("n")
+			assert(
+				vim.api.nvim_get_current_buf() == buf_b,
+				"n must jump to the next file"
+			)
+			assert(files_row() == 3, "files pane must highlight the landed file")
+			assert(diffs_row() == 2, "diffs pane must mark the landed diff")
+			assert(vim.api.nvim_get_current_win() ~= files_win, "n must not move focus into a pane")
+			assert(vim.api.nvim_get_current_win() ~= diffs_win, "n must not move focus into a pane")
+			local diffs_b = vim.api.nvim_buf_get_lines(diffs_buf, 0, -1, false)
+			assert(
+				vim.inspect(diffs_b) == vim.inspect({ "Diffs in gitpages_bbb.lua (1)", "> 1: b" }),
+				"diffs pane must switch to the landed file, got: " .. vim.inspect(diffs_b)
+			)
+			press("N")
+			assert(
+				vim.api.nvim_get_current_buf() == buf_a,
+				"N must jump back to the previous file"
+			)
+			assert(files_row() == 2, "files pane must highlight the landed file")
+			assert(diffs_row() == 2, "diffs pane must mark the landed diff")
+			local diffs_a = vim.api.nvim_buf_get_lines(diffs_buf, 0, -1, false)
+			assert(
+				vim.inspect(diffs_a)
+					== vim.inspect({ "Diffs in gitpages_aaa.lua (2)", "> 1: a1", "  2: a2" }),
+				"diffs pane must switch back, got: " .. vim.inspect(diffs_a)
+			)
+			-- Wrap-around at the ends of the file list.
+			press("N")
+			assert(
+				vim.api.nvim_get_current_buf() == buf_b,
+				"N must wrap to the last file"
+			)
+			assert(files_row() == 3, "files pane must highlight the landed file")
+			assert(diffs_row() == 2, "diffs pane must mark the landed diff")
+			press("n")
+			assert(
+				vim.api.nvim_get_current_buf() == buf_a,
+				"n must wrap to the first file"
+			)
+			assert(files_row() == 2, "files pane must highlight the landed file")
+			assert(diffs_row() == 2, "diffs pane must mark the landed diff")
+
+			-- h/l move the marker within the diffs pane; files stay put.
+			press("l")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 2, "l must step to the next diff in the file")
+			assert(
+				vim.api.nvim_get_current_buf() == buf_a,
+				"l must not leave the file"
+			)
+			local diffs_l = vim.api.nvim_buf_get_lines(diffs_buf, 0, -1, false)
+			assert(
+				vim.inspect(diffs_l)
+					== vim.inspect({ "Diffs in gitpages_aaa.lua (2)", "  1: a1", "> 2: a2" }),
+				"marker must follow h/l, got: " .. vim.inspect(diffs_l)
+			)
+			assert(files_row() == 2, "files pane must keep highlighting the file")
+			assert(diffs_row() == 3, "diffs pane must move to the marked diff")
+			assert(vim.api.nvim_get_current_win() ~= files_win, "h/l must not move focus into a pane")
+			assert(vim.api.nvim_get_current_win() ~= diffs_win, "h/l must not move focus into a pane")
+			press("h")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 1, "h must step back to the previous diff")
+			local diffs_h = vim.api.nvim_buf_get_lines(diffs_buf, 0, -1, false)
+			assert(
+				vim.inspect(diffs_h)
+					== vim.inspect({ "Diffs in gitpages_aaa.lua (2)", "> 1: a1", "  2: a2" }),
+				"marker must follow h back, got: " .. vim.inspect(diffs_h)
+			)
+			assert(files_row() == 2, "files pane must keep highlighting the file")
+			assert(diffs_row() == 2, "diffs pane must move back to the marked diff")
+
+			calls = {}
+			press("d")
+			assert(vim.g.angst_git_hunks_enabled == true, "d must flip the global hunk switch back on")
+			assert(vim.tbl_contains(calls, "deleted:true"), "d on must restore deleted overlay")
+			assert(vim.tbl_contains(calls, "linehl:true"), "d on must restore line bg")
+
+			press("q")
+			assert(vim.g.active_hydra == nil, "q head never exited review mode")
+			assert(hint_win("Prev diff") == nil, "hint window must close on exit")
+			assert(not pages_mod.is_open(), "q must hide the page pane")
+			assert(
+				vim.fn.getqflist({ winid = 0 }).winid == 0,
+				"q must leave the quickfix window closed"
+			)
+			vim.b[buf_a].gitsigns_status_dict = nil
+			vim.b[buf_b].gitsigns_status_dict = nil
+
+			package.loaded["gitsigns"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			vim.api.nvim_buf_delete(buf_a, { force = true })
+			vim.api.nvim_buf_delete(buf_b, { force = true })
+		end)
+
+		it("h/l cycles four staged diffs in one file without leaving it", function()
+			vim.g.mapleader = " "
+
+			package.loaded["gitsigns"] = {
+				setqflist = function() end,
+				nav_hunk = function() end,
+				toggle_deleted = function() end,
+				toggle_linehl = function() end,
+				toggle_word_diff = function() end,
+			}
+			-- Fake the supplement for the hydra: the list is prebuilt
+			-- below, so collection short-circuits and jumps stay sync.
+			package.loaded["frontend.tools.git_review_files"] = {
+				repo_toplevels = function()
+					return {}
+				end,
+				extra_entries_for = function()
+					return {}
+				end,
+				append_missing = function()
+					return 0
+				end,
+				collect = function()
+					return vim.fn.getqflist({ size = 0 }).size
+				end,
+			}
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			package.loaded["frontend.tools.git_hunk_display"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			package.loaded["frontend.tools.git_review"] = nil
+			require("frontend.tools.git_review").config()
+
+			-- Per-hunk dedupe: four hunks in one staged file must all
+			-- survive append_missing, not just the first per file.
+			local base = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h:h")
+				.. "/lua/frontend/tools/git_review_files.lua"
+			local real_files = dofile(base)
+			local path = "/tmp/gitpages_four.lua"
+			local f = assert(io.open(path, "w"))
+			for i = 1, 40 do
+				f:write("line" .. i .. "\n")
+			end
+			f:close()
+			local extras = {
+				{ filename = path, lnum = 5, text = "Staged (-5 +5): one" },
+				{ filename = path, lnum = 15, text = "Staged (-15 +15): two" },
+				{ filename = path, lnum = 25, text = "Staged (-25 +25): three" },
+				{ filename = path, lnum = 35, text = "Staged (-35 +35): four" },
+			}
+			vim.fn.setqflist({}, "r")
+			assert(
+				real_files.append_missing(extras) == 4,
+				"all four staged hunks must be appended"
+			)
+			assert(
+				real_files.append_missing(extras) == 0,
+				"re-append must add nothing"
+			)
+			assert(
+				vim.fn.getqflist({ size = 0 }).size == 4,
+				"quickfix must hold all four diffs"
+			)
+
+			vim.cmd("edit " .. path)
+			local buf = vim.api.nvim_get_current_buf()
+			vim.b[buf].gitsigns_status_dict = {}
+			vim.cmd("cc 1")
+
+			press(" G")
+			assert(
+				vim.g.active_hydra ~= nil and vim.g.active_hydra.name == "Git",
+				"Git hydra never activated"
+			)
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 1, "must start on the first diff")
+
+			-- l walks every middle block, not just first/last.
+			local want_l = { 2, 3, 4, 1 }
+			for _, want in ipairs(want_l) do
+				press("l")
+				assert(
+					vim.fn.getqflist({ idx = 0 }).idx == want,
+					"l must land on diff " .. want .. ", got " .. vim.fn.getqflist({ idx = 0 }).idx
+				)
+				assert(
+					vim.api.nvim_get_current_buf() == buf,
+					"l must not leave the file"
+				)
+			end
+			-- h wraps back to the last block, then walks down.
+			press("h")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 4, "h must wrap to the last diff")
+			assert(
+				vim.api.nvim_get_current_buf() == buf,
+				"h must not leave the file"
+			)
+			press("h")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 3, "h must step to the third diff")
+			press("h")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 2, "h must step to the second diff")
+			press("h")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 1, "h must step to the first diff")
+
+			press("q")
+			assert(vim.g.active_hydra == nil, "q head never exited review mode")
+			vim.b[buf].gitsigns_status_dict = nil
+			package.loaded["gitsigns"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			vim.api.nvim_buf_delete(buf, { force = true })
+			vim.fn.setqflist({}, "r")
+			os.remove(path)
+		end)
+
+		it("h/l with a stale quickfix index jumps to the hunk nearest the cursor", function()
+			vim.g.mapleader = " "
+
+			package.loaded["gitsigns"] = {
+				setqflist = function() end,
+				nav_hunk = function() end,
+				toggle_deleted = function() end,
+				toggle_linehl = function() end,
+				toggle_word_diff = function() end,
+			}
+			package.loaded["frontend.tools.git_review_files"] = {
+				repo_toplevels = function()
+					return {}
+				end,
+				extra_entries_for = function()
+					return {}
+				end,
+				append_missing = function()
+					return 0
+				end,
+				collect = function()
+					return vim.fn.getqflist({ size = 0 }).size
+				end,
+			}
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			package.loaded["frontend.tools.git_hunk_display"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			package.loaded["frontend.tools.git_review"] = nil
+			require("frontend.tools.git_review").config()
+
+			-- Stale idx: the list was rebuilt under us (idx reset to an
+			-- entry of another file). Blind jump-to-end would strand h
+			-- on last / l on first forever; cursor-nearest must win.
+			local path = "/tmp/gitpages_stale.lua"
+			local other = "/tmp/gitpages_stale_other.lua"
+			for _, p in ipairs({ path, other }) do
+				local f = assert(io.open(p, "w"))
+				for i = 1, 40 do
+					f:write("line" .. i .. "\n")
+				end
+				f:close()
+			end
+			vim.fn.setqflist({}, "r")
+			vim.fn.setqflist({
+				{ filename = other, lnum = 1, col = 1, text = "elsewhere" },
+				{ filename = path, lnum = 5, col = 1, text = "Staged h1" },
+				{ filename = path, lnum = 15, col = 1, text = "Staged h2" },
+				{ filename = path, lnum = 25, col = 1, text = "Staged h3" },
+			})
+			vim.cmd("edit " .. path)
+			local buf = vim.api.nvim_get_current_buf()
+			vim.b[buf].gitsigns_status_dict = {}
+			vim.cmd("cc 1")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 1, "fixture must start on the stale entry")
+			-- cc 1 lands in the other file: come back so the cursor
+			-- sits in the reviewed file while the index stays stale.
+			vim.cmd("edit " .. path)
+
+			press(" G")
+			vim.api.nvim_win_set_cursor(0, { 15, 0 })
+
+			-- h from a stale idx lands on the hunk under the cursor,
+			-- not the last one; the next h then walks normally.
+			press("h")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 3, "h must land on the nearest hunk")
+			press("h")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 2, "h must step to the previous diff")
+			assert(
+				vim.api.nvim_get_current_buf() == buf,
+				"h must not leave the file"
+			)
+
+			-- Same for l: resync to nearest, then step forward.
+			vim.cmd("cc 1")
+			vim.cmd("edit " .. path)
+			vim.api.nvim_win_set_cursor(0, { 15, 0 })
+			press("l")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 3, "l must land on the nearest hunk")
+			press("l")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 4, "l must step to the next diff")
+
+			press("q")
+			assert(vim.g.active_hydra == nil, "q head never exited review mode")
+			vim.b[buf].gitsigns_status_dict = nil
+			package.loaded["gitsigns"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			for _, b in ipairs(vim.api.nvim_list_bufs()) do
+				local name = vim.api.nvim_buf_get_name(b)
+				if name == path or name == other then
+					pcall(vim.api.nvim_buf_delete, b, { force = true })
+				end
+			end
+			vim.fn.setqflist({}, "r")
+			os.remove(path)
+			os.remove(other)
+		end)
+
+		it("page pane toggles from p and closes on quit", function()
+			vim.g.mapleader = " "
+
+			package.loaded["gitsigns"] = {
+				setqflist = function() end,
+				nav_hunk = function() end,
+				toggle_deleted = function() end,
+				toggle_linehl = function() end,
+				toggle_word_diff = function() end,
+				preview_hunk = function() end,
+			}
+			package.loaded["frontend.tools.git_review_files"] = {
+				repo_toplevels = function()
+					return {}
+				end,
+				extra_entries_for = function()
+					return {}
+				end,
+				append_missing = function()
+					return 0
+				end,
+				collect = function()
+					return vim.fn.getqflist({ size = 0 }).size
+				end,
+			}
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			package.loaded["frontend.tools.git_hunk_display"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			package.loaded["frontend.tools.git_review"] = nil
+			require("frontend.tools.git_review").config()
+			local pages_mod = require("frontend.tools.git_review_pages")
+
+			local buf_a = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_buf_set_name(buf_a, "/tmp/gitpages_single.lua")
+			vim.fn.setqflist({ { bufnr = buf_a, lnum = 1, text = "own" } })
+			vim.cmd("cc 1")
+			vim.b[buf_a].gitsigns_status_dict = {}
+
+			press(" G")
+			assert(not pages_mod.is_open(), "enter must not auto-open the page pane")
+			assert(
+				vim.fn.getqflist({ winid = 0 }).winid == 0,
+				"enter must keep the quickfix window closed"
+			)
+
+			-- A stuck bottom quickfix (e.g. left open from elsewhere) must
+			-- not survive opening the list: the pane replaces it.
+			vim.cmd("copen")
+			assert(
+				vim.fn.getqflist({ winid = 0 }).winid ~= 0,
+				"fixture needs an open quickfix window"
+			)
+			press("p")
+			assert(pages_mod.is_open(), "p must open the page pane")
+			assert(
+				vim.fn.getqflist({ winid = 0 }).winid == 0,
+				"p must close the bottom quickfix window"
+			)
+			press("p")
+			assert(not pages_mod.is_open(), "p again must close the page pane")
+
+			press("p")
+			assert(pages_mod.is_open(), "p must reopen the page pane")
+			press("q")
+			assert(vim.g.active_hydra == nil, "q head never exited review mode")
+			assert(not pages_mod.is_open(), "exit must close the page pane")
+			assert(
+				vim.fn.getqflist({ winid = 0 }).winid == 0,
+				"exit must keep the quickfix window closed"
+			)
+
+			pcall(vim.cmd, "cclose")
+			vim.fn.setqflist({}, "r")
+			package.loaded["gitsigns"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			vim.api.nvim_buf_delete(buf_a, { force = true })
+		end)
+
+		it("hydra runs on_exit when deactivating", function()
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			local Hydra = require("common.Hydra")
+			local palette = require("config.theme.palette")
+
+			local exited = 0
+			local hydra = Hydra.new({
+				name = "ExitTest",
+				fg_color = palette.p.accent.base,
+				bg_color = palette.p.background.base,
+				enter = "<leader>Y",
+				global = true,
+				logger = require("common.Logger").new("TEST"),
+				on_exit = function()
+					exited = exited + 1
+				end,
+				heads = {
+					{ "a", function() end, "Alpha" },
+				},
+			})
+
+			press("<leader>Y")
+			assert(
+				vim.g.active_hydra ~= nil and vim.g.active_hydra.name == "ExitTest",
+				"test hydra never activated"
+			)
+			assert(exited == 0, "on_exit must not run on enter")
+			hydra:deactivate()
+			assert(exited == 1, "on_exit must run once on deactivate")
+			hydra:purge()
+			assert(vim.g.active_hydra == nil, "test hydra never deactivated")
+		end)
+
+		it("every hydra toggles help with ?", function()
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			local Hydra = require("common.Hydra")
+			local palette = require("config.theme.palette")
+
+			local hydra = Hydra.new({
+				name = "HelpTest",
+				fg_color = palette.p.accent.base,
+				bg_color = palette.p.background.base,
+				enter = "<leader>Z",
+				global = true,
+				logger = require("common.Logger").new("TEST"),
+				heads = {
+					{ "a", function() end, "Alpha action" },
+					{ "b", function() end, "Beta action" },
+				},
+			})
+
+			press("<leader>Z")
+			assert(
+				vim.g.active_hydra ~= nil and vim.g.active_hydra.name == "HelpTest",
+				"test hydra never activated"
+			)
+			assert(hint_win("Alpha action") == nil, "? hydra must not auto-popup without hint flag")
+
+			press("?")
+			assert(hint_win("Alpha action") ~= nil, "? never opened help float")
+			assert(hint_win("Beta action") ~= nil, "help float must list every head")
+			press("?")
+			assert(hint_win("Alpha action") == nil, "? never closed help float")
+
+			hydra:deactivate()
+			hydra:purge()
+			assert(vim.g.active_hydra == nil, "test hydra never deactivated")
+		end)
+
+		it("hydra keeps its own ? head when defined", function()
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			local Hydra = require("common.Hydra")
+			local palette = require("config.theme.palette")
+
+			local ran = false
+			local hydra = Hydra.new({
+				name = "OwnHelp",
+				fg_color = palette.p.accent.base,
+				bg_color = palette.p.background.base,
+				enter = "<leader>X",
+				global = true,
+				logger = require("common.Logger").new("TEST"),
+				heads = {
+					{
+						"?",
+						function()
+							ran = true
+						end,
+						"Custom help",
+						exit = true,
+					},
+				},
+			})
+
+			press("<leader>X")
+			press("?")
+			assert(ran, "hydra's own ? head must run instead of the toggle")
+			assert(vim.g.active_hydra == nil, "exiting ? head must deactivate")
+			hydra:purge()
+		end)
+
+		it("n collects once synchronously, then diagnoses emptiness", function()
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			local buf_a = vim.api.nvim_create_buf(false, true)
+			local buf_b = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_buf_set_name(buf_a, "/tmp/gitpages_async_a.lua")
+			vim.api.nvim_buf_set_name(buf_b, "/tmp/gitpages_async_b.lua")
+			local fills = 0
+			package.loaded["frontend.tools.git_review_files"] = {
+				repo_toplevels = function()
+					return {}
+				end,
+				extra_entries_for = function()
+					return {}
+				end,
+				append_missing = function()
+					return 0
+				end,
+				collect = function()
+					fills = fills + 1
+					vim.fn.setqflist({
+						{ bufnr = buf_a, lnum = 1, text = "a1" },
+						{ bufnr = buf_a, lnum = 2, text = "a2" },
+						{ bufnr = buf_b, lnum = 1, text = "b" },
+					}, "r")
+					return 3
+				end,
+			}
+			package.loaded["frontend.tools.git_review"] = nil
+			require("frontend.tools.git_review").config()
+
+			package.loaded["gitsigns"] = {
+				get_hunks = function()
+					return nil
+				end,
+				toggle_deleted = function() end,
+				toggle_linehl = function() end,
+				toggle_word_diff = function() end,
+			}
+
+			press(" G")
+			vim.fn.setqflist({}, "r")
+			press("n")
+			-- Single synchronous fill: the jump lands in the same tick,
+			-- no waiting for a deferred or async pass.
+			assert(vim.api.nvim_get_current_buf() == buf_a, "n must jump after a single fill")
+			assert(fills == 1, "n must fill exactly once, got " .. fills)
+			assert(
+				vim.fn.getqflist({ winid = 0 }).winid == 0,
+				"collection must never show a bottom quickfix window"
+			)
+			-- The diffs pane lists every diff and h/l cycles them.
+			local pages_mod = require("frontend.tools.git_review_pages")
+			assert(pages_mod.is_open(), "n must open the pane after fill")
+			local diffs_buf = nil
+			for _, win in ipairs(vim.api.nvim_list_wins()) do
+				local buf = vim.api.nvim_win_get_buf(win)
+				if vim.bo[buf].filetype == "angst-git-diffs" then
+					diffs_buf = buf
+					break
+				end
+			end
+			assert(diffs_buf ~= nil, "diffs pane missing")
+			assert(
+				vim.inspect(vim.api.nvim_buf_get_lines(diffs_buf, 0, -1, false))
+					== vim.inspect({ "Diffs in gitpages_async_a.lua (2)", "> 1: a1", "  2: a2" }),
+				"pane must show every diff after the fill, got: "
+					.. vim.inspect(vim.api.nvim_buf_get_lines(diffs_buf, 0, -1, false))
+			)
+			press("l")
+			assert(vim.fn.getqflist({ idx = 0 }).idx == 2, "l must cycle to the next diff")
+			assert(
+				vim.api.nvim_get_current_buf() == buf_a,
+				"l must not leave the file"
+			)
+			assert(fills == 1, "stepping diffs must not re-collect, got " .. fills)
+			press("q")
+
+			package.loaded["gitsigns"] = {
+				get_hunks = function()
+					return nil
+				end,
+				toggle_deleted = function() end,
+				toggle_linehl = function() end,
+				toggle_word_diff = function() end,
+				preview_hunk = function() end,
+				nav_hunk = function() end,
+			}
+			package.loaded["frontend.tools.git_review_files"] = {
+				repo_toplevels = function()
+					return {}
+				end,
+				extra_entries_for = function()
+					return {}
+				end,
+				append_missing = function()
+					return 0
+				end,
+				collect = function()
+					return 0
+				end,
+			}
+			-- Rebind: the hydra holds the previous fake as an upvalue.
+			package.loaded["frontend.tools.git_review"] = nil
+			require("frontend.tools.git_review").config()
+			vim.fn.setqflist({}, "r")
+			local messages = {}
+			local orig_notify = vim.notify
+			vim.notify = function(msg, ...)
+				messages[#messages + 1] = tostring(msg)
+			end
+			press(" G")
+			press("n")
+			vim.wait(1500, function()
+				return #messages > 1
+			end)
+			vim.notify = orig_notify
+			local text = table.concat(messages, "\n")
+			assert(text:find("collecting", 1, true), "must announce collection, got: " .. text)
+			assert(text:find("no changed files", 1, true), "must diagnose emptiness, got: " .. text)
+			assert(text:find(vim.fn.getcwd(), 1, true), "diagnosis must show cwd, got: " .. text)
+			press("q")
+
+			package.loaded["gitsigns"] = nil
+			vim.api.nvim_buf_delete(buf_a, { force = true })
+			vim.api.nvim_buf_delete(buf_b, { force = true })
+		end)
+
+		it("collect writes worktree hunks and extras as one replaced list", function()
+			-- Real module, stubbed gitsigns cache, cwd outside any repo
+			-- so no real git leaks in: the list must hold exactly the
+			-- cached hunks, and a second collect must replace, not grow.
+			local saved_cwd = vim.fn.getcwd()
+			local dir = vim.fn.tempname() .. "_gitreview_nowhere"
+			vim.fn.mkdir(dir, "p")
+			vim.cmd("cd " .. vim.fn.fnameescape(dir))
+
+			local buf_a = vim.api.nvim_create_buf(true, false)
+			local buf_b = vim.api.nvim_create_buf(true, false)
+			vim.api.nvim_buf_set_name(buf_a, "/tmp/gitpages_collect_a.lua")
+			vim.api.nvim_buf_set_name(buf_b, "/tmp/gitpages_collect_b.lua")
+			package.loaded["gitsigns"] = {
+				get_hunks = function(bufnr)
+					if bufnr == buf_a then
+						return {
+							{
+								type = "change",
+								added = { start = 3, count = 1 },
+								removed = { start = 3, count = 1 },
+								lines = { "-old", "+new" },
+							},
+						}
+					elseif bufnr == buf_b then
+						return {
+							{
+								type = "add",
+								added = { start = 1, count = 2 },
+								removed = { start = 0, count = 0 },
+								lines = { "+one", "+two" },
+							},
+						}
+					end
+					return nil
+				end,
+			}
+			package.loaded["frontend.tools.git_review_files"] = nil
+			local files = require("frontend.tools.git_review_files")
+
+			vim.fn.setqflist({}, "r")
+			local n = files.collect()
+			local n2 = files.collect()
+			vim.cmd("cd " .. vim.fn.fnameescape(saved_cwd))
+			assert(n == 2, "collect must write both cached hunks, got " .. n)
+			local items = vim.fn.getqflist()
+			assert(#items == 2, "quickfix must hold exactly the combined list")
+			assert(
+				items[1].bufnr == buf_a and items[1].lnum == 3,
+				"first hunk must keep bufnr and line, got: " .. vim.inspect(items[1])
+			)
+			assert(
+				items[1].text:find("Changed", 1, true) == 1 and items[1].text:find("new", 1, true),
+				"worktree text must mirror kind and sample, got: " .. items[1].text
+			)
+			assert(
+				items[2].bufnr == buf_b and items[2].lnum == 1,
+				"second hunk must keep bufnr and line, got: " .. vim.inspect(items[2])
+			)
+			assert(
+				n2 == 2 and vim.fn.getqflist({ size = 0 }).size == 2,
+				"a second collect must replace the list, not append"
+			)
+
+			vim.fn.setqflist({}, "r")
+			package.loaded["gitsigns"] = nil
+			vim.api.nvim_buf_delete(buf_a, { force = true })
+			vim.api.nvim_buf_delete(buf_b, { force = true })
+			vim.fn.delete(dir, "rf")
+		end)
+
+		it("review extras cover staged and unpushed files", function()
+			assert(vim.fn.executable("git") == 1, "git binary required for fixture")
+
+			local root = vim.fn.tempname() .. "_gitreview"
+			vim.fn.mkdir(root, "p")
+			local origin = root .. "/origin.git"
+			local work = root .. "/work"
+
+			local function git(cwd, args)
+				local cmd = { "git", "-C", cwd }
+				vim.list_extend(cmd, args)
+				local out = vim.fn.systemlist(cmd)
+				assert(
+					vim.v.shell_error == 0,
+					"fixture git failed: " .. table.concat(cmd, " ") .. "\n" .. table.concat(out, "\n")
+				)
+				return out
+			end
+			local function write(path, text)
+				local f = assert(io.open(path, "w"))
+				f:write(text)
+				f:close()
+			end
+
+			git(root, { "init", "--bare", "-b", "main", origin })
+			git(root, {
+				"clone",
+				"-c",
+				"protocol.file.allow=always",
+				origin,
+				work,
+			})
+			git(work, { "config", "user.email", "test@local" })
+			git(work, { "config", "user.name", "test" })
+			write(work .. "/a.txt", "one\n")
+			write(work .. "/c.txt", "see\n")
+			write(work .. "/d.txt", "gone\n")
+			git(work, { "add", "a.txt", "c.txt", "d.txt" })
+			git(work, { "commit", "-m", "base" })
+			git(work, { "push", "-u", "origin", "main" })
+
+			write(work .. "/e.txt", "local\n")
+			git(work, { "add", "e.txt" })
+			git(work, { "commit", "-m", "local-only" })
+
+			local f = assert(io.open(work .. "/a.txt", "a"))
+			f:write("two\n")
+			f:close()
+			git(work, { "add", "a.txt" })
+			write(work .. "/b.txt", "new\n")
+			git(work, { "add", "b.txt" })
+			git(work, { "rm", "-q", "d.txt" })
+			local c = assert(io.open(work .. "/c.txt", "a"))
+			c:write("un-staged\n")
+			c:close()
+
+			package.loaded["frontend.tools.git_review_files"] = nil
+			local files = require("frontend.tools.git_review_files")
+			local entries = files.extra_entries_for({ work })
+
+			local by_file = {}
+			for _, e in ipairs(entries) do
+				assert(e.lnum ~= nil and e.lnum >= 1, "entry needs a sane lnum")
+				by_file[e.filename] = by_file[e.filename] or {}
+				by_file[e.filename][#by_file[e.filename] + 1] = e
+			end
+
+			local function has_prefix(path, prefix)
+				for _, e in ipairs(by_file[path] or {}) do
+					if e.text:find(prefix, 1, true) == 1 then
+						return true
+					end
+				end
+				return false
+			end
+
+			assert(has_prefix(work .. "/a.txt", "Staged"), "staged-only modify must list")
+			assert(has_prefix(work .. "/b.txt", "Staged"), "staged-new file must list")
+			assert(has_prefix(work .. "/e.txt", "Unpushed"), "local-only commit must list")
+			assert(has_prefix(work .. "/c.txt", "Unstaged"), "unopened unstaged file must list")
+			assert(by_file[work .. "/d.txt"] == nil, "staged-deleted has no buffer to show")
+
+			-- c.txt's unstaged hunk is already listed at the same
+			-- file+lnum (e.g. by gitsigns): only the rest may append.
+			local c_lnum = by_file[work .. "/c.txt"][1].lnum
+			vim.fn.setqflist({ { filename = work .. "/c.txt", lnum = c_lnum, text = "x" } })
+			local added = files.append_missing(entries)
+			assert(added == 3, "must append exactly staged+unpushed, got " .. added)
+
+			local counts = {}
+			for _, item in ipairs(vim.fn.getqflist()) do
+				local name = item.bufnr > 0 and vim.api.nvim_buf_get_name(item.bufnr)
+					or item.filename
+				counts[name] = (counts[name] or 0) + 1
+			end
+			assert(counts[work .. "/c.txt"] == 1, "already-listed hunks must not duplicate")
+			assert(counts[work .. "/a.txt"] == 1, "a.txt must appear once")
+			assert(counts[work .. "/b.txt"] == 1, "b.txt must appear once")
+			assert(counts[work .. "/e.txt"] == 1, "e.txt must appear once")
+
+			vim.fn.setqflist({}, "r")
+			vim.fn.delete(root, "rf")
+		end)
+
+		it("review extras cover unstaged and untracked files without opening them", function()
+			assert(vim.fn.executable("git") == 1, "git binary required for fixture")
+
+			local root = vim.fn.tempname() .. "_gitreview_unstaged"
+			local work = root .. "/work"
+			vim.fn.mkdir(work, "p")
+
+			local function git(args)
+				local cmd = { "git", "-C", work }
+				vim.list_extend(cmd, args)
+				local out = vim.fn.systemlist(cmd)
+				assert(
+					vim.v.shell_error == 0,
+					"fixture git failed: " .. table.concat(cmd, " ") .. "\n" .. table.concat(out, "\n")
+				)
+				return out
+			end
+			local function write(path, text)
+				local f = assert(io.open(path, "w"))
+				f:write(text)
+				f:close()
+			end
+
+			git({ "init", "-b", "main" })
+			git({ "config", "user.email", "test@local" })
+			git({ "config", "user.name", "test" })
+			write(work .. "/x.txt", "x\n")
+			write(work .. "/y.txt", "y1\ny2\ny3\n")
+			git({ "add", "x.txt", "y.txt" })
+			git({ "commit", "-m", "base" })
+
+			-- Staged modify of x, unstaged modify of y (never opened in
+			-- any buffer), plus a brand-new untracked file z.
+			local xf = assert(io.open(work .. "/x.txt", "a"))
+			xf:write("x2\n")
+			xf:close()
+			git({ "add", "x.txt" })
+			write(work .. "/y.txt", "y1\nCHANGED\ny3\n")
+			write(work .. "/z.txt", "fresh\n")
+
+			package.loaded["frontend.tools.git_review_files"] = nil
+			local files = require("frontend.tools.git_review_files")
+			local entries = files.extra_entries_for({ work })
+
+			local by_file = {}
+			for _, e in ipairs(entries) do
+				assert(e.lnum ~= nil and e.lnum >= 1, "entry needs a sane lnum")
+				by_file[e.filename] = by_file[e.filename] or {}
+				by_file[e.filename][#by_file[e.filename] + 1] = e
+			end
+
+			local function has_prefix(path, prefix)
+				for _, e in ipairs(by_file[path] or {}) do
+					if e.text:find(prefix, 1, true) == 1 then
+						return true
+					end
+				end
+				return false
+			end
+
+			assert(has_prefix(work .. "/x.txt", "Staged"), "staged modify must list")
+			assert(has_prefix(work .. "/y.txt", "Unstaged"), "unopened unstaged file must list")
+			assert(not has_prefix(work .. "/y.txt", "Staged"), "y.txt has no staged hunks")
+			local z = by_file[work .. "/z.txt"] or {}
+			assert(#z == 1, "untracked file must contribute exactly one stop, got " .. #z)
+			assert(z[1].lnum == 1 and z[1].text == "Untracked", "untracked stop must sit at line 1")
+
+			-- A gitsigns worktree hunk for y.txt at the same line
+			-- suppresses the duplicate; everything else still appends.
+			local y_lnum = by_file[work .. "/y.txt"][1].lnum
+			vim.fn.setqflist({}, "r")
+			vim.fn.setqflist({ { filename = work .. "/y.txt", lnum = y_lnum, text = "worktree" } })
+			local added = files.append_missing(entries)
+			assert(added == #entries - 1, "must skip only the covered hunk, got " .. added)
+
+			local names = {}
+			for _, item in ipairs(vim.fn.getqflist()) do
+				local name = item.bufnr > 0 and vim.api.nvim_buf_get_name(item.bufnr)
+					or item.filename
+				names[name] = (names[name] or 0) + 1
+			end
+			assert(names[work .. "/y.txt"] == 1, "covered hunk must not duplicate")
+			assert(names[work .. "/z.txt"] == 1, "untracked file must append unopened")
+
+			vim.fn.setqflist({}, "r")
+			vim.fn.delete(root, "rf")
+		end)
+
 		it("git theme groups cover diffview, neogit and gitsigns", function()
 			package.loaded["config.theme.groups.git"] = nil
 			local groups = require("config.theme.groups.git").get()
@@ -256,11 +1429,35 @@ return function()
 				"GitSignsAdd",
 				"GitSignsChange",
 				"GitSignsDelete",
+				"GitSignsAddLn",
+				"GitSignsChangeLn",
+				"GitSignsDeleteLn",
+				"GitSignsAddPreview",
+				"GitSignsDeletePreview",
+				"GitSignsChangePreview",
+				"GitSignsAddInline",
+				"GitSignsDeleteInline",
+				"GitSignsChangeInline",
 				"DiffviewFilePanelTitle",
 				"DiffviewDiffAdd",
 				"NeogitHunkHeader",
 				"NeogitDiffAdd",
 				"NeogitBranch",
+				"NeogitSectionHeader",
+				"NeogitSectionHeaderCount",
+				"NeogitFilePath",
+				"NeogitChangeModified",
+				"NeogitChangeAdded",
+				"NeogitChangeNewFile",
+				"NeogitChangeDeleted",
+				"NeogitChangeRenamed",
+				"NeogitChangeCopied",
+				"NeogitChangeUpdated",
+				"NeogitChangeUnmerged",
+				"NeogitChangeUntracked",
+				"NeogitDiffHeader",
+				"NeogitDiffHeaderHighlight",
+				"NeogitHunkHeaderCursor",
 				"gitcommitSummary",
 				"gitcommitOverflow",
 				"gitcommitComment",
@@ -277,6 +1474,19 @@ return function()
 				"GitCommitRenamed",
 			}) do
 				assert(groups[name] ~= nil, "git theme missing group " .. name)
+			end
+
+			-- Bg-only hunks: 3 distinct line backgrounds, no text recolor.
+			local seen_bg = {}
+			for _, name in ipairs({ "GitSignsAddLn", "GitSignsChangeLn", "GitSignsDeleteLn" }) do
+				local hl = groups[name]
+				assert(hl.bg ~= nil, name .. " must set a background")
+				assert(hl.fg == nil, name .. " must not recolor code text")
+				assert(seen_bg[hl.bg] == nil, name .. " bg must differ from other hunk kinds")
+				seen_bg[hl.bg] = name
+			end
+			for _, name in ipairs({ "GitSignsAddInline", "GitSignsChangeInline", "GitSignsDeleteInline" }) do
+				assert(groups[name].fg == nil, name .. " must not recolor code text")
 			end
 
 			package.loaded["config.theme.groups.init"] = nil

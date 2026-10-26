@@ -78,7 +78,7 @@ local function actions()
 			label = "hunk: preview",
 			needs_git = true,
 			run = function()
-				vim.cmd("Gitsigns preview_hunk_inline")
+				vim.cmd("Gitsigns preview_hunk")
 			end,
 		},
 		{
