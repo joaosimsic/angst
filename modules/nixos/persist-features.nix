@@ -73,6 +73,23 @@
         durable = true;
       }
     ];
+    "games.epic" = [
+      {
+        dir = ".config/heroic";
+        name = "heroic";
+        durable = true;
+      }
+      {
+        dir = ".config/legendary";
+        name = "legendary";
+        durable = true;
+      }
+      {
+        dir = "Games/Heroic";
+        name = "heroic-games";
+        durable = true;
+      }
+    ];
     "chat.discord" = [
       {
         dir = ".config/discord";
