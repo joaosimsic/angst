@@ -61,10 +61,12 @@ in
       })
 
       require("git"):setup({ order = 1500 })
+      require("image-dim"):setup({ order = 1450 })
 
-      function Linemode:persist()
-        return persist.marker(self._file.url, self._file.is_hovered)
-      end
+      Linemode:children_add(function(self)
+        local marker = ui.Line(persist.marker(self._file.url, self._file.is_hovered))
+        return marker:visible() and ui.Line { " ", marker } or ""
+      end, 1400)
     '';
   }
 ]

@@ -67,9 +67,10 @@ return function()
 			local source = spec_source("neogit")
 			assert(source:find('kind = "tab"', 1, true), "neogit must open in a tab")
 			assert(source:find("diffview = false", 1, true), "neogit must not integrate with diffview")
-			for _, lhs in ipairs({ "<leader>gs", "<leader>gc", "<leader>gm" }) do
+			for _, lhs in ipairs({ "<leader>lg", "<leader>gc", "<leader>gm" }) do
 				assert(source:find(lhs, 1, true), "neogit spec missing key " .. lhs)
 			end
+			assert(not source:find("<leader>gs", 1, true), "neogit status moved off <leader>gs")
 		end)
 
 		it("gitsigns attaches buffer-local hunk navigation and quickfix", function()

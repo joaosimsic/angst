@@ -32,9 +32,9 @@ return {
 
 		local binder = Keybinder.new(nil, "NEOGIT")
 
-		binder:nmap("<leader>gs", function()
+		binder:nmap("<leader>lg", function()
 			vim.cmd("Neogit")
-		end, { desc = "Git status in tab" })
+		end, { desc = "Neogit status in tab" })
 
 		binder:nmap("<leader>gc", function()
 			vim.cmd("Neogit commit")

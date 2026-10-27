@@ -1,6 +1,6 @@
 [mgr]
 show_hidden = true
-linemode = "persist"
+linemode = "size"
 
 [opener]
 celluloid = [
@@ -17,4 +17,5 @@ prepend_rules = [
 prepend_fetchers = [
 	{ url = "*", run = "git", group = "git" },
 	{ url = "*/", run = "git", group = "git" },
+	{ url = "*.{png,jpg,jpeg,gif,webp,bmp,ico,tif,tiff,avif,heic,heif,jxl}", run = "image-dim", group = "image-dim" },
 ]
