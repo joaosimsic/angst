@@ -164,6 +164,7 @@ in
 
       for_window [class=".*"] title_format %title
       for_window [class="^i3-hardware-menu$"] floating enable, border none, sticky enable
+      for_window [class="^i3-network-menu$"] floating enable, border none, sticky enable
       for_window [class="^i3-cheatsheet$"] floating enable, border none, move to workspace current, move position center
       no_focus [class="^i3-cheatsheet$"]
 
@@ -177,6 +178,7 @@ in
       exec --no-startup-id systemctl --user start graphical-session.target
       bindsym $mod+space exec --no-startup-id rofi -show drun
       bindsym --release $mod+i exec --no-startup-id i3-hardware-menu
+      bindsym --release $mod+n exec --no-startup-id i3-network-menu
       bindsym --release $mod+Shift+slash exec --no-startup-id i3-cheatsheet toggle
 
       bar {
@@ -272,6 +274,127 @@ in
 
       local runtime = os.getenv("XDG_RUNTIME_DIR") or "/tmp"
       local state_path = runtime .. "/i3-hardware-state"
+
+      local function hex(c)
+        return tonumber(c:sub(1, 2), 16) / 255,
+               tonumber(c:sub(3, 4), 16) / 255,
+               tonumber(c:sub(5, 6), 16) / 255
+      end
+
+      local function read_state()
+        local f = io.open(state_path, "r")
+        if not f then return "idle" end
+        local line = f:read("*l") or ""
+        f:close()
+        local state, ts = line:match("^(%a+)%s+(%d+)$")
+        if not state or not ts then return "idle" end
+        if os.time() - tonumber(ts) > 15 then return "idle" end
+        return state:lower()
+      end
+
+      function conky_draw_bg()
+        if not conky_window then return end
+        local w = conky_window.width or 420
+        local h = conky_window.height or 240
+        local surface = cairo_xlib_surface_create(
+          conky_window.display,
+          conky_window.drawable,
+          conky_window.visual,
+          w,
+          h
+        )
+        local cr = cairo_create(surface)
+        local state = read_state()
+        local r, g, b = hex(base)
+        cairo_set_source_rgba(cr, r, g, b, 1)
+        cairo_rectangle(cr, 0, 0, w, h)
+        cairo_fill(cr)
+        local tr, tg, tb = hex(accent)
+        if state == "warning" then
+          tr, tg, tb = hex(warn)
+        elseif state == "critical" then
+          tr, tg, tb = hex(crit)
+        end
+        if state == "warning" or state == "critical" then
+          cairo_set_source_rgba(cr, tr, tg, tb, 0.22)
+          cairo_rectangle(cr, 0, 0, w, h)
+          cairo_fill(cr)
+        end
+        cairo_set_source_rgba(cr, tr, tg, tb, 1)
+        cairo_set_line_width(cr, 1)
+        cairo_rectangle(cr, 0.5, 0.5, w - 1, h - 1)
+        cairo_stroke(cr)
+        cairo_destroy(cr)
+        cairo_surface_destroy(surface)
+      end
+    '';
+  }
+  {
+    path = "domains/wm/i3/config/network-menu.conky";
+    text = ''
+      conky.config = {
+        alignment = 'top_right',
+        gap_x = 20,
+        gap_y = 42,
+        xinerama_head = 0,
+        minimum_width = 420,
+        maximum_width = 420,
+        own_window = true,
+        own_window_type = 'normal',
+        own_window_class = 'i3-network-menu',
+        own_window_title = 'i3-network-menu',
+        own_window_hints = 'undecorated,above,sticky,skip_taskbar,skip_pager',
+        own_window_argb_visual = true,
+        own_window_transparent = true,
+        background = false,
+        double_buffer = true,
+        use_xft = true,
+        override_utf8_locale = true,
+        font = '${fontFamily}:size=10',
+        update_interval = 2.0,
+        total_run_times = 0,
+        default_color = '#${p.foreground.base}',
+        color0 = '#${p.accent.base}',
+        color1 = '#${t.ansi.warn}',
+        color2 = '#${t.ansi.error}',
+        color3 = '#${t.ansi.success}',
+        border_inner_margin = 12,
+        border_outer_margin = 0,
+        border_width = 0,
+        draw_borders = false,
+        draw_graph_borders = false,
+        draw_shades = false,
+        default_bar_height = 5,
+        default_bar_width = 180,
+        format_human_readable = true,
+        short_units = true,
+        pad_percents = 3,
+        use_spacer = 'left',
+        text_buffer_size = 1024,
+        lua_load = 'network-menu.lua',
+        lua_draw_hook_pre = 'draw_bg',
+      };
+
+      conky.text = [[
+      ''${color0}NETWORK''${color}''${alignr}''${color0}''${time %H:%M:%S}''${color}
+      ''${color0}''${hr 1}''${color}
+      ''${execpi 2 i3-network-metrics --details}
+      ]];
+    '';
+  }
+  {
+    path = "domains/wm/i3/config/network-menu.lua";
+    text = ''
+      require("cairo")
+      require("cairo_xlib")
+
+      local base = "${p.background.base}"
+      local accent = "${p.accent.base}"
+      local warn = "${t.ansi.warn}"
+      local crit = "${t.ansi.error}"
+
+      local runtime = os.getenv("XDG_RUNTIME_DIR") or "/tmp"
+      local state_path = runtime .. "/i3-network-state"
 
       local function hex(c)
         return tonumber(c:sub(1, 2), 16) / 255,

@@ -25,6 +25,7 @@ function pretty_action(a, s) {
   gsub(/i3-workspace-group[[:space:]]+urgent/, "jump to urgent", s)
   gsub(/i3-mouse-hide[[:space:]]+toggle/, "toggle mouse hide", s)
   gsub(/i3-hardware-menu/, "toggle hardware menu", s)
+  gsub(/i3-network-menu/, "toggle network menu", s)
   gsub(/i3-cheatsheet[[:space:]]+toggle/, "toggle shortcuts overlay", s)
   gsub(/i3-audio-mute/, "toggle audio mute", s)
   gsub(/i3-lock/, "lock screen", s)

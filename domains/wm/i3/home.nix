@@ -17,6 +17,8 @@ let
   audioMute = pkgs.callPackage ./audio-mute.nix { };
   hardwareMetrics = pkgs.callPackage ../../bar/i3status-rust/hardware-metrics.nix { };
   hardwareMenu = pkgs.callPackage ./hardware-menu.nix { inherit hardwareMetrics; };
+  networkMetrics = pkgs.callPackage ../../bar/i3status-rust/network-metrics.nix { };
+  networkMenu = pkgs.callPackage ./network-menu.nix { inherit networkMetrics; };
   cheatsheet = pkgs.callPackage ./cheatsheet.nix { };
   lock = pkgs.callPackage ./lock.nix {
     theme = themesLib.get config.theme;
@@ -40,6 +42,7 @@ in
       vmGrab
       lock
       hardwareMenu
+      networkMenu
       cheatsheet
     ]
     ++ lib.optionals shouldBindAudio [ audioMute ];

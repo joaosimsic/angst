@@ -39,6 +39,10 @@ in
       [icons]
       icons = "material-nf"
 
+      [icons.overrides]
+      net_wifi = "\U000F05A9"
+      net_offline = "\U000F05AA"
+
       [theme]
       theme = "plain"
       [theme.overrides]
@@ -61,6 +65,21 @@ in
       [[block.click]]
       button = "left"
       cmd = "sh -c 'command -v i3-hardware-menu >/dev/null 2>&1 && i3-hardware-menu'"
+
+      [[block]]
+      block = "custom"
+      interval = 2
+      json = true
+      command = "i3-network-metrics"
+      format = " $icon "
+      [block.theme_overrides]
+      warning_fg = "#${p.background.base}"
+      warning_bg = "#${t.ansi.warn}"
+      critical_fg = "#${p.background.base}"
+      critical_bg = "#${t.ansi.error}"
+      [[block.click]]
+      button = "left"
+      cmd = "sh -c 'command -v i3-network-menu >/dev/null 2>&1 && i3-network-menu'"
 
       ${ftpStatusBlock}
       [[block]]

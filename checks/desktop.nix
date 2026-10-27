@@ -9,6 +9,7 @@
 let
   themeNames = lib.attrNames themesLib.themes;
   hardwareMetrics = pkgs.callPackage ../domains/bar/i3status-rust/hardware-metrics.nix { };
+  networkMetrics = pkgs.callPackage ../domains/bar/i3status-rust/network-metrics.nix { };
   cheatsheet = pkgs.callPackage ../domains/wm/i3/cheatsheet.nix { };
   ftpStatus = pkgs.callPackage ../domains/remote/ftp/status.nix {
     inherit lib;
@@ -25,6 +26,7 @@ let
     themeWarn = (themesLib.get themeName).ansi.warn;
     i3Config = renderDomainOutputFor themeName "domains/wm/i3/config/config";
     cheatsheetConky = renderDomainOutputFor themeName "domains/wm/i3/config/cheatsheet.conky";
+    networkMenuConky = renderDomainOutputFor themeName "domains/wm/i3/config/network-menu.conky";
     i3statusRustConfig = renderDomainOutputFor themeName "domains/bar/i3status-rust/config/config.toml";
     ghosttyConfig = renderDomainOutputFor themeName "domains/terminal/ghostty/config/config.ghostty";
     ghosttyColors = renderDomainOutputFor themeName "domains/terminal/ghostty/config/colors.conf";
@@ -40,6 +42,7 @@ let
       themeWarn,
       i3Config,
       cheatsheetConky,
+      networkMenuConky,
       i3statusRustConfig,
       ghosttyConfig,
       ghosttyColors,
@@ -52,7 +55,9 @@ let
           pkgs.gnugrep
           pkgs.i3
           pkgs.i3status-rust
+          pkgs.jq
           hardwareMetrics
+          networkMetrics
           cheatsheet
           ftpStatus
         ];
@@ -65,6 +70,7 @@ let
         ''} home/.config/i3/monitors.conf
         cp ${pkgs.writeText "i3-${themeName}.conf" i3Config} i3.conf
         cp ${pkgs.writeText "cheatsheet-${themeName}.conky" cheatsheetConky} cheatsheet.conky
+        cp ${pkgs.writeText "network-menu-${themeName}.conky" networkMenuConky} network-menu.conky
         cp ${pkgs.writeText "i3status-rust-${themeName}.toml" i3statusRustConfig} config.toml
         cp ${pkgs.writeText "ghostty-${themeName}.conf" ghosttyConfig} ghostty.conf
         cp ${pkgs.writeText "ghostty-colors-${themeName}.conf" ghosttyColors} colors.conf
@@ -96,6 +102,14 @@ let
           echo "i3 config is missing the hardware menu window rule" >&2
           exit 1
         fi
+        if ! grep -qF 'bindsym --release $mod+n exec --no-startup-id i3-network-menu' i3.conf; then
+          echo "i3 config is missing the mod+n network menu binding" >&2
+          exit 1
+        fi
+        if ! grep -qF 'for_window [class="^i3-network-menu$"] floating enable, border none, sticky enable' i3.conf; then
+          echo "i3 config is missing the network menu window rule" >&2
+          exit 1
+        fi
         if ! grep -qF 'bindsym --release $mod+Shift+slash exec --no-startup-id i3-cheatsheet toggle' i3.conf; then
           echo "i3 config is missing the mod+Shift+slash cheatsheet binding" >&2
           exit 1
@@ -116,8 +130,16 @@ let
           echo "i3 config is missing the cheatsheet no_focus rule" >&2
           exit 1
         fi
+        if ! grep -qF "own_window_class = 'i3-network-menu'" network-menu.conky; then
+          echo "network menu conky config is missing its window class" >&2
+          exit 1
+        fi
+        if ! grep -qF 'execpi 2 i3-network-metrics --details' network-menu.conky; then
+          echo "network menu conky config is missing the details command" >&2
+          exit 1
+        fi
         HOME="$PWD/home" i3-cheatsheet generate "$PWD/i3.conf" > cheatsheet.txt
-        for expected in 'Mod+?' 'WINDOWS' 'WORKSPACES' 'toggle shortcuts overlay'; do
+        for expected in 'Mod+?' 'WINDOWS' 'WORKSPACES' 'toggle shortcuts overlay' 'toggle network menu'; do
           if ! grep -qF "$expected" cheatsheet.txt; then
             echo "cheatsheet output is missing: $expected" >&2
             cat cheatsheet.txt >&2
@@ -160,6 +182,30 @@ let
         if ! grep -qE '^\{"text":"(CPU|RAM|DISK|GPU) [0-9]+%","state":"(Idle|Warning|Critical)"\}$' metrics.json; then
           echo "hardware summary returned unexpected output" >&2
           cat metrics.json >&2
+          exit 1
+        fi
+        if ! grep -qF 'command = "i3-network-metrics"' config.toml; then
+          echo "bar config is missing the network summary command" >&2
+          exit 1
+        fi
+        if ! grep -qF 'format = " $icon "' config.toml; then
+          echo "network bar block is not icon-only" >&2
+          exit 1
+        fi
+        if ! grep -qF 'command -v i3-network-menu' config.toml; then
+          echo "bar config is missing the network menu click handler" >&2
+          exit 1
+        fi
+        XDG_RUNTIME_DIR="$PWD/runtime" i3-network-metrics >network.json
+        if ! jq -e 'type == "object" and (.icon == "net_offline" or .icon == "net_wifi" or .icon == "net_wired" or .icon == "net_vpn") and .text == "" and (.state == "Idle" or .state == "Warning" or .state == "Critical")' network.json >/dev/null; then
+          echo "network summary returned unexpected output" >&2
+          cat network.json >&2
+          exit 1
+        fi
+        XDG_RUNTIME_DIR="$PWD/runtime" i3-network-metrics --details >network-details.txt
+        if ! grep -qF 'STATUS' network-details.txt || ! grep -qF 'TYPE' network-details.txt; then
+          echo "network details returned unexpected output" >&2
+          cat network-details.txt >&2
           exit 1
         fi
 

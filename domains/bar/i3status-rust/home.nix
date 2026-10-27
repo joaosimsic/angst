@@ -12,6 +12,7 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = [
       (pkgs.callPackage ./hardware-metrics.nix { })
+      (pkgs.callPackage ./network-metrics.nix { })
     ];
   };
 }
