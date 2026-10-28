@@ -112,7 +112,7 @@
     "datapath"
     "llm-ruler"
     "agent"
-    "horror"
+    "threefold"
     "Throughput"
     "Throughput-Releases"
     "vault"

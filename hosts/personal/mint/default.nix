@@ -97,7 +97,7 @@
     "datapath"
     "llm-ruler"
     "agent"
-    "horror"
+    "threefold"
     "stealing-eye"
     "Throughput"
     "Throughput-Releases"
