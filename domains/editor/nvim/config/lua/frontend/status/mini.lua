@@ -1,7 +1,1 @@
-return {
-	"echasnovski/mini.nvim",
-	event = "VeryLazy",
-	config = function()
-		require("mini.cmdline").setup()
-	end,
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/frontend/status/mini.lua

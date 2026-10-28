@@ -1,1 +1,1 @@
-(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[888],{1597:function(n,_,u){(window.__NEXT_P=window.__NEXT_P||[]).push(["/_app",function(){return u(6029)}])}},function(n){var _=function(_){return n(n.s=_)};n.O(0,[774,179],(function(){return _(1597),_(387)}));var u=n.O();_N_E=u}]);
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/markdown-preview.nvim/app/out/_next/static/chunks/pages/_app-dc14f8483464b560.js

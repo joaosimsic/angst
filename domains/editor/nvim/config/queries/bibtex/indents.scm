@@ -1,8 +1,1 @@
-(entry) @indent.begin
-
-[
-  "{"
-  "}"
-] @indent.branch
-
-(comment) @indent.ignore
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/queries/bibtex/indents.scm

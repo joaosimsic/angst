@@ -1,10 +1,1 @@
----@type Adapter
-return {
-	filetypes = { "yaml", "yml" },
-	lsp = "yamlls",
-	lsp_cmd = { "yaml-language-server", "--stdio" },
-	lsp_root_markers = { ".git" },
-	treesitter = "yaml",
-	formatter = "yamlfmt",
-	linter = "yamllint",
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/yaml.lua

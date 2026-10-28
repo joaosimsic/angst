@@ -1,8 +1,1 @@
----@type Plugin
-return {
-	"saghen/blink.cmp",
-	version = "1.*",
-	config = function()
-		require("backend.engines.completion.config").setup()
-	end,
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/engines/completion/init.lua

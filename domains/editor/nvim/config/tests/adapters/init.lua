@@ -1,3 +1,1 @@
-local source = debug.getinfo(1, "S").source:sub(2)
-local bootstrap = vim.fn.fnamemodify(source, ":p:h:h") .. "/bootstrap.lua"
-dofile(bootstrap)
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/tests/adapters/init.lua

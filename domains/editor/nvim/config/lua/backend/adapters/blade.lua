@@ -1,7 +1,1 @@
----@type Adapter
-return {
-	filetypes = { "blade" },
-	formatter = "blade_formatter",
-	formatter_cmd = { "blade-formatter", "$FILENAME" },
-	treesitter = "blade",
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/blade.lua

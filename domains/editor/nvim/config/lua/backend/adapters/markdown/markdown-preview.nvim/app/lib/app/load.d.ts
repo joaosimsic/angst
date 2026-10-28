@@ -1,1 +1,1 @@
-export default function load(scriptPath: any): any;
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/markdown-preview.nvim/app/lib/app/load.d.ts

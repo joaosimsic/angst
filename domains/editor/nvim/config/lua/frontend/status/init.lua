@@ -1,3 +1,1 @@
-local PluginLoader = require("common.PluginLoader")
-
-return PluginLoader.load("frontend.status")
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/frontend/status/init.lua

@@ -1,5 +1,1 @@
----@type Adapter
-return {
-	filetypes = { "conf" },
-	treesitter = "ini",
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/conf.lua

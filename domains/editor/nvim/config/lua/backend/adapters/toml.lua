@@ -1,9 +1,1 @@
----@type Adapter
-return {
-	filetypes = { "toml" },
-	lsp = "taplo",
-	lsp_cmd = { "taplo", "lsp", "stdio" },
-	lsp_root_markers = { ".git" },
-	treesitter = "toml",
-	formatter = "taplo",
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/toml.lua

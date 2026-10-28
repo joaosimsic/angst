@@ -1,3 +1,1 @@
-#!/usr/bin/env bash
-
-nvim --headless -u NONE -l bootstrap.lua
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/tests/run.sh

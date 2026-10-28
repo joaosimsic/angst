@@ -1,9 +1,1 @@
----@type Plugin
-return {
-	"tab-management",
-	virtual = true,
-	event = "VeryLazy",
-	config = function()
-		require("frontend.tab.hydra").setup()
-	end,
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/frontend/tab/init.lua

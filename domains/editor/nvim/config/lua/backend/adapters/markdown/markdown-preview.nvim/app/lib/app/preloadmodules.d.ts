@@ -1,8 +1,1 @@
-declare const _default: {
-    '@chemzqm/neovim': any;
-    log4js: any;
-    tslib: any;
-    'socket.io': any;
-    'msgpack-lite': any;
-};
-export default _default;
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/markdown-preview.nvim/app/lib/app/preloadmodules.d.ts

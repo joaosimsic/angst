@@ -1,7 +1,1 @@
----@type Adapter
-return {
-	filetypes = { "html", "htmldjango" },
-	lsp = "html",
-	lsp_cmd = { "vscode-html-language-server", "--stdio" },
-	treesitter = "html",
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/html.lua

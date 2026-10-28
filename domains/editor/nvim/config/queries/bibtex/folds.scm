@@ -1,1 +1,1 @@
-(entry) @fold
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/queries/bibtex/folds.scm

@@ -1,12 +1,1 @@
----@type Plugin
-return {
-	"theme",
-	virtual = true,
-	lazy = false,
-	priority = 1000,
-	config = function()
-		vim.g.colors_name = "angst"
-
-		require("config.theme.groups").apply()
-	end,
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/config/theme/init.lua

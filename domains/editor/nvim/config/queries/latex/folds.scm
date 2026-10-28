@@ -1,14 +1,1 @@
-[
-  (chapter)
-  (part)
-  (section)
-  (subsection)
-  (subsubsection)
-  (paragraph)
-  (subparagraph)
-  (generic_environment)
-  (math_environment)
-  (comment_environment)
-  (block_comment)
-  (displayed_equation)
-] @fold
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/queries/latex/folds.scm

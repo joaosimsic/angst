@@ -1,10 +1,1 @@
-{
-  "cSpell.words": [
-    "browserfunc",
-    "bufnr",
-    "chemzqm",
-    "mkdp",
-    "winheight",
-    "winline"
-  ]
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/markdown-preview.nvim/.vim/coc-settings.json

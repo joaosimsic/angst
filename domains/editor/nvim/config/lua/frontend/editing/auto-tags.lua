@@ -1,13 +1,1 @@
-return {
-	"windwp/nvim-ts-autotag",
-	lazy = false,
-	config = function()
-		require("nvim-ts-autotag").setup({
-			opts = {
-				enable_close = true,
-				enable_rename = true,
-				enable_close_on_slash = false,
-			},
-		})
-	end,
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/frontend/editing/auto-tags.lua

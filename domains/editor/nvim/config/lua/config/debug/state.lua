@@ -1,8 +1,1 @@
-local state = {
-	win = nil,
-	buf = nil,
-	current_tab = 1,
-	origin_buf = nil,
-}
-
-return state
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/config/debug/state.lua

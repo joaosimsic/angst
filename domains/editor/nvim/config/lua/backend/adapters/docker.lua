@@ -1,7 +1,1 @@
----@type Adapter
-return {
-	filetypes = { "dockerfile" },
-	lsp = "dockerls",
-	lsp_cmd = { "docker-langserver", "--stdio" },
-	treesitter = "dockerfile",
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/docker.lua

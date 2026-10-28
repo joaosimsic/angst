@@ -1,6 +1,1 @@
----@type Adapter
-return {
-	filetypes = { "editorconfig" },
-	treesitter = "ini",
-	linter = "editorconfig-checker",
-}
+/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/editorconfig.lua
