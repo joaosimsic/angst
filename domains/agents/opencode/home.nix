@@ -23,8 +23,26 @@ let
     inherit muxEnabled;
     muxFallback = cfg.mux.fallbackStandalone;
   };
+  prune = import ./prune.nix {
+    inherit pkgs lib;
+    opencodePackage = pkgs.opencode;
+    olderThanDays = cfg.prune.olderThanDays;
+  };
 in
 {
+  options.domains.agents.opencode.prune = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Auto-delete OpenCode sessions and sidecars older than olderThanDays.";
+    };
+
+    olderThanDays = lib.mkOption {
+      type = lib.types.ints.between 1 3650;
+      default = 7;
+      description = "Age threshold for opencode-prune.";
+    };
+  };
   options.domains.agents.opencode.mux = {
     enable = lib.mkOption {
       type = lib.types.bool;
@@ -69,7 +87,8 @@ in
       opencode
       pkgs.rtk
     ]
-    ++ lib.optional muxEnabled mux;
+    ++ lib.optional muxEnabled mux
+    ++ lib.optional cfg.prune.enable prune;
 
     xdg.configFile = (import ./skills.nix { inherit lib pkgs; }) // {
       "opencode/tui-plugins" = {
@@ -109,6 +128,16 @@ in
               ExecStart = "${mux}/bin/opencode-mux reap";
             };
           };
+
+          opencode-prune = lib.mkIf cfg.prune.enable {
+            Unit = {
+              Description = "Delete OpenCode sessions and sidecars older than ${toString cfg.prune.olderThanDays} days";
+            };
+            Service = {
+              Type = "oneshot";
+              ExecStart = "${prune}/bin/opencode-prune";
+            };
+          };
         };
 
         timers.opencode-mux-reap = lib.mkIf muxEnabled {
@@ -119,6 +148,19 @@ in
             OnBootSec = "2min";
             OnUnitActiveSec = "2min";
             Unit = "opencode-mux-reap.service";
+          };
+          Install.WantedBy = [ "timers.target" ];
+        };
+
+        timers.opencode-prune = lib.mkIf cfg.prune.enable {
+          Unit = {
+            Description = "Daily OpenCode prune, with catch-up run at boot";
+          };
+          Timer = {
+            OnCalendar = "daily";
+            OnBootSec = "5min";
+            Persistent = true;
+            Unit = "opencode-prune.service";
           };
           Install.WantedBy = [ "timers.target" ];
         };
