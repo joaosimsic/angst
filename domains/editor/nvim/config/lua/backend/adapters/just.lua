@@ -1,1 +1,10 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/just.lua
+---@type Adapter
+return {
+	filetypes = { "just" },
+	lsp = "just_lsp",
+	lsp_cmd = { "just-lsp" },
+	treesitter = "just",
+	formatter = "just-formatter",
+	compiler = "just",
+	compiler_cmd = { "just", "--justfile", "$FILE" },
+}

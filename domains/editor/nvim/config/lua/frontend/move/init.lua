@@ -1,1 +1,9 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/frontend/move/init.lua
+---@type Plugin
+return {
+	"move",
+	virtual = true,
+	event = "VeryLazy",
+	config = function()
+		require("frontend.move.keys").setup()
+	end,
+}

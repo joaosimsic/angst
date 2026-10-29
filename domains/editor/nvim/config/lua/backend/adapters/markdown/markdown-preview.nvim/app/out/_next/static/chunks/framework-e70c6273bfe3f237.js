@@ -1,1 +1,0 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/markdown-preview.nvim/app/out/_next/static/chunks/framework-e70c6273bfe3f237.js

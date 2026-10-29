@@ -1,1 +1,7 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/tests/bootstrap.lua
+local source = debug.getinfo(1, "S").source:sub(2)
+local tests_dir = vim.fn.fnamemodify(source, ":p:h")
+local setup = dofile(tests_dir .. "/setup_plenary.lua")
+
+local config_root = setup.prepare()
+
+require("plenary.test_harness").test_file(config_root .. "/tests/adapters/suite.lua")

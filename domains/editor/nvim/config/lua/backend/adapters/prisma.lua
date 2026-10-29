@@ -1,1 +1,6 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/prisma.lua
+---@type Adapter
+return {
+	filetypes = { "prisma" },
+	lsp = "prismals",
+	lsp_cmd = { "prisma-language-server", "--stdio" },
+}

@@ -59,6 +59,8 @@ let
 
   lintNix = import ./lint-nix.nix { inherit pkgs; };
 
+  checkNoStoreSymlinks = import ./no-store-symlinks.nix { inherit pkgs; };
+
   checkSecretsEncrypted = import ./secrets.nix { inherit pkgs; };
 
   checkDeclared = import ./declared.nix {
@@ -211,6 +213,7 @@ in
   secret-scan = secretScan;
   secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;
+  check-no-store-symlinks = checkNoStoreSymlinks;
   check-treesitter = checkTreesitter;
   check-rust = checkRust;
   check-tex = checkTex;

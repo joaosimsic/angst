@@ -59,6 +59,7 @@ jobs:
           - login-shell-valid
           - login-shell-invalid
           - lint-nix
+          - check-no-store-symlinks
           - eval-all
           - check-session-env
           - check-session-usability

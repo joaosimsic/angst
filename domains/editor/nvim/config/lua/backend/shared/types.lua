@@ -1,1 +1,20 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/shared/types.lua
+---@meta
+
+---@class Adapter
+---@field filetypes string[]
+---@field lsp? string
+---@field lsp_cmd? string[]|fun():string[]
+---@field lsp_settings? table
+---@field lsp_init_options? table
+---@field lsp_root_markers? string[]
+---@field lsp_root_dir? function
+---@field lsp_handlers? table
+---@field treesitter? string|string[]
+---@field formatter? string|string[]
+---@field formatter_cmd? string[]|fun():string[]
+---@field linter? string|string[]
+---@field linter_cmd? string[]|fun():string[]
+---@field linter_def? table<string, any>
+---@field compiler? string|string[]
+---@field compiler_cmd? string[]|fun():string[]
+---@field plugins? table[]

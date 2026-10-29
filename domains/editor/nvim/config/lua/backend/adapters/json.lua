@@ -1,1 +1,8 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/json.lua
+---@type Adapter
+return {
+	filetypes = { "json", "jsonc" },
+	lsp = "jsonls",
+	lsp_cmd = { "vscode-json-language-server", "--stdio" },
+	formatter = "fixjson",
+	treesitter = "json",
+}

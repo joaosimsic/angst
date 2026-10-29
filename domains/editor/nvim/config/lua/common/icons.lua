@@ -1,1 +1,20 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/common/icons.lua
+---@class DiagnosticIcons
+---@field error string
+---@field warn string
+---@field info string
+---@field hint string
+
+---@class Icons
+---@field diagnostics DiagnosticIcons
+
+---@type Icons
+local M = {
+	diagnostics = {
+		error = "󰅚",
+		warn = "󰀪",
+		info = "󰋽",
+		hint = "󰌶",
+	},
+}
+
+return M

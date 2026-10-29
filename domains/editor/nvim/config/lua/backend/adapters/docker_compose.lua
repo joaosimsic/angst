@@ -1,1 +1,7 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/docker_compose.lua
+---@type Adapter
+return {
+	filetypes = { "yaml.docker-compose" },
+	lsp = "docker_compose_language_service",
+	lsp_cmd = { "docker-compose-langserver", "--stdio" },
+	treesitter = "yaml",
+}

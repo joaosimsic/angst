@@ -1,1 +1,7 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/xml.lua
+---@type Adapter
+return {
+	filetypes = { "xml", "xsd", "xsl", "xslt" },
+	lsp = "lemminx",
+	lsp_cmd = { "lemminx" },
+	treesitter = "xml",
+}

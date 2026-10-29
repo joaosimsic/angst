@@ -1,1 +1,9 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/frontend/window/init.lua
+---@type Plugin
+return {
+	"window-management",
+	virtual = true,
+	event = "VeryLazy",
+	config = function()
+		require("frontend.window.hydra").setup()
+	end,
+}
