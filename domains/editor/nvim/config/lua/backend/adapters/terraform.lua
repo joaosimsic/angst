@@ -1,1 +1,7 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/terraform.lua
+---@type Adapter
+return {
+	filetypes = { "terraform", "tf" },
+	lsp = "terraformls",
+	lsp_cmd = { "terraform-ls", "serve" },
+	treesitter = "hcl",
+}

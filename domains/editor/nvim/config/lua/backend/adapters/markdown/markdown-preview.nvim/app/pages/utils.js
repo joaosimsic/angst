@@ -1,1 +1,6 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/markdown-preview.nvim/app/pages/utils.js
+export const escape = (str) => {
+  // escape html content
+  const d = document.createElement('div')
+  d.appendChild(document.createTextNode(str))
+  return d.innerHTML
+}

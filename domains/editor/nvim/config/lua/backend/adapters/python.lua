@@ -1,1 +1,11 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/python.lua
+---@type Adapter
+return {
+	filetypes = { "python" },
+	lsp = "pyright",
+	lsp_cmd = { "pyright-langserver", "--stdio" },
+	formatter = "black",
+	linter = "pylint",
+	treesitter = "python",
+	compiler = "python3",
+	compiler_cmd = { "python3", "$FILE" },
+}

@@ -1,1 +1,7 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/make.lua
+---@type Adapter
+return {
+	filetypes = { "make" },
+	treesitter = "make",
+	compiler = "make",
+	compiler_cmd = { "make", "-f", "$FILE" },
+}

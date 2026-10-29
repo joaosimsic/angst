@@ -1,1 +1,11 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/markdown-preview.nvim/app/next.config.js
+
+module.exports = {
+  pageExtensions: [ 'jsx' ],
+  exportPathMap: async function () {
+    return {
+      '/': { page: '/' },
+      '/404.html': { page: '/404' }
+    }
+  }
+}
+

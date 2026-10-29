@@ -1,1 +1,8 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/init.lua
+---@type Adapter
+return {
+	filetypes = { "markdown", "markdown.mdx" },
+	lsp = "marksman",
+	lsp_cmd = { "marksman" },
+	formatter = "mdformat",
+	treesitter = { "markdown", "markdown_inline" },
+}

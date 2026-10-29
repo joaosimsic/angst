@@ -5,7 +5,7 @@
   homeDirectory ? "/home/${username}",
   enabledFeatures ? [ ],
 }:
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 
 let
   featureData = import ./persist-features.nix;
@@ -87,7 +87,8 @@ in
           "/var/lib/alsa"
           "/etc/ssh"
           "/etc/NetworkManager/system-connections"
-        ];
+        ]
+        ++ lib.optional config.services.tailscale.enable "/var/lib/tailscale";
         files = [
           "/etc/machine-id"
         ];

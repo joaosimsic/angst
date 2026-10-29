@@ -11,6 +11,7 @@
     "design"
     "game-dev"
     "office"
+    "remote"
   ];
   toolchains = [
     "javascript"
@@ -111,6 +112,7 @@
   secrets = [
     "opencode-go-key"
     "cursor-api-key"
+    "tailscale-auth-key-mint"
   ];
   git = {
     personal = {

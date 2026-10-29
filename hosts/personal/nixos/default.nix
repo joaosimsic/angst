@@ -14,6 +14,7 @@
     "office"
     "gaming"
     "obs"
+    "remote"
     "vpn"
   ];
   toolchains = "*";
@@ -124,6 +125,7 @@
   secrets = [
     "opencode-go-key"
     "cursor-api-key"
+    "sunshine-credentials"
   ];
   git = {
     personal = {

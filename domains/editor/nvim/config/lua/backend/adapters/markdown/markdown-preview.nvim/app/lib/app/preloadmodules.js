@@ -1,1 +1,14 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/markdown-preview.nvim/app/lib/app/preloadmodules.js
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const neovim = require('@chemzqm/neovim');
+const log4js = require('log4js');
+const tslib = require('tslib');
+const socketIO = require('socket.io');
+const msgpackLite = require('msgpack-lite');
+exports.default = {
+    '@chemzqm/neovim': neovim,
+    log4js,
+    tslib,
+    'socket.io': socketIO,
+    'msgpack-lite': msgpackLite
+};

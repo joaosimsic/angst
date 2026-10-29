@@ -124,6 +124,13 @@
         dir = ".cache/fontconfig";
       }
     ];
+    "remote.stream" = [
+      {
+        dir = ".config/sunshine";
+        name = "sunshine";
+        durable = true;
+      }
+    ];
     "shell.nushell" = [
       {
         dir = ".local/share/nushell";

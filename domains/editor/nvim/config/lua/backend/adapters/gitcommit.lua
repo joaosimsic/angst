@@ -1,1 +1,5 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/gitcommit.lua
+---@type Adapter
+return {
+	filetypes = { "gitcommit" },
+	treesitter = "gitcommit",
+}

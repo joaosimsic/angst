@@ -1,1 +1,18 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/vue.lua
+---@type Adapter
+return {
+	filetypes = { "vue" },
+	lsp = "volar",
+	lsp_cmd = { "vue-language-server", "--stdio" },
+	treesitter = "vue",
+	lsp_settings = {
+		vue = {
+			inlayHints = {
+				destructuredProps = true,
+				inlineHandlerLeading = true,
+				missingProps = true,
+				optionsWrapper = true,
+				vBindShorthand = true,
+			},
+		},
+	},
+}

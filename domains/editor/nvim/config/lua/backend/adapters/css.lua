@@ -1,1 +1,7 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/css.lua
+---@type Adapter
+return {
+	filetypes = { "css", "scss", "less" },
+	lsp = "cssls",
+	lsp_cmd = { "vscode-css-language-server", "--stdio" },
+	treesitter = "css",
+}

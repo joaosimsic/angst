@@ -1,1 +1,6 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/markdown-preview.nvim/app/_static/sequence-diagram-min.css
+/** js sequence diagrams
+ *  https://bramp.github.io/js-sequence-diagrams/
+ *  (c) 2012-2017 Andrew Brampton (bramp.net)
+ *  Simplified BSD license.
+ */
+@font-face{font-family:'danielbd';src:url(/_static/fonts/danielbd.woff2) format('woff2'),url(/_static/fonts/danielbd.woff) format('woff');font-weight:normal;font-style:normal}

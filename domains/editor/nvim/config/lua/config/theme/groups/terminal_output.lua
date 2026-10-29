@@ -1,1 +1,20 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/config/theme/groups/terminal_output.lua
+local palette = require("config.theme.palette")
+local p, a = palette.p, palette.a
+
+local M = {}
+
+M.get = function()
+	return {
+		TermUser = { fg = a.info, bold = true },
+		TermPath = { fg = p.accent.base, bold = true },
+		TermGitBranch = { fg = a.info },
+		TermGitStatus = { fg = a.warn },
+		TermCommand = { fg = p.foreground.variant },
+		TermNixShell = { fg = p.foreground.variant },
+		TermLangModule = { fg = p.dim },
+		TermError = { fg = a.error, bold = true },
+		TermSignal = { fg = p.dim },
+	}
+end
+
+return M

@@ -1,1 +1,3 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/init.lua
+local AdapterLoader = require("backend.shared.AdapterLoader")
+
+return AdapterLoader.load("backend.adapters")

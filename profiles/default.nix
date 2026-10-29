@@ -33,6 +33,7 @@ let
     design = import ./design.nix;
     office = import ./office.nix;
     obs = import ./obs.nix;
+    remote = import ./remote.nix;
   };
 
   resolve =

@@ -1,1 +1,5 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/markdown-preview.nvim/app/pages/404.jsx
+// 404 page
+export default () => (
+  <div>404</div>
+)
+

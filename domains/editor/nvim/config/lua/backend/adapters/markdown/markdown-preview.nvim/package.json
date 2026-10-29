@@ -1,1 +1,14 @@
-/nix/store/m4r9ncq04gpqxsxj7mkdyijisylr7v0f-home-manager-files/.config/nvim/lua/backend/adapters/markdown/markdown-preview.nvim/package.json
+{
+  "name": "markdown-preview",
+  "version": "0.0.10",
+  "private": true,
+  "scripts": {
+    "setup": "bun install --cwd app",
+    "build-lib": "tsc -p ./",
+    "build": "tsc -p ./"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^4.6.4"
+  }
+}
