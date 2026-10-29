@@ -47,15 +47,17 @@ let
         # Text candidates in intent order: light text first, then dark
         # surfaces. pickContrast keeps the first passing candidate and
         # falls back to the highest-ratio one when none pass.
-        textOn = bg: pickContrast {
-          candidates = [
-            p.foreground.variant
-            p.foreground.base
-            p.background.base
-            p.background.variant
-          ];
-          inherit bg threshold;
-        };
+        textOn =
+          bg:
+          pickContrast {
+            candidates = [
+              p.foreground.variant
+              p.foreground.base
+              p.background.base
+              p.background.variant
+            ];
+            inherit bg threshold;
+          };
         full = base // {
           inherit isDark colorScheme;
           safe = {
@@ -74,7 +76,7 @@ let
             };
             # Arbitrary-bg text: textOn bg returns the first passing
             # candidate (intent order) or the highest-ratio one.
-            textOn = textOn;
+            inherit textOn;
           };
         };
       in

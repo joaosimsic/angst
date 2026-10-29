@@ -1,4 +1,8 @@
-{ lib, stripHash, hexToRgb }:
+{
+  lib,
+  stripHash,
+  hexToRgb,
+}:
 
 let
   normalizeSub = sub: lib.mapAttrs (_: stripHash) sub;

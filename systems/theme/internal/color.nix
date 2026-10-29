@@ -55,9 +55,7 @@ let
 
   # sRGB -> linear per WCAG (exponent 2.4). Nix has no pow builtin,
   # so x^2.4 is computed as x^2 * fifthRoot(x^2) via Newton iteration.
-  fifthRoot =
-    y:
-    lib.foldl' (z: _: (4 * z + y / (z * z * z * z)) / 5) 1.0 (lib.range 1 10);
+  fifthRoot = y: lib.foldl' (z: _: (4 * z + y / (z * z * z * z)) / 5) 1.0 (lib.range 1 10);
 
   srgbToLinearChannel =
     c:
@@ -119,13 +117,9 @@ let
           ratio = contrastRatio c bg;
         }) candidates
       );
-      passing = lib.filter (e: e.ratio >= threshold) ranked;
       orderedPassing = lib.filter (c: contrastRatio c bg >= threshold) candidates;
     in
-    if orderedPassing != [ ] then
-      builtins.head orderedPassing
-    else
-      (builtins.head ranked).value;
+    if orderedPassing != [ ] then builtins.head orderedPassing else (builtins.head ranked).value;
 in
 {
   inherit

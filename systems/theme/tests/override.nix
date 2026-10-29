@@ -16,8 +16,8 @@ in
 if theme != overrideTheme then
   throw "expected config.theme = ${overrideTheme}, got ${theme}"
 else if
-  !(lib.hasInfix "background           = ${expected.palette.background.variant}" ghosttyColors)
+  !(lib.hasInfix "background           = ${expected.palette.background.base}" ghosttyColors)
 then
-  throw "theme override did not reach rendered ghostty colors (expected ${overrideTheme} background.variant)"
+  throw "theme override did not reach rendered ghostty colors (expected ${overrideTheme} background.base)"
 else
   pkgs.writeText "theme-override-check" "ok"

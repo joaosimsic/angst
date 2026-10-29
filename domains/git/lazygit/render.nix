@@ -1,4 +1,8 @@
-{ themeSys, themeName, checkHelpers }:
+{
+  themeSys,
+  themeName,
+  checkHelpers,
+}:
 
 let
   t = themeSys.get themeName;

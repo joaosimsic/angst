@@ -21,7 +21,9 @@ let
     let
       id = lib.removeSuffix ".nix" filename;
       file = "systems/theme/themes/${filename}";
-      checked = result.withContext { inherit file; } (schema.validate (import (themesDir + "/${filename}")));
+      checked = result.withContext { inherit file; } (
+        schema.validate (import (themesDir + "/${filename}"))
+      );
     in
     {
       inherit file id checked;
@@ -34,7 +36,9 @@ let
   }) (builtins.filter (entry: entry.checked.ok) loaded);
 
   ids = map (entry: entry.id) entries;
-  duplicateIds = builtins.filter (id: builtins.length (builtins.filter (other: other == id) ids) > 1) ids;
+  duplicateIds = builtins.filter (
+    id: builtins.length (builtins.filter (other: other == id) ids) > 1
+  ) ids;
 
   duplicateDiagnostics = map (id: {
     kind = "catalog";

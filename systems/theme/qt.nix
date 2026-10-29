@@ -45,16 +45,24 @@ let
     shadeSortColumn=true
 
     [Colors:Window]
-    ${section (csv "palette_background_base_RGB") (csv "palette_background_variant_RGB") (rgbOf (t.safe.textOn p.background.base))}
+    ${section (csv "palette_background_base_RGB") (csv "palette_background_variant_RGB") (
+      rgbOf (t.safe.textOn p.background.base)
+    )}
 
     [Colors:View]
-    ${section (csv "palette_background_base_RGB") (csv "palette_background_variant_RGB") (rgbOf (t.safe.textOn p.background.base))}
+    ${section (csv "palette_background_base_RGB") (csv "palette_background_variant_RGB") (
+      rgbOf (t.safe.textOn p.background.base)
+    )}
 
     [Colors:Button]
-    ${section (csv "palette_background_variant_RGB") (csv "palette_background_base_RGB") (rgbOf (t.safe.textOn p.background.variant))}
+    ${section (csv "palette_background_variant_RGB") (csv "palette_background_base_RGB") (
+      rgbOf (t.safe.textOn p.background.variant)
+    )}
 
     [Colors:Tooltip]
-    ${section (csv "palette_background_variant_RGB") (csv "palette_background_base_RGB") (rgbOf (t.safe.textOn p.background.variant))}
+    ${section (csv "palette_background_variant_RGB") (csv "palette_background_base_RGB") (
+      rgbOf (t.safe.textOn p.background.variant)
+    )}
 
     [Colors:Selection]
     BackgroundNormal=${csv "palette_accent_base_RGB"}
