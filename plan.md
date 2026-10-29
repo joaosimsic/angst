@@ -2,7 +2,7 @@
 
 ## Status
 
-Workstream A implemented through A7; host-secret files and Workstream B remain pending.
+Gate 1: Mint Tailscale enrolled; nixos key present; work key pending. Gate 2 implemented and builds; Mint client validated, NixOS runtime validation pending.
 
 ## Goal
 
@@ -372,19 +372,22 @@ Add/extend checks:
 
 Files:
 
+- `lib/resolve.nix`
 - `domains/remote/stream/default.nix`
 - `domains/remote/stream/system.nix`
 - `domains/remote/stream/home.nix`
 - `profiles/remote.nix`
 
-Add:
+Host declaration:
 
 ```nix
-options.domains.remote.stream.role = lib.mkOption {
-  type = lib.types.enum [ "client" "host" "both" ];
-  default = "client";
+remoteStream = {
+  role = "client";
 };
 ```
+
+`lib/resolve.nix` validates `client|host|both` and exposes `host.remoteStream.role`.
+Both the NixOS and Home Manager modules read the same host field.
 
 Behavior:
 
@@ -479,13 +482,13 @@ Resolution:
 
 - `hosts/personal/nixos`
   - Keep `remote` profile.
-  - Set `domains.remote.stream.role = "host"`.
+  - Set `remoteStream.role = "both"`.
 - `hosts/personal/work`
   - Add `"remote"` profile.
-  - Set `domains.remote.stream.role = "client"`.
+  - Set `remoteStream.role = "client"`.
 - `hosts/personal/mint`
   - Keep `remote` profile.
-  - Default role is `client`.
+  - Set `remoteStream.role = "client"`.
 - `hosts/work/home`
   - Leave unchanged. It is a separate work machine.
 - `hosts/vm`

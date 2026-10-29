@@ -1,5 +1,5 @@
 {
   package = null;
   customXdg = true;
-  description = "Sunshine game stream host and Moonlight client over Tailscale";
+  description = "Sunshine game stream host and/or Moonlight client over Tailscale";
 }

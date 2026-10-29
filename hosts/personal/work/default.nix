@@ -11,8 +11,12 @@
     "design"
     "game-dev"
     "office"
+    "remote"
   ];
   toolchains = "*";
+  remoteStream = {
+    role = "client";
+  };
 
   monitors = {
     primary = {

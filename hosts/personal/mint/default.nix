@@ -38,6 +38,9 @@
     "blade"
     "scm"
   ];
+  remoteStream = {
+    role = "client";
+  };
   db = [ "work/intelligence-metadata" ];
   env = {
     EDITOR = "nvim";

@@ -5,6 +5,8 @@
 # `--flake .#host=nixos` and fails with a confusing "does not provide attribute" error.
 # Run `just --list` to see each recipe's parameter names.
 
+set shell := ["bash", "-c"]
+
 bootstrap-password name="main" scope="personal":
     angst bootstrap-password --name {{ name }} --scope {{ scope }}
 
@@ -127,7 +129,24 @@ remote-mint-bootstrap:
     just hm-switch mint
     @test -f "$HOME/.secrets/tailscale" || { echo "missing ~/.secrets/tailscale; run: just remote-tailscale-key mint && just hm-switch mint"; exit 1; }
     @command -v tailscale >/dev/null 2>&1 || sudo sh -c 'curl -fsSL https://tailscale.com/install.sh | sh'
-    @sudo tailscale up --auth-key "$(cat "$HOME/.secrets/tailscale")"
+    @sudo tailscale up --auth-key "file:$HOME/.secrets/tailscale" --timeout=60s
     @if command -v ufw >/dev/null 2>&1 && sudo ufw status 2>/dev/null | grep -q 'Status: active'; then sudo ufw allow in on tailscale0; fi
     @sudo tailscale status
     @echo "Open Moonlight, add the NixOS Tailscale IP or MagicDNS name, then enter the Sunshine PIN."
+
+# Recover from a stale/duplicate Tailscale node key.
+remote-mint-reauth:
+    just hm-switch mint
+    @test -f "$HOME/.secrets/tailscale" || { echo "missing ~/.secrets/tailscale; run: just remote-tailscale-key mint && just hm-switch mint"; exit 1; }
+    @sudo tailscale up --auth-key "file:$HOME/.secrets/tailscale" --force-reauth --timeout=60s
+    @sudo tailscale status
+
+# Last resort: reset the local Tailscale node identity (backs up state).
+remote-mint-reset-tailscale:
+    just hm-switch mint
+    @test -f "$HOME/.secrets/tailscale" || { echo "missing ~/.secrets/tailscale; run: just remote-tailscale-key mint && just hm-switch mint"; exit 1; }
+    @sudo systemctl stop tailscaled
+    @if [ -f /var/lib/tailscale/tailscaled.state ]; then sudo mv /var/lib/tailscale/tailscaled.state "/var/lib/tailscale/tailscaled.state.bak-$(date +%s)"; fi
+    @sudo systemctl start tailscaled
+    @sudo tailscale up --auth-key "file:$HOME/.secrets/tailscale" --timeout=60s
+    @sudo tailscale status

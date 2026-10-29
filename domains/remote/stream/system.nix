@@ -3,12 +3,15 @@
   lib,
   pkgs,
   userConfig,
+  host,
   hostHostSecrets ? [ ],
   ...
 }:
 
 let
   cfg = config.domains.remote.stream;
+  role = host.remoteStream.role;
+  isHost = role == "host" || role == "both";
 
   hasTailscaleKey = lib.any (s: lib.hasSuffix "/tailscale" s) hostHostSecrets;
 
@@ -32,33 +35,61 @@ in
     enable = lib.mkEnableOption "Sunshine host and Moonlight client over Tailscale";
   };
 
-  config = lib.mkIf cfg.enable {
-    services = {
-      sunshine = {
-        enable = true;
-        autoStart = true;
-        openFirewall = false;
-        capSysAdmin = false;
-      };
+  config = lib.mkIf cfg.enable (
+    lib.mkMerge [
+      {
+        services.tailscale = {
+          enable = true;
+          openFirewall = true;
+        }
+        // lib.optionalAttrs hasTailscaleKey {
+          authKeyFile = "/run/angst/host-secrets/tailscale";
+        };
 
-      tailscale = {
-        enable = true;
-        openFirewall = true;
+        networking.firewall.trustedInterfaces = [ "tailscale0" ];
+
+        hardware.graphics.enable = true;
       }
-      // lib.optionalAttrs hasTailscaleKey {
-        authKeyFile = "/run/angst/host-secrets/tailscale";
-      };
-    };
+      (lib.mkIf isHost {
+        services.sunshine = {
+          enable = true;
+          autoStart = true;
+          openFirewall = false;
+          capSysAdmin = false;
+        };
 
-    systemd.user.services.sunshine.serviceConfig.ExecStartPre = [ "${sunshineCredsScript}" ];
+        services.displayManager.defaultSession = "i3";
+        services.displayManager.autoLogin = {
+          enable = true;
+          user = userConfig.username;
+        };
 
-    networking.firewall.trustedInterfaces = [ "tailscale0" ];
+        systemd.user.services.sunshine.serviceConfig.ExecStartPre = [ "${sunshineCredsScript}" ];
 
-    hardware.graphics.enable = true;
+        users.users.${userConfig.username}.extraGroups = [
+          "uinput"
+          "render"
+        ];
 
-    users.users.${userConfig.username}.extraGroups = [
-      "uinput"
-      "render"
-    ];
-  };
+        assertions = [
+          {
+            assertion = config.domains.display.x11.enable;
+            message = "domains.remote.stream role host requires domains.display.x11";
+          }
+          {
+            assertion = config.domains.wm.i3.enable;
+            message = "domains.remote.stream role host requires domains.wm.i3";
+          }
+          {
+            assertion = config.domains.display.ly.enable;
+            message = "domains.remote.stream role host requires domains.display.ly";
+          }
+          {
+            assertion = lib.elem "i3" config.services.displayManager.sessionData.sessionNames;
+            message = "domains.remote.stream role host requires the i3 display-manager session";
+          }
+        ];
+      })
+    ]
+  );
 }

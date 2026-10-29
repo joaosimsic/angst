@@ -68,6 +68,9 @@ Nix CI uses DeterminateSystems `nix-installer-action` + `magic-nix-cache-action`
 | `just bootstrap-password name scope` | `angst bootstrap-password --name <name> --scope <personal|work>` |
 | `just remote-tailscale-key hostname scope` | Encrypt a host Tailscale auth key to `secrets/tailscale/<hostname>.age` |
 | `just remote-sunshine-secret hostname scope` | Encrypt host Sunshine credentials to `secrets/sunshine/<hostname>.age` |
+| `just remote-mint-bootstrap` | Activate Mint, then enroll Tailscale with the declared key |
+| `just remote-mint-reauth` | Re-enroll Mint with `--force-reauth` after a stale node key |
+| `just remote-mint-reset-tailscale` | Back up local Tailscale state, reset node identity, and re-enroll Mint |
 | `just disko host=…` | Run disko with `hosts/<host>/disk.nix` |
 | `just hardware host=…` | `nixos-generate-config --show-hardware-config > hosts/<host>/hardware.nix` |
 | `just bootstrap-disk host=…` | `disko` + `hardware` |

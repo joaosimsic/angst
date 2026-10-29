@@ -18,6 +18,9 @@
     "vpn"
   ];
   toolchains = "*";
+  remoteStream = {
+    role = "both";
+  };
 
   monitors = {
     primary = {

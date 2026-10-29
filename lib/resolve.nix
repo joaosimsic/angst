@@ -100,6 +100,28 @@ let
     "hosts"
   ];
 
+  validRemoteStreamRoles = [
+    "client"
+    "host"
+    "both"
+  ];
+
+  rawRemoteStream = decl.remoteStream or { };
+
+  remoteStream =
+    if !(builtins.isAttrs rawRemoteStream) then
+      throw "remoteStream: must be an attrset { role; }, got ${builtins.typeOf rawRemoteStream}"
+    else
+      let
+        role = rawRemoteStream.role or "client";
+      in
+      if !(builtins.isString role) then
+        throw "remoteStream.role: must be a string, got ${builtins.typeOf role}"
+      else if !(builtins.elem role validRemoteStreamRoles) then
+        throw "remoteStream.role: unknown role '${role}'; expected client, host, or both"
+      else
+        { inherit role; };
+
   rawSecrets = decl.secrets or { };
 
   secretScopes =
@@ -215,7 +237,7 @@ in
     // (decl.persist or { });
     projects = decl.projects or [ ];
     type = decl.type or "nixos";
-    inherit domain;
+    inherit domain remoteStream;
 
     scopes = secretScopes;
     inherit passwordSecret;
