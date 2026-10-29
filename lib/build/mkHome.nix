@@ -34,11 +34,7 @@ let
   };
 
   secrets = import ../../modules/secrets.nix {
-    inherit
-      self
-      host
-      lib
-      ;
+    inherit host lib;
   };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
@@ -55,7 +51,8 @@ inputs.home-manager.lib.homeManagerConfiguration {
       ;
     hostType = host.type;
     hostScopes = host.scopes;
-    hostSecrets = host.secrets;
+    hostAppSecrets = host.appSecrets;
+    hostHostSecrets = host.hostSecrets;
     inherit host;
     shell = if shellOverride != null then shellOverride else host.shell;
     inherit (host.scan) themes;

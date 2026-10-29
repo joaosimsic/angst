@@ -5,6 +5,7 @@
   flakeSelf,
   runtime,
   userConfig,
+  hostScopes ? [ ],
   ...
 }:
 let
@@ -17,10 +18,7 @@ let
       secretsDir = "${flakeSelf}/${cfg.secretsDir}";
       inherit (cfg) destDir;
       inherit (userConfig) username homeDirectory;
-      scopes = [
-        "personal"
-        "work"
-      ];
+      scopes = hostScopes;
     }).bin;
   provisionWrapper = pkgs.writeShellApplication {
     name = "angst-provision-vpn-home";
@@ -43,7 +41,7 @@ let
       fi
       mkdir -p "$dest"
       chmod 0700 "$dest"
-      exec ${provisionBin} --secrets-dir "${flakeSelf}/${cfg.secretsDir}" --dest-dir "$dest" --user "${userConfig.username}" --home "${userConfig.homeDirectory}" --scopes personal,work
+      exec ${provisionBin} --secrets-dir "${flakeSelf}/${cfg.secretsDir}" --dest-dir "$dest" --user "${userConfig.username}" --home "${userConfig.homeDirectory}" --scopes ${lib.escapeShellArg (lib.concatStringsSep "," hostScopes)}
     '';
   };
   mkVpnService =

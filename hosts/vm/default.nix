@@ -86,7 +86,16 @@
     "intelligence/backend"
     "intelligence/frontend"
   ];
-  secrets = [ ];
+  secrets = {
+    scopes = [
+      "personal"
+      "work"
+    ];
+    apps = [
+      "personal/opencode-go-key"
+      "work/cursor-api-key"
+    ];
+  };
   git = {
     personal = {
       name = "joaosimsic";

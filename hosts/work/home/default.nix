@@ -68,9 +68,10 @@
     "intelligence/backend"
     "intelligence/frontend"
   ];
-  secrets = [
-    "cursor-api-key"
-  ];
+  secrets = {
+    scopes = [ "work" ];
+    apps = [ "work/cursor-api-key" ];
+  };
   git = {
     default = "work";
     personal = {

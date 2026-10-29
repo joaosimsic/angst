@@ -3,23 +3,25 @@
   lib,
   pkgs,
   userConfig,
-  flakeSelf,
+  hostHostSecrets ? [ ],
   ...
 }:
 
 let
   cfg = config.domains.remote.stream;
 
-  tailscaleKeyAge = flakeSelf + "/secrets/apps/personal/tailscale-auth-key-nixos.age";
-  hasTailscaleKey = builtins.pathExists tailscaleKeyAge;
+  hasTailscaleKey = lib.any (s: lib.hasSuffix "/tailscale" s) hostHostSecrets;
 
-  sunshineCreds = "${userConfig.homeDirectory}/.secrets/sunshine-credentials";
+  sunshineCreds = "/run/angst/host-secrets/sunshine";
 
   sunshineCredsScript = pkgs.writeShellScript "angst-sunshine-credentials" ''
     set -eu
     umask 0077
     creds=${lib.escapeShellArg sunshineCreds}
-    [ -f "$creds" ] || exit 0
+    if [ ! -f "$creds" ]; then
+      echo "sunshine credentials are not ready at $creds; retrying" >&2
+      exit 1
+    fi
     user=$(sed -n '1p' "$creds")
     pass=$(sed -n '2p' "$creds")
     exec ${pkgs.sunshine}/bin/sunshine --creds "$user" "$pass"
@@ -44,42 +46,11 @@ in
         openFirewall = true;
       }
       // lib.optionalAttrs hasTailscaleKey {
-        authKeyFile = "/run/angst/tailscale-auth-key";
+        authKeyFile = "/run/angst/host-secrets/tailscale";
       };
     };
 
-    systemd = {
-      user.services.sunshine.serviceConfig.ExecStartPre = [ "${sunshineCredsScript}" ];
-
-      services = lib.mkIf hasTailscaleKey {
-        angst-tailscale-auth-key = {
-          description = "angst: decrypt the Tailscale auth key";
-          wantedBy = [ "multi-user.target" ];
-          before = [ "tailscaled-autoconnect.service" ];
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            UMask = "0077";
-            RuntimeDirectory = "angst";
-            RuntimeDirectoryMode = "0700";
-            ExecStart = "${pkgs.age}/bin/age --decrypt --identity ${userConfig.homeDirectory}/.config/age/keys.txt --output /run/angst/tailscale-auth-key ${tailscaleKeyAge}";
-            NoNewPrivileges = true;
-            PrivateTmp = true;
-            ProtectSystem = "strict";
-            ProtectHome = "read-only";
-            ReadOnlyPaths = [
-              "${userConfig.homeDirectory}/.config/age/keys.txt"
-              tailscaleKeyAge
-            ];
-          };
-        };
-
-        tailscaled-autoconnect = {
-          after = [ "angst-tailscale-auth-key.service" ];
-          wants = [ "angst-tailscale-auth-key.service" ];
-        };
-      };
-    };
+    systemd.user.services.sunshine.serviceConfig.ExecStartPre = [ "${sunshineCredsScript}" ];
 
     networking.firewall.trustedInterfaces = [ "tailscale0" ];
 

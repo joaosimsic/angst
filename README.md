@@ -2,7 +2,7 @@
 
 NixOS + home-manager flake for a theme-driven, hot-reloadable desktop environment.
 
-Every machine is declared as a plain, diffable Nix file under `hosts/` and auto-discovered at flake eval time — no `flake.nix` edits, no env-file hacks. Secrets are age-encrypted (`secrets/master/<host>.age` for the login password, `secrets/apps/<scope>/<slug>.age` for app secrets) and decrypted at runtime. A single color-theme system propagates across ~21 user-space applications.
+Every machine is declared as a plain, diffable Nix file under `hosts/` and auto-discovered at flake eval time — no `flake.nix` edits, no env-file hacks. Secrets are age-encrypted (`secrets/password/<name>.age` for login passwords, `secrets/apps/<scope>/<slug>.age` for app secrets, `secrets/<name>/<hostname>.age` for host infrastructure) and decrypted at runtime. A single color-theme system propagates across ~21 user-space applications.
 
 Maintained reference documentation lives in [openwiki/](openwiki/quickstart.md) (quickstart, [architecture](openwiki/architecture.md), [domains](openwiki/domains.md), [themes](openwiki/themes.md), [tools](openwiki/tools.md), [operations](openwiki/operations.md), [secrets](openwiki/secrets.md)).
 
@@ -75,7 +75,7 @@ Each machine is `hosts/<domain>/<hostname>/default.nix`, a pure data decl. A dir
 
 Persisted dirs are **not** listed in the host decl. Each feature declares the paths it owns in `modules/nixos/persist-features.nix` (keyed by domain id, e.g. `"browser.firefox"`, `"git.projects"`, `"toolchain:rust"`); only enabled features contribute, and `dataRoot` routes durable entries there as bind mounts (falling back to `root` when unset, like the VM).
 
-Optional siblings: `secrets/master/<host>.age` and `secrets/apps/` (age-encrypted, see [Secrets](openwiki/secrets.md)) and `hardware.nix` (auto-imported by `mkNixos.nix`). Current hosts: `ci` (CI runner, user `runner`), `personal/nixos` (desktop), `personal/mint` (home-only), `vm` (disposable QEMU VM).
+Hosts declare secrets explicitly with `secrets = { scopes = [...]; password = "..."; apps = [...]; host = [...]; }` (age-encrypted, see [Secrets](openwiki/secrets.md)); `hardware.nix` is auto-imported by `mkNixos.nix`. Current hosts: `ci` (CI runner, user `runner`), `personal/nixos` (desktop), `personal/work` (work desktop), `personal/mint` (home-only), `work/home` (work home-only), `vm` (disposable QEMU VM), `personal/generic` (generic installer).
 
 **Machine layout (`personal/nixos`)** — dual-boot with Windows, split so the OS can be erased and rebuilt without touching Windows or user data:
 
@@ -141,8 +141,10 @@ Defined in `checks/` and wired as flake `checks` by `lib/flake/outputs.nix`. Run
 | `theme-override` | Theme override propagates into a real home config |
 | `theme-semantic-distinct` | `ansi.error/warn/info/success` mutually distinct |
 | `check-password` | Host `password` field is a valid `$6$` sha-512 hash |
-| `check-secrets-encrypted` | Every `secrets/master/*.age` is age-encrypted |
-| `check-secrets-encrypted` | Every `secrets/master/*.age` is age-encrypted |
+| `check-secrets-encrypted` | Every `secrets/password/*.age` is age-encrypted |
+| `check-host-secrets-encrypted` | Every declared host-secret `.age` is age-encrypted |
+| `check-host-identity` | Host declarations use unique hostnames |
+| `check-secret-declarations` | Declared scopes/apps/host secrets are valid; missing files warn |
 | `login-shell-valid` / `login-shell-invalid` | `shellOverride` handling |
 | `home-theme-override-test` | Builds a representative home config with an alternate theme |
 | `lint-nix` | `deadnix --fail` + `statix check .` |
@@ -246,7 +248,7 @@ in-place decrypt never stages plaintext. All secrets are age-encrypted, so no so
 
 **`modules/vm/`** — Multi-layered VM support: internal `angst.isQemuVm` flag (declared — forced on only by `vmVariant`, never probed at eval time), conditional bootloader (`runtime.nix`), vmVariant resources and guest OS overrides (`vm-variant.nix` — tmpfs `/`, `/persist` ext4, SPICE, 9p host mount, guest boot/display settings), declarative inbound auth + age-key injection (`vm-profile.nix` — `authorized_keys` baked from `secrets/ssh/*.pub`, `vm-age-key` consumes `/tmp/shared`), and host-repo symlink for live editing (`host-mount.nix`). The `vm` profile is guest-only: profile resolution and `vm-profile.nix` reject it on any host other than `hostname = "vm"`. `specialisation.nix` exists but is never imported (dead code).
 
-**`modules/secrets.nix`** — age secrets integration per host: the master password (`secrets/master/<host>.age`, decrypted by `angst set-password-hash` at boot) and app secrets (e.g. `opencode-go-key` → `~/.secrets/opencode-go-key`, provisioned by `angst provision-app-secret`). Decryption is decided at runtime (age key at `~/.config/age/keys.txt`), never at eval — pure-`nix build` hosts like the VM still get secret wiring. See [openwiki/secrets.md](openwiki/secrets.md).
+**`modules/secrets.nix`** — age secrets integration per host: app secrets (`host.appSecrets`) and home-only host secrets (`host.hostSecrets`). NixOS host infrastructure secrets are provisioned to `/run/angst/host-secrets` by `modules/nixos/host-secrets.nix`; login passwords come from the flat pool `secrets/password/<name>.age` and are decrypted by `angst set-password-hash` at boot. Decryption is decided at runtime, never at eval. See [openwiki/secrets.md](openwiki/secrets.md).
 
 ---
 
@@ -288,7 +290,7 @@ Toolchains are auto-discovered by `lib/resolve.nix` and selected via `toolchains
 ### `@tools/` — Standalone Tools
 
 **angst CLI** (`runtime/angst`, packaged as `angst`):
-- `angst bootstrap-master-password [--host HOST] [--scope personal|work]` — interactive master-password bootstrap; age-encrypts the password to `secrets/master/<host>.age`. The boot service derives the sha-512 hash.
+- `angst bootstrap-password --name NAME --scope personal|work` — interactive password-pool bootstrap; age-encrypts to `secrets/password/<name>.age`. The boot service tries the host's declared scopes and derives the sha-512 hash.
 - `angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]` — batch-evals `.#lib.renderDomainOutputsFor` and writes rendered domain configs.
 - `angst watch [...]` — watchexec-based hot-reload on `themes/`, `domains/`, `hosts/`.
 - `angst projects <add|sync|status|capture|edit-env|rm> ...` — manage the encrypted dev-project store (see [`@projects/`](#projects--auto-synced-encrypted-dev-projects)).
@@ -339,7 +341,7 @@ home-manager activation                    # xdg.configFile symlinks → ~/.conf
 
 ### Secrets (summary)
 
-age-encrypted secrets → decrypted at runtime into `~/.secrets/`. The master password (`secrets/master/<host>.age`) drives the login-hash via the `angst-bootstrap-secrets` systemd service; app secrets (e.g. `opencode-go-key`) land at `~/.secrets/` via `angst provision-app-secret`. Shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned to every host at boot by `angst-provision-ssh-key`; the FTP server config lives age-encrypted in `secrets/ftp/`. Vault stores for projects and DB (`secrets/projects/*.tar.age` + `secrets/db/*.tar.age`) are age-encrypted too, with scope-isolated keys (repo tarballs travel; working stores decrypted at `~/.secrets/projects` + `~/.secrets/db`, see [`@secrets/projects/ + @secrets/db/`](#secrets-projects--secretsdb---auto-synced-encrypted-vault-stores)). Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets/master/*.age` / `secrets/projects/*.tar.age` / `secrets/db/*.tar.age` / `secrets/ssh/*.age` / `secrets/ftp/*`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
+age-encrypted secrets → decrypted at runtime. Login passwords live in a flat pool (`secrets/password/<name>.age`) and drive the user/root hash via `angst-bootstrap-secrets`. App secrets (`secrets/apps/<scope>/<slug>.age`) land at `~/.secrets/<slug>` via `angst provision-app-secret`. Host infrastructure secrets (`secrets/<name>/<hostname>.age`) are provisioned to `/run/angst/host-secrets` on NixOS or `~/.secrets` on home-only hosts. Shared scope SSH keys are age-encrypted in `secrets/ssh/`; VPN files live in `secrets/vpn/`; FTP config lives in `secrets/ftp/`. Vault stores for projects and DB (`secrets/projects/*.tar.age` + `secrets/db/*.tar.age`) are age-encrypted with scope-isolated keys. Defense in depth: gitleaks pre-commit/pre-push hooks, gitleaks + trufflehog CI, and flake checks that refuse unencrypted `secrets/password/*.age` / declared host-secret files / `secrets/projects/*.tar.age` / `secrets/db/*.tar.age` / `secrets/ssh/*.age` / `secrets/ftp/*`. Full story: [openwiki/secrets.md](openwiki/secrets.md).
 
 ### CI
 
@@ -363,7 +365,7 @@ just hm nixos              # build home activation package
 just hm-switch nixos       # build + activate (run as your user, never sudo)
 just switch nixos          # sudo nixos-rebuild switch --flake .#nixos
 just hardware personal/nixos  # regenerate hardware.nix next to the decl
-just bootstrap-secrets nixos   # create/rotate secrets.yaml + password hash
+just bootstrap-password main personal   # create/rotate a password-pool entry
 just analyze               # regenerate analysis.md
 just install-hooks         # enable gitleaks git hooks
 just install-nixos         # install/reuse; see --help for flags

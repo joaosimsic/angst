@@ -1,10 +1,27 @@
-{ pkgs }:
+{
+  pkgs,
+  lib,
+  hostList ? [ ],
+}:
 
 let
   repoRoot = ../.;
 
-  secretsCheck =
-    pkgs.runCommand "check-secrets-encrypted"
+  hostSecretRows = lib.concatStringsSep "\n" (
+    lib.concatMap (
+      h:
+      map (
+        ref:
+        let
+          parts = lib.splitString "/" ref;
+        in
+        "${h.hostname}\t${builtins.elemAt parts 1}"
+      ) (h.hostSecrets or [ ])
+    ) hostList
+  );
+
+  passwordCheck =
+    pkgs.runCommand "check-passwords-encrypted"
       {
         nativeBuildInputs = [
           pkgs.findutils
@@ -15,14 +32,14 @@ let
         set -euo pipefail
         cd ${repoRoot}
 
-        files=$(find ./secrets/master -type f -name '*.age' 2>/dev/null || true)
+        files=$(find ./secrets/password -type f -name '*.age' 2>/dev/null || true)
         if [ -z "$files" ]; then
-          echo "No secrets/master/*.age files found; nothing to check."
+          echo "No secrets/password/*.age files found; nothing to check."
           touch $out
           exit 0
         fi
 
-        echo "==> Checking tracked master-password age files are age-encrypted..."
+        echo "==> Checking tracked password age files are age-encrypted..."
         failed=0
         for f in $files; do
           if ! grep -q 'age-encryption.org/v1' "$f"; then
@@ -37,12 +54,62 @@ let
         done
 
         if [ "$failed" -ne 0 ]; then
-          echo "==> One or more master-password files are not properly encrypted. Refusing to proceed."
+          echo "==> One or more password files are not properly encrypted. Refusing to proceed."
           exit 1
         fi
 
-        echo "==> All master-password files are age-encrypted."
+        echo "==> All password files are age-encrypted."
         touch $out
+      '';
+
+  hostSecretsCheck =
+    pkgs.runCommand "check-host-secrets-encrypted"
+      {
+        nativeBuildInputs = [
+          pkgs.findutils
+          pkgs.gnugrep
+        ];
+      }
+      ''
+            set -euo pipefail
+            cd ${repoRoot}
+
+            echo "==> Checking declared host-secret age files are age-encrypted..."
+            failed=0
+            found=0
+            while IFS=$'\t' read -r hostname name; do
+              if [ -z "$hostname" ]; then
+                continue
+              fi
+              f="secrets/$name/$hostname.age"
+              if [ ! -f "$f" ]; then
+                continue
+              fi
+              found=1
+              if ! grep -q 'age-encryption.org/v1' "$f"; then
+                echo "FAIL: $f is not age-encrypted (missing age-encryption.org/v1 envelope)"
+                failed=1
+              elif grep -qE '(password|passphrase|token|secret|api[_-]?key|access[_-]?key|client[_-]?secret|tskey-auth-)' "$f"; then
+                echo "FAIL: $f contains plaintext secret-like content"
+                failed=1
+              else
+                echo "PASS: $f is age-encrypted"
+              fi
+            done <<'HOSTSECRETS'
+        ${hostSecretRows}
+        HOSTSECRETS
+
+            if [ "$found" -eq 0 ]; then
+              echo "No declared host-secret files found; nothing to check."
+            fi
+
+            if [ "$failed" -ne 0 ]; then
+              echo "==> One or more host-secret files are not properly encrypted. Refusing to proceed."
+              exit 1
+            fi
+
+            echo "==> All declared host-secret files are age-encrypted."
+            touch $out
       '';
 
   ftpCheck =
@@ -259,7 +326,8 @@ let
       '';
 in
 {
-  secrets = secretsCheck;
+  passwords = passwordCheck;
+  hostSecrets = hostSecretsCheck;
   projects = projectsCheck;
   db = dbCheck;
   sshKeys = sshKeysCheck;

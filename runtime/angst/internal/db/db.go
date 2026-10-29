@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"angst/internal/paths"
+	"angst/internal/scope"
 	"angst/internal/shared"
 )
 
@@ -145,9 +146,25 @@ func discoverAllSlugs() []scopedSlug {
 
 func usage() {
 	fmt.Print(`Usage:
-  angst db import
-  angst db sync
+  angst db import [--scopes personal[,work]]
+  angst db sync [--scopes personal[,work]]
 `)
+}
+
+func scopesFor(flag string, set bool) []scope.Scope {
+	if set {
+		return scope.Split(flag)
+	}
+	return []scope.Scope{scope.Personal, scope.Work}
+}
+
+func scopeAllowed(scopes []scope.Scope, target string) bool {
+	for _, sc := range scopes {
+		if string(sc) == target {
+			return true
+		}
+	}
+	return false
 }
 func Run(args []string) int {
 	cmdName := ""

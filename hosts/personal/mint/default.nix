@@ -109,11 +109,17 @@
     "intelligence/backend"
     "intelligence/frontend"
   ];
-  secrets = [
-    "opencode-go-key"
-    "cursor-api-key"
-    "tailscale-auth-key-mint"
-  ];
+  secrets = {
+    scopes = [
+      "personal"
+      "work"
+    ];
+    apps = [
+      "personal/opencode-go-key"
+      "work/cursor-api-key"
+    ];
+    host = [ "personal/tailscale" ];
+  };
   git = {
     personal = {
       name = "joaosimsic";

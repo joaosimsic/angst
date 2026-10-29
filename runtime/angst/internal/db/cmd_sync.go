@@ -155,17 +155,26 @@ type syncEntry struct {
 }
 
 func cmdSync(args []string) int {
-	for _, a := range args {
-		switch a {
+	scopesFlag := ""
+	scopesSet := false
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--scopes":
+			scopesSet = true
+			if i+1 < len(args) {
+				scopesFlag = args[i+1]
+				i++
+			}
 		case "-h", "--help":
 			usage()
 			return shared.ExitOK
 		default:
-			fmt.Fprintf(os.Stderr, "unknown sync option: %s\n", a)
+			fmt.Fprintf(os.Stderr, "unknown sync option: %s\n", args[i])
 			usage()
 			return shared.ExitUsage
 		}
 	}
+	allowedScopes := scopesFor(scopesFlag, scopesSet)
 
 	store := storeRoot()
 	if _, err := os.Stat(store); err != nil {
@@ -193,6 +202,10 @@ func cmdSync(args []string) int {
 	seen := map[string]bool{}
 	var uniq []scopedSlug
 	for _, s := range toSync {
+		if !scopeAllowed(allowedScopes, s.scope) {
+			fmt.Fprintf(os.Stderr, "warn: db %q uses undeclared scope %s; skipping\n", s.raw, s.scope)
+			continue
+		}
 		if !seen[s.raw] {
 			seen[s.raw] = true
 			uniq = append(uniq, s)

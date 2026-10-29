@@ -2,7 +2,7 @@
 
 **angst** is a [NixOS](https://nixos.org/) + [home-manager](https://github.com/nix-community/home-manager) flake for a **theme-driven, hot-reloadable desktop environment**. It manages every layer of the system — from hardware detection and bootloader to shell prompts and editor themes — through one unified color-theme system that propagates across ~21 user-space applications.
 
-Machines are declared as plain, diffable Nix files under `hosts/` and auto-discovered at flake eval time. Secrets are age-encrypted (`secrets/master/<host>.age`, `secrets/apps/`) and decrypted at runtime — never in the repo.
+Machines are declared as plain, diffable Nix files under `hosts/` and auto-discovered at flake eval time. Secrets are age-encrypted (`secrets/password/`, `secrets/apps/`, `secrets/tailscale/`, `secrets/sunshine/`) and decrypted at runtime — never in the repo.
 
 > The [README.md](../README.md) is maintained in sync with this wiki; when a page here and the README disagree, this wiki (grounded in `hosts/` + `lib/`) is the reference for recent changes.
 
@@ -10,27 +10,27 @@ Machines are declared as plain, diffable Nix files under `hosts/` and auto-disco
 
 | Area | Purpose |
 |------|---------|
-| `/hosts/` | Machine declarations: `hosts/<domain>/<hostname>/default.nix` (+ optional `secrets.yaml`, `hardware.nix`) |
+| `/hosts/` | Machine declarations: `hosts/<domain>/<hostname>/default.nix` (+ optional `hardware.nix`) |
 | `/profiles/` | Reusable composition units (base, desktop, development, server, vm) selected per host |
 | `/modules/` | Core modules: `home/`, `nixos/`, `vm/`, plus `secrets.nix` (age integration) |
 | `/domains/` | Features — the unit of configuration (31 features / 17 categories), each with a `default.nix` interface + optional `home.nix`/`system.nix` sides |
-| `/secrets/` | Encrypted stores: master passwords, app secrets, ssh/ftp/vpn keys, vault tarballs for projects + db (all age-encrypted, scope-isolated) |
+| `/secrets/` | Encrypted stores: password pool, app secrets, host secrets, ssh/ftp/vpn keys, vault tarballs for projects + db (all age-encrypted, scope-isolated) |
 | `/themes/` | Color token definitions (9 themes, strict 13-token schema) |
 | `/toolchains/` | Declarative dev-language toolchains (24 languages via `mkToolchain`) |
 | `/tools/` | Standalone Rust workspaces: `shell` (env switcher), `vm` (QEMU lifecycle + MCP) |
 | `/lib/` | Build system: `discover.nix`, `resolve.nix`, `build/`, `domains/`, `flake/`, `render.nix`, `treesitter.nix` |
 | `/checks/` | Build-time validation (theme lint, rendered configs, password, secrets, login-shell, Nix lint) |
-| `/scripts/` | `angst.sh` (render/watch/bootstrap-secrets), `analyze_flake/` (analysis.md generator) |
+| `/runtime/` | Go `angst` CLI (render/watch/secrets/projects/db/ssh) and Nix wrappers |
 | `/githooks/` | gitleaks pre-commit / pre-push hooks (install via `just install-hooks`) |
 
 ## Key Concepts
 
-- **Hosts** — Each machine is `hosts/<domain>/<hostname>/default.nix`, a pure data decl (`type`, hostname, username, theme, profiles, toolchains, monitors, sshAgent, persist, …). `lib/discover.nix` finds them recursively; `lib/resolve.nix` normalizes each decl into a `host` object. Optional `secrets/master/<host>.age` (age-encrypted) and `hardware.nix` sit next to the decl. Current hosts: `ci` (CI runner), `personal/nixos` (desktop), `personal/mint` (home-only, `type = "home"`), `vm`.
+- **Hosts** — Each machine is `hosts/<domain>/<hostname>/default.nix`, a pure data decl (`type`, hostname, username, theme, profiles, toolchains, monitors, sshAgent, persist, secrets, …). `lib/discover.nix` finds them recursively; `lib/resolve.nix` normalizes each decl into a `host` object. Secrets are declared explicitly at `secrets = { scopes; password; apps; host; }`; optional `hardware.nix` sits next to the decl. Current hosts: `ci`, `personal/nixos`, `personal/work`, `personal/mint` (home-only), `work/home` (home-only), `vm`, `personal/generic`.
 - **Profiles** — Composition units (`profiles/*.nix`), each a pure feature list `{ enable = [...]; }` (+ optional NixOS-only `modules`). Hosts select via `profiles = ["base" "desktop" ...]`. `profiles/default.nix` validates feature names at build time and the builder splits them into home/system sides by feature sides + host type.
 - **Domains** — The unit of configuration: `domains/<category>/<name>/` with a `default.nix` interface (package + XDG target + description, validated by `mkDomain`), optional `home.nix` (home-manager), `system.nix` (NixOS), `render.nix` (theme-aware config generator), and `config/`. A feature may be user-space, system-space, or both. Auto-discovered and turned into modules by `lib/domains/`.
 - **Themes** — 13 color tokens (9 palette + 4 ansi). 9 themes, all validated at build time; rendered into every domain config. See [Themes](themes.md).
 - **Toolchains** — Declarative language environments (runtime, LSP, formatter, linter, treesitter grammar) for 24 languages; selected by `toolchains = "*"` or a list in the host decl.
-- **Secrets** — age. `secrets/master/<host>.age` holds the master password; app secrets (e.g. `opencode-go-key`) live in `secrets/apps/<scope>/` and are provisioned to `~/.secrets/`. Vault stores for projects + db live as `secrets/projects/<scope>.tar.age` + `secrets/db/<scope>.tar.age` (whole trees age-encrypted, scope-isolated). Shared SSH keys are age-encrypted in `secrets/ssh/` and provisioned by `angst-provision-ssh-key`. See [Secrets](secrets.md).
+- **Secrets** — age. Host declarations select a flat password from `secrets/password/<name>.age`; app secrets (e.g. `personal/opencode-go-key`) live in `secrets/apps/<scope>/` and are provisioned to `~/.secrets/`; host infrastructure secrets live in `secrets/<name>/<hostname>.age` (for example `secrets/tailscale/nixos.age`) and are provisioned to `/run/angst/host-secrets` on NixOS or `~/.secrets` on home-only hosts. Vault stores for projects + db live as `secrets/projects/<scope>.tar.age` + `secrets/db/<scope>.tar.age` (whole trees age-encrypted, scope-isolated). Shared SSH keys are age-encrypted in `secrets/ssh/` and provisioned by `angst-provision-ssh-key`. See [Secrets](secrets.md).
 - **Projects** — `angst projects` syncs declared dev repos into `~/projects/` with encrypted `.env` handling: `secrets/projects/*.tar.age` holds age-encrypted `<scope>/<id>/{metadata.json,.env}` trees, split into `personal`/`work` scopes. `import` decrypts into `~/.secrets/projects`; `sync` clones-if-missing and materializes `.env` (0600) at `~/projects/<name>/.env`. `db` uses the same vault model (`secrets/db/*.tar.age` → `~/.secrets/db` → `~/.config/sqlit` + `~/.config/rainfrog`). `sync` runs at activation + `systemd.user` oneshot. See [Domains](domains.md#gitprojects--encrypted-project-store) and [Secrets](secrets.md#project-store).
 - **Hot-reload** — `angst render` / `angst watch` regenerate theme-rendered configs without a full Nix rebuild.
 
@@ -99,7 +99,7 @@ nix run .#lint-shell               # starship + nushell per theme
 ## Quick Links
 
 - [Architecture](architecture.md) — flake inputs/outputs, host discovery + resolution, build pipeline, VM support, impermanence, dead code
-- [Secrets](secrets.md) — age architecture, master-password bootstrap, VM key forwarding, secret scanning
+- [Secrets](secrets.md) — age architecture, password pool, host secrets, VM key forwarding, secret scanning
 - [Domains](domains.md) — domain framework, full 21-domain table, toolchains (24 langs), tree-sitter
 - [Themes](themes.md) — 13-token schema, 9 themes, normalization/validation, rendering
 - [Tools](tools.md) — angst CLI, shell CLI, VM tool + MCP server, analysis script
@@ -107,7 +107,7 @@ nix run .#lint-shell               # starship + nushell per theme
 
 ## Change Guidance
 
-- **Configuring a machine**: edit `hosts/<domain>/<hostname>/default.nix` (or create a new host dir — it is auto-discovered). Set theme, profiles, toolchains, monitors, persist, sshAgent. For secrets, run `angst bootstrap-secrets --host <host>`.
+- **Configuring a machine**: edit `hosts/<domain>/<hostname>/default.nix` (or create a new host dir — it is auto-discovered). Set theme, profiles, toolchains, monitors, persist, sshAgent, and the explicit `secrets` declaration. Create password entries with `angst bootstrap-password --name <name> --scope <scope>`.
 - **Adding a profile**: create `profiles/<name>.nix` as a feature list `{ enable = [...]; }` and register it in the `profileMap` in `profiles/default.nix`.
 - **Adding a domain**: create `domains/<category>/<name>/default.nix` (the interface), optionally `home.nix`, `system.nix`, `render.nix`, `config/`. Enable via a profile or host extra modules.
 - **Adding a theme**: create `/themes/<name>.nix` following `/themes/schema.nix`; validate with `nix run .#lint-themes`.
@@ -126,7 +126,7 @@ nix run .#lint-shell               # starship + nushell per theme
 | Flake outputs | `/lib/flake/outputs.nix` |
 | Home-manager build | `/lib/build/mkHome.nix` |
 | NixOS build | `/lib/build/mkNixos.nix` |
-| Secrets (age) | `/modules/secrets.nix`, `/runtime/bootstrap-secrets.nix`, `/runtime/angst-cli.nix` |
+| Secrets (age) | `/modules/secrets.nix`, `/modules/nixos/host-secrets.nix`, `/runtime/bootstrap-secrets.nix`, `/runtime/angst-cli.nix` |
 | Profile composition | `/profiles/default.nix`, `/profiles/{base,desktop,development,server,vm}.nix` |
 | Domain framework | `/lib/domains/mkDomain.nix`, `/lib/domains/scan.nix`, `/lib/domains/module.nix` |
 | Theme system | `/themes/default.nix`, `/themes/schema.nix` |

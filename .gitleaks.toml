@@ -3,9 +3,9 @@ useDefault = true
 
 [[rules]]
 id = "angst-plaintext-secret-value"
-description = "Plaintext secret value in secrets.yaml or secrets/master/ (not age-encrypted)"
+description = "Plaintext secret value in secrets.yaml, password pool, or host secrets (not age-encrypted)"
 regex = '''(?i)(password|passphrase|token|secret|api[_-]?key|access[_-]?key|client[_-]?secret)\s*[:=]\s*['"][^'"]{4,}['"]'''
-path = "(secrets\\.ya?ml|secrets/master/)"
+path = "(secrets\\.ya?ml|secrets/password/|secrets/(tailscale|sunshine)/)"
 
 [[rules]]
 id = "angst-projects-plaintext-secret-value"
@@ -32,6 +32,8 @@ paths = [
   "pure\\.md",
   "analysis\\.md",
   "openwiki/",
+  "secrets/password/.*\\.age",
+  "secrets/(tailscale|sunshine)/.*\\.age",
   "secrets/ssh/.*\\.age",
   "secrets/ftp/.*\\.age",
   "secrets/vpn/.*\\.age",

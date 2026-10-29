@@ -12,20 +12,29 @@ import (
 
 func cmdImport(args []string) int {
 	all := false
-	for _, a := range args {
-		switch a {
+	scopesFlag := ""
+	scopesSet := false
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
 		case "--all":
 			all = true
+		case "--scopes":
+			scopesSet = true
+			if i+1 < len(args) {
+				scopesFlag = args[i+1]
+				i++
+			}
 		case "-h", "--help":
 			usage()
 			return shared.ExitOK
 		default:
-			fmt.Fprintf(os.Stderr, "unknown import option: %s\n", a)
+			fmt.Fprintf(os.Stderr, "unknown import option: %s\n", args[i])
 			usage()
 			return shared.ExitUsage
 		}
 	}
 	_ = all
+	selectedScopes := scopesFor(scopesFlag, scopesSet)
 	store := storeRoot()
 	repo := repoRoot()
 	if _, err := os.Stat(repo); err != nil {
@@ -37,7 +46,7 @@ func cmdImport(args []string) int {
 	}
 	_ = os.Chmod(store, 0o700)
 
-	for _, s := range []scope.Scope{scope.Personal, scope.Work} {
+	for _, s := range selectedScopes {
 		tarball := filepath.Join(repo, string(s)+".tar.age")
 		if _, err := os.Stat(tarball); err != nil {
 			fmt.Fprintf(os.Stderr, "warn: no %s tarball at %s; skipping\n", s, tarball)

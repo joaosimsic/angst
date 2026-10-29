@@ -5,12 +5,14 @@
   flakeSelf,
   projects,
   runtime,
+  hostScopes ? [ ],
   ...
 }:
 
 let
   sync = runtime.projects-sync {
     inherit projects flakeSelf;
+    scopes = hostScopes;
   };
 in
 {

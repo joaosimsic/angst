@@ -5,8 +5,8 @@
 # `--flake .#host=nixos` and fails with a confusing "does not provide attribute" error.
 # Run `just --list` to see each recipe's parameter names.
 
-bootstrap-secrets host="nixos":
-    angst bootstrap-secrets --host {{ host }}
+bootstrap-password name="main" scope="personal":
+    angst bootstrap-password --name {{ name }} --scope {{ scope }}
 
 install-nixos *args:
     sudo nix run .#install-nixos -- {{ args }}
@@ -97,33 +97,37 @@ vm host="vm":
 vm-ssh host="vm":
     @NIX_DEFAULT_TARGET_HOST={{ host }} nix run .#vm -- ssh --auto-start
 
-# Encrypt a Tailscale auth key into secrets/apps/personal for nixos or mint.
-remote-tailscale-key name:
-    @case "{{ name }}" in nixos|mint) ;; *) echo "usage: just remote-tailscale-key nixos|mint"; exit 2 ;; esac; \
+# Encrypt a Tailscale auth key for a host into secrets/tailscale/<hostname>.age.
+remote-tailscale-key name scope="personal":
+    @case "{{ name }}" in ""|*/*|.*) echo "usage: just remote-tailscale-key <hostname> [personal|work]"; exit 2 ;; esac; \
+      case "{{ scope }}" in personal|work) ;; *) echo "invalid scope: {{ scope }}"; exit 2 ;; esac; \
       read -rsp "Tailscale auth key for {{ name }}: " key; echo; \
       case "$key" in tskey-auth-*) ;; *) echo "invalid Tailscale auth key"; exit 1 ;; esac; \
-      printf '%s' "$key" | age -r "$(age-keygen -y ~/.config/age/keys.txt)" -o "secrets/apps/personal/tailscale-auth-key-{{ name }}.age"; \
-      chmod 600 "secrets/apps/personal/tailscale-auth-key-{{ name }}.age"; \
-      git add "secrets/apps/personal/tailscale-auth-key-{{ name }}.age"
+      keyfile="$HOME/.config/age/keys.txt"; [ "{{ scope }}" = work ] && keyfile="$HOME/.config/age/work-keys.txt"; \
+      mkdir -p "secrets/tailscale"; \
+      printf '%s' "$key" | age -r "$(age-keygen -y "$keyfile")" -o "secrets/tailscale/{{ name }}.age"; \
+      chmod 600 "secrets/tailscale/{{ name }}.age"; \
+      git add "secrets/tailscale/{{ name }}.age"
 
-# Generate and encrypt Sunshine web credentials; leaves plaintext only in ~/.secrets.
-remote-sunshine-secret:
-    @read -rp "Sunshine username [joao]: " user; user=${user:-joao}; \
+# Generate and encrypt Sunshine web credentials for a host.
+remote-sunshine-secret name="nixos" scope="personal":
+    @case "{{ name }}" in ""|*/*|.*) echo "usage: just remote-sunshine-secret <hostname> [personal|work]"; exit 2 ;; esac; \
+      case "{{ scope }}" in personal|work) ;; *) echo "invalid scope: {{ scope }}"; exit 2 ;; esac; \
+      read -rp "Sunshine username [joao]: " user; user=${user:-joao}; \
       pass=$(openssl rand -base64 24 | tr -d '\n'); \
-      printf '%s\n%s\n' "$user" "$pass" | age -r "$(age-keygen -y ~/.config/age/keys.txt)" -o secrets/apps/personal/sunshine-credentials.age; \
-      chmod 600 secrets/apps/personal/sunshine-credentials.age; \
-      git add secrets/apps/personal/sunshine-credentials.age; \
-      install -d -m 700 "$HOME/.secrets"; \
-      printf '%s\n%s\n' "$user" "$pass" > "$HOME/.secrets/sunshine-credentials"; \
-      chmod 600 "$HOME/.secrets/sunshine-credentials"; \
-      echo "Sunshine credentials stored at ~/.secrets/sunshine-credentials"
+      keyfile="$HOME/.config/age/keys.txt"; [ "{{ scope }}" = work ] && keyfile="$HOME/.config/age/work-keys.txt"; \
+      mkdir -p "secrets/sunshine"; \
+      printf '%s\n%s\n' "$user" "$pass" | age -r "$(age-keygen -y "$keyfile")" -o "secrets/sunshine/{{ name }}.age"; \
+      chmod 600 "secrets/sunshine/{{ name }}.age"; \
+      git add "secrets/sunshine/{{ name }}.age"; \
+      echo "Sunshine credentials encrypted at secrets/sunshine/{{ name }}.age"
 
 # Run on Mint: activate home config, install Tailscale, enroll with the mint auth key.
 remote-mint-bootstrap:
     just hm-switch mint
-    @test -f "$HOME/.secrets/tailscale-auth-key-mint" || { echo "missing ~/.secrets/tailscale-auth-key-mint; run: just remote-tailscale-key mint && just hm-switch mint"; exit 1; }
+    @test -f "$HOME/.secrets/tailscale" || { echo "missing ~/.secrets/tailscale; run: just remote-tailscale-key mint && just hm-switch mint"; exit 1; }
     @command -v tailscale >/dev/null 2>&1 || sudo sh -c 'curl -fsSL https://tailscale.com/install.sh | sh'
-    @sudo tailscale up --auth-key "$(cat "$HOME/.secrets/tailscale-auth-key-mint")"
+    @sudo tailscale up --auth-key "$(cat "$HOME/.secrets/tailscale")"
     @if command -v ufw >/dev/null 2>&1 && sudo ufw status 2>/dev/null | grep -q 'Status: active'; then sudo ufw allow in on tailscale0; fi
     @sudo tailscale status
     @echo "Open Moonlight, add the NixOS Tailscale IP or MagicDNS name, then enter the Sunshine PIN."

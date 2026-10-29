@@ -7,17 +7,20 @@ angst ships three CLI tools and an MCP server for VM management: the **angst** s
 A bash script packaged via `pkgs.writeShellApplication` (runtime inputs: coreutils, findutils, git, nix, watchexec, jq, age, openssl, openssh, diffutils). Exposed as `apps.angst`, `apps.render`, `apps.watch` and the `angst` package.
 
 ```
-angst bootstrap-secrets [--host HOST]
+angst bootstrap-password --name NAME --scope personal|work
+angst set-password-hash --username USER --age-path FILE --scopes personal,work [--home DIR]
 angst render [--repo PATH] [--host HOST] [--theme THEME] [--reload|--no-reload]
 angst watch  [--repo PATH] [--host HOST] [--theme THEME]
-angst projects <add|sync|status|capture|edit-env|rm> ...
+angst projects <import|sync> [--scopes personal[,work]]
+angst db <import|sync> [--scopes personal[,work]]
 angst ssh-key <generate|verify> --scope personal|work
+angst provision-app-secret --secrets-dir DIR --slug [SCOPE/]NAME ...
 ```
 
 - **`render`** — determines repo root (`--repo`/git/`pwd`), host (`--host`, default `NIX_DEFAULT_TARGET_HOST`/`ANGST_HOST`/`nixos`), theme (default from the host decl via `nix eval`), batch-evals `.#lib.renderDomainOutputsFor`, writes rendered domain configs, syncs per-dir `.gitignore`, and optionally reloads i3 (`--reload`, default on; requires `i3-msg` + `I3SOCK`).
 - **`watch`** — wraps render with `watchexec` on `themes/`, `domains/`, `hosts/` for hot-reload.
-- **`bootstrap-master-password`** — interactive master-password bootstrap: reads password twice (never echoed) and age-encrypts it to `secrets/master/<host>.age` with the host's scope recipient. The boot service derives the `mkpasswd -m sha-512` hash. Requires `age`/`age-keygen` and `mkpasswd` on PATH. See [Secrets](secrets.md).
-- **`projects`** — syncs declared dev repos into `~/projects/` from an age-encrypted tarball store. The repo holds `secrets/projects/{personal,work}.tar.age` (each a whole `<scope>/<id>/{metadata.json,.env}` tree, encrypted to that scope's age key). `import` decrypts the tarballs into the decrypted **working store** (`~/.secrets/projects`, `ANGST_PROJECTS_STORE` overrides); `sync` clones-if-missing into `~/projects/<name>` (no auto-pull, no hooks) and materializes a hash-tracked `.env` (0600) from the working store. A locally-edited `.env` is never clobbered (`sync` marks it stale + exits non-zero); missing key/tarball/network → warn + exit 0. `sync` filters to the host's declared ids when `ANGST_PROJECTS_ONLY` is set (wrapper: `projects = [...]` in the host decl; unset = all). Editing the repo tarballs is a manual `angst vault decrypt --dir` → edit → `angst vault encrypt --dir` flow. Scope key selection: personal → `~/.config/age/keys.txt`, work → `~/.config/age/work-keys.txt` (`ANGST_*_AGE_KEY_FILE` overrides).
+- **`bootstrap-password`** — interactive password-pool bootstrap: reads the password twice (never echoed) and age-encrypts it to `secrets/password/<name>.age` with the selected scope recipient. The host declaration selects the name; `set-password-hash` tries the declared scopes at boot. Requires `age`/`age-keygen` on PATH. See [Secrets](secrets.md).
+- **`projects`** — syncs declared dev repos into `~/projects/` from an age-encrypted tarball store. The repo holds `secrets/projects/{personal,work}.tar.age` (each a whole `<scope>/<id>/{metadata.json,.env}` tree, encrypted to that scope's age key). `import` decrypts only the scopes passed with `--scopes` into the decrypted **working store** (`~/.secrets/projects`, `ANGST_PROJECTS_STORE` overrides); `sync` clones-if-missing into `~/projects/<name>` (no auto-pull, no hooks) and materializes a hash-tracked `.env` (0600) from the working store. A locally-edited `.env` is never clobbered (`sync` marks it stale + exits non-zero); missing key/tarball/network → warn + exit 0. `sync` filters to the host's declared ids when `ANGST_PROJECTS_ONLY` is set (wrapper: `projects = [...]` in the host decl; unset = all). Scope key selection: personal → `~/.config/age/keys.txt`, work → `~/.config/age/work-keys.txt` (`ANGST_*_AGE_KEY_FILE` overrides).
 
   | Subcommand | Behavior |
   |---|---|
@@ -27,7 +30,7 @@ angst ssh-key <generate|verify> --scope personal|work
   See [Secrets — Project store](secrets.md#project-store) for the vault/age flow and [Domains](domains.md#gitprojects--encrypted-project-store) for the domain.
 - **`ssh-key`** — manages the shared, scope-isolated SSH keys in `secrets/ssh/` (age-encrypted at rest, one key per scope, provisioned to every host at boot). `generate` derives the recipient from the scope age key (`age-keygen -y`), writes `.age` + `.pub` from the same keypair, and prints where to authorize the public key; `verify` decrypts `.age` locally and cross-checks the committed `.pub`. See [Secrets — Shared SSH keys](secrets.md#shared-ssh-keys-secretsssh).
 
-There is **no** `angst passwd` (old wiki/README claim); password handling happens through `bootstrap-secrets`.
+There is **no** `angst passwd`; password handling happens through `bootstrap-password` and the boot-time `set-password-hash`.
 
 ## shell CLI (`tools/shell`, Rust)
 

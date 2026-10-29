@@ -174,7 +174,8 @@ pkgs.testers.runNixOSTest {
           "personal"
           "work"
         ];
-        hostSecrets = [ "opencode-go-key" ];
+        hostAppSecrets = [ "personal/opencode-go-key" ];
+        hostHostSecrets = [ ];
       };
       users.${username} = {
         imports = [ ../modules/home/app-secrets.nix ];

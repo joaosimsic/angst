@@ -6,4 +6,5 @@
   theme = "monochrome";
   profiles = [ "ci" ];
   toolchains = [ "nix" ];
+  secrets.scopes = [ ];
 }

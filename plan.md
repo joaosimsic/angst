@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft. No code changes applied.
+Workstream A implemented through A7; host-secret files and Workstream B remain pending.
 
 ## Goal
 
@@ -83,15 +83,16 @@ Sunshine runs as a user service bound to `graphical-session.target`. i3 starts t
 
 - Host identity is `hostname` only. Directories and domains do not select secrets.
 - Scope is only `personal` or `work`.
-- Host infrastructure secrets are keyed by hostname.
-- Passwords are a shared pool, not keyed by hostname.
+- Host infrastructure secrets are keyed by type, then hostname.
+- Passwords are a flat shared pool, not keyed by hostname or scope.
 - App secrets are keyed by scope and slug.
 
 ```text
 secrets/
-  passwords/<scope>/<name>.age        password pool
+  password/<name>.age                 flat password pool
   apps/<scope>/<slug>.age             cross-host app secrets
-  hosts/<hostname>/<name>.age         host infrastructure secrets
+  tailscale/<hostname>.age            host infrastructure secret
+  sunshine/<hostname>.age             host infrastructure secret
   ssh/<scope>.ed25519.age             shared SSH keys
   projects/<scope>.tar.age            project store
   db/<scope>.tar.age                  DB store
@@ -107,8 +108,8 @@ secrets = {
   # Age identities this host may use. No inference from hosts/<domain>/.
   scopes = [ "personal" "work" ];
 
-  # One selected password from the pool, applied to user and root.
-  password = "personal/main";
+  # One selected password from the flat pool, applied to user and root.
+  password = "main";
 
   # Exact app secrets: secrets/apps/<scope>/<slug>.age -> ~/.secrets/<slug>
   apps = [
@@ -116,11 +117,11 @@ secrets = {
     "work/cursor-api-key"
   ];
 
-  # Exact host secrets: secrets/hosts/<hostname>/<name>.age
+  # Exact host secrets: secrets/<name>/<hostname>.age
   # -> /run/angst/host-secrets/<name> on NixOS, ~/.secrets/<name> on home-only.
   host = [
-    "personal/sunshine-credentials"
-    "personal/tailscale-auth-key"
+    "personal/sunshine"
+    "personal/tailscale"
   ];
 };
 ```
@@ -137,9 +138,9 @@ Rules:
 
 | Host | scopes | password | apps | host secrets |
 |---|---|---|---|---|
-| `hosts/personal/nixos` | personal, work | `personal/main` | personal/opencode-go-key, work/cursor-api-key | personal/sunshine-credentials, personal/tailscale-auth-key |
-| `hosts/personal/work` | personal, work | `personal/work` | personal/opencode-go-key, work/cursor-api-key | personal/tailscale-auth-key |
-| `hosts/personal/mint` | personal, work | none | personal/opencode-go-key, work/cursor-api-key | personal/tailscale-auth-key |
+| `hosts/personal/nixos` | personal, work | `main` | personal/opencode-go-key, work/cursor-api-key | personal/sunshine, personal/tailscale |
+| `hosts/personal/work` | personal, work | `main` | personal/opencode-go-key, work/cursor-api-key | personal/tailscale |
+| `hosts/personal/mint` | personal, work | none | personal/opencode-go-key, work/cursor-api-key | personal/tailscale |
 | `hosts/work/home` | work | none | work/cursor-api-key | none |
 | `hosts/vm` | personal, work | none | explicit personal/work entries | none |
 | `hosts/personal/generic` | personal | none | personal/opencode-go-key | none |
@@ -147,7 +148,7 @@ Rules:
 
 `hosts/personal/work` and `hosts/work/home` remain separate machines with separate declarations.
 
-Password names are provisional. Confirm `personal/main` and `personal/work`, or rename before migration.
+Password names are provisional. `main` is the only password-pool entry currently declared.
 
 ### 2.4 Provisioning map
 
@@ -195,13 +196,13 @@ Changes:
 Storage:
 
 ```text
-secrets/passwords/<scope>/<name>.age
+secrets/password/<name>.age
 ```
 
 Boot behavior:
 
 - `angst-bootstrap-secrets` runs before `getty@.service`, `serial-getty@.service`, and `display-manager.service`.
-- It decrypts the selected password with the scope age key.
+- It tries each declared host scope age key until one decrypts the selected password.
 - It applies the same sha-512 hash to the host user and `root`.
 - If the password file is absent or cannot decrypt, it skips and keeps the fallback hash.
 - Decrypted plaintext exists only in a temporary directory with mode `0700` and is removed.
@@ -212,9 +213,9 @@ CLI changes:
   ```bash
   angst bootstrap-password --name <name> --scope personal|work
   ```
-- Write `secrets/passwords/<scope>/<name>.age`.
+- Write `secrets/password/<name>.age`; the scope only selects the encryption key.
 - Remove the `strings.Contains(configDir, "/work/")` scope inference.
-- `set-password-hash` accepts `--scope` and resolves the correct age key.
+- `set-password-hash` accepts `--scopes` and tries the declared age keys in order.
 - Keep a deprecated `bootstrap-master-password` alias for one release if desired.
 
 Migration note:
@@ -228,8 +229,11 @@ Migration note:
 Storage:
 
 ```text
-secrets/hosts/<hostname>/<name>.age
+secrets/<name>/<hostname>.age
 ```
+
+Host secret type names are top-level directories under `secrets/`. Reserved names
+(`apps`, `password`, `ssh`, `projects`, `db`, `vpn`, `ftp`, `hosts`) are rejected.
 
 NixOS:
 
@@ -244,14 +248,13 @@ NixOS:
 Home-only hosts:
 
 - Add a home module that decrypts declared host secrets into `~/.secrets/<name>` with mode `0600`.
-- Mint's bootstrap reads `~/.secrets/tailscale-auth-key` instead of a hostname-specific app secret.
-- Alternatively, `remote-mint-bootstrap` decrypts directly from the repo and never persists the key.
+- Mint's bootstrap reads `~/.secrets/tailscale`, provisioned by home activation from `secrets/tailscale/mint.age`.
 
 Consumers:
 
-- Tailscale: `authKeyFile = "/run/angst/host-secrets/tailscale-auth-key"`.
-- Sunshine: `ExecStartPre` decrypts or reads `sunshine-credentials`, then runs `sunshine --creds`.
-- No consumer hardcodes `tailscale-auth-key-nixos.age`.
+- Tailscale: `authKeyFile = "/run/angst/host-secrets/tailscale"`.
+- Sunshine: `ExecStartPre` decrypts or reads `sunshine`, then runs `sunshine --creds`.
+- No consumer hardcodes a hostname-specific app secret filename.
 
 ### A4. App secrets
 
@@ -298,16 +301,15 @@ Update every decryptor to use the explicit `scopes`:
 
 - `just remote-tailscale-key <hostname> <scope>`
   - Prompt for `tskey-auth-...`.
-  - Encrypt to `secrets/hosts/<hostname>/tailscale-auth-key.age`.
+  - Encrypt to `secrets/tailscale/<hostname>.age`.
   - `chmod 600`, `git add`.
 - `just remote-sunshine-secret <hostname> <scope>`
   - Generate a random password.
-  - Encrypt to `secrets/hosts/<hostname>/sunshine-credentials.age`.
-  - Install plaintext only where the caller needs it.
+  - Encrypt to `secrets/sunshine/<hostname>.age`.
+  - Do not persist plaintext.
 - `just remote-mint-bootstrap`
-  - Decrypt `secrets/hosts/mint/tailscale-auth-key.age` with the personal age key.
-  - Run `tailscale up --auth-key -`.
-  - Do not copy the key into `~/.secrets`.
+  - Read `~/.secrets/tailscale`, provisioned from `secrets/tailscale/mint.age` by home activation.
+  - Run `tailscale up --auth-key`.
 - `just bootstrap-secrets` and installer messages use the new password command.
 
 ### A7. Checks and tests
@@ -322,10 +324,10 @@ Add/extend checks:
   - Every `password`, `apps`, and `host` entry has a valid scope prefix.
   - Every scope prefix is present in `scopes`.
   - Every `secrets/apps/<scope>/<slug>.age` exists and is age-encrypted.
-  - Every `secrets/hosts/<hostname>/<name>.age` exists and is age-encrypted.
+  - Every `secrets/<name>/<hostname>.age` exists and is age-encrypted.
   - No host infrastructure secret remains under `secrets/apps/`.
 - `checks/secrets.nix`
-  - Add `secrets/passwords/*` and `secrets/hosts/*` envelope checks.
+  - Add `secrets/password/*` and declared host-secret envelope checks.
 - `checks/persist-ownership.nix`
   - Update special args for the new secret fields.
 - Go tests:
@@ -339,10 +341,10 @@ Add/extend checks:
 1. Implement the new schema and provisioners with the old master path still supported.
 2. Create new password files with `angst bootstrap-password` on a machine with the intended scope key.
 3. Add new host secret files:
-   - `secrets/hosts/nixos/sunshine-credentials.age`
-   - `secrets/hosts/nixos/tailscale-auth-key.age`
-   - `secrets/hosts/mint/tailscale-auth-key.age`
-   - `secrets/hosts/work/tailscale-auth-key.age`
+   - `secrets/sunshine/nixos.age`
+   - `secrets/tailscale/nixos.age`
+   - `secrets/tailscale/mint.age`
+   - `secrets/tailscale/work.age`
 4. Update all host declarations.
 5. Build every host without switching:
    ```bash
@@ -437,18 +439,18 @@ Common to host and client roles:
 
 ```nix
 services.tailscale.authKeyFile =
-  "/run/angst/host-secrets/tailscale-auth-key";
+  "/run/angst/host-secrets/tailscale";
 ```
 
-- Require `personal/tailscale-auth-key` in `secrets.host` unless manual enrollment is explicitly allowed.
+- Require `personal/tailscale` in `secrets.host` unless manual enrollment is explicitly allowed.
 - `angst-provision-host-secrets.service` runs before `tailscaled-autoconnect.service`.
 
 Work client:
 
 - Generate a Tailscale auth key.
 - Run `just remote-tailscale-key work personal`.
-- Commit `secrets/hosts/work/tailscale-auth-key.age`.
-- Add `"personal/tailscale-auth-key"` to `hosts/personal/work` `secrets.host`.
+- Commit `secrets/tailscale/work.age`.
+- Add `"personal/tailscale"` to `hosts/personal/work` `secrets.host`.
 
 If manual enrollment is chosen, skip the key declaration and run `sudo tailscale up` once on work.
 
@@ -463,7 +465,7 @@ Host role only:
 - User service remains bound to `graphical-session.target`.
 - i3 already starts `graphical-session.target` from its config.
 - Credentials:
-  - Read `sunshine-credentials` from the provisioned host secret.
+  - Read `sunshine` from the provisioned host secret.
   - `ExecStartPre` exits non-zero if the file is not ready; `Restart=on-failure` retries.
   - Or decrypt directly with the user age key in `ExecStartPre` and avoid cross-manager ordering.
 
@@ -578,5 +580,5 @@ Then:
 - Tailscale auth keys expire. Re-enrollment needs a new key and a new encrypted file.
 - Secret declarations control automation, not cryptographic isolation. A host that has an age key on disk can still decrypt anything encrypted to that key.
 - Old `secrets/master/*.age` files may not decrypt with the keys on the current workstation. Recreate passwords; do not rename blindly.
-- Password names are provisional. Confirm `personal/main` and `personal/work`.
+- Password names are provisional. `main` is the only pool entry currently declared.
 - Work Tailscale enrollment is assumed declarative. If manual enrollment is preferred, omit the host secret and run `tailscale up` once.

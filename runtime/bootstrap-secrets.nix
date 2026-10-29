@@ -6,7 +6,7 @@
 {
   username,
   agePath,
-  ageKey,
+  scopes ? [ ],
 }:
 mkScript {
   name = "angst-bootstrap-secrets";
@@ -17,6 +17,10 @@ mkScript {
     age
   ];
   text = ''
-    exec ${goAngst}/bin/angst set-password-hash --username "${username}" --age-path "${agePath}" --age-key "${ageKey}"
+    exec ${goAngst}/bin/angst set-password-hash \
+      --username "${username}" \
+      --age-path "${agePath}" \
+      --scopes "${builtins.concatStringsSep "," scopes}" \
+      --home "/home/${username}"
   '';
 }

@@ -50,14 +50,11 @@ let
     if builtins.pathExists p then p else null;
 
   secrets = import ../../modules/secrets.nix {
-    inherit
-      self
-      host
-      lib
-      ;
+    inherit host lib;
   };
 
-  masterAgePath = self + "/secrets/master/${host.hostname}.age";
+  passwordAgePath =
+    if host.passwordSecret != null then self + "/secrets/password/${host.passwordSecret}.age" else null;
 in
 inputs.nixpkgs.lib.nixosSystem {
   specialArgs = {
@@ -71,7 +68,8 @@ inputs.nixpkgs.lib.nixosSystem {
       ;
     hostType = host.type;
     hostScopes = host.scopes;
-    hostSecrets = host.secrets;
+    hostAppSecrets = host.appSecrets;
+    hostHostSecrets = host.hostSecrets;
     inherit host;
     hostName = host.hostname;
     inherit (host.scan) themes;
@@ -102,26 +100,27 @@ inputs.nixpkgs.lib.nixosSystem {
         users.users.${host.username}.hashedPassword = lib.mkDefault host.password;
         users.users.root.hashedPassword = lib.mkDefault host.password;
 
-        systemd.services.angst-bootstrap-secrets = lib.mkIf (builtins.pathExists masterAgePath) {
-          description = "angst: set login password hash from secrets";
-          wantedBy = [ "multi-user.target" ];
-          before = [
-            "getty@.service"
-            "serial-getty@.service"
-            "display-manager.service"
-          ];
+        systemd.services.angst-bootstrap-secrets =
+          lib.mkIf (passwordAgePath != null && builtins.pathExists passwordAgePath)
+            {
+              description = "angst: set login password hash from secrets";
+              wantedBy = [ "multi-user.target" ];
+              before = [
+                "getty@.service"
+                "serial-getty@.service"
+                "display-manager.service"
+              ];
 
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            ExecStart =
-              (runtime.bootstrap-secrets {
-                inherit (host) username;
-                agePath = masterAgePath;
-                ageKey = "/home/${host.username}/.config/age/keys.txt";
-              }).bin;
-          };
-        };
+              serviceConfig = {
+                Type = "oneshot";
+                RemainAfterExit = true;
+                ExecStart =
+                  (runtime.bootstrap-secrets {
+                    inherit (host) username scopes;
+                    agePath = passwordAgePath;
+                  }).bin;
+              };
+            };
       }
     )
   ]
@@ -159,7 +158,8 @@ inputs.nixpkgs.lib.nixosSystem {
             ;
           hostType = host.type;
           hostScopes = host.scopes;
-          hostSecrets = host.secrets;
+          hostAppSecrets = host.appSecrets;
+          hostHostSecrets = host.hostSecrets;
           inherit host;
           hostName = host.hostname;
           inherit (host.scan) themes;

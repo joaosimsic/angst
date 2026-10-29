@@ -25,7 +25,10 @@ Standalone: `nix run .#shell -- dev` / `nix profile install .#shell && shell dev
 | `theme-override` | Theme override propagates into a real home config (`home-theme-override-test`) |
 | `theme-semantic-distinct` | `ansi.error/warn/info/success` mutually distinct |
 | `check-password` | Host `password` field is a valid `$6$` sha-512 hash (skips home-only/`!` hosts) |
-| `check-secrets-encrypted` | Every `secrets/master/*.age` is age-encrypted (`age-encryption.org/v1` envelope) |
+| `check-secrets-encrypted` | Every `secrets/password/*.age` is age-encrypted (`age-encryption.org/v1` envelope) |
+| `check-host-secrets-encrypted` | Every declared host-secret `.age` is age-encrypted |
+| `check-host-identity` | Host declarations use unique hostnames |
+| `check-secret-declarations` | Declared scopes and secret refs are valid; missing files warn |
 | `check-ftp-encrypted` | Every `secrets/ftp/*` is age-encrypted (age envelope, no plaintext server fields) |
 | `check-projects-ftp-declared` | Host-declared `projects` ids exist in the encrypted store; host-declared ftp `configFile`s exist + are encrypted + use a safe `mountPoint` |
 | `check-projects-pipeline` | Functional round trip with throwaway age keys: export → leak-free encrypted store → byte-exact import; sync materializes `.env` (0600), store-change updates it, local edits are never clobbered (status `STALE`) |
@@ -54,7 +57,7 @@ Nix CI uses DeterminateSystems `nix-installer-action` + `magic-nix-cache-action`
 - Install: `just install-hooks` (sets `core.hooksPath githooks`).
 - `githooks/pre-commit` — `gitleaks git --pre-commit --staged --redact` (host binary or `nix run nixpkgs#gitleaks`).
 - `githooks/pre-push` — scans each pushed ref range with gitleaks (`<remote_oid>..<local_oid>`, or `--not --remotes` for brand-new refs).
-- `.gitleaks.toml` allowlists age ciphertext and public keys, and excludes `README.md`/`pure.md`/`analysis.md`/`openwiki/`; a custom rule flags plaintext secrets inside `secrets.yaml` and `secrets/master/`.
+- `.gitleaks.toml` allowlists age ciphertext and public keys, and excludes `README.md`/`pure.md`/`analysis.md`/`openwiki/`; custom rules flag plaintext secrets inside `secrets.yaml`, `secrets/password/`, `secrets/tailscale/`, and `secrets/sunshine/`.
 - `*.dec`, `*.agekey`, `node_modules`, `result*`, `*.qcow2` are gitignored.
 - See [Secrets](secrets.md) for the full scanning story.
 
@@ -62,7 +65,9 @@ Nix CI uses DeterminateSystems `nix-installer-action` + `magic-nix-cache-action`
 
 | Recipe | Action |
 |---|---|
-| `just bootstrap-secrets host=…` | `angst bootstrap-secrets --host <host>` |
+| `just bootstrap-password name scope` | `angst bootstrap-password --name <name> --scope <personal|work>` |
+| `just remote-tailscale-key hostname scope` | Encrypt a host Tailscale auth key to `secrets/tailscale/<hostname>.age` |
+| `just remote-sunshine-secret hostname scope` | Encrypt host Sunshine credentials to `secrets/sunshine/<hostname>.age` |
 | `just disko host=…` | Run disko with `hosts/<host>/disk.nix` |
 | `just hardware host=…` | `nixos-generate-config --show-hardware-config > hosts/<host>/hardware.nix` |
 | `just bootstrap-disk host=…` | `disko` + `hardware` |
@@ -105,12 +110,12 @@ cat > hosts/<domain>/<hostname>/default.nix <<'EOF'
   theme = "miasma"; profiles = ["base" "desktop" "development"]; toolchains = "*"; }
 EOF
 just hardware host=<hostname>        # generate hardware.nix next to the decl
-just bootstrap-secrets host=<hostname>   # create encrypted secrets.yaml + password hash
+just bootstrap-password main personal   # create/rotate a password-pool entry
 just switch host=<hostname>          # deploy
 ```
 
 **Home-only machine (e.g. `personal/mint`, `type = "home"`):** create the decl, then `just hm-switch host=<hostname>` — no NixOS rebuild needed; secrets optional.
 
-**Recovery / unseeded boot:** without an age key the host builds and boots with the fallback password hash (default "changeme" from `lib/resolve.nix`); run `angst bootstrap-master-password --host <host>` and re-switch once the key is present at `~/.config/age/keys.txt`.
+**Recovery / unseeded boot:** without an age key or password file the host builds and boots with the fallback password hash (default "changeme" from `lib/resolve.nix`); run `angst bootstrap-password --name <name> --scope <personal|work>` on a machine with the intended age key and re-switch.
 
 **Maintenance:** `nix flake lock`/`nix flake update` for inputs; `nix-collect-garbage -d` after switches; `just analyze` to refresh `analysis.md`.

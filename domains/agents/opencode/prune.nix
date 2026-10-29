@@ -1,6 +1,5 @@
 {
   pkgs,
-  lib ? pkgs.lib,
   opencodePackage,
   olderThanDays,
 }:

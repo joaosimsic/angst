@@ -10,7 +10,25 @@ import (
 )
 
 func cmdSync(args []string) int {
-	_ = args
+	scopesFlag := ""
+	scopesSet := false
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--scopes":
+			scopesSet = true
+			if i+1 < len(args) {
+				scopesFlag = args[i+1]
+				i++
+			}
+		case "-h", "--help":
+			usage()
+			return shared.ExitOK
+		default:
+			fmt.Fprintf(os.Stderr, "unknown sync option: %s\n", args[i])
+			usage()
+			return shared.ExitUsage
+		}
+	}
 	store := storeRoot()
 	root := projectsRoot()
 	if _, err := os.Stat(store); err != nil {
@@ -23,7 +41,7 @@ func cmdSync(args []string) int {
 	_ = os.Chmod(root, 0o755)
 
 	failed := false
-	for _, s := range []scope.Scope{scope.Personal, scope.Work} {
+	for _, s := range scopesFor(scopesFlag, scopesSet) {
 		scopePath := filepath.Join(store, string(s))
 		if st, err := os.Stat(scopePath); err != nil || !st.IsDir() {
 			continue

@@ -14,7 +14,10 @@
 
   monitors = { };
   db = [ ];
-  secrets = [ "opencode-go-key" ];
+  secrets = {
+    scopes = [ "personal" ];
+    apps = [ "personal/opencode-go-key" ];
+  };
   persist = {
     enable = false;
   };

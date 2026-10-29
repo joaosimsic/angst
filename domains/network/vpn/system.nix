@@ -4,6 +4,7 @@
   flakeSelf,
   runtime,
   userConfig,
+  hostScopes ? [ ],
   ...
 }:
 
@@ -102,7 +103,7 @@ in
       (lib.mkIf (cfg.openvpn.servers != { }) {
         systemd.services = {
           angst-provision-vpn = {
-            description = "angst: decrypt VPN .ovpn + creds (both scopes, ephemeral)";
+            description = "angst: decrypt VPN .ovpn + creds (declared scopes, ephemeral)";
             before = map (n: "openvpn-${n}.service") (builtins.attrNames cfg.openvpn.servers);
             after = [
               "local-fs.target"
@@ -129,10 +130,7 @@ in
                   secretsDir = "${flakeSelf}/${cfg.secretsDir}";
                   inherit (cfg) destDir;
                   inherit (userConfig) username homeDirectory;
-                  scopes = [
-                    "personal"
-                    "work"
-                  ];
+                  scopes = hostScopes;
                 }).bin;
             }
             // lib.optionalAttrs (lib.hasPrefix "/run/" cfg.destDir) {

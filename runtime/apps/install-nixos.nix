@@ -668,10 +668,10 @@ mkScript {
     cat <<'NEXT'
     ==> Install complete. Next steps:
       1. reboot; the age identity lives on the data partition, so the boot
-         service applies the master password automatically
+         service applies the selected password automatically
       2. only if no identity was found: log in with the fallback password
          ('changeme'), restore the age keys to /home/durable/age, then run:
-           angst bootstrap-master-password --host nixos
+           angst bootstrap-password --name main --scope personal
       3. verify mounts: findmnt / /home /home/joao /state /home/durable/age
     NEXT
   '';

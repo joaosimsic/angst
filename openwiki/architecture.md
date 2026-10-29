@@ -29,7 +29,7 @@ The `representative` host (first NixOS host) drives shared outputs: `default` pa
 Assembles a `nixosSystem` from:
 - the host decl's profile modules (`nixosModules`), domain system modules (`mkNixosSystemModule` over `systemEntries`), `modules/nixos` base, per-host `hardware.nix` (auto-detected next to the decl), `host.extraNixos`, session env vars;
 - **always**: the VM stack (`modules/vm/detect.nix`, `runtime.nix`, `vm-variant.nix`, `host-mount.nix`);
-- **`angst-bootstrap-secrets`** systemd service (when secrets are decryptable): derives the login hash from the decrypted `masterPassword` via `mkpasswd -m sha-512` and applies it to user + root (runs before getty/display-manager). SSH keys are not part of it — shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned by the `remote/ssh` domain's `angst-provision-ssh-key` oneshot (see [Secrets](secrets.md));
+- **`angst-bootstrap-secrets`** systemd service (when the declared `secrets/password/<name>.age` exists): tries the host's declared scopes, derives the login hash via `mkpasswd -m sha-512`, and applies it to user + root (runs before getty/display-manager). `angst-provision-host-secrets` decrypts declared host infrastructure secrets into `/run/angst/host-secrets` before Tailscale. SSH keys are separate — shared scope SSH keys are age-encrypted in `secrets/ssh/` and provisioned by the `remote/ssh` domain's `angst-provision-ssh-key` oneshot (see [Secrets](secrets.md));
 - impermanence (when `host.persist.enable`), home-manager NixOS module wiring `secrets.homeModules` into the user, and service ordering (`home-manager-<user>` before sshd/getty; getty ordering skipped on QEMU VMs).
 
 ### `lib/build/mkHome.nix`
@@ -42,7 +42,7 @@ Both builders receive `themeOverride`/`shellOverride` to power the representativ
 
 ## Hosts and Configuration Model
 
-There is **no** `local/config.nix` anymore: machine identity is a tracked, diffable Nix file per host. The decl shape is documented in [quickstart](quickstart.md); `lib/resolve.nix` defines every field and default. The master password is age-encrypted at `secrets/master/<hostname>.age`; app secrets live in `secrets/apps/<scope>/`.
+There is **no** `local/config.nix` anymore: machine identity is a tracked, diffable Nix file per host. The decl shape is documented in [quickstart](quickstart.md); `lib/resolve.nix` defines every field and default. Secrets are explicit: password names select flat `secrets/password/<name>.age` files, app secrets live in `secrets/apps/<scope>/`, and host infrastructure secrets live in `secrets/<name>/<hostname>.age` (for example `secrets/tailscale/nixos.age`). Domains and directory names no longer select scopes.
 
 > The old single-file model (`local/config.nix` + `lib/read-config.nix`) was removed in the `refac/pure` → `refac/nix-managed-home` progression (mid-2026). Rationale recorded in `pure.md`: disposability and purity — machine identity as plain, diffable Nix, auto-discovered, zero ceremony (no flake.nix edits), no `--impure`/env hacks.
 

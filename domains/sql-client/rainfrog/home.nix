@@ -5,12 +5,14 @@
   db,
   flakeSelf,
   runtime,
+  hostScopes ? [ ],
   ...
 }:
 
 let
   sync = runtime.db-sync {
     inherit db flakeSelf;
+    scopes = hostScopes;
   };
 in
 {

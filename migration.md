@@ -4,7 +4,7 @@ Mint box `mint` becomes NixOS host `work` (`hosts/personal/work`). Full wipe of 
 
 Box: `i5-7400`, `Intel HD 630` + `NVIDIA GT 710 (legacy_470)`, `Realtek` ethernet only (no wifi), `sda 111,8G`, `15Gi` RAM, monitors `HDMI-0` + `VGA-0` at `1920x1080@60`, `br-abnt2`, `America/Sao_Paulo`.
 
-Host: profiles `base desktop development design embedded game-dev office obs vpn` (no `gaming`), `toolchains = "*"`, theme `miasma`, persist root `/state` + dataRoot `/home/durable`, `secrets/master/work.age` holds same password as `nixos`.
+Host: profiles `base desktop development design embedded game-dev office obs vpn` (no `gaming`), `toolchains = "*"`, theme `miasma`, persist root `/state` + dataRoot `/home/durable`; `secrets.password = "main"` uses the same flat pool entry as `nixos`.
 
 ## A. Pre-boot (on Mint)
 
@@ -32,9 +32,9 @@ Small USB stick, any FAT32. Keep this stick apart from backup disk.
 git bundle create /mnt-keys/angst.bundle --all
 ```
 
-Installer has none of your SSH keys; bundle carries committed `hosts/personal/work` + `secrets/master/work.age`.
+Installer has none of your SSH keys; bundle carries the committed `hosts/personal/work` declaration.
 
-Flash graphical NixOS ISO (25.11+) to a second USB stick. Plug ethernet cable (box has no wifi). Know your login: same master password as `nixos` box. No keys found at boot → fallback `changeme`.
+Flash graphical NixOS ISO (25.11+) to a second USB stick. Plug ethernet cable (box has no wifi). Know your login: the `main` password; without the personal age key the fallback is `changeme`.
 
 ## B. Installer (NixOS ISO terminal)
 
@@ -56,10 +56,10 @@ Expect `keys.txt work-keys.txt angst.bundle`. Replace `sdX1` with keys-stick par
 ```bash
 git clone /mnt-keys/angst.bundle ~/angst && cd ~/angst
 git log --oneline -1
-ls hosts/personal/work/ secrets/master/work.age
+ls hosts/personal/work/
 ```
 
-Expect log `87100f7` (or newer `work` commit), files `default.nix hardware.nix`, `work.age`.
+Expect log `87100f7` (or newer `work` commit), files `default.nix hardware.nix`.
 
 ```bash
 sudo nix --extra-experimental-features 'nix-command flakes' run .#install-nixos -- --full-disk --disk /dev/sda --flake .#work --identity /mnt-keys --state-size 30G --yes
@@ -80,7 +80,7 @@ Unplug ISO + keys sticks during reboot.
 
 systemd-boot menu → top `work` entry (hold Space at boot if menu hidden).
 
-Login: user `joao`, same master password as `nixos` box. Keys missing → `changeme`, then restore keys to `/home/durable/age/` (0600, owned `joao`) and run `angst bootstrap-master-password --host work`.
+Login: user `joao`, `main` password. Keys missing → `changeme`; restore keys to `/home/durable/age/` (0600, owned `joao`) and reboot to apply `main`.
 
 ```bash
 findmnt / /home /home/joao /state /nix
@@ -115,9 +115,9 @@ Merge anything missing (e.g. extra kernel modules), then switch again.
 |---|---|
 | At boot menu press `e`, append `nomodeset`, boot | Black screen from Nvidia |
 | Delete `services.xserver.videoDrivers` + `hardware.nvidia` block in `hosts/personal/work/default.nix`, then `sudo nixos-rebuild switch --flake .#work` | GT 710 driver fails (falls back to Intel HD 630) |
-| `cp /mnt-keys/keys.txt /mnt-keys/work-keys.txt /home/durable/age/ && chmod 600 /home/durable/age/*.txt && angst bootstrap-master-password --host work` | Booted on `changeme` fallback, no keys |
+| `cp /mnt-keys/keys.txt /mnt-keys/work-keys.txt /home/durable/age/ && chmod 600 /home/durable/age/*.txt` | Booted on `changeme` fallback, no keys |
 | Pick older generation in systemd-boot | Any bad switch, instant rollback |
-| `journalctl -u angst-bootstrap-secrets --no-pager` | Login password not applied |
+| `journalctl -u angst-bootstrap-secrets --no-pager` | Only applies when the host declares `secrets.password` |
 | `just build work` on Mint/live repo before reinstalling | Validate decl changes without touching running system |
 
 Secrets rules: never commit `*.agekey`, `*.dec`, or plaintext passwords. Age identity lives at `/home/durable/age/keys.txt` (+ `work-keys.txt`), survives reinstalls on data partition. Details: `openwiki/secrets.md`. Install runbook: `openwiki/operations.md`.

@@ -7,6 +7,10 @@
 {
   db,
   flakeSelf,
+  scopes ? [
+    "personal"
+    "work"
+  ],
 }:
 mkScript {
   name = "angst-db-sync";
@@ -17,6 +21,6 @@ mkScript {
     export ANGST_DB_STORE="$HOME/.secrets/db"
     export ANGST_DB_REPO="${flakeSelf}/secrets/db"
     export ANGST_DB_ONLY='${lib.concatStringsSep " " db}'
-    exec ${goAngst}/bin/angst db "$@"
+    exec ${goAngst}/bin/angst db "$@" --scopes "${lib.concatStringsSep "," scopes}"
   '';
 }

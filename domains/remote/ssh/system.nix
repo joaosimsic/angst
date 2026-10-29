@@ -5,6 +5,7 @@
   userConfig,
   flakeSelf,
   runtime,
+  hostScopes ? [ ],
   ...
 }:
 
@@ -78,6 +79,7 @@ in
           ExecStart =
             (runtime.ssh-key-provision {
               inherit (userConfig) username homeDirectory;
+              scopes = hostScopes;
               secretsDir = "${flakeSelf}/secrets/ssh";
             }).bin;
           Environment = [

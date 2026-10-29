@@ -61,9 +61,23 @@ let
 
   checkNoStoreSymlinks = import ./no-store-symlinks.nix { inherit pkgs; };
 
-  checkSecretsEncrypted = import ./secrets.nix { inherit pkgs; };
+  checkSecretsEncrypted = import ./secrets.nix {
+    inherit
+      pkgs
+      lib
+      hostList
+      ;
+  };
 
   checkDeclared = import ./declared.nix {
+    inherit pkgs lib hostList;
+  };
+
+  checkHostIdentity = import ./host-identity.nix {
+    inherit self lib pkgs;
+  };
+
+  checkSecretDeclarations = import ./secret-declarations.nix {
     inherit pkgs lib hostList;
   };
 
@@ -200,13 +214,16 @@ in
   generic-host-contract = checkGenericHostContract;
   generic-host-guard = checkGenericHostGuard;
   generic-provision-safety = checkGenericProvisionSafety;
-  check-secrets-encrypted = checkSecretsEncrypted.secrets;
+  check-secrets-encrypted = checkSecretsEncrypted.passwords;
+  check-host-secrets-encrypted = checkSecretsEncrypted.hostSecrets;
   check-projects-encrypted = checkSecretsEncrypted.projects;
   check-db-encrypted = checkSecretsEncrypted.db;
   check-ssh-keys = checkSecretsEncrypted.sshKeys;
   check-ftp-encrypted = checkSecretsEncrypted.ftp;
   check-vpn-encrypted = checkSecretsEncrypted.vpn;
   check-projects-ftp-declared = checkDeclared;
+  check-host-identity = checkHostIdentity;
+  check-secret-declarations = checkSecretDeclarations;
   check-projects-pipeline = checkProjectsPipeline;
   check-vault-pipeline = checkVaultPipeline;
   check-ftp-pipeline = checkFtpPipeline;

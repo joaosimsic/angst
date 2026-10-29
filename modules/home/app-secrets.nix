@@ -3,18 +3,18 @@
   flakeSelf,
   runtime,
   hostScopes ? [ ],
-  hostSecrets ? [ ],
+  hostAppSecrets ? [ ],
   ...
 }:
 
 let
-  enable = hostSecrets != [ ];
+  enable = hostAppSecrets != [ ];
 
   secretsAppsDir = "${flakeSelf}/secrets/apps";
 
   scopesFlag = lib.concatStringsSep "," hostScopes;
 
-  slugFlags = lib.concatMapStringsSep " " (s: "--slug ${lib.escapeShellArg s}") hostSecrets;
+  slugFlags = lib.concatMapStringsSep " " (s: "--slug ${lib.escapeShellArg s}") hostAppSecrets;
 in
 lib.mkIf enable {
   home.activation.angstAppSecrets = lib.hm.dag.entryAfter [ ] ''

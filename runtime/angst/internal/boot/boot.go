@@ -21,21 +21,24 @@ const (
 	exitOK    = shared.ExitOK
 )
 
-func usageMasterPassword() {
+func usageBootstrapPassword() {
 	fmt.Print(`Usage:
-  angst bootstrap-master-password [--host HOST] [--scope personal|work]
+  angst bootstrap-password --name NAME --scope personal|work
+
+Writes secrets/password/<name>.age. The host declaration selects the password
+by name; the scope only chooses the age key used for encryption.
 `)
 }
 
-func BootstrapMasterPassword(args []string) int {
+func BootstrapPassword(args []string) int {
 	repoRoot := paths.RepoRoot()
-	hostName := "nixos"
+	name := ""
 	scopeFlag := ""
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
-		case "--host":
+		case "--name":
 			if i+1 < len(args) {
-				hostName = args[i+1]
+				name = args[i+1]
 				i++
 			}
 		case "--scope":
@@ -44,14 +47,24 @@ func BootstrapMasterPassword(args []string) int {
 				i++
 			}
 		case "-h", "--help":
-			usageMasterPassword()
+			usageBootstrapPassword()
 			return exitOK
 		default:
-			fmt.Fprintf(os.Stderr, "unknown bootstrap-master-password option: %s\n", args[i])
-			usageMasterPassword()
+			fmt.Fprintf(os.Stderr, "unknown bootstrap-password option: %s\n", args[i])
+			usageBootstrapPassword()
 			return exitUsage
 		}
 	}
+
+	if name == "" || strings.Contains(name, "/") || name == "." || name == ".." {
+		fmt.Fprintln(os.Stderr, "Error: --name must be a plain password name")
+		return exitUsage
+	}
+	if !scope.Valid(scopeFlag) {
+		fmt.Fprintf(os.Stderr, "Error: invalid --scope '%s' (expected personal|work)\n", scopeFlag)
+		return exitUsage
+	}
+	sc := scope.Scope(scopeFlag)
 
 	if _, err := exec.LookPath("age"); err != nil {
 		fmt.Fprintln(os.Stderr, "Error: age is not available. Install it first (e.g., nix shell nixpkgs#age)")
@@ -62,41 +75,19 @@ func BootstrapMasterPassword(args []string) int {
 		return exitError
 	}
 
-	configDir, ok := paths.FindHostConfigDir(repoRoot, hostName)
-	if !ok {
-		fmt.Fprintf(os.Stderr, "Error: host config not found for '%s'\n", hostName)
-		return exitError
-	}
-	configFile := filepath.Join(configDir, "default.nix")
-	if _, err := os.Stat(configFile); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: host config not found for '%s'\n", hostName)
-		return exitError
-	}
-
-	sc := scope.Personal
-	if scopeFlag != "" {
-		if !scope.Valid(scopeFlag) {
-			fmt.Fprintf(os.Stderr, "Error: invalid --scope '%s' (expected personal|work)\n", scopeFlag)
-			return exitUsage
-		}
-		sc = scope.Scope(scopeFlag)
-	} else if strings.Contains(configDir, "/work/") {
-		sc = scope.Work
-	}
-
-	master, err := readSecret("Master password: ")
+	password, err := readSecret("Password: ")
 	if err != nil {
 		return exitError
 	}
-	if master == "" {
+	if password == "" {
 		fmt.Fprintln(os.Stderr, "Error: password cannot be empty")
 		return exitError
 	}
-	confirm, err := readSecret("Confirm master password: ")
+	confirm, err := readSecret("Confirm password: ")
 	if err != nil {
 		return exitError
 	}
-	if master != confirm {
+	if password != confirm {
 		fmt.Fprintln(os.Stderr, "Error: passwords do not match")
 		return exitError
 	}
@@ -108,32 +99,33 @@ func BootstrapMasterPassword(args []string) int {
 		return exitError
 	}
 
-	outDir := filepath.Join(repoRoot, "secrets", "master")
+	outDir := filepath.Join(repoRoot, "secrets", "password")
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: could not create %s\n", outDir)
 		return exitError
 	}
-	outPath := filepath.Join(outDir, hostName+".age")
+	outPath := filepath.Join(outDir, name+".age")
 
-	tmp, err := os.CreateTemp("", "angst-master-*.txt")
+	tmp, err := os.CreateTemp("", "angst-password-*.txt")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error: could not create temp file")
 		return exitError
 	}
 	tmpName := tmp.Name()
 	defer os.Remove(tmpName)
-	if _, err := tmp.WriteString(master); err != nil {
+	if _, err := tmp.WriteString(password); err != nil {
 		fmt.Fprintln(os.Stderr, "Error: could not write temp file")
 		return exitError
 	}
 	tmp.Close()
 
 	if err := shared.AgeEncrypt(keyFile, recipient, tmpName, outPath); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to encrypt master password: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to encrypt password: %v\n", err)
 		return exitError
 	}
+	_ = os.Chmod(outPath, 0o600)
 
-	fmt.Printf("Master password encrypted for %s (scope %s):\n", hostName, sc)
+	fmt.Printf("Password encrypted for %s (scope %s):\n", name, sc)
 	fmt.Printf("  age file: %s\n", outPath)
 	fmt.Println("")
 	fmt.Println("Rebuild the host to apply (the boot service derives the login hash).")
@@ -161,10 +153,36 @@ func readSecret(prompt string) (string, error) {
 	return strings.TrimRight(line, "\r\n"), nil
 }
 
+func usageSetPasswordHash() {
+	fmt.Print(`Usage:
+  angst set-password-hash --username USER --age-path FILE --scopes personal,work [--home DIR] [--age-key FILE]
+
+Tries the age keys for the declared scopes in order. Missing files or keys are
+non-fatal: the fallback password hash is kept.
+`)
+}
+
+func passwordKeyFiles(ageKey, scopesFlag, homeDir string) ([]string, bool) {
+	if ageKey != "" {
+		return []string{ageKey}, true
+	}
+	requested := scope.Split(scopesFlag)
+	if len(requested) == 0 {
+		return nil, false
+	}
+	keys := make([]string, 0, len(requested))
+	for _, sc := range requested {
+		keys = append(keys, scope.AgeKeyfileInHome(homeDir, sc, scope.Fixed))
+	}
+	return keys, true
+}
+
 func SetPasswordHash(args []string) int {
 	username := ""
 	agePath := ""
 	ageKey := ""
+	scopesFlag := ""
+	homeDir := ""
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--username":
@@ -182,14 +200,41 @@ func SetPasswordHash(args []string) int {
 				ageKey = args[i+1]
 				i++
 			}
+		case "--scopes":
+			if i+1 < len(args) {
+				scopesFlag = args[i+1]
+				i++
+			}
+		case "--home":
+			if i+1 < len(args) {
+				homeDir = args[i+1]
+				i++
+			}
+		case "-h", "--help":
+			usageSetPasswordHash()
+			return exitOK
 		default:
 			fmt.Fprintf(os.Stderr, "unknown set-password-hash option: %s\n", args[i])
 			return exitUsage
 		}
 	}
-	if username == "" || agePath == "" || ageKey == "" {
-		fmt.Fprintln(os.Stderr, "error: set-password-hash requires --username, --age-path and --age-key")
+	if username == "" || agePath == "" {
+		fmt.Fprintln(os.Stderr, "error: set-password-hash requires --username and --age-path")
 		return exitUsage
+	}
+	if homeDir == "" {
+		homeDir = filepath.Join("/home", username)
+	}
+
+	keyFiles, ok := passwordKeyFiles(ageKey, scopesFlag, homeDir)
+	if !ok {
+		fmt.Fprintln(os.Stderr, "error: set-password-hash requires --scopes or --age-key")
+		return exitUsage
+	}
+
+	if _, err := os.Stat(agePath); err != nil {
+		fmt.Fprintf(os.Stderr, "warn: password file %s is missing; keeping fallback hash\n", agePath)
+		return exitOK
 	}
 
 	tmpDir, err := os.MkdirTemp("", "angst-pwhash-")
@@ -198,29 +243,38 @@ func SetPasswordHash(args []string) int {
 		return exitError
 	}
 	defer os.RemoveAll(tmpDir)
-	tmpName := filepath.Join(tmpDir, "pw")
 
-	if err := shared.AgeDecrypt(ageKey, agePath, tmpName); err != nil {
-		fmt.Fprintf(os.Stderr, "error: could not decrypt %s: %v\n", agePath, err)
-		return exitError
+	for _, keyFile := range keyFiles {
+		if _, err := os.Stat(keyFile); err != nil {
+			continue
+		}
+		tmpName := filepath.Join(tmpDir, "pw")
+		_ = os.Remove(tmpName)
+		if err := shared.AgeDecrypt(keyFile, agePath, tmpName); err != nil {
+			_ = os.Remove(tmpName)
+			continue
+		}
+		pass, err := os.ReadFile(tmpName)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error: could not read decrypted password")
+			return exitError
+		}
+		feed := append(append([]byte{}, pass...), '\n')
+		hash, err := hashPassword(feed)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error: failed to hash password")
+			return exitError
+		}
+		if err := cmd.Run("usermod", "-p", hash, username); err != nil {
+			return exitError
+		}
+		if err := cmd.Run("usermod", "-p", hash, "root"); err != nil {
+			return exitError
+		}
+		return exitOK
 	}
-	pass, err := os.ReadFile(tmpName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: could not read decrypted password\n")
-		return exitError
-	}
-	feed := append(append([]byte{}, pass...), '\n')
-	hash, err := hashPassword(feed)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error: failed to hash password")
-		return exitError
-	}
-	if err := cmd.Run("usermod", "-p", hash, username); err != nil {
-		return exitError
-	}
-	if err := cmd.Run("usermod", "-p", hash, "root"); err != nil {
-		return exitError
-	}
+
+	fmt.Fprintf(os.Stderr, "warn: could not decrypt %s with any declared scope key; keeping fallback hash\n", agePath)
 	return exitOK
 }
 

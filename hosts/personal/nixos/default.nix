@@ -122,11 +122,21 @@
     "intelligence/backend"
     "intelligence/frontend"
   ];
-  secrets = [
-    "opencode-go-key"
-    "cursor-api-key"
-    "sunshine-credentials"
-  ];
+  secrets = {
+    scopes = [
+      "personal"
+      "work"
+    ];
+    password = "main";
+    apps = [
+      "personal/opencode-go-key"
+      "work/cursor-api-key"
+    ];
+    host = [
+      "personal/sunshine"
+      "personal/tailscale"
+    ];
+  };
   git = {
     personal = {
       name = "joaosimsic";

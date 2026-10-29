@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"angst/internal/paths"
+	"angst/internal/scope"
 	"angst/internal/shared"
 )
 
@@ -72,9 +73,16 @@ func selected(id string) bool {
 
 func usage() {
 	fmt.Print(`Usage:
-  angst projects sync
-  angst projects import [--all]
+  angst projects sync [--scopes personal[,work]]
+  angst projects import [--all] [--scopes personal[,work]]
 `)
+}
+
+func scopesFor(flag string, set bool) []scope.Scope {
+	if set {
+		return scope.Split(flag)
+	}
+	return []scope.Scope{scope.Personal, scope.Work}
 }
 
 func Run(args []string) int {

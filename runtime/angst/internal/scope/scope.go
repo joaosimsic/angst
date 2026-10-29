@@ -51,17 +51,23 @@ const (
 )
 
 func AgeKeyfile(s Scope, env RespectEnv) string {
+	return AgeKeyfileInHome(home(), s, env)
+}
+
+// AgeKeyfileInHome resolves the age identity for a scope under a specific home
+// directory. Boot services run as root and must point at the user's keys.
+func AgeKeyfileInHome(h string, s Scope, env RespectEnv) string {
 	switch s {
 	case Work:
 		if env && os.Getenv("ANGST_WORK_AGE_KEY_FILE") != "" {
 			return os.Getenv("ANGST_WORK_AGE_KEY_FILE")
 		}
-		return filepath.Join(home(), ".config", "age", "work-keys.txt")
+		return filepath.Join(h, ".config", "age", "work-keys.txt")
 	default:
 		if env && os.Getenv("ANGST_AGE_KEY_FILE") != "" {
 			return os.Getenv("ANGST_AGE_KEY_FILE")
 		}
-		return filepath.Join(home(), ".config", "age", "keys.txt")
+		return filepath.Join(h, ".config", "age", "keys.txt")
 	}
 }
 

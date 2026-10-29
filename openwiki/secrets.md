@@ -4,29 +4,40 @@ angst uses **age** to keep secrets out of the repository while making them avail
 
 ## Model
 
-- **Per-host master password**: `secrets/master/<hostname>.age`, age-encrypted with the host's scope recipient. One file per NixOS host. Decrypted at boot by `angst set-password-hash`, which derives the sha-512 login hash.
-- **App secrets**: `secrets/apps/<scope>/<slug>.age` (e.g. `secrets/apps/personal/opencode-go-key.age`), provisioned to `~/.secrets/<slug>` by `angst provision-app-secret`. Declared per host via `secrets = [ "<slug>" ... ]`.
-- **Keys**: age keys at `~/.config/age/keys.txt` (personal) and `~/.config/age/work-keys.txt` (work), or `ANGST_AGE_KEY_FILE` / `ANGST_WORK_AGE_KEY_FILE` env vars (used in CI/tooling). Keys are **not** committed (`.gitignore` ignores `*.agekey`).
+Host declarations are explicit:
+
+```nix
+secrets = {
+  scopes = [ "personal" "work" ];
+  password = "main";
+  apps = [ "personal/opencode-go-key" "work/cursor-api-key" ];
+  host = [ "personal/tailscale" "personal/sunshine" ];
+};
+```
+
+- **Password pool**: `secrets/password/<name>.age`, flat and not keyed by hostname or scope. The host declaration selects one name. At boot, `angst set-password-hash` tries each declared host scope age key until one decrypts the file, then applies the same sha-512 hash to the user and `root`.
+- **App secrets**: `secrets/apps/<scope>/<slug>.age`. Declared as `<scope>/<slug>`; provisioned to `~/.secrets/<slug>` by `angst provision-app-secret`. A scoped slug only tries that scope.
+- **Host infrastructure secrets**: `secrets/<name>/<hostname>.age` (for example `secrets/tailscale/nixos.age` and `secrets/sunshine/nixos.age`). Declared with a scope prefix (`<scope>/<name>`). On NixOS, `angst-provision-host-secrets` writes `/run/angst/host-secrets/<name>` (0750 `root:<group>`, files 0640). On home-only hosts, home activation writes `~/.secrets/<name>` (0600).
+- **Scopes**: only `personal` or `work`. `scopes` is a unique subset; every `apps` and `host` prefix must appear in it. There is no inference from `hosts/<domain>/`.
+- **Keys**: age keys at `~/.config/age/keys.txt` (personal) and `~/.config/age/work-keys.txt` (work), or `ANGST_AGE_KEY_FILE` / `ANGST_WORK_AGE_KEY_FILE` env vars (used in CI/tooling). Keys are **not** committed.
 - **Secret values**:
-  - `opencode-go-key` → `~/.secrets/opencode-go-key` (mode 0600) — consumed by the opencode domain via `{file:~/.secrets/opencode-go-key}` (see `domains/agents/opencode/config/opencode.jsonc`).
-  - `masterPassword` (NixOS hosts only) — the machine's master password: source of the login hash.
+  - `opencode-go-key` → `~/.secrets/opencode-go-key` (mode 0600) — consumed by the opencode domain.
+  - `tailscale` (auth key) and `sunshine` (web credentials) are host infrastructure secrets, not app secrets.
 
 ## How it works (`modules/secrets.nix`)
 
-`secrets.nix` is evaluated per host with `{ inputs, self, host, lib }`:
+`lib/resolve.nix` validates the declaration and exposes `host.scopes`, `host.passwordSecret`, `host.appSecrets`, and `host.hostSecrets`.
 
-1. Locates `secrets/master/<hostname>.age` → `hasMasterAge`. `canDecrypt = hasMasterAge`.
-2. The master-password boot service (`lib/build/mkNixos.nix`) is gated on the age file existing, so builds never fail on missing keys.
-3. App secrets are wired via `modules/home/app-secrets.nix`, enabled when the host decl's `secrets` list is non-empty. `angst provision-app-secret` decrypts each `<slug>.age` with the scope age key and installs it at `~/.secrets/<slug>`.
+1. The password boot service (`lib/build/mkNixos.nix`) is created only when the declared `secrets/password/<name>.age` exists. Missing files or keys log warnings and keep the fallback hash.
+2. App secrets are wired via `modules/home/app-secrets.nix`, enabled when `host.appSecrets` is non-empty.
+3. NixOS host secrets are provisioned by `modules/nixos/host-secrets.nix`; home-only hosts use `modules/home/host-secrets.nix`.
+4. Missing host secrets or age keys do not block boot. Consumers such as Tailscale and Sunshine fail or retry until the runtime files exist.
 
-The opencode API key therefore ends up at `~/.secrets/opencode-go-key` at activation time.
+## Password pool bootstrap
 
-## Master password bootstrap
-
-- **Create**: `angst bootstrap-master-password --host <host> [--scope personal|work]` reads the password interactively (no echo) and age-encrypts it to `secrets/master/<host>.age` with the scope recipient.
-- **System** (`lib/build/mkNixos.nix`): `angst-bootstrap-secrets` oneshot service (before getty/display-manager) runs `angst set-password-hash`, which age-decrypts `secrets/master/<host>.age`, runs `mkpasswd -m sha-512` on the password, and applies the hash to user + root via `usermod -p`. SSH keys are **not** managed here — they come from the shared, age-encrypted model below (`domains/remote/ssh/`).
-
-The hash in the host decl is only the unseeded fallback (`changeme` default in `lib/resolve.nix`); once `secrets/master/<host>.age` exists, the boot service overrides it.
+- **Create**: `angst bootstrap-password --name main --scope personal` reads the password interactively (no echo) and age-encrypts it to `secrets/password/main.age`. The scope only selects the age key used for encryption.
+- **System** (`lib/build/mkNixos.nix`): `angst-bootstrap-secrets` runs before getty/display-manager and calls `angst set-password-hash --scopes personal,work`. It tries the personal key, then work, derives the hash with `mkpasswd -m sha-512`, and applies it to user + root.
+- **Fallback**: the `password` field in the host decl is only the unseeded sha-512 fallback in `lib/resolve.nix`. A missing pool file keeps that fallback.
 
 ## Shared SSH keys (`secrets/ssh/`)
 
@@ -55,7 +66,7 @@ angst ssh-key verify   --scope personal|work   # decrypts .age locally, compares
 
 ### Provision at boot
 
-A systemd oneshot `angst-provision-ssh-key` (unconditional — independent of `canDecrypt`) runs before `home-manager-<user>.service` and, on the VM, after `vm-age-key.service`. For each scope whose age key and `.age` file both exist, it decrypts to a temp file (mode `0600`), validates it is a private key (`ssh-keygen -y` round-trip), installs to `~/.ssh/<name>.tmp`, `mv`s over the destination (atomic — the destination is **never truncated before successful decryption**), and removes the temp plaintext. A missing age key or file skips that scope (resilient, never fatal). It re-decrypts on every boot, so hosts converge on rotation. Home-only hosts (`type = "home"`) run it as a user unit via `domains/remote/ssh/ssh-provision-home.nix`; the system unit (`domains/remote/ssh/system.nix`) is sandboxed (`NoNewPrivileges`, `PrivateTmp`, `ProtectSystem=strict`, `ProtectHome=read-only`, `ReadWritePaths=~/.ssh`).
+A systemd oneshot `angst-provision-ssh-key` (unconditional, limited to the host's declared scopes) runs before `home-manager-<user>.service` and, on the VM, after `vm-age-key.service`. For each scope whose age key and `.age` file both exist, it decrypts to a temp file (mode `0600`), validates it is a private key (`ssh-keygen -y` round-trip), installs to `~/.ssh/<name>.tmp`, `mv`s over the destination (atomic — the destination is **never truncated before successful decryption**), and removes the temp plaintext. A missing age key or file skips that scope (resilient, never fatal). It re-decrypts on every boot, so hosts converge on rotation. Home-only hosts (`type = "home"`) run it as a user unit via `domains/remote/ssh/ssh-provision-home.nix`; the system unit (`domains/remote/ssh/system.nix`) is sandboxed (`NoNewPrivileges`, `PrivateTmp`, `ProtectSystem=strict`, `ProtectHome=read-only`, `ReadWritePaths=~/.ssh`).
 
 ### Use at clone time
 
@@ -90,16 +101,22 @@ History: `50e80de feat: opencode api key` (first secret) → `84b7ab8` decryptio
 ## Creating / rotating secrets
 
 ```bash
-# First-time bootstrap for a host (age-encrypts the master password to
-# secrets/master/<host>.age; the boot service derives the login hash):
-angst bootstrap-master-password --host <host>        # age + age-keygen must be on PATH
+# Password pool entry (scope only chooses the encryption recipient):
+angst bootstrap-password --name main --scope personal
+angst bootstrap-password --name work --scope work
 
-# Declare app secrets in the host decl:
-#   secrets = [ "opencode-go-key" "cursor-api-key" ];
-#   then rebuild the host.
+# Host infrastructure secrets:
+just remote-tailscale-key nixos personal
+just remote-sunshine-secret nixos personal
+just remote-tailscale-key work personal
+just remote-tailscale-key mint personal
+
+# App secrets are raw age files:
+age -r "$(age-keygen -y ~/.config/age/keys.txt)" \
+  -o secrets/apps/personal/opencode-go-key.age <plaintext-file>
 ```
 
-`angst bootstrap-master-password` reads the master password interactively (never echo), age-encrypts it to `secrets/master/<host>.age`, and unset its in-memory copy afterwards. The host will only decrypt once the age key is present at `~/.config/age/keys.txt`.
+Declare them in the host and rebuild. Missing password/app/host files are warnings in `check-secret-declarations`; existing non-age files fail the check. `check-secrets-encrypted` and `check-host-secrets-encrypted` verify age envelopes.
 
 ## Project store (tarball + vault/age)
 
@@ -161,9 +178,9 @@ Parallel to the project store, the **DB store** keeps `sqlit`/`rainfrog` credent
 ## Secret scanning (defense in depth)
 
 - **Git hooks** (`githooks/`, install with `just install-hooks`): `pre-commit` runs `gitleaks git --pre-commit --staged --redact`; `pre-push` scans pushed ranges (`<remote_oid>..<local_oid>`, or all new commits for new refs) with gitleaks. Hooks use a host `gitleaks` or fall back to `nix run nixpkgs#gitleaks`.
-- **`.gitleaks.toml`** — extends default rules with `angst-plaintext-secret-value` (`secrets.yaml`, `secrets/master/`), `angst-projects-plaintext-secret-value` (`secrets/projects/.*`) and `angst-db-plaintext-secret-value` (`secrets/db/.*`). Allowlists age blocks/public keys, `secrets/ssh/.*\.age`, `secrets/ftp/.*\.age`, `secrets/projects/.*\.tar\.age`, `secrets/db/.*\.tar\.age`, and `README.md`/`pure.md`/`analysis.md`/`openwiki/` — no broad path allowlist on `secrets/`.
+- **`.gitleaks.toml`** — extends default rules with `angst-plaintext-secret-value` (`secrets.yaml`, `secrets/password/`, `secrets/tailscale/`, `secrets/sunshine/`), `angst-projects-plaintext-secret-value` (`secrets/projects/.*`) and `angst-db-plaintext-secret-value` (`secrets/db/.*`). Allowlists age blocks/public keys, `secrets/password/.*\.age`, `secrets/(tailscale|sunshine)/.*\.age`, `secrets/ssh/.*\.age`, `secrets/ftp/.*\.age`, `secrets/projects/.*\.tar\.age`, `secrets/db/.*\.tar\.age`, and `README.md`/`pure.md`/`analysis.md`/`openwiki/` — no broad path allowlist on `secrets/`.
 - **CI** (`.github/workflows/secret-scan.yml`) — gitleaks-action + trufflehog (`--results=verified,unknown`) on every push/PR; `fix: trufflehog` (HEAD) tuned the trufflehog args.
-- **Flake check** (`checks/secrets.nix`) — `check-secrets-encrypted` fails if any `secrets/master/*.age` lacks an `age-encryption.org/v1` envelope; `check-projects-encrypted` asserts every `secrets/projects/*.tar.age` is age-encrypted; `check-db-encrypted` asserts every `secrets/db/*.tar.age` is age-encrypted; `check-ssh-keys` asserts every `secrets/ssh/*.age` is age-encrypted (envelope present, no plaintext private key) with a valid matching `.pub` (see [Shared SSH keys](#shared-ssh-keys-secretsssh)); `check-ftp-encrypted` asserts every `secrets/ftp/*` carries an age envelope with no plaintext server fields.
+- **Flake check** (`checks/secrets.nix`) — `check-secrets-encrypted` fails if any `secrets/password/*.age` lacks an `age-encryption.org/v1` envelope; `check-host-secrets-encrypted` does the same for declared host-secret files; `check-secret-declarations` validates declared scopes/refs and warns on missing files; `check-projects-encrypted` asserts every `secrets/projects/*.tar.age` is age-encrypted; `check-db-encrypted` asserts every `secrets/db/*.tar.age` is age-encrypted; `check-ssh-keys` asserts every `secrets/ssh/*.age` is age-encrypted (envelope present, no plaintext private key) with a valid matching `.pub` (see [Shared SSH keys](#shared-ssh-keys-secretsssh)); `check-ftp-encrypted` asserts every `secrets/ftp/*` carries an age envelope with no plaintext server fields.
 
 ## Security rules for contributors
 

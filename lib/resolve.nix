@@ -83,6 +83,87 @@ let
         map (n: _tcIndex.${n}) _toolchains
     else
       throw "toolchains must be \"*\" or a list";
+
+  validScopes = [
+    "personal"
+    "work"
+  ];
+
+  reservedHostSecretNames = [
+    "apps"
+    "password"
+    "ssh"
+    "projects"
+    "db"
+    "vpn"
+    "ftp"
+    "hosts"
+  ];
+
+  rawSecrets = decl.secrets or { };
+
+  secretScopes =
+    if !(builtins.isAttrs rawSecrets) then
+      throw "secrets: must be an attrset { scopes; password; apps; host; }, got ${builtins.typeOf rawSecrets}"
+    else if !(builtins.isList (rawSecrets.scopes or [ ])) then
+      throw "secrets.scopes: must be a list"
+    else
+      let
+        scopes = rawSecrets.scopes or [ ];
+        unknown = builtins.filter (s: !builtins.elem s validScopes) scopes;
+      in
+      if unknown != [ ] then
+        throw "secrets.scopes: unknown scope(s) ${builtins.concatStringsSep ", " unknown}; expected personal or work"
+      else if lib.unique scopes != scopes then
+        throw "secrets.scopes: scopes must be unique"
+      else
+        scopes;
+
+  parseSecretRef =
+    kind: raw:
+    if !(builtins.isString raw) then
+      throw "secrets.${kind}: entries must be strings like \"personal/name\", got ${builtins.typeOf raw}"
+    else
+      let
+        parts = lib.splitString "/" raw;
+      in
+      if builtins.length parts != 2 then
+        throw "secrets.${kind}: '${raw}' must be <scope>/<name>"
+      else
+        let
+          scope = builtins.elemAt parts 0;
+          name = builtins.elemAt parts 1;
+        in
+        if !(builtins.elem scope validScopes) then
+          throw "secrets.${kind}: '${raw}' has invalid scope '${scope}'"
+        else if !(builtins.elem scope secretScopes) then
+          throw "secrets.${kind}: '${raw}' uses scope '${scope}' not present in secrets.scopes"
+        else if name == "" || name == "." || name == ".." || lib.hasInfix "/" name then
+          throw "secrets.${kind}: '${raw}' has an invalid name"
+        else if kind == "host" && builtins.elem name reservedHostSecretNames then
+          throw "secrets.host: '${raw}' uses reserved secrets directory '${name}'"
+        else
+          {
+            inherit scope name raw;
+          };
+
+  appSecretRefs = map (parseSecretRef "apps") (rawSecrets.apps or [ ]);
+  hostSecretRefs = map (parseSecretRef "host") (rawSecrets.host or [ ]);
+
+  passwordSecret =
+    let
+      name = rawSecrets.password or null;
+    in
+    if name == null then
+      null
+    else if !(builtins.isString name) then
+      throw "secrets.password: must be a string name, got ${builtins.typeOf name}"
+    else if name == "" || name == "." || name == ".." || lib.hasInfix "/" name then
+      throw "secrets.password: '${name}' must be a plain name, not a path"
+    else if secretScopes == [ ] then
+      throw "secrets.password: requires at least one entry in secrets.scopes"
+    else
+      name;
 in
 
 {
@@ -136,60 +217,10 @@ in
     type = decl.type or "nixos";
     inherit domain;
 
-    scopes =
-      let
-        inWork = domain == "work";
-        inPersonal = domain == "personal";
-        isVm = (decl.hostname or "nixos") == "vm";
-      in
-      if inWork then
-        [ "work" ]
-      else if inPersonal then
-        [
-          "personal"
-          "work"
-        ]
-      else if isVm then
-        [
-          "personal"
-          "work"
-        ]
-      else
-        [ "work" ];
-
-    secrets =
-      let
-        isVm = (decl.hostname or "nixos") == "vm";
-        declSecrets = decl.secrets or [ ];
-        autoSecrets =
-          if !isVm || self == null then
-            [ ]
-          else
-            let
-              slugsFor =
-                scope:
-                let
-                  dir = self + "/secrets/apps/${scope}";
-                in
-                if builtins.pathExists dir then
-                  let
-                    entries = builtins.readDir dir;
-                    ageFiles = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".age" n) entries;
-                  in
-                  map (n: lib.removeSuffix ".age" n) (builtins.attrNames ageFiles)
-                else
-                  [ ];
-              all = lib.concatMap slugsFor [
-                "personal"
-                "work"
-              ];
-            in
-            lib.unique all;
-      in
-      if isVm && self != null then
-        if autoSecrets != [ ] then lib.unique (declSecrets ++ autoSecrets) else declSecrets
-      else
-        declSecrets;
+    scopes = secretScopes;
+    inherit passwordSecret;
+    appSecrets = map (r: r.raw) appSecretRefs;
+    hostSecrets = map (r: r.raw) hostSecretRefs;
 
     toolchainModules = _selectedTCs;
 

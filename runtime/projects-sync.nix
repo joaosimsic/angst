@@ -7,6 +7,10 @@
 {
   projects,
   flakeSelf,
+  scopes ? [
+    "personal"
+    "work"
+  ],
 }:
 mkScript {
   name = "angst-projects-sync";
@@ -19,6 +23,6 @@ mkScript {
     export ANGST_PROJECTS_STORE="$HOME/.secrets/projects"
     export ANGST_PROJECTS_REPO="${flakeSelf}/secrets/projects"
     export ANGST_PROJECTS_ONLY='${lib.concatStringsSep " " projects}'
-    exec ${goAngst}/bin/angst projects "$@"
+    exec ${goAngst}/bin/angst projects "$@" --scopes "${lib.concatStringsSep "," scopes}"
   '';
 }
