@@ -51,17 +51,18 @@ in
         hardware.graphics.enable = true;
       }
       (lib.mkIf isHost {
-        services.sunshine = {
-          enable = true;
-          autoStart = true;
-          openFirewall = false;
-          capSysAdmin = false;
-        };
-
-        services.displayManager.defaultSession = "i3";
-        services.displayManager.autoLogin = {
-          enable = true;
-          user = userConfig.username;
+        services = {
+          sunshine = {
+            enable = true;
+            autoStart = true;
+            openFirewall = false;
+            capSysAdmin = false;
+          };
+          displayManager.defaultSession = "i3";
+          displayManager.autoLogin = {
+            enable = true;
+            user = userConfig.username;
+          };
         };
 
         systemd.user.services.sunshine.serviceConfig.ExecStartPre = [ "${sunshineCredsScript}" ];
