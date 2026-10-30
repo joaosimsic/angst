@@ -54,7 +54,12 @@ in
         services = {
           sunshine = {
             enable = true;
-            autoStart = true;
+            # Started via systemd.user.paths.sunshine-creds once
+            # /run/angst/host-secrets/sunshine exists. Direct WantedBy
+            # would restart the user unit before the system
+            # angst-provision-host-secrets.service creates the file on
+            # first switch, failing activation with status 4.
+            autoStart = false;
             openFirewall = false;
             capSysAdmin = false;
           };
@@ -66,6 +71,39 @@ in
         };
 
         systemd.user.services.sunshine.serviceConfig.ExecStartPre = [ "${sunshineCredsScript}" ];
+
+        # Event-driven start: path units never fail when the file is
+        # missing, they wait. This covers first switch (host-secrets
+        # service starts after user reload) and fresh boots.
+        systemd.user.paths.sunshine-creds = {
+          wantedBy = [ "graphical-session.target" ];
+          partOf = [ "graphical-session.target" ];
+          pathConfig = {
+            PathExists = sunshineCreds;
+            Unit = "sunshine.service";
+          };
+        };
+
+        # Rotation: PathModified fires on credential rewrite. Unit only
+        # starts, never restarts, so fan out to a oneshot that
+        # try-restarts (no-op when sunshine is not running).
+        systemd.user.paths.sunshine-creds-changed = {
+          wantedBy = [ "graphical-session.target" ];
+          partOf = [ "graphical-session.target" ];
+          pathConfig = {
+            PathModified = sunshineCreds;
+            Unit = "sunshine-creds-restart.service";
+          };
+        };
+
+        systemd.user.services.sunshine-creds-restart = {
+          description = "angst: restart sunshine after credential rotation";
+          after = [ "sunshine.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = "${pkgs.systemd}/bin/systemctl --user try-restart sunshine.service";
+          };
+        };
 
         users.users.${userConfig.username}.extraGroups = [
           "uinput"
