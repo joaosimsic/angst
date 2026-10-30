@@ -1,5 +1,0 @@
-{
-  enable = [
-    "embedded.arduino"
-  ];
-}
