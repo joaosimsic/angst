@@ -337,9 +337,8 @@ Reading:
   and emits home-manager and NixOS modules that install `$out` from
   `/nix/store`.
 - `activate`: `workflow/activate` selects the backend from `target.nix`:
-  `nixos` local uses `nixos-rebuild switch`; `generic-linux` local uses
-  `home-manager switch`; `nixos` remote uses `nixos-rebuild --target-host`;
-  `generic-linux` remote builds, copies, and activates over SSH.
+  `nixos` uses `nixos-rebuild switch`; `generic-linux` uses
+  `home-manager switch`.
 - `verify`: activation re-probes the target and compares it with
   `target.nix`. Mismatch stops the run; only `angst host detect`
   regenerates the manifest. `workflow/validate` runs health checks and
@@ -367,7 +366,7 @@ Atomicity keeps the failure out of live state.
 | `evaluate` | `catalog/features/`, `catalog/capabilities/`, `catalog/toolchains/`, `catalog/runtime/`, `catalog/hosts/<host>/default.nix`, `catalog/hosts/<host>/target.nix`, `catalog/hosts/<host>/hardware.nix` | `compose/packages`, `compose/context`, `infra/monads`, `infra/lib` | `SystemPlan` {selected, providers, order, facts, involved} plus diagnostics. `involved` lists per-run features for later phases to scope work | Eval, pure, no probe, no SSH, no QEMU, no decrypt |
 | `validate` | `SystemPlan` plus desired/observed/derived context plus `target.nix` | public facades only, `catalog/*` read-only | diagnostics, fail closed on `unknown`/`failed`/stale | Eval, owns `ARCH`, `PROF001`, `DESK001`, `DESK002`, `DESK003`, `TGT001`, `TGT002`, `TGT003`, `PKG`, `VM`, `PROJ`, `DEP`, `ACT`, `SEC`, `CTX`, `LOG` (all abort-only, no `--force`) |
 | `build` | `SystemPlan` plus `theme` plus `toolchains` plus `src` plus `upstream` plus `version` from `self.shortRev` / `self.dirtyShortRev`, fallback `"dev"` for eval only, plus flake rev pin | `catalog/features/*/package.nix`, `catalog/runtime/*/package.nix`, `compose/platform`, `infra/nixpkgs-config.nix` | `/nix/store` paths plus home-manager/NixOS modules installing `$out`, plus sealed `deployPlan` with digests (`targetDigest`, `planDigest`, `storePath`, `flakeRev`) | Build, theme/toolchain baked into `$out`, never eval text; non-pinned leaf health (e.g. `design.paper`) gates here when checkable pre-build, else defers to `activate` pre-flight / `verify` with atomic abort |
-| `activate` | sealed `deployPlan` plus `target.nix` plus built toplevel plus backend choice | `target`, `deploy`, `state`, `log`, `secret` ports; `infra/cli` executes, `workflow/activate` owns behavior | generation switch via `nixos-rebuild switch` or `home-manager switch` or `nixos-rebuild --target-host` plus phase events | Activate, strict: missing manifest fails `TGT001`, no probe, no write, no fallback; mismatch, flake-rev drift, or dirty/dev rev fails `TGT003`; health gate failure fails `PKG`/`ACT` before effects. Pre-flight reloads sealed gates, runs fast native checks, re-invokes `nix eval` recheck, compares fresh probe digest; any drift or failed health aborts, keeps prior generation, never GCs |
+| `activate` | sealed `deployPlan` plus `target.nix` plus built toplevel plus backend choice | `target`, `deploy`, `state`, `log`, `secret` ports; `infra/cli` executes, `workflow/activate` owns behavior | generation switch via `nixos-rebuild switch` or `home-manager switch` plus phase events | Activate, strict: missing manifest fails `TGT001`, no probe, no write, no fallback; mismatch, flake-rev drift, or dirty/dev rev fails `TGT003`; health gate failure fails `PKG`/`ACT` before effects. Pre-flight reloads sealed gates, runs fast native checks, re-invokes `nix eval` recheck, compares fresh probe digest; any drift or failed health aborts, keeps prior generation, never GCs |
 | `verify` | sealed run plus `target.nix` plus fresh probe plus generation plus store path | `compose/context`, `systems/*` health checks, `infra/state` | diagnostics plus recorded generation/store path | Run, stale facts never authorize destroy; mismatch or failed health stops run, no `finish ok`; atomic: failed health keeps prior generation as last-good, never GCs |
 | `finish` | per-phase durations plus event stream plus exit code | `infra/log`, `infra/state` | `~/.local/state/angst/activation/<host>/<run-id>/summary.json`, `events.jsonl`, `raw.log`, `latest` symlink, 20-run retention, gzip old logs, `0700` dirs, `0600` sensitive | Run. On `error` writes `error` summary, preserves `raw.log`, keeps prior generation |
 
@@ -736,7 +735,7 @@ repo checks.
 ## Target Model
 
 Pure Nix cannot detect the target OS. `builtins.currentSystem` is the evaluator
-platform, not the target. A remote host is invisible to evaluation.
+platform, not the target. Evaluation cannot see other hosts.
 
 Use a generated, tracked target manifest:
 
@@ -791,27 +790,18 @@ Rules:
 - `target.kind = "generic-linux"` selects the home-manager backend
 - no `--scope` is required for normal use
 - target mismatch fails `TGT003` before build
-- `--target-host` explicitly selects remote execution
 
 `hm-switch` and `nixos-switch` are compatibility wrappers only. They are not
 the normal activation path.
 
-Remote deployment is not monad work:
-
-```bash
-nixos-rebuild switch --flake .#host --target-host user@host --use-remote-sudo
-```
-
-Remote requires explicit `--target-host USER@HOST`, strict host-key
-checking, and hash-verified artifacts before activate. `workflow/activate`
-builds the deployment plan. `infra/cli` executes it.
+`workflow/activate` builds the deployment plan. `infra/cli` executes it.
 
 ## Switch
 
 Primary command:
 
 ```bash
-angst switch [--host HOST] [--flake REF] [--target-host USER@HOST]
+angst switch [--host HOST] [--flake REF]
              [--dry-run] [--build-only] [--no-gc] [--json] [--verbose]
 ```
 
@@ -838,10 +828,8 @@ implicit target detection or target write in `angst switch`. There is no
 
 | Target | Backend |
 |---|---|
-| `nixos` local | `nixos-rebuild switch` |
-| `generic-linux` local | `home-manager switch` |
-| `nixos` remote | `nixos-rebuild --target-host` |
-| `generic-linux` remote | build activation, copy, activate over SSH |
+| `nixos` | `nixos-rebuild switch` |
+| `generic-linux` | `home-manager switch` |
 
 `--home` and `--system` are explicit overrides only. They do not silently
 fallback.
@@ -1518,7 +1506,6 @@ Owns the sole phase state machine:
 - `angst switch` orchestration
 - strict target validation and backend selection
 - NixOS and home-manager activation backends
-- remote deploy backends
 - phase state machine and live progress events
 - activation run history and stored logs
 - login shell sync
@@ -2075,7 +2062,7 @@ facts the graph cannot know.
 Examples:
 
 - `display.gpu`: `targets = [ "generic-linux" ]`, home side only.
-- `remote.ssh`: home side both targets; system side NixOS and conditional on
+- `ssh`: home side both targets; system side NixOS and conditional on
   `ssh.server.enable`.
 - `network.vpn`: home plus system; system side NixOS.
 - `browser.firefox`: home plus system; `display.gpu` remains optional or
