@@ -1,162 +1,80 @@
-# infra/logger/default.nix — Step 2: Nix event schema, pure data only.
+# infra/logger/default.nix — thin facade: shapes, render, throw only.
 #
-# Pure data only. No printing. No IO. No builtins.trace.
-# JSONL (builtins.toJSON of `event`) is canonical; `render*` is a human
-# terminal view only.
-# Secret values never enter events; only `SecretRef` ({ ref } only).
+# Pure data only. No printing. No IO. No `builtins.trace`.
+# Vocab lives in `infra/contracts/` and is re-exported here, never
+# redefined. Generic checks plus the `Result` core live in
+# `infra/lib/types.nix`, regex matchers in `infra/lib/match.nix`
+# (transitive via contracts/types). Validation accumulates via `collect` and throws
+# once via `unwrap` with tree-formatted errors; single-field failures read
+# the same as before.
 # Phase/state literals stay unvalidated strings here; Step 3 imports the
 # single source from `workflow/phases.nix` (no redefinition).
-rec {
-  codes = [
-    "TGT"
-    "PKG"
-    "PROF"
-    "DESK"
-    "CTX"
-    "SEC"
-    "VM"
-    "PROJ"
-    "DEP"
-    "ACT"
-    "LOG"
-    "ARCH"
-  ];
+# JSONL (`builtins.toJSON` of `event`) is canonical; `render*` is a human
+# terminal view. Secret values never enter events; only `SecretRef`.
+let
+  types = import ../lib/types.nix;
+  codesMod = import ../contracts/codes.nix;
+  levelsMod = import ../contracts/levels.nix;
+  secretRefMod = import ../contracts/secret-ref.nix;
 
-  levels = [
-    "error"
-    "warn"
-    "info"
-    "step"
-  ];
+  renderDiagnosticFn =
+    d:
+    let
+      pkgs =
+        if (d.packages or [ ]) == [ ] then "" else " packages=" + builtins.concatStringsSep "," d.packages;
+      dataStr = if (d.data or { }) == { } then "" else " data=" + builtins.toJSON d.data;
+    in
+    "${d.code} [${d.phase}] ${d.scope}/${d.host}${pkgs}: ${d.message}${dataStr}";
 
-  # SecretRef constructor: exactly { ref }, nothing else.
-  SecretRef =
-    ref:
-    if !(builtins.isString ref) || ref == "" then
-      throw "SecretRef: `ref` must be a non-empty string"
+  renderEventFn = e: "${e.ts} ${e.level} ${e.code} [${e.phase}] ${e.scope}/${e.host}: ${e.message}";
+
+  checkNonEmptyString =
+    field: v:
+    if types.isNonEmptyStr v then
+      types.ok v
     else
-      { ref = ref; };
+      types.err {
+        kind = "field";
+        message = "logger: `${field}` must be a non-empty string";
+        context = {
+          field = field;
+        };
+      };
 
-  isSecretRef =
-    v:
-    builtins.isAttrs v && builtins.attrNames v == [ "ref" ] && builtins.isString v.ref && v.ref != "";
-
-  # Any attr name mentioning secrets must hold a SecretRef, never a plain string.
-  isSecretKey =
-    name:
-    builtins.match ".*(secret|Secret|SECRET|token|Token|password|Password|passwd|private|Private|credential|Credential|apiKey|api_key|auth|Auth|decrypted|Decrypted).*" name
-    != null;
-
-  # Recursive edge guard: plain secret strings rejected, SecretRef required.
-  assertSecretRefsOnly =
-    let
-      walk =
-        path: v:
-        if v == null || builtins.isBool v || builtins.isInt v || builtins.isFloat v then
-          true
-        else if builtins.isString v then
-          true
-        else if builtins.isList v then
-          builtins.all (x: walk path x) v
-        else if builtins.isAttrs v then
-          if builtins.attrNames v == [ "ref" ] && builtins.isString (v.ref or null) then
-            true
-          else
-            builtins.all (
-              name:
-              let
-                child = v.${name};
-                sub = path + "." + name;
-              in
-              if
-                builtins.match ".*(secret|Secret|SECRET|token|Token|password|Password|passwd|private|Private|credential|Credential|apiKey|api_key|auth|Auth|decrypted|Decrypted).*" name
-                != null
-              then
-                if
-                  builtins.isAttrs child
-                  && builtins.attrNames child == [ "ref" ]
-                  && builtins.isString (child.ref or null)
-                  && child.ref != ""
-                then
-                  true
-                else
-                  throw "SecretRef edge rejected at `${sub}`: secret field must be `SecretRef { ref }`, never a plain string"
-              else
-                walk sub child
-            ) (builtins.attrNames v)
-        else
-          throw "SecretRef edge rejected: unsupported value type";
-    in
-    data: walk "data" data;
-
-  # Known-value guard: caller-supplied secret strings must not appear in
-  # message or data JSON. Eval never sees decrypted values, so default is [].
-  assertNoKnownSecrets =
-    secrets: message: dataJson:
-    let
-      contains =
-        needle: haystack:
-        builtins.isString needle
-        && needle != ""
-        && builtins.isString haystack
-        && haystack != builtins.replaceStrings [ needle ] [ "" ] haystack;
-      bad = builtins.filter (s: contains s message || contains s dataJson) secrets;
-    in
-    if bad != [ ] then
-      throw "SecretRef edge rejected: plain secret value present in message/data; wrap as `SecretRef` instead"
-    else
-      true;
-
-  codePrefix =
-    code:
-    let
-      m = builtins.match "([A-Z]+)[0-9]+$" code;
-    in
-    if m == null then null else builtins.head m;
-
-  assertCode =
-    code:
-    let
-      prefix = builtins.match "([A-Z]+)[0-9]+$" code;
-    in
-    if !(builtins.isString code) || prefix == null then
-      throw "logger: `code` must look like PREFIXNNN (e.g. DESK001), got `${builtins.toJSON code}`"
-    else if
-      !(builtins.elem (builtins.head prefix) [
-        "TGT"
-        "PKG"
-        "PROF"
-        "DESK"
-        "CTX"
-        "SEC"
-        "VM"
-        "PROJ"
-        "DEP"
-        "ACT"
-        "LOG"
-        "ARCH"
-      ])
-    then
-      throw "logger: unknown code prefix `${builtins.head prefix}`; expected one of TGT PKG PROF DESK CTX SEC VM PROJ DEP ACT LOG ARCH"
-    else
-      true;
-
-  assertPackages =
+  checkPackages =
     packages:
-    if !(builtins.isList packages) || !(builtins.all builtins.isString packages) then
-      throw "logger: `packages` must be a list of strings"
+    if builtins.isList packages && builtins.all builtins.isString packages then
+      types.ok packages
     else
-      true;
+      types.err {
+        kind = "field";
+        message = "logger: `packages` must be a list of strings";
+        context = {
+          field = "packages";
+        };
+      };
 
-  assertNonEmptyString =
-    name: v:
-    if !(builtins.isString v) || v == "" then
-      throw "logger: `${name}` must be a non-empty string"
-    else
-      true;
+  checkShape =
+    ctx: checks: types.unwrap (types.mapOk (_: true) (types.withContext ctx (types.collect checks)));
+in
+{
+  logCodes = codesMod.logCodes;
+  logCodePrefix = codesMod.logCodePrefix;
+  checkLogCode = codesMod.checkLogCode;
+  assertLogCode = codesMod.assertLogCode;
+  logLevels = levelsMod.logLevels;
+  checkLogLevel = levelsMod.checkLogLevel;
+  assertLogLevel = levelsMod.assertLogLevel;
+  isLogLevel = levelsMod.isLogLevel;
+  SecretRef = secretRefMod.SecretRef;
+  checkSecretRef = secretRefMod.checkSecretRef;
+  isSecretRef = secretRefMod.isSecretRef;
+  isSecretKey = secretRefMod.isSecretKey;
+  checkSecretRefsOnly = secretRefMod.checkSecretRefsOnly;
+  assertSecretRefsOnly = secretRefMod.assertSecretRefsOnly;
+  checkNoKnownSecrets = secretRefMod.checkNoKnownSecrets;
+  assertNoKnownSecrets = secretRefMod.assertNoKnownSecrets;
 
-  # diagnostic: { code, scope, host, packages, phase, message, data }.
-  # No ts, no level. Extra `secrets` arg is edge-only, never emitted.
   diagnostic =
     {
       code,
@@ -170,16 +88,21 @@ rec {
     }:
     assert builtins.isAttrs data;
     let
-      _code = assertCode code;
-      _scope = assertNonEmptyString "scope" scope;
-      _host = assertNonEmptyString "host" host;
-      _pkgs = assertPackages packages;
-      _phase = assertNonEmptyString "phase" phase;
-      _msg = assertNonEmptyString "message" message;
-      _edge = assertSecretRefsOnly data;
-      _known = assertNoKnownSecrets secrets message (builtins.toJSON data);
+      ctx = {
+        inherit scope host phase;
+      };
+      _ = checkShape ctx [
+        (codesMod.checkLogCode code)
+        (checkNonEmptyString "scope" scope)
+        (checkNonEmptyString "host" host)
+        (checkPackages packages)
+        (checkNonEmptyString "phase" phase)
+        (checkNonEmptyString "message" message)
+        (secretRefMod.checkSecretRefsOnly data)
+        (secretRefMod.checkNoKnownSecrets secrets message (builtins.toJSON data))
+      ];
     in
-    assert _code && _scope && _host && _pkgs && _phase && _msg && _edge && _known;
+    assert _;
     {
       inherit
         code
@@ -192,8 +115,6 @@ rec {
         ;
     };
 
-  # event: { ts, level, code, scope, host, packages, phase, message, data }.
-  # Matches ## Logging JSON example keys exactly.
   event =
     {
       ts,
@@ -209,29 +130,23 @@ rec {
     }:
     assert builtins.isAttrs data;
     let
-      _ts = assertNonEmptyString "ts" ts;
-      _level =
-        if
-          !(builtins.elem level [
-            "error"
-            "warn"
-            "info"
-            "step"
-          ])
-        then
-          throw "logger: `level` must be one of error warn info step, got `${builtins.toJSON level}`"
-        else
-          true;
-      _code = assertCode code;
-      _scope = assertNonEmptyString "scope" scope;
-      _host = assertNonEmptyString "host" host;
-      _pkgs = assertPackages packages;
-      _phase = assertNonEmptyString "phase" phase;
-      _msg = assertNonEmptyString "message" message;
-      _edge = assertSecretRefsOnly data;
-      _known = assertNoKnownSecrets secrets message (builtins.toJSON data);
+      ctx = {
+        inherit scope host phase;
+      };
+      _ = checkShape ctx [
+        (checkNonEmptyString "ts" ts)
+        (levelsMod.checkLogLevel level)
+        (codesMod.checkLogCode code)
+        (checkNonEmptyString "scope" scope)
+        (checkNonEmptyString "host" host)
+        (checkPackages packages)
+        (checkNonEmptyString "phase" phase)
+        (checkNonEmptyString "message" message)
+        (secretRefMod.checkSecretRefsOnly data)
+        (secretRefMod.checkNoKnownSecrets secrets message (builtins.toJSON data))
+      ];
     in
-    assert _ts && _level && _code && _scope && _host && _pkgs && _phase && _msg && _edge && _known;
+    assert _;
     {
       inherit
         ts
@@ -246,17 +161,9 @@ rec {
         ;
     };
 
-  # Human terminal view. JSONL stays canonical via builtins.toJSON.
-  renderDiagnostic =
-    d:
-    let
-      pkgs =
-        if (d.packages or [ ]) == [ ] then "" else " packages=" + builtins.concatStringsSep "," d.packages;
-      dataStr = if (d.data or { }) == { } then "" else " data=" + builtins.toJSON d.data;
-    in
-    "${d.code} [${d.phase}] ${d.scope}/${d.host}${pkgs}: ${d.message}${dataStr}";
+  renderDiagnostic = renderDiagnosticFn;
 
-  renderEvent = e: "${e.ts} ${e.level} ${e.code} [${e.phase}] ${e.scope}/${e.host}: ${e.message}";
+  renderEvent = renderEventFn;
 
   render =
     v:
@@ -271,9 +178,8 @@ rec {
     else
       throw "logger render: expected diagnostic or event";
 
-  renderDiagnostics = diags: builtins.concatStringsSep "\n" (builtins.map renderDiagnostic diags);
+  renderDiagnostics = diags: builtins.concatStringsSep "\n" (builtins.map renderDiagnosticFn diags);
 
-  # Grouped collect-all, single throw. No warn mode, no allowlist flag.
   throwDiagnostics =
     diags:
     if !(builtins.isList diags) then
@@ -283,9 +189,8 @@ rec {
     else
       throw (
         "angst diagnostics (${toString (builtins.length diags)}):\n"
-        + builtins.concatStringsSep "\n" (builtins.map renderDiagnostic diags)
+        + builtins.concatStringsSep "\n" (builtins.map renderDiagnosticFn diags)
       );
 
-  # Canonical JSONL: one event per line.
   toJSONL = events: builtins.concatStringsSep "\n" (builtins.map builtins.toJSON events);
 }

@@ -379,7 +379,7 @@ Rules:
   for schema checks, never its behavior.
 - `workflow/*` may import `compose/*` facades, `catalog/*` records,
   `infra/lib`, `infra/contracts`, and `infra/monads` ports. Never the reverse.
-- `codes`/`levels`/`SecretRef` vocab lives only in `infra/contracts/`.
+- `logCodes`/`logLevels`/`SecretRef` vocab lives only in `infra/contracts/`.
   `infra/logger` re-exports only. `workflow/validate` owns gate behavior,
   `systems/secrets` owns provisioning/redaction behavior; both import shapes
   from `infra/contracts/`. Any other definition fails `ARCH`.
@@ -664,7 +664,7 @@ Rules:
 | `infra/monads` | The edge. Imported only by files under `compose/`, `systems/`, `workflow/`, `infra/`. Never imported by `catalog/*` or `secrets/`. |
 | `*/default.nix` (bucket facades) | Public API only. Returns plain data, modules, packages, diagnostics, or monadic programs. Never leaks internals. |
 | `*/internal/` | Private to that bucket member. No other member may import it. `workflow/validate` never imports `workflow/activate` internals. |
-| `infra/lib/` | Imports only `infra/lib/` and nixpkgs lib. Never imports `compose/`, `systems/`, `workflow/`, `catalog/`. Holds minimal shared types/checks (`infra/lib/types.nix`: `isNonEmptyStr`, `isRelPath`, `isBasename`, `require`, `checks`/`firstError` like pre-refac `lib/domains/mkDomain.nix`). |
+| `infra/lib/` | Imports only `infra/lib/` and nixpkgs lib. Never imports `compose/`, `systems/`, `workflow/`, `catalog/`. Holds minimal shared types/checks plus a `Result` core (`infra/lib/types.nix`: `isNonEmptyStr`, hardened `isRelPath`/`isBasename`, `ok`/`err`, `isOk`/`isErr`, `check`, `andThen`/`mapOk`, `withContext`, `collect`, tree `format`, `unwrap` as the sole throw site) plus single regex home (`infra/lib/match.nix`: `logCodePattern`, `secretKeyPattern`, `slashPattern`, `parseLogCode`/`logCodePrefix`, `isSecretKeyName`, `hasSlash`; leaf, no imports). |
 | `infra/nixpkgs-config.nix` | Single nixpkgs configuration. Imported by `infra/outputs`, `workflow/build`, and compose builds via args. Never hardcoded from `catalog/*`. |
 | `catalog/features/*/default.nix` | Declarative record (`type`, `requires`, `provides`, `conflicts`, `sides`, `targets`, `placement`, `persist`). No imports from `compose/`, `systems/`, `workflow/`, or non-lib `infra/` (local files plus `infra/lib/` only); no effects. |
 | `catalog/features/*/package.nix` | Pure build function. Explicit inputs only (`theme`, `toolchains`, `src`, `upstream`, `version`, nixpkgs inputs); never reads `host`. |
@@ -1455,7 +1455,7 @@ matrix plus these rules:
   literals (`pending|running|ok|warn|error|skipped`) outside `workflow/`,
   `infra/logger` (re-export only), and `workflow/validate/report.nix` fail
   `ARCH`
-- `codes`/`levels`/`SecretRef` vocab outside `infra/contracts/` (plus
+- `logCodes`/`logLevels`/`SecretRef` vocab outside `infra/contracts/` (plus
   re-export in `infra/logger`) fails `ARCH`
 - event `code`/`phase`/`level` schema breaks fail `LOG`/`ARCH`
 - missing `catalog/hosts/<host>/target.nix` fails `TGT001`; no or ambiguous
@@ -1594,8 +1594,11 @@ Edge layer described above. Public operations: `pure`, `bind`, `map`,
 Unified diagnostics and runtime logging.
 
 - Nix facade: `diagnostic`, `event`, `render`, `throwDiagnostics`
-  (re-exports `codes`, `levels`, `SecretRef` from `infra/contracts/`,
-  `phases`/`states` from `workflow/phases.nix`; defines no vocab).
+  (re-exports `logCodes`, `logLevels`, `SecretRef` plus `check*` validators from
+  `infra/contracts/`, `phases`/`states` from `workflow/phases.nix`;
+  defines no vocab). Field checks accumulate via `collect` with
+  `{ scope, host, phase }` context and unwrap once with tree-formatted
+  errors (`error[kind]: message (k=v)` plus indented `causes`).
 - Go package: `infra/logger`.
 - Shell helper: `angst-log`, a small helper binary or a wrapper to
   `angst log`.
@@ -1727,25 +1730,37 @@ pre-refac `lib/core/` port:
 - never imports `compose/`, `systems/`, `workflow/`, `catalog/`, or
   `infra/contracts/`
 - generic helpers with no domain logic
-- `infra/lib/types.nix`: `isNonEmptyStr`, `isRelPath`, `isBasename`,
-  `require`, `checks` list plus `firstError` fold (same idiom as pre-refac
-  `lib/domains/mkDomain.nix`). Asserts non-empty (`""`, `[ ]`, `{ }` reject).
-  No `TGT`, no `levels`, no `SecretRef`.
+- `infra/lib/match.nix`: single regex home. Leaf, no imports. `logCodePattern`, `secretKeyPattern`, `slashPattern` plus `parseLogCode`/`logCodePrefix`, `isSecretKeyName`, `hasSlash`. Callers use functions, not literals. No inline `builtins.match` outside this file.
+- `infra/lib/types.nix`: `isNonEmptyStr`, hardened `isRelPath`
+  (segment scan, rejects `..`/`.`/empty/`~` segments), hardened
+  `isBasename` (delegates slash check to `infra/lib/match.nix`), plus a minimal `Result` core (`ok`, `err`, `isOk`/`isErr`,
+  `check`, `andThen`/`mapOk`, `withContext`, `collect`, tree `format`,
+  `unwrap` as the sole throw site). Validators return values; only `unwrap`
+  throws. No `TGT`, no `logLevels`, no `SecretRef`.
 
 ### `infra/contracts`
 
-Public vocab between domains. Import-free leaves except `infra/lib/types.nix`
-plus nixpkgs lib:
+Public vocab between domains. Import-free leaves except `infra/lib/*`
+plus nixpkgs lib. Lists live in `infra/contracts/log-vocab.json`
+(single source shared Nix+Go; build-time immutable, no runtime file read):
 
-- `infra/contracts/codes.nix`: `codes` `TGT`, `PKG`, `PROF`, `DESK`, `CTX`,
-  `SEC`, `VM`, `PROJ`, `DEP`, `ACT`, `LOG`, `ARCH` plus `codePrefix` plus
-  `assertCode` (`PREFIXNNN`). Gate behavior stays in `workflow/validate`.
-- `infra/contracts/levels.nix`: `levels` `error`, `warn`, `info`, `step` plus
-  `assertLevel` plus `isLevel`. Neutral, shared Nix+Go. Canonical wire values
-  lowercase, matching `## Logging` example.
+- `infra/contracts/codes.nix`: `logCodes` `TGT`, `PKG`, `PROF`, `DESK`, `CTX`,
+  `SEC`, `VM`, `PROJ`, `DEP`, `ACT`, `LOG`, `ARCH` (from `log-vocab.json`) plus `logCodePrefix` plus
+  `checkLogCode`/`assertLogCode` (`PREFIXNNN`, `assertLogCode = unwrap ∘ checkLogCode`).
+  Regex lives in `infra/lib/match.nix`; no inline `builtins.match` here.
+  `logCodePrefix` safe: `null` on non-string, not throw.
+  Gate behavior stays in `workflow/validate`.
+- `infra/contracts/levels.nix`: `logLevels` `error`, `warn`, `info`, `step` (from `log-vocab.json`) plus
+  `checkLogLevel`/`assertLogLevel` plus `isLogLevel`. Neutral, shared Nix+Go.
+  Canonical wire values lowercase, matching `## Logging` example.
+  Go mirror: `infra/logger/vocab_gen.go` (generated, `DO NOT EDIT`) + `infra/logger/logger.go`
+  (`Level`, `LogCodes()`, `LogLevels()`, clones only). Parity test reads JSON.
 - `infra/contracts/secret-ref.nix`: `SecretRef` `{ ref }` only plus
-  `isSecretRef` plus `isSecretKey` plus `assertSecretRefsOnly` plus
-  `assertNoKnownSecrets`. Not just null/string checking: recursive edge guards
+  `checkSecretRef` plus `isSecretRef` plus `isSecretKey` plus
+  `checkSecretRefsOnly`/`assertSecretRefsOnly` plus
+  `checkNoKnownSecrets`/`assertNoKnownSecrets`. Secret-name regex lives in
+  `infra/lib/match.nix`; no inline `builtins.match` here. Not just null/string
+  checking: recursive edge guards returning `Result` with `path` context
   for secret-named fields, known-value guard for `message`/`data` JSON.
   Shape lives here; provisioning/redaction behavior stays in
   `systems/secrets`.
@@ -1753,8 +1768,9 @@ plus nixpkgs lib:
   Never by `catalog/*` (only `infra/lib/`). Never imports `compose/`,
   `systems/`, `workflow/`, `catalog/`, or `infra/logger`.
 - `infra/logger/default.nix` `let`-imports these 3 plus
-  `workflow/phases.nix` and `infra/lib/types.nix`, drops `rec`, re-exports
-  same public names.
+  `workflow/phases.nix` and `infra/lib/types.nix` (plus transitive
+  `infra/lib/match.nix`), drops `rec`, re-exports
+  same public names plus `check*` validators.
 
 ### `infra/nixpkgs-config.nix`
 

@@ -1,0 +1,22 @@
+{
+  "logCodes": [
+    "TGT",
+    "PKG",
+    "PROF",
+    "DESK",
+    "CTX",
+    "SEC",
+    "VM",
+    "PROJ",
+    "DEP",
+    "ACT",
+    "LOG",
+    "ARCH"
+  ],
+  "logLevels": [
+    "error",
+    "warn",
+    "info",
+    "step"
+  ]
+}

@@ -1,0 +1,49 @@
+name: log-vocab-parity
+on:
+  push:
+    paths:
+      - "infra/contracts/log-vocab.json"
+      - "infra/contracts/codes.nix"
+      - "infra/contracts/levels.nix"
+      - "infra/logger/logger.go"
+      - "infra/logger/vocab_gen.go"
+      - "infra/logger/logger_test.go"
+      - "infra/logger/go.mod"
+      - ".github/workflows/log-vocab-parity.yml"
+  pull_request:
+    paths:
+      - "infra/contracts/log-vocab.json"
+      - "infra/contracts/codes.nix"
+      - "infra/contracts/levels.nix"
+      - "infra/logger/logger.go"
+      - "infra/logger/vocab_gen.go"
+      - "infra/logger/logger_test.go"
+      - "infra/logger/go.mod"
+      - ".github/workflows/log-vocab-parity.yml"
+jobs:
+  log_vocab_parity:
+    name: log domain vocab parity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout log domain
+        uses: actions/checkout@v4
+      - name: Setup Nix
+        uses: cachix/install-nix-action@v27
+      - name: Nix log vocab eval
+        working-directory: .
+        run: |
+          set -euo pipefail
+          nix eval --impure --json --expr '(import ./infra/logger/default.nix).logCodes'
+          nix eval --impure --json --expr '(import ./infra/logger/default.nix).logLevels'
+          NIXPKGS_ALLOW_UNFREE=1 nix flake check --no-build --impure
+      - name: Setup Go 1.26
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - name: Go log vocab tests
+        working-directory: infra/logger
+        run: |
+          set -euo pipefail
+          test -z "$(gofmt -l .)"
+          CGO_ENABLED=0 go vet ./...
+          CGO_ENABLED=0 go test ./... -count=1 -run 'TestVocab|TestNixParity|TestLevel|TestLogCodes|TestImmutability' -v
