@@ -17,6 +17,7 @@ in
     ./font.nix
     ./generic-host.nix
     ./host-secrets.nix
+    ./wake-on-lan.nix
     (lib.mkAliasOptionModule [ "keyboardLayout" ] [ "angst" "keyboardLayout" ])
   ];
 

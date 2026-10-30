@@ -146,7 +146,6 @@
       "personal/opencode-go-key"
       "work/cursor-api-key"
     ];
-    host = [ "personal/tailscale" ];
   };
   git = {
     personal = {

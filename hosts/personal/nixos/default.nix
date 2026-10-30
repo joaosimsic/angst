@@ -41,6 +41,11 @@
 
   nixos = {
     keyboardLayout = "br-abnt2";
+    angst.wakeOnLan = {
+      enable = true;
+      mac = "34:5a:60:a3:01:ec";
+      interface = "enp42s0";
+    };
     virtualisation.docker.daemon.settings.data-root = "/home/docker-data";
     domains.network.vpn.openvpn.servers.us = {
       config = "config /run/secrets/vpn/us.ovpn";
