@@ -118,7 +118,7 @@ not an umbrella.
 | Compose | Composition, resolution, base adapters | `compose/packages/`, `compose/context/`, `compose/host/`, `compose/platform/`, `compose/theme/` |
 | Systems | Bounded behavior plus state ports | `systems/secrets/`, `systems/vm/`, `systems/projects/`, `systems/persistence/` |
 | Workflow | Time, sequencing, gates, backend selection; controller over data, composition, systems | `workflow/evaluation/`, `workflow/validate/`, `workflow/build/`, `workflow/activate/`, `workflow/verify/`, `workflow/finish/`, `workflow/phases.nix`, `workflow/validate/matrix.nix`, `workflow/validate/report.nix` |
-| Infra | Seams, IO, rendering, exposure, shared helpers | `infra/monads/`, `infra/state/`, `infra/log/`, `infra/cli/`, `infra/outputs/`, `infra/lib/`, `infra/nixpkgs-config.nix` |
+| Infra | Seams, IO, rendering, exposure, shared helpers, public contracts | `infra/monads/`, `infra/state/`, `infra/logger/`, `infra/cli/`, `infra/outputs/`, `infra/lib/`, `infra/contracts/`, `infra/nixpkgs-config.nix` |
 | Secrets source | Encrypted data only | `secrets/` |
 
 NixOS and home-manager modules are adapters at the edge. They receive plain
@@ -185,8 +185,11 @@ infra/
     interpreters/
     tests/
   state/
-  log/
-    go/logger/
+  logger/
+    default.nix
+    go.mod
+    logger.go
+    logger_test.go
   cli/
     go.mod
     cmd/angst/
@@ -203,6 +206,11 @@ infra/
     wrappers/
   outputs/
   lib/
+    types.nix
+  contracts/
+    codes.nix
+    levels.nix
+    secret-ref.nix
   nixpkgs-config.nix
 secrets/                       # encrypted data only
 githooks/
@@ -308,14 +316,14 @@ design guide. Cells: O owns, R reads, W writes, X forbidden, - absent.
 | `infra/monads` | W | W | - | - | - | - |
 | `infra/state` | - | R | - | W | W | W |
 | `infra/lib` | R | R | R | - | - | - |
-| `infra/log` | W | W | W | W | W | W |
+| `infra/logger` | W | W | W | W | W | W |
 | `infra/cli-outputs` | - | - | R | W | R | R |
 
 Reading:
 
 - `evaluate`: `compose/packages` plus `compose/host` and `compose/context` emit the
   `SystemPlan` plus context through the `infra/monads` seam.
-  `workflow/activate` tracks phase state only. `infra/log` emits start/end
+  `workflow/activate` tracks phase state only. `infra/logger` emits start/end
   plus selection counts. `workflow/validate` checks shapes but owns no gates
   yet.
 - `validate`: `workflow/validate` owns gates `ARCH`, `PROF001`, `DESK001`,
@@ -360,17 +368,21 @@ Atomicity keeps the failure out of live state.
 | `build` | `SystemPlan` plus `theme` plus `toolchains` plus `src` plus `upstream` plus `version` from `self.shortRev` / `self.dirtyShortRev`, fallback `"dev"` for eval only, plus flake rev pin | `catalog/features/*/package.nix`, `catalog/runtime/*/package.nix`, `compose/platform`, `infra/nixpkgs-config.nix` | `/nix/store` paths plus home-manager/NixOS modules installing `$out`, plus sealed `deployPlan` with digests (`targetDigest`, `planDigest`, `storePath`, `flakeRev`) | Build, theme/toolchain baked into `$out`, never eval text; non-pinned leaf health (e.g. `design.paper`) gates here when checkable pre-build, else defers to `activate` pre-flight / `verify` with atomic abort |
 | `activate` | sealed `deployPlan` plus `target.nix` plus built toplevel plus backend choice | `target`, `deploy`, `state`, `log`, `secret` ports; `infra/cli` executes, `workflow/activate` owns behavior | generation switch via `nixos-rebuild switch` or `home-manager switch` plus phase events | Activate, strict: missing manifest fails `TGT001`, no probe, no write, no fallback; mismatch, flake-rev drift, or dirty/dev rev fails `TGT003`; health gate failure fails `PKG`/`ACT` before effects. Pre-flight reloads sealed gates, runs fast native checks, re-invokes `nix eval` recheck, compares fresh probe digest; any drift or failed health aborts, keeps prior generation, never GCs |
 | `verify` | sealed run plus `target.nix` plus fresh probe plus generation plus store path | `compose/context`, `systems/*` health checks, `infra/state` | diagnostics plus recorded generation/store path | Run, stale facts never authorize destroy; mismatch or failed health stops run, no `finish ok`; atomic: failed health keeps prior generation as last-good, never GCs |
-| `finish` | per-phase durations plus event stream plus exit code | `infra/log`, `infra/state` | `~/.local/state/angst/activation/<host>/<run-id>/summary.json`, `events.jsonl`, `raw.log`, `latest` symlink, 20-run retention, gzip old logs, `0700` dirs, `0600` sensitive | Run. On `error` writes `error` summary, preserves `raw.log`, keeps prior generation |
+| `finish` | per-phase durations plus event stream plus exit code | `infra/logger`, `infra/state` | `~/.local/state/angst/activation/<host>/<run-id>/summary.json`, `events.jsonl`, `raw.log`, `latest` symlink, 20-run retention, gzip old logs, `0700` dirs, `0600` sensitive | Run. On `error` writes `error` summary, preserves `raw.log`, keeps prior generation |
 
 Rules:
 
-- `workflow/activate` is the sole state machine owner. `infra/log` renders
+- `workflow/activate` is the sole state machine owner. `infra/logger` renders
   it; `workflow/validate` checks it.
 - `workflow/validate` never imports `workflow/activate`. Check never calls
   do. `workflow/validate` may read `workflow/activate` phase/state shapes
   for schema checks, never its behavior.
 - `workflow/*` may import `compose/*` facades, `catalog/*` records,
-  `infra/lib`, and `infra/monads` ports. Never the reverse.
+  `infra/lib`, `infra/contracts`, and `infra/monads` ports. Never the reverse.
+- `codes`/`levels`/`SecretRef` vocab lives only in `infra/contracts/`.
+  `infra/logger` re-exports only. `workflow/validate` owns gate behavior,
+  `systems/secrets` owns provisioning/redaction behavior; both import shapes
+  from `infra/contracts/`. Any other definition fails `ARCH`.
 - `infra/cli` composes binaries only. No phase logic there. `cmd/angst-switch`
   calls `workflow/activate`; it owns no state machine.
 - `infra/outputs` exposes results: `nixosConfigurations` only for
@@ -378,7 +390,7 @@ Rules:
   `checks`.
 - Phase literals (`evaluate|validate|build|activate|verify|finish`) and state
   literals (`pending|running|ok|warn|error|skipped`) live only in
-  `workflow/`, `infra/log`, and `workflow/validate/report.nix`. Any other
+  `workflow/`, `infra/logger`, and `workflow/validate/report.nix`. Any other
   occurrence fails `ARCH`.
 - Eval plane versus `evaluate` phase: plane is *where* code runs (pure
   `nix eval`); phase is *what* step runs (produce `SystemPlan`). Both
@@ -591,9 +603,10 @@ flake.nix
        -> workflow/validate
        -> infra/cli
        -> compose/theme
-       -> infra/log
+       -> infra/logger
        -> catalog/
        -> infra/lib/
+       -> infra/contracts/
        -> infra/nixpkgs-config.nix
 
 compose/host
@@ -615,7 +628,7 @@ infra/cli
   -> systems/vm
   -> systems/projects
   -> infra/state
-  -> infra/log
+  -> infra/logger
 
 workflow/validate
   -> public facades only
@@ -625,7 +638,7 @@ workflow/activate
   -> compose/host (read-only plan/context shapes)
   -> systems/secrets (refs only)
   -> infra/state
-  -> infra/log
+  -> infra/logger
   -> infra/monads ports
 
 workflow/build
@@ -634,8 +647,11 @@ workflow/build
   -> catalog/ records plus pure builds
   -> infra/nixpkgs-config.nix via args
 
-compose/*, systems/*, workflow/*, infra/* (except infra/lib)
-  -> infra/lib (helpers only)
+compose/*, systems/*, workflow/*, infra/* (except infra/lib, infra/contracts)
+  -> infra/lib (helpers only) + infra/contracts (vocab only)
+
+infra/contracts
+  -> infra/lib + nixpkgs lib only
 
 infra/lib
   -> infra/lib + nixpkgs lib only
@@ -648,7 +664,7 @@ Rules:
 | `infra/monads` | The edge. Imported only by files under `compose/`, `systems/`, `workflow/`, `infra/`. Never imported by `catalog/*` or `secrets/`. |
 | `*/default.nix` (bucket facades) | Public API only. Returns plain data, modules, packages, diagnostics, or monadic programs. Never leaks internals. |
 | `*/internal/` | Private to that bucket member. No other member may import it. `workflow/validate` never imports `workflow/activate` internals. |
-| `infra/lib/` | Imports only `infra/lib/` and nixpkgs lib. Never imports `compose/`, `systems/`, `workflow/`, `catalog/`. |
+| `infra/lib/` | Imports only `infra/lib/` and nixpkgs lib. Never imports `compose/`, `systems/`, `workflow/`, `catalog/`. Holds minimal shared types/checks (`infra/lib/types.nix`: `isNonEmptyStr`, `isRelPath`, `isBasename`, `require`, `checks`/`firstError` like pre-refac `lib/domains/mkDomain.nix`). |
 | `infra/nixpkgs-config.nix` | Single nixpkgs configuration. Imported by `infra/outputs`, `workflow/build`, and compose builds via args. Never hardcoded from `catalog/*`. |
 | `catalog/features/*/default.nix` | Declarative record (`type`, `requires`, `provides`, `conflicts`, `sides`, `targets`, `placement`, `persist`). No imports from `compose/`, `systems/`, `workflow/`, or non-lib `infra/` (local files plus `infra/lib/` only); no effects. |
 | `catalog/features/*/package.nix` | Pure build function. Explicit inputs only (`theme`, `toolchains`, `src`, `upstream`, `version`, nixpkgs inputs); never reads `host`. |
@@ -695,7 +711,7 @@ repositories.
 | `VM` | fake lifecycle | none | `systems/vm` |
 | `Deploy` | plan only | plan only | `workflow/activate` |
 | `Projects` | fixture stores | tracked metadata only | `systems/projects` |
-| `Log` | captured events | diagnostics only | `infra/log` |
+| `Log` | captured events | diagnostics only | `infra/logger` |
 | `State` repositories | in-memory stores | tracked snapshots | `infra/state` plus owning bucket |
 
 Buckets do not call `os.ReadFile`, SSH, QEMU, or `nixos-rebuild` directly.
@@ -843,7 +859,7 @@ pending | running | ok | warn | error | skipped
 Phase ownership: `workflow/activate` is the sole phase state machine owner.
 No other bucket runs the state machine. `workflow/evaluation` and
 `workflow/build` produce plans and modules; `workflow/validate` owns the
-gates; `infra/log` renders progress.
+gates; `infra/logger` renders progress.
 
 Live view:
 
@@ -1012,7 +1028,7 @@ Use DDD repositories behind monad ports. Do not call everything “store.”
 | `ActivationRepository` | `state/activation/<host>/<run-id>/` | `workflow/activate` |
 | `ProjectStateRepository` | `state/projects/` plus working store | `systems/projects` |
 | `DbStateRepository` | `state/db/` plus decrypted DB store | `systems/projects` |
-| `LogRepository` | `state/logs/` | `infra/log` |
+| `LogRepository` | `state/logs/` | `infra/logger` |
 
 Ports live in `infra/monads/ports/`. Production adapters live in the owning
 bucket. Test adapters are in-memory or fixture-backed.
@@ -1063,7 +1079,7 @@ Rules:
 | `systems/vm` | VM service state, VM logs, VM locks |
 | `workflow/activate` | system switch runs, deploy runs, activation history, logs |
 | `systems/projects` | project/db/vault sync metadata and working-store state |
-| `infra/log` | append-only logs |
+| `infra/logger` | append-only logs |
 | `infra/state` | state root, atomic IO, locks, schema versions |
 | `infra/cli` | no state ownership; composes binaries |
 
@@ -1385,6 +1401,9 @@ matrix plus these rules:
 - `catalog/*` imports bucket behavior fail `ARCH` (except `infra/lib/`
   helpers)
 - `infra/lib/*` imports outside `infra/lib/` plus nixpkgs lib fail `ARCH`
+- `infra/contracts/*` imports outside `infra/lib/` plus nixpkgs lib fail
+  `ARCH`; `catalog/*` importing `infra/contracts/` fails `ARCH` (only
+  `infra/lib/` allowed there)
 - `infra/monads` imported outside `compose/`, `systems/`, `workflow/`,
   `infra/` fails `ARCH`
 - cross-`internal/` imports fail `ARCH`
@@ -1434,7 +1453,10 @@ matrix plus these rules:
   digest; mismatch fails `TGT003`
 - phase literals (`evaluate|validate|build|activate|verify|finish`) and state
   literals (`pending|running|ok|warn|error|skipped`) outside `workflow/`,
-  `infra/log`, and `workflow/validate/` fail `ARCH`
+  `infra/logger` (re-export only), and `workflow/validate/report.nix` fail
+  `ARCH`
+- `codes`/`levels`/`SecretRef` vocab outside `infra/contracts/` (plus
+  re-export in `infra/logger`) fails `ARCH`
 - event `code`/`phase`/`level` schema breaks fail `LOG`/`ARCH`
 - missing `catalog/hosts/<host>/target.nix` fails `TGT001`; no or ambiguous
   host fails `TGT002`; unknown kind or pre-build mismatch fails `TGT003`;
@@ -1555,7 +1577,7 @@ sixteen forbidden fallbacks (probe/write/default/first-host/missing-output/
 silent home-system/autofix/partial/overwrite/GC/skip/force/secret-values/
 stale-authorizes-destroy) fail `ARCH` before effects.
 
-`infra/log` and `workflow/validate/report.nix` import shapes from here;
+`infra/logger` and `workflow/validate/report.nix` import shapes from here;
 they do not redefine literals.
 
 ## Infra
@@ -1567,13 +1589,14 @@ Generic mechanics. No domain logic, no domain state.
 Edge layer described above. Public operations: `pure`, `bind`, `map`,
 `ask`, `asks`, `get`, `gets`, `modify`, `tell`, `fail`, `run`.
 
-### `infra/log`
+### `infra/logger`
 
 Unified diagnostics and runtime logging.
 
-- Nix facade: `diagnostic`, `event`, `render`, `throwDiagnostics`, `codes`,
-  `levels`.
-- Go package: `infra/log/go/logger`.
+- Nix facade: `diagnostic`, `event`, `render`, `throwDiagnostics`
+  (re-exports `codes`, `levels`, `SecretRef` from `infra/contracts/`,
+  `phases`/`states` from `workflow/phases.nix`; defines no vocab).
+- Go package: `infra/logger`.
 - Shell helper: `angst-log`, a small helper binary or a wrapper to
   `angst log`.
 - JSONL canonical format; human renderer for terminals.
@@ -1697,11 +1720,41 @@ logic; it only exposes what the buckets produce.
 
 ### `infra/lib`
 
-Pure shared utilities only:
+Pure shared utilities only. Minimal types/checks only, not a full
+pre-refac `lib/core/` port:
 
 - imports only `infra/lib/` and nixpkgs lib
-- never imports `compose/`, `systems/`, `workflow/`, or `catalog/`
+- never imports `compose/`, `systems/`, `workflow/`, `catalog/`, or
+  `infra/contracts/`
 - generic helpers with no domain logic
+- `infra/lib/types.nix`: `isNonEmptyStr`, `isRelPath`, `isBasename`,
+  `require`, `checks` list plus `firstError` fold (same idiom as pre-refac
+  `lib/domains/mkDomain.nix`). Asserts non-empty (`""`, `[ ]`, `{ }` reject).
+  No `TGT`, no `levels`, no `SecretRef`.
+
+### `infra/contracts`
+
+Public vocab between domains. Import-free leaves except `infra/lib/types.nix`
+plus nixpkgs lib:
+
+- `infra/contracts/codes.nix`: `codes` `TGT`, `PKG`, `PROF`, `DESK`, `CTX`,
+  `SEC`, `VM`, `PROJ`, `DEP`, `ACT`, `LOG`, `ARCH` plus `codePrefix` plus
+  `assertCode` (`PREFIXNNN`). Gate behavior stays in `workflow/validate`.
+- `infra/contracts/levels.nix`: `levels` `error`, `warn`, `info`, `step` plus
+  `assertLevel` plus `isLevel`. Neutral, shared Nix+Go. Canonical wire values
+  lowercase, matching `## Logging` example.
+- `infra/contracts/secret-ref.nix`: `SecretRef` `{ ref }` only plus
+  `isSecretRef` plus `isSecretKey` plus `assertSecretRefsOnly` plus
+  `assertNoKnownSecrets`. Not just null/string checking: recursive edge guards
+  for secret-named fields, known-value guard for `message`/`data` JSON.
+  Shape lives here; provisioning/redaction behavior stays in
+  `systems/secrets`.
+- importable by `compose/*`, `systems/*`, `workflow/*`, `infra/*`.
+  Never by `catalog/*` (only `infra/lib/`). Never imports `compose/`,
+  `systems/`, `workflow/`, `catalog/`, or `infra/logger`.
+- `infra/logger/default.nix` `let`-imports these 3 plus
+  `workflow/phases.nix` and `infra/lib/types.nix`, drops `rec`, re-exports
+  same public names.
 
 ### `infra/nixpkgs-config.nix`
 
@@ -2115,7 +2168,7 @@ Rules:
 - `angst-switch` wraps backend output as `source=nixos-rebuild` or
   `source=home-manager` events and keeps level detection as fallback.
 - Activation events include phase and state transitions.
-- The old `runtime/logger` seeds the shared Go logger under `infra/log`.
+- The old `runtime/logger` seeds the shared Go logger under `infra/logger`.
 - State and logs share `ANGST_STATE_DIR`; activation runs live under
   `~/.local/state/angst/activation/`; VM state lives under
   `~/.local/state/angst/vm/`.
@@ -2138,7 +2191,7 @@ Record per-host enabled/package sets and rendered output hashes.
 - Move `lib/nixpkgs-config.nix` to `infra/nixpkgs-config.nix` as the single
   configuration. No root-level exceptions.
 - Implement `infra/monads` with ports, interpreters, and central tests.
-- Add `infra/log` schema and diagnostics renderer.
+- Add `infra/logger` schema and diagnostics renderer.
 - Add `infra/state` contracts.
 - No production callers yet.
 - Verify with `nix flake check --no-build --impure`.

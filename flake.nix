@@ -8,4 +8,8 @@
     };
 
   };
+
+  outputs = { self, ... }: {
+    lib.logger = import ./infra/logger/default.nix;
+  };
 }
