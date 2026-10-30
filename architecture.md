@@ -9,6 +9,33 @@ Previous version can be seen on ~/projects/angst-pre-refac/
 Proposed architecture. Current code is still on the old layout; this document
 defines the target and the migration path.
 
+## Pillars
+
+Two pillars, hierarchical. Integrity is the goal. Atomicity exists only to
+preserve integrity on failure: if any failure entered the system as new
+state, integrity would be compromised, so every failure path must end in the
+old generation still live plus `error` artifacts, never half-new state.
+
+- Pillar 1 Integrity: system never enters bad state. Abort-only, no
+  `--force` for `TGT`, `PKG`, `PROF`, `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`,
+  `VM`, `PROJ`, `DEP`, `LOG` on any phase or target. Sealed `SystemPlan`
+  plus sealed `deployPlan` with digests (`targetDigest`, `planDigest`,
+  `storePath`, `flakeRev`). Runtime layers reload same plan, re-verify
+  against fresh probe digest before effects. `TGT003` rejects dirty/dev rev
+  and flake-rev drift. Pinned impure allowlist plus `ARCH` scanner plus
+  `flake.lock` with hash-pinned nixpkgs. `SecretRef` only in state, events,
+  and logs. Details in `## Workflow Phase Contracts`, `## Switch`,
+  `## State and Stores`, `## Workflow`, `## Non-Goals`.
+- Pillar 2 Atomicity (subordinate): preserves Pillar 1 on failure. No
+  partial switch, no prior-generation overwrite, no last-good GC. Never GC
+  in a run; prior and last-good generations stay as GC roots. Failed
+  validation or failed health keeps prior generation with no penalty, no
+  `finish ok`, no `warn`-as-pass. Writes are atomic: temp file, fsync,
+  rename. Atomic `summary.json`, append-only `events.jsonl` and `raw.log`,
+  `0700` dirs, `0600` sensitive files. Per-host activation lock. Mismatch
+  or drift aborts before effects and points to `angst host detect`.
+  Details in `## Switch`, `## State and Stores`, `## Workflow`.
+
 ## Goals
 
 - Buckets are top-level by kind, not hidden under one umbrella label. Catalog,
@@ -38,7 +65,7 @@ defines the target and the migration path.
   involved, coordinates the buckets, and defines their access, boundaries,
   and responsibilities. `catalog/` declares, `core/` composes, `systems/`
   acts; `workflow/` decides when, with what, and whether to proceed or fail.
-- Safety is abort-only. If system (`nixos`) or home (`generic-linux`)
+- Safety is abort-only (see `## Pillars`). If system (`nixos`) or home (`generic-linux`)
   integrity might be compromised, activation and run are forbidden. No
   `--force` override exists for integrity failures (`TGT`, `PKG`, `PROF`,
   `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG`).
@@ -59,7 +86,10 @@ defines the target and the migration path.
 - Feature implementations are co-located with their package builds.
 - `catalog/features/` is the new name for what is currently `domains/`.
 - Package versions are git-derived (flake `self.shortRev` /
-  `self.dirtyShortRev`, fallback `"dev"`); no hardcoded versions.
+  `self.dirtyShortRev`, fallback `"dev"`); no hardcoded versions. Eval allows
+  fallback `"dev"` for local dev; `angst switch` fails closed on dirty/dev rev
+  with `TGT003`: switch requires a clean tracked rev, keeps the prior
+  generation, never GCs.
 - No separate `derivations/` directory. Shared build helpers are consumed via
   `callPackage` dependencies, not via a shared recipe directory.
 - `infra/lib/` contains only shared pure utilities. `infra/nixpkgs-config.nix`
@@ -213,10 +243,16 @@ hides inside another.
   `catalog/hosts/<host>/target.nix`, `catalog/hosts/<host>/hardware.nix`, and
   `secrets/**/*.age` presence only. It emits modules, derivations, and
   diagnostics. It never probes live processes, SSH, QEMU, decrypted values,
-  or runtime logs.
+  or runtime logs. Pure eval is impossible at this point: all Nix invocations
+  use `--impure` with `NIXPKGS_ALLOW_UNFREE=1`. Purity is enforced by a pinned
+  impure allowlist plus `ARCH` scanner gates, not by the flag. Any new impure
+  source fails `ARCH`. There is no import from derivation (IFD): `workflow/build`
+  invokes `package.nix` in the Build plane; `evaluate` never imports a build
+  output.
 - Build runs `package.nix` derivations into `/nix/store`. Inputs are explicit:
   `theme`, `toolchains`, `src`, `upstream`, `version` from `self.shortRev` /
-  `self.dirtyShortRev` with fallback `"dev"`. Theme and toolchain values are
+  `self.dirtyShortRev` with fallback `"dev"` for eval only. `activate` pre-flight
+  rejects dirty/dev rev with `TGT003`. Theme and toolchain values are
   baked into `$out` here, never rendered as eval text.
 - Activate switches generations: `nixosConfigurations.<host>` into
   `/run/current-system` via `nixos-rebuild switch` (needs sudo), or
@@ -316,15 +352,17 @@ elsewhere. The full six-step run (`evaluate -> validate -> build ->
 activate -> verify -> finish`) is one controlled chain: Nix layers
 (`evaluate`, `validate`, `build`) are pure and emit a sealed plan; runtime
 layers (`activate`, `verify`, `finish`) reload the same plan, re-verify it
-against live reality, and abort on any drift before effects.
+against live reality, and abort on any drift before effects. This chain
+enforces `## Pillars`: Pillar 1 Integrity decides pass/fail, Pillar 2
+Atomicity keeps the failure out of live state.
 
 | Phase | Inputs | Uses | Outputs | Plane |
 |---|---|---|---|---|
 | `evaluate` | `catalog/features/`, `catalog/toolchains/`, `catalog/runtime/`, `catalog/profiles/`, `catalog/hosts/<host>/default.nix`, `catalog/hosts/<host>/target.nix`, `catalog/hosts/<host>/hardware.nix` | `core/packages`, `core/context`, `infra/monads`, `infra/lib` | `SystemPlan` {selected, providers, order, facts, involved} plus diagnostics. `involved` lists per-run domains for later phases to scope work | Eval, pure, no probe, no SSH, no QEMU, no decrypt |
 | `validate` | `SystemPlan` plus desired/observed/derived context plus `target.nix` | public facades only, `catalog/*` read-only | diagnostics, fail closed on `unknown`/`failed`/stale | Eval, owns `ARCH`, `PROF001`, `DESK001`, `DESK002`, `DESK003`, `TGT001`, `TGT002`, `TGT003`, `PKG`, `VM`, `PROJ`, `DEP`, `ACT`, `SEC`, `CTX`, `LOG` (all abort-only, no `--force`) |
-| `build` | `SystemPlan` plus `theme` plus `toolchains` plus `src` plus `upstream` plus `version` from `self.shortRev` / `self.dirtyShortRev`, fallback `"dev"`, plus flake rev pin | `catalog/features/*/package.nix`, `catalog/runtime/*/package.nix`, `core/platform`, `infra/nixpkgs-config.nix` | `/nix/store` paths plus home-manager/NixOS modules installing `$out`, plus sealed `deployPlan` with digests (`targetDigest`, `planDigest`, `storePath`, `flakeRev`) | Build, theme/toolchain baked into `$out`, never eval text |
-| `activate` | sealed `deployPlan` plus `target.nix` plus built toplevel plus backend choice | `target`, `deploy`, `state`, `log`, `secret` ports; `infra/cli` executes, `workflow/activate` owns behavior | generation switch via `nixos-rebuild switch` or `home-manager switch` or `nixos-rebuild --target-host` plus phase events | Activate, strict: missing manifest fails `TGT001`, no probe, no write, no fallback; mismatch or flake-rev drift fails `TGT003`. Pre-flight reloads sealed gates, runs fast native checks, re-invokes `nix eval` recheck, compares fresh probe digest; any drift aborts, keeps prior generation, never GCs |
-| `verify` | sealed run plus `target.nix` plus fresh probe plus generation plus store path | `core/context`, `systems/*` health checks, `infra/state` | diagnostics plus recorded generation/store path | Run, stale facts never authorize destroy; mismatch stops run, no `finish ok` |
+| `build` | `SystemPlan` plus `theme` plus `toolchains` plus `src` plus `upstream` plus `version` from `self.shortRev` / `self.dirtyShortRev`, fallback `"dev"` for eval only, plus flake rev pin | `catalog/features/*/package.nix`, `catalog/runtime/*/package.nix`, `core/platform`, `infra/nixpkgs-config.nix` | `/nix/store` paths plus home-manager/NixOS modules installing `$out`, plus sealed `deployPlan` with digests (`targetDigest`, `planDigest`, `storePath`, `flakeRev`) | Build, theme/toolchain baked into `$out`, never eval text; non-pinned leaf health (e.g. `design.paper`) gates here when checkable pre-build, else defers to `activate` pre-flight / `verify` with atomic abort |
+| `activate` | sealed `deployPlan` plus `target.nix` plus built toplevel plus backend choice | `target`, `deploy`, `state`, `log`, `secret` ports; `infra/cli` executes, `workflow/activate` owns behavior | generation switch via `nixos-rebuild switch` or `home-manager switch` or `nixos-rebuild --target-host` plus phase events | Activate, strict: missing manifest fails `TGT001`, no probe, no write, no fallback; mismatch, flake-rev drift, or dirty/dev rev fails `TGT003`; health gate failure fails `PKG`/`ACT` before effects. Pre-flight reloads sealed gates, runs fast native checks, re-invokes `nix eval` recheck, compares fresh probe digest; any drift or failed health aborts, keeps prior generation, never GCs |
+| `verify` | sealed run plus `target.nix` plus fresh probe plus generation plus store path | `core/context`, `systems/*` health checks, `infra/state` | diagnostics plus recorded generation/store path | Run, stale facts never authorize destroy; mismatch or failed health stops run, no `finish ok`; atomic: failed health keeps prior generation as last-good, never GCs |
 | `finish` | per-phase durations plus event stream plus exit code | `infra/log`, `infra/state` | `~/.local/state/angst/activation/<host>/<run-id>/summary.json`, `events.jsonl`, `raw.log`, `latest` symlink, 20-run retention, gzip old logs, `0700` dirs, `0600` sensitive | Run. On `error` writes `error` summary, preserves `raw.log`, keeps prior generation |
 
 Rules:
@@ -359,7 +397,8 @@ Rules:
   re-checking.
 - Abort-only has no `--force` for integrity codes. All twelve (`TGT`, `PKG`,
   `PROF`, `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG`)
-  abort on any phase or target. `skipped` and `warn` apply to
+  abort on any phase or target. Failed health aborts the same way
+  (`PKG`/`ACT`), no `warn`-as-pass, no `finish ok`. `skipped` and `warn` apply to
   optional sides only, never to `validate` or `activate` as whole phases.
 
 ## Catalog Discovery
@@ -699,6 +738,12 @@ Rules:
 - `flake.lock` required; nixpkgs hash-pinned. Runtime validation
   (healthy means working) covers non-pinned artifacts such as
   `design.paper` AppImages; it does not replace nixpkgs pinning.
+  Decision: keep `design.paper` health-only, no hash pin, to avoid hash-churn
+  blocking `build`/`switch` on one leaf. Cost: health-only cannot prove
+  untampered bytes. Therefore health failure aborts atomically: `build` and
+  `activate` pre-flight gates fail closed, `verify` health failure stops the run
+  with no `finish ok`, same as any integrity code, keeps the prior generation,
+  and never GCs.
 
 `angst switch` is strict:
 
@@ -750,7 +795,7 @@ wrapper selects the backend.
 
 `--dry-run` prints the selected backend and planned command. There is no
 implicit target detection or target write in `angst switch`. There is no
-`--force` path around integrity gates.
+`--force` path around integrity gates. This enforces `## Pillars`.
 
 ### Backend Selection
 
@@ -1328,21 +1373,31 @@ matrix plus these rules:
   `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG` on any
   phase or target (`nixos` system and `generic-linux` home alike)
 - strict allowlist, not path-prefix only: token-aware import scan plus `rg`
-  denies for dynamic `import`, string-interpolated paths, unpinned
+  denies for dynamic `import`, import from derivation (IFD),
+  string-interpolated paths, unpinned
   `builtins.fetch*`, `builtins.currentSystem` outside `core/context`,
   `builtins.getEnv`/`__getFlake` outside blessed helpers; catalog discovery
   stays data-only, code composition stays explicit
-- pinned impure set only: `NIXPKGS_ALLOW_UNFREE=1` plus documented eval
-  inputs; any new impure source fails `ARCH`
+- pinned impure set only: `NIXPKGS_ALLOW_UNFREE=1` plus `--impure` plus documented eval
+  inputs (`self.shortRev` / `self.dirtyShortRev` with fallback `"dev"` for eval only,
+  tracked snapshots); any new impure source fails `ARCH`. Pure eval is out of scope;
+  the flag does not grant new impure inputs.
 - `flake.lock` required and hash-pinned nixpkgs; fetched artifacts
   (e.g. `design.paper` AppImage in `catalog/features/design/paper/package.nix`)
   use runtime health validation via `workflow/validate` plus
-  `workflow/verify` instead of hash pins; a healthy check means working
+  `workflow/verify` instead of hash pins; a healthy check means working.
+  Hash churn is the accepted cost avoided here: re-pinning on every upstream
+  move would block `build`/`switch` on one leaf hash. Store pinning would give
+  content-addressed `/nix/store` paths, reproducible rollback, and tamper failure
+  before effects, but is rejected for this leaf. Health-only cannot detect
+  trojaned binaries that behave correctly during checks, so health failure aborts
+  the run atomically (no `finish ok`), same as any integrity code.
 - never GC in a run: no `nix-collect-garbage`, no delete-generation, prior
   and last-good generations kept as GC roots; validation failure keeps the
   prior generation with no penalty
 - sealed plan pins flake rev (`self.shortRev` / `self.dirtyShortRev`,
-  fallback `"dev"`); `activate` pre-flight rejects rev drift with `TGT003`
+  fallback `"dev"` for eval only); `activate` pre-flight rejects rev drift and
+  dirty/dev rev with `TGT003`
 - secret scrub before persist: `SecretRef` only in `events.jsonl` and
   `raw.log`; `0700` dirs, `0600` sensitive files; scrubbed `raw.log` stays
   authoritative
@@ -1424,8 +1479,9 @@ Owns the sole phase state machine:
 - no hidden backend default
 - no first-host fallback
 - no fallback when the selected flake output is missing
-- sealed `deployPlan` pins flake rev; rev drift fails `TGT003`
-- no `--force` for integrity failures; any drift aborts before effects,
+- sealed `deployPlan` pins flake rev; rev drift or dirty/dev rev fails `TGT003`
+- health gate failure fails `PKG`/`ACT` before effects; atomic: no partial switch
+- no `--force` for integrity failures; any drift or failed health aborts before effects,
   keeps the prior generation, never GCs, and points to `angst host detect`
 
 It uses target, deploy, state, log, and secret ports. `infra/cli` composes the
@@ -1436,6 +1492,8 @@ binaries; activation owns the behavior.
 - re-probe target after activation, compare with `target.nix`
 - mismatch stops run; only `angst host detect` regenerates manifest
 - run health checks via `workflow/validate`
+- failed health aborts atomically: stops run, no `finish ok`, records `error`,
+  keeps prior generation as last-good, never GCs
 - record generation plus store path
 
 ### `workflow/finish`
@@ -1459,8 +1517,8 @@ abort-only guards:
 
 Full contract: linear order with no jumps or backward moves; `skipped`
 and `warn` for optional sides only, never for `validate` or `activate` as
-whole phases; integrity codes `TGT`, `PKG`, `PROF`, `DESK`, `ACT`, `SEC`,
-`CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG` abort-only with no `--force` on
+whole phases, never as pass for failed health; integrity codes `TGT`, `PKG`, `PROF`, `DESK`, `ACT`, `SEC`,
+`CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG` plus failed health abort-only with no `--force` on
 any phase or target;
 sixteen forbidden fallbacks (probe/write/default/first-host/missing-output/
 silent home-system/autofix/partial/overwrite/GC/skip/force/secret-values/
@@ -1701,7 +1759,8 @@ rename):
 - `packages.${system}."<hostname>--<category>-<name>"`: per-host baked
   variant (that host's theme + toolchains).
 - `version` is git-derived in all cases (`self.shortRev` /
-  `self.dirtyShortRev`, fallback `"dev"`).
+  `self.dirtyShortRev`, fallback `"dev"` for eval only; `angst switch`
+  rejects dirty/dev with `TGT003`).
 
 Fields:
 
@@ -1986,8 +2045,13 @@ Examples:
 - `editor.nvim`: home side, baked config, mutable lockfile.
 - `design.paper`: custom `package.nix` build (fetch/wrap AppImage).
   AppImages use runtime health validation (healthy means working), not
-  hash pins. Runtime health checks cannot detect trojaned binaries that
-  behave correctly during checks.
+  hash pins. Decision: keep health-only to avoid one leaf hash bump blocking
+  `build`/`switch` for the whole system. Store pinning would give
+  content-addressed `/nix/store` paths, reproducible rollback, and tamper
+  failure before effects, but is rejected here for churn. Runtime health checks
+  cannot detect trojaned binaries that behave correctly during checks, so any
+  health failure aborts atomically with `PKG`/`ACT`, no `warn`-as-pass, no
+  `finish ok`.
 - `games.steam`, `kernel.audio`, `kernel.container`: system side NixOS only.
 
 ## Logging
@@ -2209,9 +2273,11 @@ generated OpenWiki pages; regenerate them.
 
 ## Verification Gates
 
-Pinned impure set only: `NIXPKGS_ALLOW_UNFREE=1` plus documented eval
-inputs. Any new impure source fails `ARCH`. `flake.lock` is required;
-nixpkgs stays hash-pinned.
+Pinned impure set only: `NIXPKGS_ALLOW_UNFREE=1` plus `--impure` plus documented eval
+inputs (`self.shortRev` / `self.dirtyShortRev` with fallback `"dev"` for eval only,
+tracked snapshots). Any new impure source fails `ARCH`. `flake.lock` is required;
+nixpkgs stays hash-pinned. No import from derivation (IFD). `angst switch` rejects
+dirty/dev rev with `TGT003`. Health failure aborts atomically, no `finish ok`.
 
 After each phase:
 
@@ -2275,7 +2341,11 @@ Additional checks:
 - state files and logs contain no secret values; `raw.log` scrubbed to
   `SecretRef`, `0600`
 - `flake.lock` present; nixpkgs hash-pinned
-- non-pinned artifacts (e.g. AppImages) pass runtime health validation
+- non-pinned artifacts (e.g. AppImages) pass runtime health validation; failed
+  health aborts atomically with `PKG`/`ACT`, no `finish ok`, keeps prior generation
+- `angst switch` rejects dirty/dev rev with `TGT003`
+- no import from derivation (IFD) in `evaluate`; `workflow/build` owns all `package.nix`
+  invocation
 - never GC in a run; prior and last-good generations kept as GC roots;
   failed validation keeps prior generation with no penalty
 - feature checks are co-located and aggregated
@@ -2299,7 +2369,9 @@ Additional checks:
    diff. Use scripted `git mv`; do one cutover.
 6. Static architecture checks cannot catch dynamic imports. Enforce a
    strict allowlist (token-aware scan plus `rg` denies for dynamic
-   `import`, interpolated paths, unpinned fetchers, and new impure
+   `import`, import from derivation (IFD), interpolated paths, unpinned fetchers,
+   `builtins.currentSystem` outside `core/context`,
+   `builtins.getEnv`/`__getFlake` outside blessed helpers, and new impure
    sources) and keep facades simple.
 7. Never let stale observations authorize destructive operations. Require a
    fresh probe.
@@ -2337,6 +2409,13 @@ Additional checks:
     All twelve families (`TGT`, `PKG`, `PROF`, `DESK`, `ACT`, `SEC`,
     `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG`) abort; `warn` and
     `skipped` cover optional sides only.
+21. Health-only leaves (e.g. `design.paper` AppImage) trade hash churn for
+    weaker tamper proof: a passing check means working, not untampered.
+    Keep health-only only with atomic abort on failure, no `warn`-as-pass,
+    no `finish ok`; prior generation stays last-good, never GCs.
+22. Dirty tree plus `fallback "dev"` hides which source built the system.
+    Eval may use `fallback "dev"`; `angst switch` rejects dirty/dev with
+    `TGT003`, keeps the prior generation, and points to a clean commit.
 
 ## Non-Goals
 
@@ -2366,3 +2445,10 @@ Additional checks:
 - No NixOS configuration output for `generic-linux` targets.
 - No implicit deployment of a NixOS closure to a non-NixOS host.
 - No floating nixpkgs without `flake.lock`; nixpkgs stays hash-pinned.
+- No import from derivation (IFD); `evaluate` never imports a build output.
+- No switch on dirty/dev rev; `angst switch` requires a clean tracked rev
+  (`TGT003`).
+- No `warn`-as-pass for health failures; failed health aborts atomically with
+  `PKG`/`ACT`, no `finish ok`.
+- Pillars rule: any failure ends in old generation live plus `error`
+  artifacts (see `## Pillars`); failure never becomes new live state.
