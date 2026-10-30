@@ -1,11 +1,5 @@
 # angst architecture
 
----
-
-Previous version can be seen on ~/projects/angst-pre-refac/
-
----
-
 Proposed architecture. Current code is still on the old layout; this document
 defines the target and the migration path.
 
@@ -54,8 +48,7 @@ old generation still live plus `error` artifacts, never half-new state.
 - `systems/` holds bounded runtime contexts with their own state and adapters:
   `secrets`, `vm`, `projects`, `persistence`. Each owns its repository port
   and runtime behavior.
-- Time and ownership stay separate. Phases (`evaluate -> validate -> build ->
-  activate -> verify -> finish`) describe *when* work happens. Buckets describe
+- Time and ownership stay separate. Phases (`evaluate -> validate -> build -> activate -> verify -> finish`) describe *when* work happens. Buckets describe
   *who* owns it. Exactly one workflow owns sequencing: `workflow/activate`
   owns the state machine; `workflow/validate` owns the gates; both live under
   one `workflow/` root so time has a single home.
@@ -353,8 +346,7 @@ Reading:
 `workflow/` owns time and controls the flake. Not tools. Not domains. Each
 phase declares which flake state it handles, which domains are involved, what
 it takes as inputs, and what it emits as outputs. No hidden sequencing
-elsewhere. The full six-step run (`evaluate -> validate -> build ->
-activate -> verify -> finish`) is one controlled chain: Nix layers
+elsewhere. The full six-step run (`evaluate -> validate -> build -> activate -> verify -> finish`) is one controlled chain: Nix layers
 (`evaluate`, `validate`, `build`) are pure and emit a sealed plan; runtime
 layers (`activate`, `verify`, `finish`) reload the same plan, re-verify it
 against live reality, and abort on any drift before effects. This chain
@@ -1478,8 +1470,7 @@ once with the full report:
 ]; }
 ```
 
-Fatal errors render through `throwDiagnostics`. There is no warn mode: `nix
-flake check` stays red until zero violations.
+Fatal errors render through `throwDiagnostics`. There is no warn mode: `nix flake check` stays red until zero violations.
 
 ### `workflow/build`
 
@@ -2403,64 +2394,64 @@ Additional checks:
 
 1. Auto-enabling dependencies changes package sets. Use the diagnostics-only
    phase and diff before enabling closure.
-2. Conditional dependencies must not become unconditional. Keep assertions
+1. Conditional dependencies must not become unconditional. Keep assertions
    until optional dependencies exist.
-3. Target detection requires a tracked observation. Missing manifests must not
+1. Target detection requires a tracked observation. Missing manifests must not
    silently produce NixOS outputs.
-4. Moving Go sources into one module breaks `go.work` and CI. Update module
+1. Moving Go sources into one module breaks `go.work` and CI. Update module
    paths and remove `go.work` in the same commit.
-5. Moving feature metadata into co-located package directories is a large
+1. Moving feature metadata into co-located package directories is a large
    diff. Use scripted `git mv`; do one cutover.
-6. Static architecture checks cannot catch dynamic imports. Enforce a
+1. Static architecture checks cannot catch dynamic imports. Enforce a
    strict allowlist (token-aware scan plus `rg` denies for dynamic
    `import`, import from derivation (IFD), interpolated paths, unpinned fetchers,
    `builtins.currentSystem` outside `compose/context`,
    `builtins.getEnv`/`__getFlake` outside blessed helpers, and new impure
    sources) and keep facades simple.
-7. Never let stale observations authorize destructive operations. Require a
+1. Never let stale observations authorize destructive operations. Require a
    fresh probe.
-8. Unified logging must not leak secrets. Scrub to `SecretRef` before
+1. Unified logging must not leak secrets. Scrub to `SecretRef` before
    `events.jsonl` and `raw.log`; keep `0700` dirs and `0600` sensitive
    files. Scrubbed `raw.log` stays authoritative.
-9. A single all-features runtime binary couples optional code into every host.
+1. A single all-features runtime binary couples optional code into every host.
    Enforce separate binaries and closure checks.
-10. State sprawl causes ownership conflicts. Enforce one owner per state file,
-    atomic writes, locks, and schema versions.
-11. A shared Go module can erode command boundaries. Command packages must not
-    import other command packages; only `cmd/*` composes them.
-12. State and secret stores must not converge. Keep encrypted secrets outside
-    runtime state and never store secret values in state or logs.
-13. Splitting base modules by bucket creates duplication risk.
-    Keep shared platform adapters in `compose/platform`; keep
-    feature-specific modules in catalog package directories.
-14. `angst switch` must never invent a host, target, or backend. Missing state
-    is an error, not an opportunity for fallback.
-15. Backend phase boundaries may be inferred from text output. Preserve
-    scrubbed raw logs and never present inferred phases as exact backend
-    internals.
-16. Activation logs can grow quickly. Enforce retention, gzip old raw logs, and
-    per-host locks.
-17. Catalog discovery only sees tracked files. Untracked features, toolchains,
-    and themes are invisible until `git add`.
-18. Directory discovery can hide typos or duplicates. Validate IDs, reject
-    orphan implementation directories and orphan providers, enforce closed
-    capability keys + values, and sort entries deterministically.
-19. Do not discover code buckets, adapters, binaries, or validation modules.
-    Keep code composition explicit; discovery is for data catalogs.
-20. Merging pipelines and governance into `workflow/` risks check-calls-do.
-    Enforce no `workflow/activate` behavior imports from
-    `workflow/validate`; keep the boundary in `matrix.nix`. Enforce
-    abort-only with no `--force` for integrity codes on every phase.
-    All twelve families (`TGT`, `PKG`, `PROF`, `DESK`, `ACT`, `SEC`,
-    `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG`) abort; `warn` and
-    `skipped` cover optional sides only.
-21. Health-only leaves (e.g. `design.paper` AppImage) trade hash churn for
-    weaker tamper proof: a passing check means working, not untampered.
-    Keep health-only only with atomic abort on failure, no `warn`-as-pass,
-    no `finish ok`; prior generation stays last-good, never GCs.
-22. Dirty tree plus `fallback "dev"` hides which source built the system.
-    Eval may use `fallback "dev"`; `angst switch` rejects dirty/dev with
-    `TGT003`, keeps the prior generation, and points to a clean commit.
+1. State sprawl causes ownership conflicts. Enforce one owner per state file,
+   atomic writes, locks, and schema versions.
+1. A shared Go module can erode command boundaries. Command packages must not
+   import other command packages; only `cmd/*` composes them.
+1. State and secret stores must not converge. Keep encrypted secrets outside
+   runtime state and never store secret values in state or logs.
+1. Splitting base modules by bucket creates duplication risk.
+   Keep shared platform adapters in `compose/platform`; keep
+   feature-specific modules in catalog package directories.
+1. `angst switch` must never invent a host, target, or backend. Missing state
+   is an error, not an opportunity for fallback.
+1. Backend phase boundaries may be inferred from text output. Preserve
+   scrubbed raw logs and never present inferred phases as exact backend
+   internals.
+1. Activation logs can grow quickly. Enforce retention, gzip old raw logs, and
+   per-host locks.
+1. Catalog discovery only sees tracked files. Untracked features, toolchains,
+   and themes are invisible until `git add`.
+1. Directory discovery can hide typos or duplicates. Validate IDs, reject
+   orphan implementation directories and orphan providers, enforce closed
+   capability keys + values, and sort entries deterministically.
+1. Do not discover code buckets, adapters, binaries, or validation modules.
+   Keep code composition explicit; discovery is for data catalogs.
+1. Merging pipelines and governance into `workflow/` risks check-calls-do.
+   Enforce no `workflow/activate` behavior imports from
+   `workflow/validate`; keep the boundary in `matrix.nix`. Enforce
+   abort-only with no `--force` for integrity codes on every phase.
+   All twelve families (`TGT`, `PKG`, `PROF`, `DESK`, `ACT`, `SEC`,
+   `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG`) abort; `warn` and
+   `skipped` cover optional sides only.
+1. Health-only leaves (e.g. `design.paper` AppImage) trade hash churn for
+   weaker tamper proof: a passing check means working, not untampered.
+   Keep health-only only with atomic abort on failure, no `warn`-as-pass,
+   no `finish ok`; prior generation stays last-good, never GCs.
+1. Dirty tree plus `fallback "dev"` hides which source built the system.
+   Eval may use `fallback "dev"`; `angst switch` rejects dirty/dev with
+   `TGT003`, keeps the prior generation, and points to a clean commit.
 
 ## Non-Goals
 
