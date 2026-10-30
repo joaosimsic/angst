@@ -1,0 +1,43 @@
+---@type Plugin
+return {
+	"env",
+	virtual = true,
+	lazy = false,
+	priority = 1001,
+	config = function()
+		vim.filetype.add({
+			extension = { env = "conf", ino = "cpp" },
+		})
+		vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+			pattern = { "*.env", ".env", ".env.*" },
+			callback = function(ev)
+				vim.bo[ev.buf].filetype = "conf"
+			end,
+		})
+		vim.opt.equalalways = false
+		vim.opt.tabstop = 4
+		vim.opt.softtabstop = 4
+		vim.opt.shiftwidth = 4
+		vim.opt.expandtab = true
+		vim.opt.relativenumber = true
+		vim.opt.number = true
+		vim.opt.termguicolors = true
+		vim.opt.cursorline = true
+		vim.o.guicursor = "n-v-c:block"
+		vim.opt.showmode = false
+		vim.opt.scrolloff = 999
+		vim.opt.timeoutlen = 300
+		vim.opt.ttimeoutlen = 10
+		vim.opt.splitright = true
+		vim.opt.splitbelow = true
+		vim.opt.signcolumn = "yes"
+		-- Spellcheck is opt-in: only markdown buffers enable it (see below).
+		vim.opt.spell = false
+		vim.api.nvim_create_autocmd("FileType", {
+			pattern = { "markdown", "markdown.mdx" },
+			callback = function()
+				vim.opt_local.spell = true
+			end,
+		})
+	end,
+}

@@ -1,0 +1,47 @@
+{
+  lib,
+  themeSys,
+  renderDomainOutputsFor,
+}:
+
+let
+  themeNames = lib.attrNames themeSys.themes;
+
+  themeResults = import ./entries.nix { inherit themeSys themeNames; };
+
+  unitResults =
+    import ./color.nix { inherit lib; }
+    ++ import ./schema.nix { inherit lib; }
+    ++ import ./themes.nix { inherit lib themeSys; }
+    ++ import ./catalog.nix { inherit lib themeSys; };
+
+  renderResults = import ./render.nix {
+    inherit
+      lib
+      themeSys
+      renderDomainOutputsFor
+      ;
+  };
+
+  summary = builtins.concatStringsSep "\n" (
+    [
+      "Themes (${toString (lib.length themeNames)}):"
+    ]
+    ++ themeResults
+    ++ [
+      ""
+      "Theme unit tests:"
+    ]
+    ++ unitResults
+    ++ [
+      ""
+      "Domain renders:"
+    ]
+    ++ renderResults
+    ++ [
+      ""
+      "All theme checks passed."
+    ]
+  );
+in
+builtins.deepSeq summary summary

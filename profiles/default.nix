@@ -1,0 +1,52 @@
+{
+  profiles,
+  lib,
+  scan,
+}:
+
+let
+  entries = scan.domains.entries;
+
+  domainId = e: if e.category == e.name then e.category else "${e.category}.${e.name}";
+  entryFor =
+    name:
+    let
+      entry = lib.findFirst (e: domainId e == name) null entries;
+    in
+    if entry == null then
+      throw "Unknown domain '${name}'. Available: ${builtins.concatStringsSep ", " (map domainId entries)}"
+    else
+      entry;
+
+  profileMap = {
+    base = import ./base.nix;
+    ci = import ./ci.nix;
+    desktop = import ./desktop.nix;
+    development = import ./development.nix;
+    embedded = import ./embedded.nix;
+    generic = import ./generic.nix;
+    server = import ./server.nix;
+    vm = import ./vm.nix;
+    vpn = import ./vpn.nix;
+    game-dev = import ./game-dev.nix;
+    gaming = import ./gaming.nix;
+    design = import ./design.nix;
+    office = import ./office.nix;
+    obs = import ./obs.nix;
+  };
+
+  resolve =
+    names:
+    let
+      validNames = builtins.attrNames profileMap;
+      unknown = builtins.filter (n: !builtins.elem n validNames) names;
+    in
+    if unknown != [ ] then
+      throw "Unknown profiles: ${builtins.concatStringsSep ", " unknown}. Valid: ${builtins.concatStringsSep ", " validNames}"
+    else
+      {
+        enabled = map entryFor (lib.concatMap (n: profileMap.${n}.enable or [ ]) names);
+        modules = lib.concatMap (n: profileMap.${n}.modules or [ ]) names;
+      };
+in
+resolve profiles

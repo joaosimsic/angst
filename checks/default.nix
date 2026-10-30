@@ -1,0 +1,241 @@
+{
+  self,
+  host,
+  pkgs,
+  lib,
+  render,
+  hostList,
+  runtime,
+}:
+
+let
+  inherit (lib) attrNames filter head;
+
+  themeSys = host.scan.themes;
+  alternate = head (filter (n: n != host.theme) (attrNames themeSys.themes));
+
+  themeLint = import ../systems/theme/tests {
+    inherit lib themeSys;
+    inherit (render) renderDomainOutputsFor;
+  };
+
+  lintDesktop = import ./desktop.nix {
+    inherit lib pkgs themeSys;
+    inherit (render) renderDomainOutputFor;
+    ftpMounts = map (m: m.mountPoint) (host.ftp.mounts or [ ]);
+  };
+
+  lintShell = import ./shell.nix {
+    inherit lib pkgs themeSys;
+    inherit (render) renderDomainOutputFor;
+  };
+
+  themeRendered = import ../systems/theme/tests/rendered.nix {
+    inherit lib pkgs themeSys;
+    inherit (render) renderDomainOutputsFor;
+    themeName = host.theme;
+  };
+
+  themeSemanticDistinct = import ../systems/theme/tests/semanticDistinct.nix {
+    inherit pkgs;
+    themeSys = host.scan.themes;
+    themeName = host.theme;
+  };
+
+  themeOverrideCheck = import ../systems/theme/tests/override.nix {
+    inherit lib pkgs themeSys;
+    overrideTheme = alternate;
+    inherit (render) renderDomainOutputFor;
+    homeConfiguration = self.homeConfigurations."${host.username}-theme-override-test";
+  };
+
+  checkPassword = import ./password.nix {
+    inherit pkgs host;
+  };
+
+  loginShell = import ./login-shell.nix {
+    inherit self pkgs;
+  };
+
+  lintNix = import ./lint-nix.nix { inherit pkgs; };
+
+  checkNoStoreSymlinks = import ./no-store-symlinks.nix { inherit pkgs; };
+
+  checkSecretsEncrypted = import ./secrets.nix { inherit pkgs; };
+
+  checkDeclared = import ./declared.nix {
+    inherit pkgs lib hostList;
+  };
+
+  checkGenericHostIsolation = import ./generic-host-isolation.nix {
+    inherit self lib pkgs;
+  };
+
+  checkGenericHostContract = import ./generic-host-contract.nix {
+    inherit self lib pkgs;
+  };
+
+  checkGenericHostGuard = import ./generic-host-guard.nix {
+    inherit lib pkgs;
+  };
+
+  checkGenericProvisionSafety = import ./generic-provision-safety.nix {
+    inherit pkgs;
+  };
+
+  checkTreesitter = import ./treesitter.nix {
+    inherit
+      pkgs
+      lib
+      hostList
+      self
+      ;
+  };
+
+  checkRust = import ./rust.nix {
+    inherit
+      pkgs
+      lib
+      self
+      hostList
+      ;
+  };
+
+  checkProjectsPipeline = import ./projects-pipeline.nix {
+    inherit pkgs runtime;
+  };
+
+  checkVaultPipeline = import ./vault-pipeline.nix {
+    inherit pkgs runtime;
+  };
+
+  checkFtpPipeline = import ./ftp-pipeline.nix {
+    inherit pkgs runtime;
+  };
+
+  secretScan = import ./secret-scan.nix { inherit pkgs; };
+
+  secretScanHooks = import ./secret-scan-hooks.nix { inherit pkgs; };
+
+  checkTex = import ./tex.nix { inherit pkgs lib; };
+
+  checkZellij = import ./zellij.nix {
+    inherit
+      pkgs
+      host
+      render
+      ;
+  };
+
+  checkOpencodeAttention = import ./opencode.nix { inherit pkgs; };
+
+  checkOpencodeSessionNav = import ./opencode-session-nav.nix { inherit pkgs; };
+
+  checkOpencodeMux = import ./opencode-mux.nix { inherit pkgs; };
+
+  checkOpencodeSecret = import ./opencode-secret.nix {
+    inherit pkgs;
+    opencodeConfig = render.renderDomainOutputFor host.theme "domains/agents/opencode/config/opencode.jsonc";
+  };
+
+  checkSessionEnv = import ./session-env.nix {
+    inherit pkgs lib self;
+  };
+
+  checkSessionUsability = import ./session-usability.nix {
+    inherit
+      pkgs
+      lib
+      self
+      hostList
+      ;
+  };
+
+  domainHealth = import ./health {
+    inherit
+      lib
+      pkgs
+      themeSys
+      render
+      host
+      ;
+  };
+
+  excludedHomes = [
+    "login-shell-valid"
+    "login-shell-invalid"
+  ];
+
+  evalAllConfigs =
+    let
+      nixosToplevels = builtins.mapAttrs (
+        _: c:
+        builtins.baseNameOf (builtins.unsafeDiscardStringContext c.config.system.build.toplevel.drvPath)
+      ) self.nixosConfigurations;
+      homeActivations = builtins.mapAttrs (
+        _: c: builtins.baseNameOf (builtins.unsafeDiscardStringContext c.activationPackage.drvPath)
+      ) (builtins.removeAttrs self.homeConfigurations excludedHomes);
+    in
+    pkgs.writeText "eval-all-configs" (
+      builtins.concatStringsSep "\n" (builtins.attrValues (nixosToplevels // homeActivations))
+    );
+
+  buildAllConfigs =
+    let
+      nixosDrvs = builtins.attrValues (
+        builtins.mapAttrs (_: c: c.config.system.build.toplevel) self.nixosConfigurations
+      );
+      homeDrvs = builtins.attrValues (
+        builtins.mapAttrs (_: c: c.activationPackage) (
+          builtins.removeAttrs self.homeConfigurations excludedHomes
+        )
+      );
+      allDrvs = nixosDrvs ++ homeDrvs;
+    in
+    pkgs.writeText "build-all-configs" (builtins.concatStringsSep "\n" (map (d: "${d}") allDrvs));
+in
+{
+  check-password = checkPassword;
+  generic-host-isolation = checkGenericHostIsolation;
+  generic-host-contract = checkGenericHostContract;
+  generic-host-guard = checkGenericHostGuard;
+  generic-provision-safety = checkGenericProvisionSafety;
+  check-secrets-encrypted = checkSecretsEncrypted.secrets;
+  check-projects-encrypted = checkSecretsEncrypted.projects;
+  check-db-encrypted = checkSecretsEncrypted.db;
+  check-ssh-keys = checkSecretsEncrypted.sshKeys;
+  check-ftp-encrypted = checkSecretsEncrypted.ftp;
+  check-vpn-encrypted = checkSecretsEncrypted.vpn;
+  check-projects-ftp-declared = checkDeclared;
+  check-projects-pipeline = checkProjectsPipeline;
+  check-vault-pipeline = checkVaultPipeline;
+  check-ftp-pipeline = checkFtpPipeline;
+  secret-scan = secretScan;
+  secret-scan-hooks = secretScanHooks;
+  lint-nix = lintNix;
+  check-no-store-symlinks = checkNoStoreSymlinks;
+  check-treesitter = checkTreesitter;
+  check-rust = checkRust;
+  check-tex = checkTex;
+  check-zellij = checkZellij;
+  check-opencode-attention = checkOpencodeAttention;
+  check-opencode-session-nav = checkOpencodeSessionNav;
+  check-opencode-mux = checkOpencodeMux;
+  check-opencode-secret = checkOpencodeSecret;
+  check-session-env = checkSessionEnv;
+  check-session-usability = checkSessionUsability;
+  inherit themeLint;
+  lint-themes = pkgs.writeText "lint-themes-check" themeLint;
+  lint-desktop = lintDesktop;
+  lint-shell = lintShell;
+  theme-rendered = themeRendered;
+  theme-override = themeOverrideCheck;
+  theme-semantic-distinct = themeSemanticDistinct;
+  home-theme-override-test =
+    self.homeConfigurations."${host.username}-theme-override-test".activationPackage;
+  login-shell-valid = loginShell.valid;
+  login-shell-invalid = loginShell.invalid;
+  eval-all = evalAllConfigs;
+  build-all = buildAllConfigs;
+}
+// domainHealth

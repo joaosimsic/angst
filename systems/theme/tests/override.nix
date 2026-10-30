@@ -1,0 +1,23 @@
+{
+  lib,
+  pkgs,
+  themeSys,
+  overrideTheme,
+  homeConfiguration,
+  renderDomainOutputFor,
+}:
+
+let
+  theme = homeConfiguration.config.theme;
+  expected = themeSys.get overrideTheme;
+
+  ghosttyColors = renderDomainOutputFor overrideTheme "domains/terminal/ghostty/config/colors.conf";
+in
+if theme != overrideTheme then
+  throw "expected config.theme = ${overrideTheme}, got ${theme}"
+else if
+  !(lib.hasInfix "background           = ${expected.palette.background.base}" ghosttyColors)
+then
+  throw "theme override did not reach rendered ghostty colors (expected ${overrideTheme} background.base)"
+else
+  pkgs.writeText "theme-override-check" "ok"

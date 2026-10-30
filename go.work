@@ -1,0 +1,11 @@
+go 1.23.0
+
+use (
+	./runtime/angst
+	./runtime/logger
+	./runtime/vm
+	./runtime/shell
+	./runtime/analyze
+	./domains/wm/i3/workspace-group
+	./domains/chat/discord/voice-status
+)

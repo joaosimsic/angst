@@ -1,0 +1,5 @@
+{
+  enable = [
+    "office.libreoffice"
+  ];
+}

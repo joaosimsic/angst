@@ -1,0 +1,53 @@
+{
+  config,
+  lib,
+  pkgs,
+  flakeSelf,
+  projects,
+  runtime,
+  ...
+}:
+
+let
+  sync = runtime.projects-sync {
+    inherit projects flakeSelf;
+  };
+in
+{
+  config = lib.mkMerge [
+    {
+      assertions = [
+        {
+          assertion = !config.domains.git.projects.enable || config.domains.git.code.enable;
+          message = "domains.git.projects requires domains.git.code to be enabled";
+        }
+      ];
+    }
+    (lib.mkIf config.domains.git.projects.enable {
+      home.packages = [ sync ];
+
+      home.activation.angstProjectsSync = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        mkdir -p "$HOME/.secrets/projects"
+        chmod 700 "$HOME/.secrets" 2>/dev/null || true
+        ${sync.bin} import || echo "warn: projects import failed (age key missing?)" >&2
+        ${sync.bin} sync || echo "warn: projects sync failed (network or SSH keys?)" >&2
+      '';
+
+      systemd.user.services.angst-projects-sync = {
+        Unit = {
+          Description = "Sync declared dev projects";
+          After = [
+            "network-online.target"
+            "angst-provision-ssh-key.service"
+          ];
+          Wants = [ "network-online.target" ];
+        };
+        Service = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.bash}/bin/bash -c '${sync.bin} import; ${sync.bin} sync'";
+        };
+        Install.WantedBy = [ "default.target" ];
+      };
+    })
+  ];
+}
