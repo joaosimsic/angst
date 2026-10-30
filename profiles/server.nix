@@ -1,5 +1,0 @@
-{
-  enable = [
-    "remote.ssh"
-  ];
-}

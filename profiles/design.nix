@@ -1,5 +1,0 @@
-{
-  enable = [
-    "design.paper"
-  ];
-}

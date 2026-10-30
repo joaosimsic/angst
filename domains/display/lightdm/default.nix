@@ -1,1 +1,0 @@
-{ description = "LightDM GTK greeter"; }
