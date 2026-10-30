@@ -1,5 +1,10 @@
 # angst architecture
 
+---
+Previous version can be seens on ~/projects/angst-pre-refac/
+---
+
+
 Proposed architecture. Current code is still on the old layout; this document
 defines the target and the migration path.
 
