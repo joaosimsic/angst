@@ -41,9 +41,13 @@ defines the target and the migration path.
 - Safety is abort-only. If system (`nixos`) or home (`generic-linux`)
   integrity might be compromised, activation and run are forbidden. No
   `--force` override exists for integrity failures (`TGT`, `PKG`, `PROF`,
-  `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`). Missing, unknown, failed, stale, or
-  mismatched state aborts before effects, keeps the prior generation, and
-  points to explicit recovery (`angst host detect`).
+  `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG`).
+  All twelve codes abort on any phase or target. Missing, unknown, failed,
+  stale, or mismatched state aborts before effects, keeps the prior
+  generation, and points to explicit recovery (`angst host detect`).
+  `warn` is legal for optional sides only, never for `validate` or
+  `activate` as whole phases. Validation failure never penalizes the user:
+  failed runs keep the prior generation and never trigger GC.
 - Eval, build, activation, and run are distinct planes with explicit logging
   and step validation. No plane hides inside another.
 - `infra/monads/` is the edge: ports, interpreters, effect composition, and
@@ -280,7 +284,10 @@ Reading:
   plus selection counts. `workflow/validate` checks shapes but owns no gates
   yet.
 - `validate`: `workflow/validate` owns gates `ARCH`, `PROF001`, `DESK001`,
-  `DESK002`, `DESK003`, `TGT001`, `SEC`, `CTX`. Core and systems are
+  `DESK002`, `DESK003`, `TGT001`, `TGT002`, `TGT003`, `SEC`, `CTX`, `PKG`,
+  `VM`, `PROJ`, `DEP`, `ACT`, `LOG`. All twelve families (`TGT`, `PKG`,
+  `PROF`, `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG`)
+  abort-only with no `--force`. Core and systems are
   read-only. `infra/state` checks schemas and permissions. Required facts
   fail closed on `unknown`, `failed`, or stale.
 - `build`: `workflow/build` pairs selected records, invokes `package.nix`
@@ -314,9 +321,9 @@ against live reality, and abort on any drift before effects.
 | Phase | Inputs | Uses | Outputs | Plane |
 |---|---|---|---|---|
 | `evaluate` | `catalog/features/`, `catalog/toolchains/`, `catalog/runtime/`, `catalog/profiles/`, `catalog/hosts/<host>/default.nix`, `catalog/hosts/<host>/target.nix`, `catalog/hosts/<host>/hardware.nix` | `core/packages`, `core/context`, `infra/monads`, `infra/lib` | `SystemPlan` {selected, providers, order, facts, involved} plus diagnostics. `involved` lists per-run domains for later phases to scope work | Eval, pure, no probe, no SSH, no QEMU, no decrypt |
-| `validate` | `SystemPlan` plus desired/observed/derived context plus `target.nix` | public facades only, `catalog/*` read-only | diagnostics, fail closed on `unknown`/`failed`/stale | Eval, owns `ARCH`, `PROF001`, `DESK001`, `DESK002`, `DESK003`, `TGT001`, `TGT002`, `SEC`, `CTX` |
-| `build` | `SystemPlan` plus `theme` plus `toolchains` plus `src` plus `upstream` plus `version` from `self.shortRev` / `self.dirtyShortRev`, fallback `"dev"` | `catalog/features/*/package.nix`, `catalog/runtime/*/package.nix`, `core/platform`, `infra/nixpkgs-config.nix` | `/nix/store` paths plus home-manager/NixOS modules installing `$out`, plus sealed `deployPlan` with digests (`targetDigest`, `planDigest`, `storePath`) | Build, theme/toolchain baked into `$out`, never eval text |
-| `activate` | sealed `deployPlan` plus `target.nix` plus built toplevel plus backend choice | `target`, `deploy`, `state`, `log`, `secret` ports; `infra/cli` executes, `workflow/activate` owns behavior | generation switch via `nixos-rebuild switch` or `home-manager switch` or `nixos-rebuild --target-host` plus phase events | Activate, strict: missing manifest fails `TGT001`, no probe, no write, no fallback; mismatch fails `TGT003`. Pre-flight reloads sealed gates, runs fast native checks, re-invokes `nix eval` recheck, compares fresh probe digest; any drift aborts |
+| `validate` | `SystemPlan` plus desired/observed/derived context plus `target.nix` | public facades only, `catalog/*` read-only | diagnostics, fail closed on `unknown`/`failed`/stale | Eval, owns `ARCH`, `PROF001`, `DESK001`, `DESK002`, `DESK003`, `TGT001`, `TGT002`, `TGT003`, `PKG`, `VM`, `PROJ`, `DEP`, `ACT`, `SEC`, `CTX`, `LOG` (all abort-only, no `--force`) |
+| `build` | `SystemPlan` plus `theme` plus `toolchains` plus `src` plus `upstream` plus `version` from `self.shortRev` / `self.dirtyShortRev`, fallback `"dev"`, plus flake rev pin | `catalog/features/*/package.nix`, `catalog/runtime/*/package.nix`, `core/platform`, `infra/nixpkgs-config.nix` | `/nix/store` paths plus home-manager/NixOS modules installing `$out`, plus sealed `deployPlan` with digests (`targetDigest`, `planDigest`, `storePath`, `flakeRev`) | Build, theme/toolchain baked into `$out`, never eval text |
+| `activate` | sealed `deployPlan` plus `target.nix` plus built toplevel plus backend choice | `target`, `deploy`, `state`, `log`, `secret` ports; `infra/cli` executes, `workflow/activate` owns behavior | generation switch via `nixos-rebuild switch` or `home-manager switch` or `nixos-rebuild --target-host` plus phase events | Activate, strict: missing manifest fails `TGT001`, no probe, no write, no fallback; mismatch or flake-rev drift fails `TGT003`. Pre-flight reloads sealed gates, runs fast native checks, re-invokes `nix eval` recheck, compares fresh probe digest; any drift aborts, keeps prior generation, never GCs |
 | `verify` | sealed run plus `target.nix` plus fresh probe plus generation plus store path | `core/context`, `systems/*` health checks, `infra/state` | diagnostics plus recorded generation/store path | Run, stale facts never authorize destroy; mismatch stops run, no `finish ok` |
 | `finish` | per-phase durations plus event stream plus exit code | `infra/log`, `infra/state` | `~/.local/state/angst/activation/<host>/<run-id>/summary.json`, `events.jsonl`, `raw.log`, `latest` symlink, 20-run retention, gzip old logs, `0700` dirs, `0600` sensitive | Run. On `error` writes `error` summary, preserves `raw.log`, keeps prior generation |
 
@@ -350,7 +357,9 @@ Rules:
   health, generation plus store path). Max safety is both with a sealed
   handoff and re-verification; neither layer trusts the other without
   re-checking.
-- Abort-only has no `--force` for integrity codes. `skipped` applies to
+- Abort-only has no `--force` for integrity codes. All twelve (`TGT`, `PKG`,
+  `PROF`, `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG`)
+  abort on any phase or target. `skipped` and `warn` apply to
   optional sides only, never to `validate` or `activate` as whole phases.
 
 ## Catalog Discovery
@@ -678,12 +687,18 @@ Rules:
 
 - Generated by `angst host detect`, the installer, or a probe.
 - Tracked in git. Flakes do not see untracked files.
+- CI probe check required: tracked file compared against fresh probe
+  evidence (`kind`, `system`, `virtualization`, external capabilities)
+  digest; mismatch fails `TGT003`.
 - Host `default.nix` stays free of `type`.
 - `target.kind = "nixos"` emits `homeConfigurations` and `nixosConfigurations`.
 - `target.kind = "generic-linux"` emits only `homeConfigurations`.
 - Missing manifest: home config only, diagnostic `TGT001`.
 - No probing during flake evaluation.
 - `target.nix` holds stable observed identity, not volatile runtime state.
+- `flake.lock` required; nixpkgs hash-pinned. Runtime validation
+  (healthy means working) covers non-pinned artifacts such as
+  `design.paper` AppImages; it does not replace nixpkgs pinning.
 
 `angst switch` is strict:
 
@@ -705,7 +720,9 @@ Remote deployment is not monad work:
 nixos-rebuild switch --flake .#host --target-host user@host --use-remote-sudo
 ```
 
-`workflow/activate` builds the deployment plan. `infra/cli` executes it.
+Remote requires explicit `--target-host USER@HOST`, strict host-key
+checking, and hash-verified artifacts before activate. `workflow/activate`
+builds the deployment plan. `infra/cli` executes it.
 
 ## Switch
 
@@ -821,11 +838,13 @@ Rules:
 - atomic summary writes
 - append-only events and raw logs
 - `0700` directories, `0600` sensitive files
-- no secrets or decrypted values
+- scrubbed output only; no secrets or decrypted values
+- user-owned state; sudo only for `nixos-rebuild switch` backends
 - per-host activation lock
 - keep last 20 runs per host by default
 - gzip old raw logs
 - retention configurable
+- never GC in a run; failed validation keeps prior generation with no penalty
 
 ### Observability Commands
 
@@ -1306,8 +1325,30 @@ matrix plus these rules:
   as whole phases, `--force` override of any integrity code, secret values
   in state or logs, stale observations authorizing destroy
 - no `--force` override exists for integrity codes `TGT`, `PKG`, `PROF`,
-  `DESK`, `ACT`, `SEC`, `CTX`, `ARCH` on any phase or target (`nixos`
-  system and `generic-linux` home alike)
+  `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG` on any
+  phase or target (`nixos` system and `generic-linux` home alike)
+- strict allowlist, not path-prefix only: token-aware import scan plus `rg`
+  denies for dynamic `import`, string-interpolated paths, unpinned
+  `builtins.fetch*`, `builtins.currentSystem` outside `core/context`,
+  `builtins.getEnv`/`__getFlake` outside blessed helpers; catalog discovery
+  stays data-only, code composition stays explicit
+- pinned impure set only: `NIXPKGS_ALLOW_UNFREE=1` plus documented eval
+  inputs; any new impure source fails `ARCH`
+- `flake.lock` required and hash-pinned nixpkgs; fetched artifacts
+  (e.g. `design.paper` AppImage in `catalog/features/design/paper/package.nix`)
+  use runtime health validation via `workflow/validate` plus
+  `workflow/verify` instead of hash pins; a healthy check means working
+- never GC in a run: no `nix-collect-garbage`, no delete-generation, prior
+  and last-good generations kept as GC roots; validation failure keeps the
+  prior generation with no penalty
+- sealed plan pins flake rev (`self.shortRev` / `self.dirtyShortRev`,
+  fallback `"dev"`); `activate` pre-flight rejects rev drift with `TGT003`
+- secret scrub before persist: `SecretRef` only in `events.jsonl` and
+  `raw.log`; `0700` dirs, `0600` sensitive files; scrubbed `raw.log` stays
+  authoritative
+- `target.nix` trust via CI probe check: tracked file compared against fresh
+  probe evidence (`kind`, `system`, `virtualization`, external capabilities)
+  digest; mismatch fails `TGT003`
 - phase literals (`evaluate|validate|build|activate|verify|finish`) and state
   literals (`pending|running|ok|warn|error|skipped`) outside `workflow/`,
   `infra/log`, and `workflow/validate/` fail `ARCH`
@@ -1383,8 +1424,9 @@ Owns the sole phase state machine:
 - no hidden backend default
 - no first-host fallback
 - no fallback when the selected flake output is missing
+- sealed `deployPlan` pins flake rev; rev drift fails `TGT003`
 - no `--force` for integrity failures; any drift aborts before effects,
-  keeps the prior generation, and points to `angst host detect`
+  keeps the prior generation, never GCs, and points to `angst host detect`
 
 It uses target, deploy, state, log, and secret ports. `infra/cli` composes the
 binaries; activation owns the behavior.
@@ -1416,9 +1458,10 @@ abort-only guards:
 ```
 
 Full contract: linear order with no jumps or backward moves; `skipped`
-for optional sides only, never for `validate` or `activate` as whole
-phases; integrity codes `TGT`, `PKG`, `PROF`, `DESK`, `ACT`, `SEC`,
-`CTX`, `ARCH` abort-only with no `--force` on any phase or target;
+and `warn` for optional sides only, never for `validate` or `activate` as
+whole phases; integrity codes `TGT`, `PKG`, `PROF`, `DESK`, `ACT`, `SEC`,
+`CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG` abort-only with no `--force` on
+any phase or target;
 sixteen forbidden fallbacks (probe/write/default/first-host/missing-output/
 silent home-system/autofix/partial/overwrite/GC/skip/force/secret-values/
 stale-authorizes-destroy) fail `ARCH` before effects.
@@ -1449,21 +1492,28 @@ Unified diagnostics and runtime logging.
 - `ANGST_LOG_LEVEL`, `ANGST_LOG_FORMAT`, `ANGST_LOG_DIR`.
 - Writes to `~/.local/state/angst/logs/`.
 - Secret values never enter events; only `SecretRef`.
+- Backend and script output is scrubbed to `SecretRef` before persist;
+  scrubbed `raw.log` stays authoritative and is `0600`.
+- User-owned state (`~/.local/state/angst/`, override `ANGST_STATE_DIR`);
+  sudo only for `nixos-rebuild switch` backends with sanitized env; no
+  secret env leak.
 
 Backend output is wrapped as `source=nixos-rebuild` or
-`source=home-manager` events with level detection as fallback. Raw output is
-always preserved in `raw.log`.
+`source=home-manager` events with level detection as fallback. Output is
+scrubbed to `SecretRef` before it lands in `raw.log`. Scrubbed raw output
+is always preserved in `raw.log` (`0600`).
 
 ### `infra/state`
 
 Generic runtime state infrastructure:
 
-- `ANGST_STATE_DIR` resolution
+- `ANGST_STATE_DIR` resolution (default `~/.local/state/angst/`, user-owned)
 - atomic JSON writes
 - file locks
 - schema versions and migrations
 - repository support utilities
-- ownership and permission checks
+- ownership and permission checks (`0700` dirs, `0600` sensitive; sudo
+  only for backend execution, never for state ownership)
 
 It owns no domain state. Context, secrets, VM, activation, projects, and log
 own their repositories and use this facade.
@@ -1935,6 +1985,9 @@ Examples:
   facts.
 - `editor.nvim`: home side, baked config, mutable lockfile.
 - `design.paper`: custom `package.nix` build (fetch/wrap AppImage).
+  AppImages use runtime health validation (healthy means working), not
+  hash pins. Runtime health checks cannot detect trojaned binaries that
+  behave correctly during checks.
 - `games.steam`, `kernel.audio`, `kernel.container`: system side NixOS only.
 
 ## Logging
@@ -1967,6 +2020,8 @@ Rules:
 - Stable codes: `TGT`, `PKG`, `PROF`, `DESK`, `CTX`, `SEC`, `VM`, `PROJ`,
   `DEP`, `ACT`, `LOG`, `ARCH`.
 - Secret values never enter logs; only `SecretRef`.
+- Scrub backend and script output to `SecretRef` before `events.jsonl`
+  and `raw.log`; scrubbed `raw.log` (`0600`) stays authoritative.
 - Replace `VERBOSE_ECHO`, raw `echo "==>"`, and ad-hoc progress `fmt.Printf`
   calls.
 - `angst-switch` wraps backend output as `source=nixos-rebuild` or
@@ -2154,6 +2209,10 @@ generated OpenWiki pages; regenerate them.
 
 ## Verification Gates
 
+Pinned impure set only: `NIXPKGS_ALLOW_UNFREE=1` plus documented eval
+inputs. Any new impure source fails `ARCH`. `flake.lock` is required;
+nixpkgs stays hash-pinned.
+
 After each phase:
 
 ```bash
@@ -2213,7 +2272,12 @@ Additional checks:
 - core `angst` does not import project, secret, VM, activation, analyze, or
   hm-switch command packages
 - state schemas, freshness, permissions, and ownership are valid
-- state files and logs contain no secret values
+- state files and logs contain no secret values; `raw.log` scrubbed to
+  `SecretRef`, `0600`
+- `flake.lock` present; nixpkgs hash-pinned
+- non-pinned artifacts (e.g. AppImages) pass runtime health validation
+- never GC in a run; prior and last-good generations kept as GC roots;
+  failed validation keeps prior generation with no penalty
 - feature checks are co-located and aggregated
 - built store-path config hashes unchanged after structural moves
 - no catalog module imports bucket internals
@@ -2233,11 +2297,15 @@ Additional checks:
    paths and remove `go.work` in the same commit.
 5. Moving feature metadata into co-located package directories is a large
    diff. Use scripted `git mv`; do one cutover.
-6. Static architecture checks cannot catch dynamic imports. Document the
-   limitation and keep facades simple.
+6. Static architecture checks cannot catch dynamic imports. Enforce a
+   strict allowlist (token-aware scan plus `rg` denies for dynamic
+   `import`, interpolated paths, unpinned fetchers, and new impure
+   sources) and keep facades simple.
 7. Never let stale observations authorize destructive operations. Require a
    fresh probe.
-8. Unified logging must not leak secrets. Log references and metadata only.
+8. Unified logging must not leak secrets. Scrub to `SecretRef` before
+   `events.jsonl` and `raw.log`; keep `0700` dirs and `0600` sensitive
+   files. Scrubbed `raw.log` stays authoritative.
 9. A single all-features runtime binary couples optional code into every host.
    Enforce separate binaries and closure checks.
 10. State sprawl causes ownership conflicts. Enforce one owner per state file,
@@ -2251,8 +2319,9 @@ Additional checks:
     feature-specific modules in catalog package directories.
 14. `angst switch` must never invent a host, target, or backend. Missing state
     is an error, not an opportunity for fallback.
-15. Backend phase boundaries may be inferred from text output. Preserve raw
-    logs and never present inferred phases as exact backend internals.
+15. Backend phase boundaries may be inferred from text output. Preserve
+    scrubbed raw logs and never present inferred phases as exact backend
+    internals.
 16. Activation logs can grow quickly. Enforce retention, gzip old raw logs, and
     per-host locks.
 17. Catalog discovery only sees tracked files. Untracked features, toolchains,
@@ -2265,6 +2334,9 @@ Additional checks:
     Enforce no `workflow/activate` behavior imports from
     `workflow/validate`; keep the boundary in `matrix.nix`. Enforce
     abort-only with no `--force` for integrity codes on every phase.
+    All twelve families (`TGT`, `PKG`, `PROF`, `DESK`, `ACT`, `SEC`,
+    `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG`) abort; `warn` and
+    `skipped` cover optional sides only.
 
 ## Non-Goals
 
@@ -2281,9 +2353,11 @@ Additional checks:
 - No hidden backend fallback when the target manifest or selected output is
   missing.
 - No `--force` override for integrity failures (`TGT`, `PKG`, `PROF`,
-  `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`).
+  `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`, `VM`, `PROJ`, `DEP`, `LOG`).
 - No partial switch, prior-generation overwrite, or last-good GC on risk.
-- No skip of `validate` or `activate` as whole phases.
+  Never GC in a run.
+- No skip or `warn`-as-pass of `validate` or `activate` as whole phases;
+  `warn`/`skipped` cover optional sides only.
 - No umbrella `systems/` label across buckets that differ widely.
   `systems/` holds bounded runtime contexts only.
 - No root `capabilities/`, `pipelines/`, `governance/`, `lib/`, `domains/`,
@@ -2291,3 +2365,4 @@ Additional checks:
   `profiles/`, `hosts/`, or `flake/` directory.
 - No NixOS configuration output for `generic-linux` targets.
 - No implicit deployment of a NixOS closure to a non-NixOS host.
+- No floating nixpkgs without `flake.lock`; nixpkgs stays hash-pinned.
