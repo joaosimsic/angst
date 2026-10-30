@@ -1,6 +1,6 @@
 [mgr]
 show_hidden = true
-linemode = "persist"
+linemode = "size"
 
 [opener]
 celluloid = [
@@ -11,4 +11,11 @@ celluloid = [
 prepend_rules = [
 	{ url = "*.{doc,docx,docm,dot,dotx,dotm,odt,ott,rtf,xls,xlsx,xlsm,xlt,xltx,xltm,ods,ots,csv,ppt,pptx,pptm,pot,potx,potm,odp,otp}", use = "open" },
 	{ mime = "video/*", use = "celluloid" },
+]
+
+[plugin]
+prepend_fetchers = [
+	{ url = "*", run = "git", group = "git" },
+	{ url = "*/", run = "git", group = "git" },
+	{ url = "*.{png,jpg,jpeg,gif,webp,bmp,ico,tif,tiff,avif,heic,heif,jxl}", run = "image-dim", group = "image-dim" },
 ]

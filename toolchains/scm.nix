@@ -9,5 +9,6 @@ mkToolchain {
   ];
   treesitter = with pkgs.tree-sitter-grammars; [
     tree-sitter-query
+    tree-sitter-gitcommit
   ];
 }

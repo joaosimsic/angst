@@ -26,6 +26,9 @@ let
     libpulseaudio
     ffmpeg
   ];
+  # Host system dirs so the standalone (non-gamedev) fallback also resolves
+  # apt-provided libs at runtime on genericLinux.
+  hostLdPath = "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/local/lib:/usr/lib";
 in
 {
   config = lib.mkIf config.domains.dev.media.enable {
@@ -37,19 +40,25 @@ in
       ];
 
       sessionVariables = {
-        PKG_CONFIG_PATH = lib.mkOverride 40 "${pkgConfigPath}:\${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}";
+        # mkDefault so gamedev.env (mkForce) wins when both are enabled;
+        # gamedev already bundles these media pkg-config paths.
+        PKG_CONFIG_PATH = lib.mkDefault "${pkgConfigPath}:\${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}";
         C_INCLUDE_PATH = includePath;
         CPLUS_INCLUDE_PATH = includePath;
         LIBRARY_PATH = libPath;
       };
 
-      file.".cargo/config.toml".text = ''
-        [target.x86_64-unknown-linux-gnu]
-        rustflags = [
-          "-C",
-          "link-arg=-Wl,-rpath,${rustRpath}",
-        ]
-      '';
+      # Standalone fallback only. When gamedev.env is enabled it owns
+      # ~/.cargo/config.toml with the superset RPATH (bevy + media + host).
+      file.".cargo/config.toml" = lib.mkIf (!config.domains.gamedev.env.enable) {
+        text = ''
+          [target.x86_64-unknown-linux-gnu]
+          rustflags = [
+            "-C",
+            "link-arg=-Wl,-rpath,${rustRpath}:${hostLdPath}",
+          ]
+        '';
+      };
     };
   };
 }

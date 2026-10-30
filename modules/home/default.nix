@@ -3,6 +3,7 @@
 {
   imports = [
     ./treesitter.nix
+    ./bash-bridge.nix
     ./login-shell.nix
     ./nix-ld-compat.nix
     ./nushell-bridge.nix

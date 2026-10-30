@@ -1,8 +1,10 @@
 package vm
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,19 +13,33 @@ import (
 )
 
 const (
-	serviceVM  = "vm"
-	serviceMCP = "vm-mcp"
-	mcpPort    = 8765
+	serviceVM         = "vm"
+	serviceMCP        = "vm-mcp"
+	serviceSupervisor = "vm-supervisor"
+	mcpPort           = 8765
 )
 
 type ServiceState struct {
 	Service   string   `json:"service"`
 	PID       int      `json:"pid"`
+	ParentPID int      `json:"parent_pid,omitempty"`
 	StartedAt string   `json:"started_at"`
 	Host      string   `json:"host"`
 	Port      int      `json:"port"`
 	Cmd       []string `json:"cmd"`
 	Log       string   `json:"log"`
+	ManagedBy string   `json:"managed_by,omitempty"`
+	Detached  bool     `json:"detached,omitempty"`
+}
+
+type ChildSpec struct {
+	Name      string
+	Program   string
+	Args      []string
+	Env       []string
+	LogPath   string
+	ManagedBy string
+	ParentPID int
 }
 
 type Controller struct {
@@ -85,19 +101,90 @@ func (c *Controller) clear(name string) {
 	_ = os.Remove(c.stateFile(name))
 }
 
+func processRunning(pid int) bool {
+	if pid <= 0 {
+		return false
+	}
+	if err := syscall.Kill(pid, 0); err != nil {
+		return false
+	}
+	b, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
+	if err != nil {
+		return true
+	}
+	end := bytes.LastIndexByte(b, ')')
+	if end < 0 || end+2 >= len(b) {
+		return true
+	}
+	return b[end+2] != 'Z'
+}
+
+func processAlive(pid int) bool {
+	return processRunning(pid)
+}
+
 func (c *Controller) isActive(name string) bool {
 	st, ok := c.read(name)
 	if !ok {
 		return false
 	}
-	proc, err := os.FindProcess(st.PID)
-	if err != nil {
-		return false
+	return processAlive(st.PID)
+}
+
+func (c *Controller) StartChild(spec ChildSpec, stdout, stderr io.Writer) (*exec.Cmd, error) {
+	if st, ok := c.read(spec.Name); ok && c.isActive(spec.Name) {
+		return nil, fmt.Errorf("Service '%s' is already running (PID: %d).", spec.Name, st.PID)
 	}
-	return proc.Signal(syscall.Signal(0)) == nil
+	if spec.LogPath == "" {
+		spec.LogPath = filepath.Join(c.stateDir(), "logs", spec.Name+".log")
+	}
+	if err := os.MkdirAll(filepath.Dir(spec.LogPath), 0o755); err != nil {
+		return nil, err
+	}
+	if stdout == nil {
+		stdout = io.Discard
+	}
+	if stderr == nil {
+		stderr = io.Discard
+	}
+
+	argv := append([]string{spec.Program}, spec.Args...)
+	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd.Env = append(os.Environ(), spec.Env...)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid:   true,
+		Pdeathsig: syscall.SIGTERM,
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("Failed to spawn child process: %w", err)
+	}
+
+	state := &ServiceState{
+		Service:   spec.Name,
+		PID:       cmd.Process.Pid,
+		ParentPID: spec.ParentPID,
+		StartedAt: time.Now().UTC().Format(time.RFC3339),
+		Host:      targetHost(),
+		Port:      2222,
+		Cmd:       argv,
+		Log:       spec.LogPath,
+		ManagedBy: spec.ManagedBy,
+	}
+	if err := c.write(spec.Name, state); err != nil {
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		_, _ = cmd.Process.Wait()
+		return nil, err
+	}
+	return cmd, nil
 }
 
 func (c *Controller) Start(name, program string, args, env []string, headless bool) (int, error) {
+	return c.StartDetached(name, program, args, env, "")
+}
+
+func (c *Controller) StartDetached(name, program string, args, env []string, managedBy string) (int, error) {
 	logDir := filepath.Join(c.stateDir(), "logs")
 	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		return 0, err
@@ -134,6 +221,8 @@ func (c *Controller) Start(name, program string, args, env []string, headless bo
 		Port:      2222,
 		Cmd:       argv,
 		Log:       logPath,
+		ManagedBy: managedBy,
+		Detached:  true,
 	}
 	if err := c.write(name, state); err != nil {
 		return 0, err
@@ -151,7 +240,9 @@ func (c *Controller) Stop(name string) error {
 		return fmt.Errorf("No state configuration file found for service '%s'.", name)
 	}
 	if c.isActive(name) {
-		if proc, err := os.FindProcess(st.PID); err == nil {
+		if st.Detached {
+			terminateDetached(st.PID, 5*time.Second)
+		} else if proc, err := os.FindProcess(st.PID); err == nil {
 			_ = proc.Signal(syscall.SIGTERM)
 		}
 	} else {
@@ -159,6 +250,21 @@ func (c *Controller) Stop(name string) error {
 	}
 	c.clear(name)
 	return nil
+}
+
+func terminateDetached(pid int, timeout time.Duration) {
+	if !processAlive(pid) {
+		return
+	}
+	_ = syscall.Kill(pid, syscall.SIGTERM)
+	deadline := time.Now().Add(timeout)
+	for processAlive(pid) && time.Now().Before(deadline) {
+		time.Sleep(50 * time.Millisecond)
+	}
+	if processAlive(pid) {
+		_ = syscall.Kill(pid, syscall.SIGKILL)
+	}
+	terminateProcessGroup(pid)
 }
 
 func (c *Controller) Logs(name string, lines uint32) error {

@@ -39,12 +39,17 @@ end
 
 local lock_lua = lazypath .. "/lua/lazy/manage/lock.lua"
 local lines = vim.fn.readfile(lock_lua)
+local patched = false
 for i, line in ipairs(lines) do
 	if line:find("info%.branch or assert%(Git%.get_branch") then
 		lines[i] = [[        branch = info.branch or Git.get_branch(plugin) or info.commit,]]
+		patched = true
 	end
 end
-vim.fn.writefile(lines, lock_lua)
+-- Only write when a replacement matched: never truncate a mid-clone file.
+if patched then
+	vim.fn.writefile(lines, lock_lua)
+end
 
 lazy.setup({
 	lockfile = vim.fn.stdpath("config") .. "/lazy-lock.json",

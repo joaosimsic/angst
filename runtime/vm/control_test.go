@@ -3,6 +3,7 @@ package vm
 import (
 	"os/exec"
 	"testing"
+	"time"
 )
 
 func withStateDir(t *testing.T) func() {
@@ -63,5 +64,29 @@ func TestStartStopLifecycle(t *testing.T) {
 	}
 	if controller.isActive("vm") {
 		t.Fatal("expected inactive after stop")
+	}
+}
+
+func TestStartChildStopProcessGroup(t *testing.T) {
+	if _, err := exec.LookPath("sleep"); err != nil {
+		t.Skip("sleep not available in this environment")
+	}
+	restore := withStateDir(t)
+	defer restore()
+	cmd, err := controller.StartChild(ChildSpec{Name: "child", Program: "sleep", Args: []string{"30"}}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid := cmd.Process.Pid
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+	terminateCmd(cmd, done, time.Second)
+	if processAlive(pid) {
+		t.Fatalf("child %d still alive after terminate", pid)
+	}
+	if controller.isActive("child") {
+		t.Fatal("expected child state to be cleared")
 	}
 }

@@ -53,6 +53,37 @@ let
         + hexValues.${lib.toLower (lib.substring 5 1 val)};
     };
 
+  intToHexByte =
+    n:
+    let
+      hexChars = "0123456789abcdef";
+      hi = builtins.div n 16;
+      lo = n - hi * 16;
+    in
+    lib.substring hi 1 hexChars + lib.substring lo 1 hexChars;
+
+  mix =
+    {
+      from,
+      to,
+      weight,
+    }:
+    let
+      a = hexToRgbInts from;
+      b = hexToRgbInts to;
+      w =
+        if weight < 0.0 then
+          0.0
+        else if weight > 1.0 then
+          1.0
+        else
+          weight;
+      channel =
+        fromChannel: toChannel:
+        intToHexByte (builtins.floor (fromChannel + (toChannel - fromChannel) * w + 0.5));
+    in
+    channel a.r b.r + channel a.g b.g + channel a.b b.b;
+
   # sRGB -> linear per WCAG (exponent 2.4). Nix has no pow builtin,
   # so x^2.4 is computed as x^2 * fifthRoot(x^2) via Newton iteration.
   fifthRoot = y: lib.foldl' (z: _: (4 * z + y / (z * z * z * z)) / 5) 1.0 (lib.range 1 10);
@@ -126,6 +157,8 @@ in
     stripHash
     hexToRgb
     hexToRgbInts
+    intToHexByte
+    mix
     relativeLuminance
     contrastRatio
     ensureContrast

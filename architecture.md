@@ -1860,7 +1860,7 @@ Final gates:
 
 ```bash
 NIXPKGS_ALLOW_UNFREE=1 nix flake check --impure
-NIXPKGS_ALLOW_UNFREE=1 nix build .#checks.x86_64-linux.build-ci --impure
+NIXPKGS_ALLOW_UNFREE=1 nix build .#checks.x86_64-linux.build-all --impure
 NIXPKGS_ALLOW_UNFREE=1 nix build .#checks.x86_64-linux.runtime-closure --impure
 NIXPKGS_ALLOW_UNFREE=1 nix build .#checks.x86_64-linux.state --impure
 NIXPKGS_ALLOW_UNFREE=1 nix build .#checks.x86_64-linux.catalog --impure

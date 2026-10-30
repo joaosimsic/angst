@@ -19,6 +19,8 @@ let
   hasClipboard = has "kernel.clipboard";
   hasAudio = has "kernel.audio";
   hasPaper = has "design.paper";
+  hasBlender = has "gamedev.blender";
+  hasGamedevEnv = has "gamedev.env";
   hasVm = builtins.elem "vm" profiles;
   hasLspmux = has "editor.lspmux";
   hasRea = has "agents.rea";
@@ -36,6 +38,8 @@ in
     hasClipboard
     hasAudio
     hasPaper
+    hasBlender
+    hasGamedevEnv
     hasVm
     hasLspmux
     hasRea

@@ -1,6 +1,6 @@
 {
   enable = [
-
+    "embedded.vial"
     "launcher.rofi"
     "terminal.ghostty"
     "display.x11"

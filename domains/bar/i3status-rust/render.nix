@@ -1,8 +1,36 @@
-{ themeSys, themeName }:
+{
+  lib,
+  themeSys,
+  themeName,
+  host,
+}:
 
 let
   t = themeSys.get themeName;
   p = t.palette;
+  isVm = host.hostname == "vm";
+  grabStatus = if isVm then "i3-vm-grab status --guest" else "i3-vm-grab status";
+  grabClick = if isVm then "i3-vm-grab request" else "i3-vm-grab toggle";
+
+  ftpStatusBlock = lib.optionalString ((host.ftp.mounts or [ ]) != [ ]) ''
+    [[block]]
+    block = "custom"
+    interval = 5
+    json = true
+    shell = "/bin/sh"
+    if_command = "command -v angst-ftp-status >/dev/null 2>&1"
+    command = "angst-ftp-status"
+    format = " $icon $text "
+    [block.theme_overrides]
+    good_fg = "#${t.ansi.success}"
+    good_bg = "#${p.background.base}"
+    warning_fg = "#${p.background.base}"
+    warning_bg = "#${t.ansi.warn}"
+    [[block.click]]
+    button = "left"
+    cmd = "angst-ftp-status toggle"
+    update = true
+  '';
 in
 [
   {
@@ -10,6 +38,10 @@ in
     text = ''
       [icons]
       icons = "material-nf"
+
+      [icons.overrides]
+      net_wifi = "\U000F05A9"
+      net_offline = "\U000F05AA"
 
       [theme]
       theme = "plain"
@@ -20,54 +52,36 @@ in
       separator_fg = "#${p.accent.base}"
 
       [[block]]
-      block = "cpu"
-      interval = 5
-      format = " $icon $utilization "
-      [block.theme_overrides]
-      warning_fg = "#${t.ansi.warn}"
-      warning_bg = "#${p.background.base}"
-      critical_fg = "#${t.ansi.error}"
-      critical_bg = "#${p.background.base}"
-
-      [[block]]
-      block = "memory"
-      interval = 5
-      format = " $icon $mem_used_percents.eng(w:2) "
-      [block.theme_overrides]
-      warning_fg = "#${t.ansi.warn}"
-      warning_bg = "#${p.background.base}"
-      critical_fg = "#${t.ansi.error}"
-      critical_bg = "#${p.background.base}"
-
-      [[block]]
       block = "custom"
       interval = 5
       json = true
-      shell = "/bin/sh"
-      format = " \U000F02CA $text "
-      command = """
-      used=$(df -B1 --output=used /boot /state /home 2>/dev/null | tail -n +2 | { s=0; while read -r u; do s=$((s + u)); done; echo $s; })
-      total=$(df -B1 --output=size /boot /state /home 2>/dev/null | tail -n +2 | { s=0; while read -r x; do s=$((s + x)); done; echo $s; })
-      if [ "$total" -le 0 ]; then
-        printf '{"state":"Idle","text":"disk n/a"}\n'
-        exit 0
-      fi
-      pct=$((used * 1000 / total))
-      ug10=$((used * 10 / 1073741824))
-      tg10=$((total * 10 / 1073741824))
-      if [ "$pct" -ge 900 ]; then state=Critical
-      elif [ "$pct" -ge 800 ]; then state=Warning
-      else state=Idle
-      fi
-      text=$(printf '%d.%dG/%d.%dG (%d.%d%%)' $((ug10 / 10)) $((ug10 % 10)) $((tg10 / 10)) $((tg10 % 10)) $((pct / 10)) $((pct % 10)))
-      printf '{"state":"%s","text":"%s"}\n' "$state" "$text"
-      """
+      command = "i3-hardware-metrics"
+      format = " $text "
       [block.theme_overrides]
-      warning_fg = "#${t.ansi.warn}"
-      warning_bg = "#${p.background.base}"
-      critical_fg = "#${t.ansi.error}"
-      critical_bg = "#${p.background.base}"
+      warning_fg = "#${p.background.base}"
+      warning_bg = "#${t.ansi.warn}"
+      critical_fg = "#${p.background.base}"
+      critical_bg = "#${t.ansi.error}"
+      [[block.click]]
+      button = "left"
+      cmd = "sh -c 'command -v i3-hardware-menu >/dev/null 2>&1 && i3-hardware-menu'"
 
+      [[block]]
+      block = "custom"
+      interval = 2
+      json = true
+      command = "i3-network-metrics"
+      format = " $icon "
+      [block.theme_overrides]
+      warning_fg = "#${p.background.base}"
+      warning_bg = "#${t.ansi.warn}"
+      critical_fg = "#${p.background.base}"
+      critical_bg = "#${t.ansi.error}"
+      [[block.click]]
+      button = "left"
+      cmd = "sh -c 'command -v i3-network-menu >/dev/null 2>&1 && i3-network-menu'"
+
+      ${ftpStatusBlock}
       [[block]]
       block = "sound"
       driver = "pulseaudio"
@@ -81,6 +95,62 @@ in
       [[block.click]]
       button = "left"
       cmd = "pavucontrol"
+
+      [[block]]
+      block = "custom"
+      interval = 1
+      json = true
+      shell = "/bin/sh"
+      if_command = "command -v angst-discord-voice >/dev/null 2>&1"
+      command = "angst-discord-voice status"
+      hide_when_empty = true
+      format = " $icon $text "
+      [block.theme_overrides]
+      good_fg = "#${t.ansi.success}"
+      good_bg = "#${p.background.base}"
+      warning_fg = "#${t.ansi.warn}"
+      warning_bg = "#${p.background.base}"
+      critical_fg = "#${t.ansi.error}"
+      critical_bg = "#${p.background.base}"
+      [[block.click]]
+      button = "left"
+      cmd = "i3-msg -q '[class=\"Discord\"] focus' 2>/dev/null || discord"
+
+      [[block]]
+      block = "custom"
+      interval = 1
+      json = true
+      shell = "/bin/sh"
+      if_command = "command -v i3-mouse-hide >/dev/null 2>&1"
+      command = "i3-mouse-hide status"
+      format = " $icon "
+      [block.theme_overrides]
+      good_fg = "#${t.ansi.success}"
+      good_bg = "#${p.background.base}"
+      critical_fg = "#${t.ansi.error}"
+      critical_bg = "#${p.background.base}"
+      [[block.click]]
+      button = "left"
+      cmd = "i3-mouse-hide toggle"
+      update = true
+
+      [[block]]
+      block = "custom"
+      interval = 1
+      json = true
+      shell = "/bin/sh"
+      command = "${grabStatus}"
+      hide_when_empty = true
+      format = " $icon $text "
+      [block.theme_overrides]
+      good_fg = "#${t.ansi.success}"
+      good_bg = "#${p.background.base}"
+      critical_fg = "#${t.ansi.error}"
+      critical_bg = "#${p.background.base}"
+      [[block.click]]
+      button = "left"
+      cmd = "${grabClick}"
+      update = true
 
       [[block]]
       block = "time"

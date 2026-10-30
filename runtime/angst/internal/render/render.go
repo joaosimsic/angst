@@ -1,6 +1,7 @@
 package render
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -23,6 +24,25 @@ const (
 type output struct {
 	Path string `json:"path"`
 	Text string `json:"text"`
+}
+
+// formatOutput pretty-prints rendered JSON outputs (4-space indent per
+// .editorconfig). Nix's builtins.toJSON only emits compact single-line JSON,
+// so formatting happens here at write time. Non-JSON outputs and unparseable
+// text pass through untouched.
+func formatOutput(o output) string {
+	if !strings.HasSuffix(o.Path, ".json") {
+		return o.Text
+	}
+	var buf bytes.Buffer
+	if err := json.Indent(&buf, []byte(o.Text), "", "    "); err != nil {
+		return o.Text
+	}
+	text := buf.String()
+	if !strings.HasSuffix(text, "\n") {
+		text += "\n"
+	}
+	return text
 }
 
 func defaultHost() string {
@@ -176,7 +196,7 @@ func Render(args []string) int {
 		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 			return exitError
 		}
-		if err := os.WriteFile(dest, []byte(o.Text), 0o644); err != nil {
+		if err := os.WriteFile(dest, []byte(formatOutput(o)), 0o644); err != nil {
 			fmt.Fprintf(os.Stderr, "error: could not write %s\n", o.Path)
 			return exitError
 		}

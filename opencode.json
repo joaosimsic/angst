@@ -1,1 +1,11 @@
-{"$schema":"https://opencode.ai/config.json","mcp":{"vm":{"enabled":true,"type":"remote","url":"http://localhost:8765/mcp"}}}
+{
+    "$schema": "https://opencode.ai/config.json",
+    "mcp": {
+        "servers": {
+            "vm": {
+                "type": "remote",
+                "url": "http://localhost:8765/mcp"
+            }
+        }
+    }
+}

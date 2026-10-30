@@ -22,6 +22,7 @@ let
   lintDesktop = import ./desktop.nix {
     inherit lib pkgs themeSys;
     inherit (render) renderDomainOutputFor;
+    ftpMounts = map (m: m.mountPoint) (host.ftp.mounts or [ ]);
   };
 
   lintShell = import ./shell.nix {
@@ -58,10 +59,28 @@ let
 
   lintNix = import ./lint-nix.nix { inherit pkgs; };
 
+  checkNoStoreSymlinks = import ./no-store-symlinks.nix { inherit pkgs; };
+
   checkSecretsEncrypted = import ./secrets.nix { inherit pkgs; };
 
   checkDeclared = import ./declared.nix {
     inherit pkgs lib hostList;
+  };
+
+  checkGenericHostIsolation = import ./generic-host-isolation.nix {
+    inherit self lib pkgs;
+  };
+
+  checkGenericHostContract = import ./generic-host-contract.nix {
+    inherit self lib pkgs;
+  };
+
+  checkGenericHostGuard = import ./generic-host-guard.nix {
+    inherit lib pkgs;
+  };
+
+  checkGenericProvisionSafety = import ./generic-provision-safety.nix {
+    inherit pkgs;
   };
 
   checkTreesitter = import ./treesitter.nix {
@@ -99,6 +118,25 @@ let
   secretScanHooks = import ./secret-scan-hooks.nix { inherit pkgs; };
 
   checkTex = import ./tex.nix { inherit pkgs lib; };
+
+  checkZellij = import ./zellij.nix {
+    inherit
+      pkgs
+      host
+      render
+      ;
+  };
+
+  checkOpencodeAttention = import ./opencode.nix { inherit pkgs; };
+
+  checkOpencodeSessionNav = import ./opencode-session-nav.nix { inherit pkgs; };
+
+  checkOpencodeMux = import ./opencode-mux.nix { inherit pkgs; };
+
+  checkOpencodeSecret = import ./opencode-secret.nix {
+    inherit pkgs;
+    opencodeConfig = render.renderDomainOutputFor host.theme "domains/agents/opencode/config/opencode.jsonc";
+  };
 
   checkSessionEnv = import ./session-env.nix {
     inherit pkgs lib self;
@@ -142,15 +180,26 @@ let
       builtins.concatStringsSep "\n" (builtins.attrValues (nixosToplevels // homeActivations))
     );
 
-  ciHost = lib.findFirst (h: h.hostname == "ci") null hostList;
-  buildCi =
-    if ciHost == null then
-      throw "checks.build-ci requires a host named \"ci\""
-    else
-      self.nixosConfigurations.${ciHost.hostname}.config.system.build.toplevel;
+  buildAllConfigs =
+    let
+      nixosDrvs = builtins.attrValues (
+        builtins.mapAttrs (_: c: c.config.system.build.toplevel) self.nixosConfigurations
+      );
+      homeDrvs = builtins.attrValues (
+        builtins.mapAttrs (_: c: c.activationPackage) (
+          builtins.removeAttrs self.homeConfigurations excludedHomes
+        )
+      );
+      allDrvs = nixosDrvs ++ homeDrvs;
+    in
+    pkgs.writeText "build-all-configs" (builtins.concatStringsSep "\n" (map (d: "${d}") allDrvs));
 in
 {
   check-password = checkPassword;
+  generic-host-isolation = checkGenericHostIsolation;
+  generic-host-contract = checkGenericHostContract;
+  generic-host-guard = checkGenericHostGuard;
+  generic-provision-safety = checkGenericProvisionSafety;
   check-secrets-encrypted = checkSecretsEncrypted.secrets;
   check-projects-encrypted = checkSecretsEncrypted.projects;
   check-db-encrypted = checkSecretsEncrypted.db;
@@ -164,9 +213,15 @@ in
   secret-scan = secretScan;
   secret-scan-hooks = secretScanHooks;
   lint-nix = lintNix;
+  check-no-store-symlinks = checkNoStoreSymlinks;
   check-treesitter = checkTreesitter;
   check-rust = checkRust;
   check-tex = checkTex;
+  check-zellij = checkZellij;
+  check-opencode-attention = checkOpencodeAttention;
+  check-opencode-session-nav = checkOpencodeSessionNav;
+  check-opencode-mux = checkOpencodeMux;
+  check-opencode-secret = checkOpencodeSecret;
   check-session-env = checkSessionEnv;
   check-session-usability = checkSessionUsability;
   inherit themeLint;
@@ -181,6 +236,6 @@ in
   login-shell-valid = loginShell.valid;
   login-shell-invalid = loginShell.invalid;
   eval-all = evalAllConfigs;
-  build-ci = buildCi;
+  build-all = buildAllConfigs;
 }
 // domainHealth

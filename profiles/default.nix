@@ -24,6 +24,7 @@ let
     desktop = import ./desktop.nix;
     development = import ./development.nix;
     embedded = import ./embedded.nix;
+    generic = import ./generic.nix;
     server = import ./server.nix;
     vm = import ./vm.nix;
     vpn = import ./vpn.nix;

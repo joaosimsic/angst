@@ -16,6 +16,7 @@ let
     pickContrast
     contrastRatio
     relativeLuminance
+    mix
     ;
 
   inherit (normalize)
@@ -102,6 +103,7 @@ in
     pickContrast
     contrastRatio
     relativeLuminance
+    mix
     ;
 
   contrast = {
@@ -110,6 +112,7 @@ in
       pickContrast
       contrastRatio
       relativeLuminance
+      mix
       ;
   };
 

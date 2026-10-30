@@ -36,7 +36,7 @@
   db = [ "work/intelligence" ];
 
   nixos = {
-    keyboardLayout = "us";
+    keyboardLayout = "br-abnt2";
     virtualisation.docker.daemon.settings.data-root = "/home/docker-data";
     domains.network.vpn.openvpn.servers.us = {
       config = "config /run/secrets/vpn/us.ovpn";
@@ -90,14 +90,14 @@
       }
     ];
   };
-  ftp = {
-    mounts = [
-      {
-        mountPoint = "ftp/server";
-        remotePath = "/httpdocs";
-      }
-    ];
-  };
+  # ftp = {
+  #   mounts = [
+  #     {
+  #       mountPoint = "ftp/server";
+  #       remotePath = "/httpdocs";
+  #     }
+  #   ];
+  # };
 
   persist = {
     enable = true;
@@ -107,11 +107,12 @@
   projects = [
     "angst"
     "advent-of-code"
+    "boring"
     "stealing-eye"
     "datapath"
     "llm-ruler"
     "agent"
-    "horror"
+    "threefold"
     "Throughput"
     "Throughput-Releases"
     "vault"

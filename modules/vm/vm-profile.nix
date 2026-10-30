@@ -154,13 +154,5 @@ in
       };
     };
 
-    home-manager.extraSpecialArgs.monitors = {
-      primary = {
-        name = "Virtual-1";
-        resolution = "1920x1080";
-        refreshRate = 60;
-        position = "0x0";
-      };
-    };
   };
 }

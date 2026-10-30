@@ -49,6 +49,57 @@
         durable = true;
       }
     ];
+    "display.gpu" = [
+      {
+        dir = ".cache/mesa_shader_cache";
+      }
+      {
+        dir = ".cache/nvidia";
+      }
+      {
+        dir = ".nv/GLCache";
+      }
+      {
+        dir = ".nv/ComputeCache";
+      }
+      {
+        dir = ".nv/OptiXCache";
+      }
+    ];
+    "gamedev.blender" = [
+      {
+        dir = ".config/blender";
+        name = "blender";
+        durable = true;
+      }
+    ];
+    "games.epic" = [
+      {
+        dir = ".config/heroic";
+        name = "heroic";
+        durable = true;
+      }
+      {
+        dir = ".config/legendary";
+        name = "legendary";
+        durable = true;
+      }
+      {
+        dir = "Games/Heroic";
+        name = "heroic-games";
+        durable = true;
+      }
+    ];
+    "chat.discord" = [
+      {
+        dir = ".config/discord";
+        name = "discord";
+        durable = true;
+      }
+      {
+        dir = ".local/state/angst/discord-voice";
+      }
+    ];
     "git.code" = [
       {
         dir = ".config/git";

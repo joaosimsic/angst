@@ -3,6 +3,7 @@ vim.opt.runtimepath:prepend(vim.fn.expand("~/.local/share/tree-sitter"))
 local describe = rawget(_G, "describe")
 local source = debug.getinfo(1, "S").source:sub(2)
 local test_dir = vim.fn.fnamemodify(source, ":p:h")
+dofile(test_dir .. "/../rtp_pin.lua")
 local helpers = dofile(test_dir .. "/helpers.lua")
 
 describe("Adapter Engine Validations", function()

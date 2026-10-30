@@ -12,7 +12,7 @@ M.Space = { provider = " " }
 
 ---@type HeirlineComponent
 M.Ruler = {
-	provider = " %l:%c | %P ",
+	provider = " %l:%c | %P | %L ",
 	hl = function(self)
 		return {
 			fg = utils.status_color(self, p.background.base),

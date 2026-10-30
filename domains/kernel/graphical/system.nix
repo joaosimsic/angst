@@ -17,10 +17,21 @@ in
 
   config = lib.mkIf cfg.enable {
     services = {
-      xserver.enable = true;
+      xserver = {
+        enable = true;
+        serverFlagsSection = ''
+          Option "BlankTime" "0"
+          Option "StandbyTime" "0"
+          Option "SuspendTime" "0"
+          Option "OffTime" "0"
+        '';
+      };
       libinput.enable = true;
       dbus.enable = true;
+      logind.settings.Login.IdleAction = "ignore";
     };
+
+    boot.kernelParams = [ "consoleblank=0" ];
 
     xdg.portal = {
       enable = true;

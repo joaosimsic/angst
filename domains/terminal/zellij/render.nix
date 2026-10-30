@@ -12,6 +12,8 @@ let
   standard = "bg=#${p.surface.variant},fg=#${t.safe.foregroundOnSurfaceVariant}";
   inactiveTab = "bg=#${p.surface.variant},fg=#${t.safe.foregroundOnSurfaceVariant},bold";
   activeTab = "bg=#${t.safe.surfaceVariantOnForegroundVariant},fg=#${p.surface.variant},bold";
+  bellTab = "bg=#${t.ansi.error},fg=#${p.background.base},bold";
+  flashingBellTab = "bg=#${t.ansi.warn},fg=#${p.background.base},bold";
 
   modeNormal = "bg=#${p.surface.variant},fg=#${t.safe.foregroundOnSurfaceVariant},bold";
   modeLocked = "bg=#${p.dim},fg=#${t.safe.textOn p.dim},bold";
@@ -39,6 +41,7 @@ let
     theme "angst"
     default_layout "default"
     pane_frames false
+    visual_bell true
     auto_layout true
     copy_clipboard "system"
     show_startup_tips false
@@ -137,6 +140,16 @@ let
                 };
             }
 
+            bind "Ctrl 1" { GoToTab 1; }
+            bind "Ctrl 2" { GoToTab 2; }
+            bind "Ctrl 3" { GoToTab 3; }
+            bind "Ctrl 4" { GoToTab 4; }
+            bind "Ctrl 5" { GoToTab 5; }
+            bind "Ctrl 6" { GoToTab 6; }
+            bind "Ctrl 7" { GoToTab 7; }
+            bind "Ctrl 8" { GoToTab 8; }
+            bind "Ctrl 9" { GoToTab 9; }
+
             bind "Ctrl l" {
                 MessagePlugin "vim-navigator" {
                     name "move_focus_or_tab";
@@ -187,6 +200,8 @@ let
       standard
       inactiveTab
       activeTab
+      bellTab
+      flashingBellTab
       modeNormal
       modeLocked
       modePane
@@ -215,6 +230,14 @@ in
       (requireInfix configText "default_layout \"default\""
         "zellij config should select the custom default layout"
       )
+      (requireInfix configText "visual_bell true" "zellij visual bell should be enabled")
+      (requireInfix configText ''bind "Ctrl j"'' "zellij Ctrl+j should navigate down")
+      (requireInfix configText ''payload "down"'' "zellij Ctrl+j should move focus down")
+      (requireInfix configText ''bind "Ctrl k"'' "zellij Ctrl+k should navigate up")
+      (requireInfix configText ''payload "up"'' "zellij Ctrl+k should move focus up")
+      (requireInfix configText ''bind "Ctrl 1" { GoToTab 1; }'' "zellij Ctrl+1 should jump to tab 1")
+      (requireInfix configText ''bind "Ctrl 2" { GoToTab 2; }'' "zellij Ctrl+2 should jump to tab 2")
+      (requireInfix configText ''bind "Ctrl 9" { GoToTab 9; }'' "zellij Ctrl+9 should jump to tab 9")
     ];
   }
   {
@@ -267,6 +290,14 @@ in
       (require (
         p.accent.base != p.background.variant
       ) "zellij inactive tab text and bar surface must differ in ${themeName}")
+      (requireInfix layoutText "tab_normal_bell" "zjstatus should render a persistent bell tab state")
+      (requireInfix layoutText "tab_normal_flashing_bell"
+        "zjstatus should render a flashing bell tab state"
+      )
+      (requireInfix layoutText "tab_bell_indicator" "zjstatus should render a bell indicator")
+      (require (
+        t.ansi.error != p.background.base
+      ) "zellij bell tab background must differ from bar surface in ${themeName}")
     ];
   }
 ]

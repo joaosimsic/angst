@@ -35,6 +35,7 @@
     "xml"
     "editorconfig"
     "blade"
+    "scm"
   ];
   db = [ "work/intelligence-metadata" ];
   env = {
@@ -92,10 +93,11 @@
   projects = [
     "angst"
     "advent-of-code"
+    "boring"
     "datapath"
     "llm-ruler"
     "agent"
-    "horror"
+    "threefold"
     "stealing-eye"
     "Throughput"
     "Throughput-Releases"

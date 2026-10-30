@@ -11,6 +11,18 @@ bootstrap-secrets host="nixos":
 install-nixos *args:
     sudo nix run .#install-nixos -- {{ args }}
 
+generic-provision *args:
+    sudo nix --extra-experimental-features 'nix-command flakes' run .#generic-provision -- {{ args }}
+
+generic-switch *args:
+    nix --extra-experimental-features 'nix-command flakes' run .#generic-switch -- {{ args }}
+
+test-generic-contract:
+    NIXPKGS_ALLOW_UNFREE=1 nix build .#checks.x86_64-linux.generic-host-contract .#checks.x86_64-linux.generic-host-guard .#checks.x86_64-linux.generic-provision-safety --impure --no-link
+
+test-generic-provision:
+    NIXPKGS_ALLOW_UNFREE=1 nix build .#tests.x86_64-linux.generic-provision-no-btrfs .#tests.x86_64-linux.generic-provision --impure --no-link --print-build-logs
+
 reinstall *args:
     sudo nix run .#install-nixos -- --fresh --yes {{ args }}
 
@@ -26,8 +38,8 @@ hardware path="personal/nixos":
 build host="nixos":
     NIXPKGS_ALLOW_UNFREE=1 nix build .#nixosConfigurations.{{ host }}.config.system.build.toplevel --impure
 
-build-ci:
-    NIXPKGS_ALLOW_UNFREE=1 nix build '.#checks.x86_64-linux.build-ci' --impure
+build-all:
+    NIXPKGS_ALLOW_UNFREE=1 nix build '.#checks.x86_64-linux.build-all' --impure
 
 switch host="nixos":
     sudo nixos-rebuild switch --flake .#{{ host }}
@@ -51,10 +63,10 @@ verify:
     NIXPKGS_ALLOW_UNFREE=1 nix flake check --no-build --impure
 
 go-fmt:
-    for d in angst vm shell analyze; do echo "=== $d ==="; (cd runtime/$d && gofmt -l . && go vet ./...); done
+    for d in runtime/angst runtime/vm runtime/shell runtime/analyze domains/wm/i3/workspace-group domains/chat/discord/voice-status; do echo "=== $d ==="; (cd $d && gofmt -l . && CGO_ENABLED=0 go vet ./...); done
 
 go-test:
-    for d in angst vm shell analyze; do echo "=== $d ==="; (cd runtime/$d && go test ./...); done
+    for d in runtime/angst runtime/vm runtime/shell runtime/analyze domains/wm/i3/workspace-group domains/chat/discord/voice-status; do echo "=== $d ==="; (cd $d && CGO_ENABLED=0 go test ./...); done
 
 vault-test:
     cd runtime/angst && go test ./internal/vault/... -v

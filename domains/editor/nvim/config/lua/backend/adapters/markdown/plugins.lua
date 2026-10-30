@@ -3,11 +3,6 @@ local Keybinder = require("common.Keybinder")
 local palette = require("config.theme.palette")
 local p = palette.p
 
-local source_path = debug.getinfo(1, "S").source:gsub("^@", "")
-local plugin_dir = vim.fn.fnamemodify(source_path, ":p:h") .. "/markdown-preview.nvim"
-
-vim.g.angst_mkdp_root_dir = plugin_dir
-
 ---@type Plugin[]
 return {
 	{
@@ -16,11 +11,10 @@ return {
 		opts = {},
 	},
 	{
-		dir = plugin_dir,
+		"iamcco/markdown-preview.nvim",
+		cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
 		ft = "markdown",
-		build = function()
-			vim.system({ "bun", "install" }, { cwd = plugin_dir .. "/app" }):wait()
-		end,
+		build = "cd app && npm install && git restore .",
 		config = function()
 			vim.g.mkdp_port = 9093
 			vim.g.mkdp_open_to_the_world = 1
@@ -74,21 +68,21 @@ return {
 						return
 					end
 					vim.api.nvim_buf_create_user_command(0, "MarkdownPreviewToggle", function()
-						require("mkdp").toggle_preview()
+						vim.fn["mkdp#util#toggle_preview"]()
 					end, { force = true })
 
 					local bufnr = vim.api.nvim_get_current_buf()
-					if require("mkdp.rpc").get_server_status() == 1 and vim.g.mkdp_linked_bufnr ~= bufnr then
-						vim.g.mkdp_linked_bufnr = bufnr
-						vim.b.MarkdownPreviewToggleBool = 1
-						require("mkdp").open_browser()
+				if vim.fn["mkdp#rpc#get_server_status"]() == 1 and vim.g.mkdp_linked_bufnr ~= bufnr then
+					vim.g.mkdp_linked_bufnr = bufnr
+					vim.b.MarkdownPreviewToggleBool = 1
+					vim.fn["mkdp#util#open_browser"]()
 					end
 				end,
 			})
 
 			local binder = Keybinder.new(nil, "MD_PREVIEW")
 			binder:nmap("<leader>mp", function()
-				require("mkdp").toggle_preview()
+				vim.fn["mkdp#util#toggle_preview"]()
 			end, { desc = "Toggle markdown preview" })
 		end,
 	},

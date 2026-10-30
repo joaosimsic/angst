@@ -41,6 +41,8 @@ in
     lint-shell = mkApp "${(runtime.apps.lint-shell { system = defaultSystem; }).bin}";
     analyze = mkApp "${runtime.apps.analyze.bin}";
     analyze-to-file = mkApp "${runtime.apps.analyze-to-file.bin}";
+    generic-provision = mkApp "${runtime.apps.generic-provision.bin}";
+    generic-switch = mkApp "${runtime.apps.generic-switch.bin}";
   }
   // lib.optionalAttrs (hostDefs ? nixos) {
     install-nixos = mkApp "${(runtime.apps.install-nixos { host = hostDefs.nixos; }).bin}";
