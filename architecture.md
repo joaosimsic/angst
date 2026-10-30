@@ -11,14 +11,39 @@ defines the target and the migration path.
 
 ## Goals
 
-- Buckets are top-level, not hidden under one `systems/` label. Capabilities,
-  pipelines, infra, and governance differ widely, so each gets its own root:
-  `capabilities/`, `pipelines/`, `infra/`, `governance/`, plus `catalog/`.
-- `catalog/` holds data only: feature records and builds, toolchain specs,
-  runtime tool records and builds, profiles, hosts. It holds no behavior.
-- Time and ownership stay separate. Phases (`resolve -> validate -> build ->
+- Buckets are top-level by kind, not hidden under one umbrella label. Catalog,
+  core, systems, workflow, and infra differ widely, so each gets its own root:
+  `catalog/`, `core/`, `systems/`, `workflow/`, `infra/`, plus `secrets/`.
+- `catalog/` holds declarative definitions plus pure builds, zero effects:
+  feature records and builds, toolchain specs, runtime tool records and builds,
+  profiles, hosts. Relations (`requires`, `provides`, `conflicts`, `sides`,
+  `targets`, `placement`, `persist`) are declarative data. Builds
+  (`package.nix`) and adapters (`home.nix`, `system.nix`) are pure functions.
+  It performs no probing, no IO, no monadic effects, and imports no bucket
+  behavior.
+- `core/` is composition machinery: resolution, context model, host assembly,
+  base platform adapters, theme. It owns no runtime lifecycle and no domain
+  state beyond the ephemeral resolved plan and derived facts.
+- `systems/` holds bounded runtime contexts with their own state and adapters:
+  `secrets`, `vm`, `projects`, `persistence`. Each owns its repository port
+  and runtime behavior.
+- Time and ownership stay separate. Phases (`evaluate -> validate -> build ->
   activate -> verify -> finish`) describe *when* work happens. Buckets describe
-  *who* owns it. Exactly one pipeline owns sequencing: `pipelines/activation`.
+  *who* owns it. Exactly one workflow owns sequencing: `workflow/activate`
+  owns the state machine; `workflow/validate` owns the gates; both live under
+  one `workflow/` root so time has a single home.
+- `workflow/` is the controller behind data, composition, and systems. It
+  determines which state the flake is in, which domains are involved, what
+  each state takes as inputs and emits as outputs, validates all machinery
+  involved, coordinates the buckets, and defines their access, boundaries,
+  and responsibilities. `catalog/` declares, `core/` composes, `systems/`
+  acts; `workflow/` decides when, with what, and whether to proceed or fail.
+- Safety is abort-only. If system (`nixos`) or home (`generic-linux`)
+  integrity might be compromised, activation and run are forbidden. No
+  `--force` override exists for integrity failures (`TGT`, `PKG`, `PROF`,
+  `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`). Missing, unknown, failed, stale, or
+  mismatched state aborts before effects, keeps the prior generation, and
+  points to explicit recovery (`angst host detect`).
 - Eval, build, activation, and run are distinct planes with explicit logging
   and step validation. No plane hides inside another.
 - `infra/monads/` is the edge: ports, interpreters, effect composition, and
@@ -46,22 +71,23 @@ defines the target and the migration path.
   structured phase/log artifacts.
 - Runtime executables are separate opt-in artifacts, not one all-features
   binary.
-- No root `systems/`, `lib/`, `domains/`, `modules/`, `checks/`, `runtime/`,
-  `toolchains/`, `themes/`, `packages/`, `profiles/`, `hosts/`, or `flake/`
-  directories.
+- No root `capabilities/`, `pipelines/`, `governance/`, `lib/`, `domains/`,
+  `modules/`, `checks/`, `runtime/`, `toolchains/`, `themes/`, `packages/`,
+  `profiles/`, `hosts/`, or `flake/` directories. `systems/` exists only in
+  its narrow sense (bounded runtime contexts), never as a shared umbrella.
 
 ## Buckets
 
-Four buckets plus a data catalog. Nothing lives under a shared `systems/`
-label.
+Five buckets plus a secrets source. `systems/` is narrow (bounded contexts),
+not an umbrella.
 
 | Bucket | Owns | Directories |
 |---|---|---|
-| Capabilities | Facts, builds, domain state | `capabilities/packages/`, `capabilities/platform/`, `capabilities/theme/`, `capabilities/host/`, `capabilities/context/`, `capabilities/persistence/`, `capabilities/secrets/`, `capabilities/vm/`, `capabilities/projects/` |
-| Pipelines | Time, sequencing, backend selection | `pipelines/activation/`, `pipelines/modules/` |
+| Catalog | Declarative records plus pure builds/modules, zero effects | `catalog/features/`, `catalog/toolchains/`, `catalog/runtime/`, `catalog/profiles/`, `catalog/hosts/` |
+| Core | Composition, resolution, base adapters | `core/packages/`, `core/context/`, `core/host/`, `core/platform/`, `core/theme/` |
+| Systems | Bounded behavior plus state ports | `systems/secrets/`, `systems/vm/`, `systems/projects/`, `systems/persistence/` |
+| Workflow | Time, sequencing, gates, backend selection; controller over data, composition, systems | `workflow/evaluation/`, `workflow/validate/`, `workflow/build/`, `workflow/activate/`, `workflow/verify/`, `workflow/finish/`, `workflow/phases.nix`, `workflow/validate/matrix.nix`, `workflow/validate/report.nix` |
 | Infra | Seams, IO, rendering, exposure, shared helpers | `infra/monads/`, `infra/state/`, `infra/log/`, `infra/cli/`, `infra/outputs/`, `infra/lib/`, `infra/nixpkgs-config.nix` |
-| Governance | Rules, no execution | `governance/validation/` (`matrix.nix`, `report.nix`, `internal/architecture.nix`) |
-| Catalog | Data only, zero behavior | `catalog/features/`, `catalog/toolchains/`, `catalog/runtime/`, `catalog/profiles/`, `catalog/hosts/` |
 | Secrets source | Encrypted data only | `secrets/` |
 
 NixOS and home-manager modules are adapters at the edge. They receive plain
@@ -99,20 +125,29 @@ catalog/
       target.nix
       hardware.nix
       observations.nix
-capabilities/
+core/
   packages/
+  context/
+  host/
   platform/
   theme/
     themes/
-  host/
-  context/
-  persistence/
+systems/
   secrets/
   vm/
   projects/
-pipelines/
-  activation/
-  modules/
+  persistence/
+workflow/
+  evaluation/
+  validate/
+    matrix.nix
+    report.nix
+    internal/architecture.nix
+  build/
+  activate/
+  verify/
+  finish/
+  phases.nix
 infra/
   monads/
     ports/
@@ -138,11 +173,6 @@ infra/
   outputs/
   lib/
   nixpkgs-config.nix
-governance/
-  validation/
-    matrix.nix
-    report.nix
-    internal/architecture.nix
 secrets/                       # encrypted data only
 githooks/
 .github/
@@ -150,7 +180,9 @@ githooks/
 
 Removed or banned root directories:
 
-- `systems/` (the old shared label; buckets are top-level now)
+- `capabilities/` (split into `core/` plus `systems/`)
+- `pipelines/` (merged into `workflow/`)
+- `governance/` (merged into `workflow/validate/`)
 - `lib/` (moved to `infra/lib/`)
 - `domains/`
 - `modules/`
@@ -166,8 +198,7 @@ Removed or banned root directories:
 
 `infra/nixpkgs-config.nix` is the single nixpkgs configuration. There are no
 root-level exceptions: the root holds only `flake.nix`, `architecture.md`,
-`catalog/`, `capabilities/`, `pipelines/`, `infra/`, `governance/`, and
-`secrets/`.
+`catalog/`, `core/`, `systems/`, `workflow/`, `infra/`, and `secrets/`.
 
 ## Planes: Eval, Build, Activate, Run
 
@@ -201,13 +232,19 @@ Old blur this replaces: `runtime/angst/internal/render/render.go` mixed
 `justfile` mixed `nix build` with `sudo nixos-rebuild switch` with raw output
 only. Each of those is now assigned to exactly one plane with its own logs.
 
-## Pipeline Ownership × Time Matrix
+## Workflow Ownership × Time Matrix
 
 Phases:
 
 ```text
-resolve -> validate -> build -> activate -> verify -> finish
+evaluate -> validate -> build -> activate -> verify -> finish
 ```
+
+Phase id is `evaluate` (verb, keeps the verb chain). Display name is
+`evaluation`. Directory is `workflow/evaluation/`. Do not use `resolve` for
+the phase; `resolve` remains an internal function name inside
+`core/packages` (the resolver resolves dependencies during the `evaluate`
+phase).
 
 States:
 
@@ -215,53 +252,106 @@ States:
 pending | running | ok | warn | error | skipped
 ```
 
-The matrix below is enforced by `governance/validation/matrix.nix`, not a
+The matrix below is enforced by `workflow/validate/matrix.nix`, not a
 design guide. Cells: O owns, R reads, W writes, X forbidden, - absent.
 
-| Component | resolve | validate | build | activate | verify | finish |
+| Component | evaluate | validate | build | activate | verify | finish |
 |---|---|---|---|---|---|---|
-| `capabilities/packages` | O | R | W | - | - | - |
-| `capabilities/host-context` | O | R | R | - | R | - |
-| `capabilities/platform-theme` | R | R | W | - | - | - |
-| `capabilities/secrets-vm-projects-persistence` | - | R | - | W | R | - |
+| `core/packages` | O | R | W | - | - | - |
+| `core/host-context` | O | R | R | - | R | - |
+| `core/platform-theme` | R | R | W | - | - | - |
+| `systems/secrets-vm-projects-persistence` | - | R | - | W | R | - |
 | `catalog/*` | W | R | R | - | - | - |
 | `secrets/` | - | R | - | - | - | - |
-| `pipelines/activation` | R | R | R | O | O | O |
-| `pipelines/modules` | - | - | O | - | - | - |
+| `workflow/activate` | R | R | R | O | O | O |
+| `workflow/build` | - | - | O | - | - | - |
+| `workflow/evaluation-validate` | O | O | - | - | R | R |
 | `infra/monads` | W | W | - | - | - | - |
 | `infra/state` | - | R | - | W | W | W |
 | `infra/lib` | R | R | R | - | - | - |
 | `infra/log` | W | W | W | W | W | W |
 | `infra/cli-outputs` | - | - | R | W | R | R |
-| `governance/validation` | - | O | - | - | R | R |
 
 Reading:
 
-- `resolve`: `capabilities/packages` plus `capabilities/host` and
-  `capabilities/context` emit the `SystemPlan` plus context through the
-  `infra/monads` seam. `pipelines/activation` tracks phase state only.
-  `infra/log` emits start/end plus selection counts. `governance/validation`
-  is absent.
-- `validate`: `governance/validation` owns gates `ARCH`, `PROF001`,
-  `DESK001`, `DESK002`, `DESK003`, `TGT001`, `SEC`, `CTX`. Capabilities are
+- `evaluate`: `core/packages` plus `core/host` and `core/context` emit the
+  `SystemPlan` plus context through the `infra/monads` seam.
+  `workflow/activate` tracks phase state only. `infra/log` emits start/end
+  plus selection counts. `workflow/validate` checks shapes but owns no gates
+  yet.
+- `validate`: `workflow/validate` owns gates `ARCH`, `PROF001`, `DESK001`,
+  `DESK002`, `DESK003`, `TGT001`, `SEC`, `CTX`. Core and systems are
   read-only. `infra/state` checks schemas and permissions. Required facts
   fail closed on `unknown`, `failed`, or stale.
-- `build`: `pipelines/modules` pairs selected records, invokes `package.nix`
+- `build`: `workflow/build` pairs selected records, invokes `package.nix`
   with `theme`, `toolchains`, `upstream`, `src`, and git-derived `version`,
   and emits home-manager and NixOS modules that install `$out` from
   `/nix/store`.
-- `activate`: `pipelines/activation` selects the backend from `target.nix`:
+- `activate`: `workflow/activate` selects the backend from `target.nix`:
   `nixos` local uses `nixos-rebuild switch`; `generic-linux` local uses
   `home-manager switch`; `nixos` remote uses `nixos-rebuild --target-host`;
   `generic-linux` remote builds, copies, and activates over SSH.
 - `verify`: activation re-probes the target and compares it with
   `target.nix`. Mismatch stops the run; only `angst host detect`
-  regenerates the manifest. `governance/validation` runs health checks and
+  regenerates the manifest. `workflow/validate` runs health checks and
   records generation plus store path.
 - `finish`: artifacts land under
   `~/.local/state/angst/activation/<host>/<run-id>/` as `summary.json`,
   `events.jsonl`, and `raw.log`, with a `latest` symlink, 20-run retention,
   gzipped old raw logs, `0700` directories, and `0600` sensitive files.
+
+## Workflow Phase Contracts
+
+`workflow/` owns time and controls the flake. Not tools. Not domains. Each
+phase declares which flake state it handles, which domains are involved, what
+it takes as inputs, and what it emits as outputs. No hidden sequencing
+elsewhere. The full six-step run (`evaluate -> validate -> build ->
+activate -> verify -> finish`) is one controlled chain: Nix layers
+(`evaluate`, `validate`, `build`) are pure and emit a sealed plan; runtime
+layers (`activate`, `verify`, `finish`) reload the same plan, re-verify it
+against live reality, and abort on any drift before effects.
+
+| Phase | Inputs | Uses | Outputs | Plane |
+|---|---|---|---|---|
+| `evaluate` | `catalog/features/`, `catalog/toolchains/`, `catalog/runtime/`, `catalog/profiles/`, `catalog/hosts/<host>/default.nix`, `catalog/hosts/<host>/target.nix`, `catalog/hosts/<host>/hardware.nix` | `core/packages`, `core/context`, `infra/monads`, `infra/lib` | `SystemPlan` {selected, providers, order, facts, involved} plus diagnostics. `involved` lists per-run domains for later phases to scope work | Eval, pure, no probe, no SSH, no QEMU, no decrypt |
+| `validate` | `SystemPlan` plus desired/observed/derived context plus `target.nix` | public facades only, `catalog/*` read-only | diagnostics, fail closed on `unknown`/`failed`/stale | Eval, owns `ARCH`, `PROF001`, `DESK001`, `DESK002`, `DESK003`, `TGT001`, `TGT002`, `SEC`, `CTX` |
+| `build` | `SystemPlan` plus `theme` plus `toolchains` plus `src` plus `upstream` plus `version` from `self.shortRev` / `self.dirtyShortRev`, fallback `"dev"` | `catalog/features/*/package.nix`, `catalog/runtime/*/package.nix`, `core/platform`, `infra/nixpkgs-config.nix` | `/nix/store` paths plus home-manager/NixOS modules installing `$out`, plus sealed `deployPlan` with digests (`targetDigest`, `planDigest`, `storePath`) | Build, theme/toolchain baked into `$out`, never eval text |
+| `activate` | sealed `deployPlan` plus `target.nix` plus built toplevel plus backend choice | `target`, `deploy`, `state`, `log`, `secret` ports; `infra/cli` executes, `workflow/activate` owns behavior | generation switch via `nixos-rebuild switch` or `home-manager switch` or `nixos-rebuild --target-host` plus phase events | Activate, strict: missing manifest fails `TGT001`, no probe, no write, no fallback; mismatch fails `TGT003`. Pre-flight reloads sealed gates, runs fast native checks, re-invokes `nix eval` recheck, compares fresh probe digest; any drift aborts |
+| `verify` | sealed run plus `target.nix` plus fresh probe plus generation plus store path | `core/context`, `systems/*` health checks, `infra/state` | diagnostics plus recorded generation/store path | Run, stale facts never authorize destroy; mismatch stops run, no `finish ok` |
+| `finish` | per-phase durations plus event stream plus exit code | `infra/log`, `infra/state` | `~/.local/state/angst/activation/<host>/<run-id>/summary.json`, `events.jsonl`, `raw.log`, `latest` symlink, 20-run retention, gzip old logs, `0700` dirs, `0600` sensitive | Run. On `error` writes `error` summary, preserves `raw.log`, keeps prior generation |
+
+Rules:
+
+- `workflow/activate` is the sole state machine owner. `infra/log` renders
+  it; `workflow/validate` checks it.
+- `workflow/validate` never imports `workflow/activate`. Check never calls
+  do. `workflow/validate` may read `workflow/activate` phase/state shapes
+  for schema checks, never its behavior.
+- `workflow/*` may import `core/*` facades, `catalog/*` records,
+  `infra/lib`, and `infra/monads` ports. Never the reverse.
+- `infra/cli` composes binaries only. No phase logic there. `cmd/angst-switch`
+  calls `workflow/activate`; it owns no state machine.
+- `infra/outputs` exposes results: `nixosConfigurations` only for
+  `target.kind = "nixos"`, `homeConfigurations` always, `packages`, `apps`,
+  `checks`.
+- Phase literals (`evaluate|validate|build|activate|verify|finish`) and state
+  literals (`pending|running|ok|warn|error|skipped`) live only in
+  `workflow/`, `infra/log`, and `workflow/validate/report.nix`. Any other
+  occurrence fails `ARCH`.
+- Eval plane versus `evaluate` phase: plane is *where* code runs (pure
+  `nix eval`); phase is *what* step runs (produce `SystemPlan`). Both
+  `evaluate` and `validate` phases run on the Eval plane.
+- Nix validates declarative truth (shapes, deps, cycles, conflicts,
+  providers, sides/targets, desktop cardinality, `ARCH` matrix, closure
+  gating, ciphertext presence, state schemas). It cannot see live OS, SSH,
+  QEMU, decrypted values, mounts, liveness, clocks, locks, or target `PATH`.
+  Go validates live truth (fresh probe digest compare, backend binary
+  present, lock exclusive, perms, freshness `observedAt` plus `ttlSeconds`,
+  health, generation plus store path). Max safety is both with a sealed
+  handoff and re-verification; neither layer trusts the other without
+  re-checking.
+- Abort-only has no `--force` for integrity codes. `skipped` applies to
+  optional sides only, never to `validate` or `activate` as whole phases.
 
 ## Catalog Discovery
 
@@ -273,7 +363,7 @@ Use eval-time discovery for declarative catalogs:
 
 | Catalog | Declaration |
 |---|---|
-| Themes | file under `capabilities/theme/themes/` |
+| Themes | file under `core/theme/themes/` |
 | Toolchains | file under `catalog/toolchains/` |
 | Features | directory under `catalog/features/<category>/<name>/` |
 | Runtime tools | directory under `catalog/runtime/<tool>/` |
@@ -285,7 +375,7 @@ Use explicit imports for code composition:
 
 | Code | Why explicit |
 |---|---|
-| `capabilities/*`, `pipelines/*`, `infra/*`, `governance/*` | bucket ownership and facade boundaries |
+| `core/*`, `systems/*`, `workflow/*`, `infra/*` | bucket ownership and facade boundaries |
 | NixOS/home-manager adapters | module composition and ordering |
 | `infra/cli` command registry | binaries and runtime capabilities |
 | `infra/monads` ports/interpreters | contracts and test doubles |
@@ -322,15 +412,15 @@ catalog/toolchains/
   rust.nix
   go.nix
 
-capabilities/packages/internal/
-  toolchains.nix        # scan, validate, index, resolve
+core/packages/internal/
+  toolchains.nix        # scan, validate, index, evaluate
 ```
 
 Flow:
 
 ```text
 catalog/toolchains/*.nix
-  -> capabilities/packages scan
+  -> core/packages scan
   -> validate with _schema.nix
   -> build with _builder.nix
   -> index by language
@@ -344,8 +434,8 @@ Rules:
 - filename is the language ID
 - no static language list
 - toolchain specs may import local `_builder.nix`
-- toolchain specs do not import `capabilities/`, `pipelines/`, `infra/`,
-  or `governance/`
+- toolchain specs do not import `core/`, `systems/`, `workflow/`,
+  or `infra/` (except `infra/lib/` pure helpers)
 - `mkToolchain` stays a pure helper; it is not a package build
 
 ### Features Like Themes
@@ -374,7 +464,7 @@ Rules:
 - skip `_*` and `config/` internals
 - no central feature list
 - no manual `entries` array
-- `pipelines/modules` pairs selected entries with side files
+- `workflow/build` pairs selected entries with side files
 
 ### Profiles Like Themes
 
@@ -399,10 +489,10 @@ Unknown profile fails `PROF001`. Discovery does not enable anything.
 ### Checks
 
 - feature checks are discovered from selected feature directories
-- governance checks are explicitly registered by `governance/validation`
+- workflow checks are explicitly registered by `workflow/validate`
 - cross-bucket checks are explicit imports
 
-Feature checks are data-adjacent and co-located. Governance checks are code
+Feature checks are data-adjacent and co-located. Workflow checks are code
 with dependencies and must not appear by accident.
 
 ### Untracked Files Caveat
@@ -421,40 +511,54 @@ A Nix eval check cannot reliably see untracked files inside a flake source.
 ```text
 flake.nix
   -> infra/outputs
-       -> capabilities/host
-       -> governance/validation
+       -> core/host
+       -> workflow/validate
        -> infra/cli
-       -> capabilities/theme
+       -> core/theme
        -> infra/log
        -> catalog/
        -> infra/lib/
        -> infra/nixpkgs-config.nix
 
-capabilities/host
-  -> capabilities/packages
-  -> capabilities/context
-  -> pipelines/modules
-  -> capabilities/platform
-  -> pipelines/activation
-  -> capabilities/persistence
-  -> capabilities/secrets
-  -> capabilities/vm
-  -> capabilities/projects
-  -> capabilities/theme
+core/host
+  -> core/packages
+  -> core/context
+  -> workflow/build
+  -> core/platform
+  -> workflow/activate
+  -> systems/persistence
+  -> systems/secrets
+  -> systems/vm
+  -> systems/projects
+  -> core/theme
 
 infra/cli
-  -> pipelines/activation
-  -> capabilities/persistence
-  -> capabilities/secrets
-  -> capabilities/vm
-  -> capabilities/projects
+  -> workflow/activate
+  -> systems/persistence
+  -> systems/secrets
+  -> systems/vm
+  -> systems/projects
   -> infra/state
   -> infra/log
 
-governance/validation
+workflow/validate
   -> public facades only
 
-capabilities/*, pipelines/*, infra/* (except infra/lib), governance/*
+workflow/activate
+  -> core/context
+  -> core/host (read-only plan/context shapes)
+  -> systems/secrets (refs only)
+  -> infra/state
+  -> infra/log
+  -> infra/monads ports
+
+workflow/build
+  -> core/packages (selected records)
+  -> core/platform (base modules only)
+  -> catalog/ records plus pure builds
+  -> infra/nixpkgs-config.nix via args
+
+core/*, systems/*, workflow/*, infra/* (except infra/lib)
   -> infra/lib (helpers only)
 
 infra/lib
@@ -465,22 +569,22 @@ Rules:
 
 | Area | Rule |
 |---|---|
-| `infra/monads` | The edge. Imported only by files under `capabilities/`, `pipelines/`, `infra/`, `governance/`. Never imported by `catalog/*` or `secrets/`. |
+| `infra/monads` | The edge. Imported only by files under `core/`, `systems/`, `workflow/`, `infra/`. Never imported by `catalog/*` or `secrets/`. |
 | `*/default.nix` (bucket facades) | Public API only. Returns plain data, modules, packages, diagnostics, or monadic programs. Never leaks internals. |
-| `*/internal/` | Private to that bucket member. No other member may import it. |
-| `infra/lib/` | Imports only `infra/lib/` and nixpkgs lib. Never imports `capabilities/`, `pipelines/`, `catalog/`, or `governance/`. |
-| `infra/nixpkgs-config.nix` | Single nixpkgs configuration. Imported by `infra/outputs`, `pipelines/modules`, and capability builds via args. Never hardcoded from `catalog/*`. |
-| `catalog/features/*/default.nix` | Pure package data. No imports from `capabilities/`, `pipelines/`, `infra/`, or `governance/` (except local files); no executable logic. |
+| `*/internal/` | Private to that bucket member. No other member may import it. `workflow/validate` never imports `workflow/activate` internals. |
+| `infra/lib/` | Imports only `infra/lib/` and nixpkgs lib. Never imports `core/`, `systems/`, `workflow/`, `catalog/`. |
+| `infra/nixpkgs-config.nix` | Single nixpkgs configuration. Imported by `infra/outputs`, `workflow/build`, and core builds via args. Never hardcoded from `catalog/*`. |
+| `catalog/features/*/default.nix` | Declarative record (`type`, `requires`, `provides`, `conflicts`, `sides`, `targets`, `placement`, `persist`). No imports from `core/`, `systems/`, `workflow/`, or non-lib `infra/` (local files plus `infra/lib/` only); no effects. |
 | `catalog/features/*/package.nix` | Pure build function. Explicit inputs only (`theme`, `toolchains`, `src`, `upstream`, `version`, nixpkgs inputs); never reads `host` or profiles. |
 | `catalog/features/*/{home,system}.nix` | Nix module adapters installing the built store path. Local imports only. |
-| `catalog/toolchains/` | Declarative toolchain specs. Local `_builder.nix`/`_schema.nix` imports only. |
+| `catalog/toolchains/` | Declarative toolchain specs. Local `_builder.nix`/`_schema.nix` imports only (plus `infra/lib/`). |
 | `catalog/runtime/` | Runtime tool records plus `package.nix` builds. |
-| `catalog/profiles/` | Pure graph data. No executable logic. |
+| `catalog/profiles/` | Pure graph data. Local plus `infra/lib/` imports only. |
 | `secrets/` | Encrypted data only. No code. |
 | `catalog/hosts/` | Pure desired data plus generated tracked observations. No code. |
 
 `catalog/*` may import `infra/lib/*` (pure helpers) only. It never imports
-capability behavior, pipeline orchestration, non-lib infra, or governance.
+core composition, systems behavior, workflow orchestration, or non-lib infra.
 
 Architecture checks enforce these rules with a static import scan. Dynamic
 imports cannot be fully checked; keep facades simple.
@@ -509,12 +613,12 @@ repositories.
 
 | Port | Pure/test interpreter | Eval interpreter | Runtime adapter owner |
 |---|---|---|---|
-| `Target` | fixed `Nixos` / `GenericLinux` / `Unknown` | reads tracked `target.nix` | `capabilities/context` |
-| `Observations` | fixture facts | reads tracked `observations.nix` | `capabilities/context` |
-| `Secrets` | fake refs | checks ciphertext presence | `capabilities/secrets` |
-| `VM` | fake lifecycle | none | `capabilities/vm` |
-| `Deploy` | plan only | plan only | `pipelines/activation` |
-| `Projects` | fixture stores | tracked metadata only | `capabilities/projects` |
+| `Target` | fixed `Nixos` / `GenericLinux` / `Unknown` | reads tracked `target.nix` | `core/context` |
+| `Observations` | fixture facts | reads tracked `observations.nix` | `core/context` |
+| `Secrets` | fake refs | checks ciphertext presence | `systems/secrets` |
+| `VM` | fake lifecycle | none | `systems/vm` |
+| `Deploy` | plan only | plan only | `workflow/activate` |
+| `Projects` | fixture stores | tracked metadata only | `systems/projects` |
 | `Log` | captured events | diagnostics only | `infra/log` |
 | `State` repositories | in-memory stores | tracked snapshots | `infra/state` plus owning bucket |
 
@@ -541,7 +645,7 @@ All monad tests live under `infra/monads/tests/`:
 - project/vault state transitions
 
 Consumer buckets use the same fixture interpreters. Unit tests do no
-filesystem, network, VM, or SSH work. `governance/validation` runs end-to-end
+filesystem, network, VM, or SSH work. `workflow/validate` runs end-to-end
 repo checks.
 
 ## Target Model
@@ -601,7 +705,7 @@ Remote deployment is not monad work:
 nixos-rebuild switch --flake .#host --target-host user@host --use-remote-sudo
 ```
 
-`pipelines/activation` builds the deployment plan. `infra/cli` executes it.
+`workflow/activate` builds the deployment plan. `infra/cli` executes it.
 
 ## Switch
 
@@ -628,7 +732,8 @@ wrapper selects the backend.
 | backend command missing | fail `ACT003` |
 
 `--dry-run` prints the selected backend and planned command. There is no
-implicit target detection or target write in `angst switch`.
+implicit target detection or target write in `angst switch`. There is no
+`--force` path around integrity gates.
 
 ### Backend Selection
 
@@ -647,7 +752,7 @@ fallback.
 Phases:
 
 ```text
-resolve -> validate -> build -> activate -> verify -> finish
+evaluate -> validate -> build -> activate -> verify -> finish
 ```
 
 States:
@@ -656,9 +761,10 @@ States:
 pending | running | ok | warn | error | skipped
 ```
 
-Phase ownership: `pipelines/activation` is the sole phase owner. No other
-bucket runs the state machine. `infra/log` renders it; `governance/validation`
-checks it.
+Phase ownership: `workflow/activate` is the sole phase state machine owner.
+No other bucket runs the state machine. `workflow/evaluation` and
+`workflow/build` produce plans and modules; `workflow/validate` owns the
+gates; `infra/log` renders progress.
 
 Live view:
 
@@ -668,8 +774,8 @@ target  nixos (system)
 run     01J...
 
 phase      state    time     detail
-resolve    ok       0.2s     host=nixos target=nixos
-validate   ok       0.1s     capabilities ok
+evaluate   ok       0.2s     host=nixos target=nixos
+validate   ok       0.1s     core ok
 build      running  12.4s    nix build .#nixosConfigurations.nixos...
   nix: building '/nix/store/...'
   nix: copy 42 paths
@@ -799,7 +905,7 @@ Override with `ANGST_STATE_DIR`.
 | VM lifecycle | runtime | VM | `state/vm/services/*.json` | no |
 | Activation run | runtime | Activation | `state/activation/<host>/<run-id>/` | no |
 | Project/db/vault sync metadata | runtime | Projects | `state/projects/`, `state/db/` | no |
-| Resolved plan | derived | Resolution | memory only | yes, recomputed |
+| Evaluated plan | derived | Evaluation | memory only | yes, recomputed |
 | Logs | runtime | Observability | `state/logs/` | no |
 
 Rules:
@@ -816,20 +922,20 @@ Use DDD repositories behind monad ports. Do not call everything “store.”
 
 | Repository | Backing | Owner |
 |---|---|---|
-| `TargetRepository` | tracked `catalog/hosts/<host>/target.nix` | `capabilities/context` |
-| `HardwareRepository` | tracked `catalog/hosts/<host>/hardware.nix` | `capabilities/context` |
-| `ObservationRepository` | tracked snapshots or `state/observations/` | `capabilities/context` |
-| `SecretRepository` | `secrets/**/*.age` plus runtime decrypted material | `capabilities/secrets` |
-| `VmStateRepository` | `state/vm/services/*.json` | `capabilities/vm` |
-| `ActivationRepository` | `state/activation/<host>/<run-id>/` | `pipelines/activation` |
-| `ProjectStateRepository` | `state/projects/` plus working store | `capabilities/projects` |
-| `DbStateRepository` | `state/db/` plus decrypted DB store | `capabilities/projects` |
+| `TargetRepository` | tracked `catalog/hosts/<host>/target.nix` | `core/context` |
+| `HardwareRepository` | tracked `catalog/hosts/<host>/hardware.nix` | `core/context` |
+| `ObservationRepository` | tracked snapshots or `state/observations/` | `core/context` |
+| `SecretRepository` | `secrets/**/*.age` plus runtime decrypted material | `systems/secrets` |
+| `VmStateRepository` | `state/vm/services/*.json` | `systems/vm` |
+| `ActivationRepository` | `state/activation/<host>/<run-id>/` | `workflow/activate` |
+| `ProjectStateRepository` | `state/projects/` plus working store | `systems/projects` |
+| `DbStateRepository` | `state/db/` plus decrypted DB store | `systems/projects` |
 | `LogRepository` | `state/logs/` | `infra/log` |
 
 Ports live in `infra/monads/ports/`. Production adapters live in the owning
 bucket. Test adapters are in-memory or fixture-backed.
 
-Monad `State` remains ephemeral resolution state. It never persists anything.
+Monad `State` remains ephemeral evaluation state. It never persists anything.
 
 ### Runtime State File Contract
 
@@ -870,11 +976,11 @@ Rules:
 
 | Bucket | State ownership |
 |---|---|
-| `capabilities/context` | target, hardware, observations |
-| `capabilities/secrets` | secret refs, availability, provisioning metadata |
-| `capabilities/vm` | VM service state, VM logs, VM locks |
-| `pipelines/activation` | system switch runs, deploy runs, activation history, logs |
-| `capabilities/projects` | project/db/vault sync metadata and working-store state |
+| `core/context` | target, hardware, observations |
+| `systems/secrets` | secret refs, availability, provisioning metadata |
+| `systems/vm` | VM service state, VM logs, VM locks |
+| `workflow/activate` | system switch runs, deploy runs, activation history, logs |
+| `systems/projects` | project/db/vault sync metadata and working-store state |
 | `infra/log` | append-only logs |
 | `infra/state` | state root, atomic IO, locks, schema versions |
 | `infra/cli` | no state ownership; composes binaries |
@@ -888,7 +994,7 @@ Rules:
 - no secret values in state files or logs
 
 Note the three meanings of “state” and keep them apart: monad `State` is
-ephemeral resolution state; `infra/state` is generic runtime IO mechanics;
+ephemeral evaluation state; `infra/state` is generic runtime IO mechanics;
 runtime dirs under `~/.local/state/angst/` are the actual mutable data.
 
 ### `target.nix` vs Runtime State
@@ -901,7 +1007,10 @@ runtime dirs under `~/.local/state/angst/` are the actual mutable data.
 - external host-OS capabilities
 
 It is generated, tracked, and reviewed. Activation re-probes the target and
-compares. Mismatch stops the operation and instructs the user to regenerate it.
+compares digests (`kind`, `system`, `virtualization`, external
+capabilities). Mismatch stops the operation and instructs the user to
+regenerate it via `angst host detect`. Only `angst host detect` writes
+target state; `angst switch` never probes, writes, or auto-fixes it.
 
 Volatile facts such as disk layout, boot mode, secret availability, and VM
 liveness do not belong in `target.nix`.
@@ -913,14 +1022,14 @@ liveness do not belong in `target.nix`.
   `$XDG_RUNTIME_DIR/angst`.
 - State stores references, hashes, and availability, never secret values.
 - Logs and diagnostics emit `SecretRef`, never values.
-- `capabilities/secrets` owns provisioning. `pipelines/activation` consumes it.
+- `systems/secrets` owns provisioning. `workflow/activate` consumes it.
 
 ### `infra/lib` (No Global Store)
 
 There is no global mutable store, and no `store.nix`. Facts flow explicitly:
 
-- `capabilities/context` desired/observed/derived context
-- `capabilities/packages` capability providers and derived facts
+- `core/context` desired/observed/derived context
+- `core/packages` capability providers and derived facts
 - feature modules receive `facts` instead of `store`
 
 Derived facts from capabilities include `hasX11`, `hasWayland`,
@@ -946,9 +1055,12 @@ Why:
 Add SQLite only if history, queries, or cross-host indexing is required. If
 added, it sits behind the same repository port and remains runtime-only.
 
-## Capabilities
+## Core
 
-### `capabilities/packages`
+Composition machinery. No runtime lifecycle. No domain state beyond the
+ephemeral evaluated plan and derived facts.
+
+### `core/packages`
 
 Owns the catalog and graph:
 
@@ -958,19 +1070,19 @@ Owns the catalog and graph:
 - discover catalogs from directory presence; no static arrays
 - sort catalog entries deterministically
 - reject duplicate IDs and orphan implementation directories
-- validate co-located feature side files with `pipelines/modules`
-- resolve profiles
+- validate co-located feature side files with `workflow/build`
+- evaluate profiles (internal function `resolve`; phase is `evaluate`)
 - expand transitive dependencies
-- resolve capability providers, including external capabilities
+- evaluate capability providers, including external capabilities
 - detect cycles and conflicts
 - produce topological order
-- produce resolved package values
+- produce evaluated package values
 - produce `SystemPlan` and diagnostics
 
-Public API exposes plain results: entries, profile resolution, `resolve`, and
-validation diagnostics.
+Public API exposes plain results: entries, profile evaluation, `resolve`
+(function name; phase name stays `evaluate`), and validation diagnostics.
 
-### `capabilities/context`
+### `core/context`
 
 Pure context model:
 
@@ -1004,13 +1116,13 @@ Rules:
 - `desired` comes from the host declaration and profile selections.
 - `observed` is imported from a tracked observation file or supplied by a
   runtime probe.
-- `derived` comes from the resolver and host facts.
+- `derived` comes from the evaluator and host facts.
 - Missing observation means `status = "unknown"`, never `false`.
 - Required context facts fail closed on `unknown` or `failed`.
 - Advisory facts produce diagnostics.
 - A stale observation never authorizes a destructive operation.
 
-### `capabilities/platform`
+### `core/platform`
 
 Owns base platform adapters:
 
@@ -1024,7 +1136,7 @@ Owns base platform adapters:
 
 No feature-specific logic.
 
-### `capabilities/theme`
+### `core/theme`
 
 Facade over:
 
@@ -1039,7 +1151,7 @@ Feature renderers receive theme data through arguments; they do not import
 theme internals. Theme-aware outputs are baked by `package.nix` at build
 time; there is no separate `render.nix`.
 
-### `capabilities/host`
+### `core/host`
 
 Owns:
 
@@ -1047,7 +1159,7 @@ Owns:
 - host declaration normalization
 - target observation loading
 - context creation
-- package selection and resolution
+- package selection and evaluation
 - `mkHome`
 - `mkNixos`
 
@@ -1057,14 +1169,19 @@ Host object gains:
 {
   target = { ... };
   context = { ... };
-  packages = [ ... ]; # resolved
+  packages = [ ... ]; # evaluated
   facts = { ... };    # derived capabilities
 }
 ```
 
 Feature modules receive `facts` instead of a global store.
 
-### `capabilities/persistence`
+## Systems
+
+Bounded runtime contexts. Each owns its state repository, adapters, and
+runtime behavior. No phase state machine here; time lives in `workflow/`.
+
+### `systems/persistence`
 
 Owns:
 
@@ -1074,10 +1191,10 @@ Owns:
 - ownership checks
 - persistence validation
 
-Package records declare `persist` entries. `capabilities/persistence`
+Package records declare `persist` entries. `systems/persistence`
 interprets them.
 
-### `capabilities/secrets`
+### `systems/secrets`
 
 Owns:
 
@@ -1089,10 +1206,10 @@ Owns:
 - app secret activation
 - secret redaction rules
 
-`pipelines/activation` and `capabilities/projects` consume it. No secret values
+`workflow/activate` and `systems/projects` consume it. No secret values
 enter context, state, logs, or package records.
 
-### `capabilities/vm`
+### `systems/vm`
 
 Owns:
 
@@ -1104,7 +1221,7 @@ Owns:
 
 The VM profile and VM runtime are one bounded context.
 
-### `capabilities/projects`
+### `systems/projects`
 
 Owns:
 
@@ -1116,11 +1233,136 @@ Owns:
 - project/db state metadata
 - `angst-projects` binary
 
-Consumes `capabilities/secrets`. It is not part of CLI composition logic.
+Consumes `systems/secrets`. It is not part of CLI composition logic.
 
-## Pipelines
+## Workflow
 
-### `pipelines/activation`
+Time. Sequencing plus gates under one root. `workflow/activate` owns the
+state machine. `workflow/validate` owns the gates. `workflow/evaluation`
+produces the plan. `workflow/build` pairs packages to modules.
+`workflow/verify` and `workflow/finish` close the run.
+
+### `workflow/evaluation`
+
+Produces the `SystemPlan`. Pure. Eval plane.
+
+- scan catalogs via `core/packages`
+- build desired/observed context via `core/context`
+- expand profiles, transitive deps, capability providers (including
+  `externalCapabilities` from `target.nix`)
+- order topologically, detect cycles/conflicts/ambiguity
+- emit `{ selected, providers, order, facts }` plus diagnostics
+- tracks `evaluate` phase state only; owns no gates
+
+Internal function name `resolve` may remain for the dependency resolver;
+the phase id is `evaluate`.
+
+### `workflow/validate`
+
+Owns cross-bucket validation and nothing else. It executes nothing; it
+returns diagnostics.
+
+- architecture import rules plus the ownership × time matrix
+- runtime closure and binary gating
+- state schemas, freshness, permissions, ownership
+- desktop and profile constraints
+- activation phase/log schema and run artifacts
+- activation strict failure behavior
+- secret redaction
+- cross-bucket health checks
+
+Feature-specific checks live in `catalog/features/<id>/checks.nix`.
+Bucket-specific checks live in `<bucket>/<name>/checks/`.
+`workflow/validate` aggregates them.
+
+There is no root `checks/` directory. `infra/outputs` exposes the `checks`
+flake output.
+
+### Enforced Matrix: `matrix.nix` and `report.nix`
+
+`workflow/validate/matrix.nix` encodes the ownership × time matrix as
+data: bucket path × phase to role (`O`, `R`, `W`, `X`, `-`). The static
+import scanner in `workflow/validate/internal/architecture.nix` maps every
+tracked `.nix` file to a bucket by path prefix, extracts imports
+(`import`, `callPackage`, relative `../`), and compares each edge against the
+matrix plus these rules:
+
+- banned roots present fail `ARCH`: `capabilities/`, `pipelines/`,
+  `governance/`, `lib/`, `domains/`, `modules/`, `checks/`, `runtime/`,
+  `toolchains/`, `themes/`, `packages/`, `profiles/`, `hosts/`, `flake/`
+- `catalog/*` imports bucket behavior fail `ARCH` (except `infra/lib/`
+  helpers)
+- `infra/lib/*` imports outside `infra/lib/` plus nixpkgs lib fail `ARCH`
+- `infra/monads` imported outside `core/`, `systems/`, `workflow/`,
+  `infra/` fails `ARCH`
+- cross-`internal/` imports fail `ARCH`
+- `workflow/validate` imports `workflow/activate` behavior fail `ARCH`
+  (schema shapes for checks are allowed; behavior is not)
+- forbidden fallbacks fail `ARCH` before effects: implicit probe on missing
+  target, target write during switch, hidden backend default, first-host
+  fallback, missing-output fallback, home/system silent fallback, stale
+  target or digest-mismatch autofix, partial switch on risk, overwrite or GC
+  of the prior/last-good generation during a run, `validate`/`activate` skip
+  as whole phases, `--force` override of any integrity code, secret values
+  in state or logs, stale observations authorizing destroy
+- no `--force` override exists for integrity codes `TGT`, `PKG`, `PROF`,
+  `DESK`, `ACT`, `SEC`, `CTX`, `ARCH` on any phase or target (`nixos`
+  system and `generic-linux` home alike)
+- phase literals (`evaluate|validate|build|activate|verify|finish`) and state
+  literals (`pending|running|ok|warn|error|skipped`) outside `workflow/`,
+  `infra/log`, and `workflow/validate/` fail `ARCH`
+- event `code`/`phase`/`level` schema breaks fail `LOG`/`ARCH`
+- missing `catalog/hosts/<host>/target.nix` fails `TGT001`; no or ambiguous
+  host fails `TGT002`; unknown kind or pre-build mismatch fails `TGT003`;
+  missing selected output fails `ACT002`; missing backend fails `ACT003`
+- unknown profile fails `PROF001`; missing package, capability, provider,
+  cycle, or conflict fails `PKG`; desktop cardinality and compatibility fail
+  `DESK001`, `DESK002`, `DESK003`, or `TGT001`
+- disabled `runtime-*` binaries present in a closure fail `ACT`/`ARCH`
+- bad permissions (`0700`/`0600`), envelope breaks, stale required facts, or
+  secret values instead of `SecretRef` fail `CTX`/`SEC`/`LOG`
+
+`workflow/validate/report.nix` collects **all** violations, groups them
+by type, orders violations by path within each group, and fails evaluation
+once with the full report:
+
+```nix
+{ groups = [
+  { name = "architecture";
+    violations = [
+      { code = "ARCH"; path = "..."; expected = "..."; found = "..."; }
+    ]; }
+  { name = "target"; violations = [ /* ... */ ]; }
+  { name = "core"; violations = [ /* ... */ ]; }
+  { name = "desktop"; violations = [ /* ... */ ]; }
+  { name = "closure"; violations = [ /* ... */ ]; }
+  { name = "state"; violations = [ /* ... */ ]; }
+  { name = "secrets-log"; violations = [ /* ... */ ]; }
+]; }
+```
+
+Fatal errors render through `throwDiagnostics`. There is no warn mode: `nix
+flake check` stays red until zero violations.
+
+### `workflow/build`
+
+Generic package-to-module engine (the build step of the workflow):
+
+- pair selected package records with co-located side files and builds
+- validate `home.nix`, `system.nix`, `package.nix`, `checks.nix`, `config/`
+- invoke `package.nix` per selected package with the host's `theme`,
+  `toolchains`, `upstream`, `src`, and git-derived `version`
+- select sides for the target
+- generate home-manager modules
+- generate NixOS modules
+- install the built store path; theme-aware outputs come from the build
+- validate placement and build contracts
+
+It does not own platform modules. Those live in `core/platform`.
+Required sides unsupported by the target fail; optional sides are skipped
+with a diagnostic.
+
+### `workflow/activate`
 
 Owns the sole phase state machine:
 
@@ -1141,27 +1383,48 @@ Owns the sole phase state machine:
 - no hidden backend default
 - no first-host fallback
 - no fallback when the selected flake output is missing
+- no `--force` for integrity failures; any drift aborts before effects,
+  keeps the prior generation, and points to `angst host detect`
 
 It uses target, deploy, state, log, and secret ports. `infra/cli` composes the
 binaries; activation owns the behavior.
 
-### `pipelines/modules`
+### `workflow/verify`
 
-Generic package-to-module engine (the build step of the pipeline):
+- re-probe target after activation, compare with `target.nix`
+- mismatch stops run; only `angst host detect` regenerates manifest
+- run health checks via `workflow/validate`
+- record generation plus store path
 
-- pair selected package records with co-located side files and builds
-- validate `home.nix`, `system.nix`, `package.nix`, `checks.nix`, `config/`
-- invoke `package.nix` per selected package with the host's `theme`,
-  `toolchains`, `upstream`, `src`, and git-derived `version`
-- select sides for the target
-- generate home-manager modules
-- generate NixOS modules
-- install the built store path; theme-aware outputs come from the build
-- validate placement and build contracts
+### `workflow/finish`
 
-It does not own platform modules. Those live in `capabilities/platform`.
-Required sides unsupported by the target fail; optional sides are skipped
-with a diagnostic.
+- aggregate per-phase durations, counts, exit code
+- write `summary.json`, `events.jsonl`, `raw.log` atomically/append-only
+- maintain `latest` symlink, 20-run retention, gzip old raw logs
+- enforce `0700` dirs and `0600` sensitive files
+
+### `workflow/phases.nix`
+
+Single source for phase ids, state ids, allowed transitions, and
+abort-only guards:
+
+```nix
+{
+  phases = [ "evaluate" "validate" "build" "activate" "verify" "finish" ];
+  states = [ "pending" "running" "ok" "warn" "error" "skipped" ];
+}
+```
+
+Full contract: linear order with no jumps or backward moves; `skipped`
+for optional sides only, never for `validate` or `activate` as whole
+phases; integrity codes `TGT`, `PKG`, `PROF`, `DESK`, `ACT`, `SEC`,
+`CTX`, `ARCH` abort-only with no `--force` on any phase or target;
+sixteen forbidden fallbacks (probe/write/default/first-host/missing-output/
+silent home-system/autofix/partial/overwrite/GC/skip/force/secret-values/
+stale-authorizes-destroy) fail `ARCH` before effects.
+
+`infra/log` and `workflow/validate/report.nix` import shapes from here;
+they do not redefine literals.
 
 ## Infra
 
@@ -1247,7 +1510,7 @@ Rules:
 - Each binary is a separate derivation or separate Nix output.
 - Do not build all commands into one output. The host closure must not contain
   disabled binaries.
-- Builders select only the runtime packages required by the resolved host.
+- Builders select only the runtime packages required by the evaluated host.
 - `base` requires `runtime-activation`.
 - `vm` profile requires `runtime-vm`. Non-VM hosts get no VM binary, wrapper,
   VM state, or QEMU dependency.
@@ -1298,92 +1561,15 @@ logic; it only exposes what the buckets produce.
 Pure shared utilities only:
 
 - imports only `infra/lib/` and nixpkgs lib
-- never imports `capabilities/`, `pipelines/`, `catalog/`, or `governance/`
+- never imports `core/`, `systems/`, `workflow/`, or `catalog/`
 - generic helpers with no domain logic
 
 ### `infra/nixpkgs-config.nix`
 
 Single nixpkgs configuration (e.g. `allowUnfree`). Imported by
-`infra/outputs`, `pipelines/modules`, and capability builds via args. Never
+`infra/outputs`, `workflow/build`, and core builds via args. Never
 hardcoded from `catalog/*`. This is the only infra-level config file; it is
 not a helper library.
-
-## Governance
-
-### `governance/validation`
-
-Owns cross-bucket validation and nothing else. It executes nothing; it
-returns diagnostics.
-
-- architecture import rules plus the ownership × time matrix
-- runtime closure and binary gating
-- state schemas, freshness, permissions, ownership
-- desktop and profile constraints
-- activation phase/log schema and run artifacts
-- activation strict failure behavior
-- secret redaction
-- cross-bucket health checks
-
-Feature-specific checks live in `catalog/features/<id>/checks.nix`.
-Bucket-specific checks live in `<bucket>/<name>/checks/`.
-`governance/validation` aggregates them.
-
-There is no root `checks/` directory. `infra/outputs` exposes the `checks`
-flake output.
-
-### Enforced Matrix: `matrix.nix` and `report.nix`
-
-`governance/validation/matrix.nix` encodes the ownership × time matrix as
-data: bucket path × phase to role (`O`, `R`, `W`, `X`, `-`). The static
-import scanner in `governance/validation/internal/architecture.nix` maps every
-tracked `.nix` file to a bucket by path prefix, extracts imports
-(`import`, `callPackage`, relative `../`), and compares each edge against the
-matrix plus these rules:
-
-- banned roots present fail `ARCH`: `systems/`, `lib/`, `domains/`,
-  `modules/`, `checks/`, `runtime/`, `toolchains/`, `themes/`, `packages/`,
-  `profiles/`, `hosts/`, `flake/`
-- `catalog/*` imports bucket behavior fail `ARCH` (except `infra/lib/`
-  helpers)
-- `infra/lib/*` imports outside `infra/lib/` plus nixpkgs lib fail `ARCH`
-- `infra/monads` imported outside `capabilities/`, `pipelines/`, `infra/`,
-  `governance/` fails `ARCH`
-- cross-`internal/` imports fail `ARCH`
-- phase literals (`resolve|validate|build|activate|verify|finish`) and state
-  literals (`pending|running|ok|warn|error|skipped`) outside `pipelines/`,
-  `infra/log`, and `governance/` fail `ARCH`
-- event `code`/`phase`/`level` schema breaks fail `LOG`/`ARCH`
-- missing `catalog/hosts/<host>/target.nix` fails `TGT001`; no or ambiguous
-  host fails `TGT002`; unknown kind or pre-build mismatch fails `TGT003`;
-  missing selected output fails `ACT002`; missing backend fails `ACT003`
-- unknown profile fails `PROF001`; missing package, capability, provider,
-  cycle, or conflict fails `PKG`; desktop cardinality and compatibility fail
-  `DESK001`, `DESK002`, `DESK003`, or `TGT001`
-- disabled `runtime-*` binaries present in a closure fail `ACT`/`ARCH`
-- bad permissions (`0700`/`0600`), envelope breaks, stale required facts, or
-  secret values instead of `SecretRef` fail `CTX`/`SEC`/`LOG`
-
-`governance/validation/report.nix` collects **all** violations, groups them
-by type, orders violations by path within each group, and fails evaluation
-once with the full report:
-
-```nix
-{ groups = [
-  { name = "architecture";
-    violations = [
-      { code = "ARCH"; path = "..."; expected = "..."; found = "..."; }
-    ]; }
-  { name = "target"; violations = [ /* ... */ ]; }
-  { name = "capabilities"; violations = [ /* ... */ ]; }
-  { name = "desktop"; violations = [ /* ... */ ]; }
-  { name = "closure"; violations = [ /* ... */ ]; }
-  { name = "state"; violations = [ /* ... */ ]; }
-  { name = "secrets-log"; violations = [ /* ... */ ]; }
-]; }
-```
-
-Fatal errors render through `throwDiagnostics`. There is no warn mode: `nix
-flake check` stays red until zero violations.
 
 ## Catalog Packages
 
@@ -1401,10 +1587,10 @@ catalog/features/wm/i3/
   config/
 ```
 
-`default.nix` is pure package data. `package.nix` is the build. Side files
-are Nix module adapters installing the built store path and may import only
-local helpers, not bucket code. Theme-aware outputs are baked by
-`package.nix` at build time; there is no separate `render.nix`.
+`default.nix` is a declarative record (relations included). `package.nix` is
+the pure build. Side files are Nix module adapters installing the built store
+path and may import only local helpers, not bucket code. Theme-aware outputs
+are baked by `package.nix` at build time; there is no separate `render.nix`.
 
 `catalog/features/wm/i3/default.nix`:
 
@@ -1481,7 +1667,7 @@ Fields:
 - `provides`: capability map with attributes.
 - `conflicts`: package IDs.
 - `optional`: only after conditional dependencies are modeled.
-- `persist`: persistence entries interpreted by `capabilities/persistence`.
+- `persist`: persistence entries interpreted by `systems/persistence`.
 
 Capabilities are maps, not bare lists:
 
@@ -1517,14 +1703,14 @@ A toolchain is a declarative spec, not a normal feature package:
 - editor LSP configuration
 - capabilities such as `toolchain:rust`, `lsp:rust`
 
-`capabilities/packages` scans, validates, indexes, and resolves toolchains.
+`core/packages` scans, validates, indexes, and evaluates toolchains.
 `catalog/toolchains/_builder.nix` provides `mkToolchain` as a pure helper.
 There is no root `toolchains/` directory.
 
 ### Runtime Package Records
 
 Runtime tools live under `catalog/runtime/<tool>/` with a record plus a
-build, so the resolver gates binaries and closures:
+build, so the evaluator gates binaries and closures:
 
 ```nix
 # catalog/runtime/vm/default.nix
@@ -1564,7 +1750,8 @@ conditional dependencies exist.
 
 ## Catalog Profiles
 
-`catalog/profiles/*.nix` are data, and each file is a graph node.
+`catalog/profiles/*.nix` are declarative graph nodes, not bare data. Each
+file declares requirements, providers, and constraints for evaluation.
 
 ```nix
 # catalog/profiles/desktop.nix
@@ -1634,7 +1821,7 @@ Hosts may also select explicit package IDs:
 }
 ```
 
-## Resolver Rules
+## Evaluator Rules
 
 - Auto-enable transitive package and capability dependencies.
 - Merge package providers and external host-OS capabilities.
@@ -1649,6 +1836,9 @@ Hosts may also select explicit package IDs:
 - Optional dependencies only when an explicit condition evaluates true.
 - Target-specific sides that are unsupported produce diagnostics; required
   sides fail, optional sides are skipped.
+
+Owner: `core/packages` implements evaluation; `workflow/evaluation` owns the
+phase contract; `workflow/validate` owns failure codes (`PKG`, `PROF001`).
 
 ## Desktop Check
 
@@ -1703,7 +1893,7 @@ DESK003 desktop: display-manager: display.lightdm conflicts display.ly
 TGT001  desktop: display.ly system side unsupported on target generic-linux
 ```
 
-`governance/validation` runs the desktop check for every host selecting a system
+`workflow/validate` runs the desktop check for every host selecting a system
 profile with desktop constraints.
 
 Remove graph-level assertions from feature modules. Keep only assertions for
@@ -1759,7 +1949,7 @@ One schema for eval diagnostics and runtime events.
   "scope": "profiles",
   "host": "nixos",
   "profile": "desktop",
-  "phase": "resolve",
+  "phase": "evaluate",
   "message": "window-manager: expected 1, got 2",
   "data": {
     "providers": ["wm.i3", "wm.sway"]
@@ -1771,7 +1961,7 @@ Rules:
 
 - Nix evaluation returns diagnostics; it does not print progress traces.
 - Fatal evaluation errors render through `throwDiagnostics` as one grouped
-  report (see `governance/validation/report.nix`); there is no warn mode.
+  report (see `workflow/validate/report.nix`); there is no warn mode.
 - Runtime logs go to stderr and `~/.local/state/angst/logs/`.
 - JSONL is canonical; the human renderer is a view.
 - Stable codes: `TGT`, `PKG`, `PROF`, `DESK`, `CTX`, `SEC`, `VM`, `PROJ`,
@@ -1816,7 +2006,7 @@ Record per-host enabled/package sets and rendered output hashes.
 - Add explicit `angst host detect`.
 - Add external capabilities to target observations.
 - Add state schema versions, freshness, and atomic update rules.
-- Add `capabilities/context` desired/observed/derived model.
+- Add `core/context` desired/observed/derived model.
 - Add activation/deploy apps that choose backend from target kind.
 - Missing target -> flake emits home config only plus `TGT001`.
 - `angst switch` fails `TGT001` on missing target; no probe, no write, no
@@ -1832,16 +2022,17 @@ Record per-host enabled/package sets and rendered output hashes.
 - Add `catalog/toolchains/_schema.nix`.
 - Move `hosts/*` into `catalog/hosts/`, `profiles/*` into
   `catalog/profiles/`.
+- Move `themes/*` into `core/theme/themes/`.
 - Convert `catalog/profiles/*.nix` to graph profile nodes.
 - Remove the static `profileMap`; discover profiles by filename.
-- Move profile resolution into `capabilities/packages`.
+- Move profile evaluation into `core/packages`.
 - Add directory scanners for features, toolchains, runtime tools, and profiles.
 - Add scanner tests: deterministic order, duplicate IDs, orphan dirs, invalid
   entries, skipped `_*` files.
 - Add sides, targets, and conditional side schema.
 - Add graph tests: closure, cycle, missing package, missing capability,
   ambiguous provider, conflicts, ordering, target support.
-- Run resolver in diagnostics-only mode and compare selected sets.
+- Run evaluator in diagnostics-only mode and compare selected sets.
 - Enable auto-closure.
 - Convert explicit assertions to `requires`/`conflicts`.
 - Replace the old store helper with derived facts (`hasX11`, `hasWayland`,
@@ -1857,26 +2048,26 @@ Record per-host enabled/package sets and rendered output hashes.
   providers, and generic-Linux target sides.
 - Verify desktop profiles on NixOS and generic-Linux fixtures.
 
-### Phase 5: Buckets split and pipeline modules
+### Phase 5: Buckets split and workflow build
 
-- Move package-to-module pairing into `pipelines/modules` (per-selected-package
+- Move package-to-module pairing into `workflow/build` (per-selected-package
   `package.nix` invocation with host `theme` + `toolchains`).
-- Move base home/NixOS modules to `capabilities/platform`.
-- Move theme/Gtk/Qt modules to `capabilities/theme`.
-- Move login shell to `pipelines/activation`.
-- Move app secret support to `capabilities/secrets`.
-- Move impermanence policy to `capabilities/persistence`.
+- Move base home/NixOS modules to `core/platform`.
+- Move theme/Gtk/Qt modules to `core/theme`.
+- Move login shell to `workflow/activate`.
+- Move app secret support to `systems/secrets`.
+- Move impermanence policy to `systems/persistence`.
 - Move persistence record data into feature package records.
-- Move VM modules and VM runtime code to `capabilities/vm`.
-- Move project/db/vault/FTP runtime code to `capabilities/projects`.
-- Move tree-sitter adapter to `capabilities/packages`.
+- Move VM modules and VM runtime code to `systems/vm`.
+- Move project/db/vault/FTP runtime code to `systems/projects`.
+- Move tree-sitter adapter to `core/packages`.
 - Delete root `modules/`.
 - Compare built store-path config hashes before and after.
 
 ### Phase 6: Host and outputs
 
 - Move host discovery, normalization, `mkHome`, and `mkNixos` into
-  `capabilities/host`.
+  `core/host`.
 - Move flake wiring into `infra/outputs`.
 - Make `flake.nix` import only `infra/outputs`.
 - Emit `nixosConfigurations` only for `target.kind = "nixos"`.
@@ -1909,7 +2100,7 @@ Record per-host enabled/package sets and rendered output hashes.
 - Wire adapters in context, secrets, VM, activation, projects, and log.
 - Add `infra/state` with atomic writes, locks, schema versions, and
   `ANGST_STATE_DIR`.
-- Implement `pipelines/activation`:
+- Implement `workflow/activate`:
   - strict target validation
   - automatic backend selection from `target.kind`
   - phase state machine
@@ -1924,33 +2115,36 @@ Record per-host enabled/package sets and rendered output hashes.
 - Verify Go tests, each runtime binary, activation logs, and runtime closure
   gating.
 
-### Phase 8: Governance, enforcement, docs
+### Phase 8: Workflow validation, enforcement, docs
 
-Land `governance/validation` with the enforced matrix:
+Land `workflow/validate` with the enforced matrix:
 
-- `governance/validation/matrix.nix`: bucket path × phase to role
-- `governance/validation/internal/architecture.nix`: static import scan
-- `governance/validation/report.nix`: collect-all grouped report, single
+- `workflow/validate/matrix.nix`: bucket path × phase to role, plus
+  per-phase allowed ports and writable state paths, plus the forbidden
+  fallback map and the no-force rule for integrity codes
+- `workflow/validate/internal/architecture.nix`: static import scan
+- `workflow/validate/report.nix`: collect-all grouped report, single
   `throwDiagnostics` failure
+- `workflow/phases.nix`: phase/state ids plus allowed transitions
 
 Enforced rules:
 
-- no `infra/monads` outside `capabilities/`, `pipelines/`, `infra/`,
-  `governance/`
+- no `infra/monads` outside `core/`, `systems/`, `workflow/`, `infra/`
 - no `*/internal/` outside its own bucket member
+- no `workflow/validate` imports of `workflow/activate` behavior
 - no bucket-behavior imports from `catalog/*` (except `infra/lib/` helpers)
 - no imports inside `catalog/features/*/default.nix` or
   `catalog/profiles/` beyond local files and `infra/lib/`
 - every bucket member has `default.nix`
-- no root `systems/`, `lib/`, `domains/`, `modules/`, `checks/`,
-  `runtime/`, `toolchains/`, `themes/`, `packages/`, `profiles/`,
-  `hosts/`, or `flake/`
+- no root `capabilities/`, `pipelines/`, `governance/`, `lib/`, `domains/`,
+  `modules/`, `checks/`, `runtime/`, `toolchains/`, `themes/`, `packages/`,
+  `profiles/`, `hosts/`, or `flake/`
 - no single all-features runtime command binary
 - runtime state files are not tracked in git, except explicit `target.nix`,
   `hardware.nix`, and `observations.nix`
 - state files have schema versions and owners; no cross-bucket state paths
 
-Add `governance/validation` checks for runtime closure, state, desktop,
+Add `workflow/validate` checks for runtime closure, state, desktop,
 activation (strict failures, phases, logs, history, redaction), and catalog
 discovery (deterministic order, duplicate IDs, orphan directories, invalid
 entries).
@@ -1987,7 +2181,7 @@ just go-test
 
 Additional checks:
 
-- all hosts resolve with closed dependency sets
+- all hosts evaluate with closed dependency sets
 - every profile ID exists in `catalog/features/` or `catalog/profiles/`
 - catalog scanners produce deterministic sorted entries
 - no manual feature/toolchain/runtime/profile arrays exist
@@ -2053,7 +2247,7 @@ Additional checks:
 12. State and secret stores must not converge. Keep encrypted secrets outside
     runtime state and never store secret values in state or logs.
 13. Splitting base modules by bucket creates duplication risk.
-    Keep shared platform adapters in `capabilities/platform`; keep
+    Keep shared platform adapters in `core/platform`; keep
     feature-specific modules in catalog package directories.
 14. `angst switch` must never invent a host, target, or backend. Missing state
     is an error, not an opportunity for fallback.
@@ -2067,6 +2261,10 @@ Additional checks:
     orphan implementation directories, and sort entries deterministically.
 19. Do not discover code buckets, adapters, binaries, or validation modules.
     Keep code composition explicit; discovery is for data catalogs.
+20. Merging pipelines and governance into `workflow/` risks check-calls-do.
+    Enforce no `workflow/activate` behavior imports from
+    `workflow/validate`; keep the boundary in `matrix.nix`. Enforce
+    abort-only with no `--force` for integrity codes on every phase.
 
 ## Non-Goals
 
@@ -2074,8 +2272,7 @@ Additional checks:
 - No mutable context store.
 - No central mutable state database used as flake input.
 - No Nix derivation used as a database.
-- No monad access outside `capabilities/`, `pipelines/`, `infra/`,
-  `governance/`.
+- No monad access outside `core/`, `systems/`, `workflow/`, `infra/`.
 - No single all-features runtime binary.
 - No runtime binary or wrapper for a disabled capability.
 - No manual theme/toolchain/feature/profile catalog arrays.
@@ -2083,9 +2280,14 @@ Additional checks:
 - No implicit target detection or target write in `angst switch`.
 - No hidden backend fallback when the target manifest or selected output is
   missing.
-- No shared `systems/` label across buckets that differ widely.
-- No root `systems/`, `lib/`, `domains/`, `modules/`, `checks/`,
-  `runtime/`, `toolchains/`, `themes/`, `packages/`, `profiles/`,
-  `hosts/`, or `flake/` directory.
+- No `--force` override for integrity failures (`TGT`, `PKG`, `PROF`,
+  `DESK`, `ACT`, `SEC`, `CTX`, `ARCH`).
+- No partial switch, prior-generation overwrite, or last-good GC on risk.
+- No skip of `validate` or `activate` as whole phases.
+- No umbrella `systems/` label across buckets that differ widely.
+  `systems/` holds bounded runtime contexts only.
+- No root `capabilities/`, `pipelines/`, `governance/`, `lib/`, `domains/`,
+  `modules/`, `checks/`, `runtime/`, `toolchains/`, `themes/`, `packages/`,
+  `profiles/`, `hosts/`, or `flake/` directory.
 - No NixOS configuration output for `generic-linux` targets.
 - No implicit deployment of a NixOS closure to a non-NixOS host.
