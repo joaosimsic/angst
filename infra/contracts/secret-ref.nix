@@ -1,29 +1,97 @@
 let
   types = import ../lib/types.nix;
-  match = import ../lib/match.nix;
+  fs = import ../lib/fs.nix;
+  strings = import ../lib/strings.nix;
+
+  secretsRoot = ../../secrets;
+  hasSecretsDir = builtins.pathExists secretsRoot;
+
+  stripSecretSuffix = name: strings.stripSuffixes [ ".placeholder" ".age" ".pub" ] name;
+
+  isSecretFile = basename: ftype:
+    (ftype == "regular" || ftype == "symlink")
+    && (strings.hasSuffix ".age" basename || strings.hasSuffix ".placeholder" basename || strings.hasSuffix ".pub" basename);
+
+  inventoryResult =
+    if hasSecretsDir then
+      let
+        entries = fs.walkDir secretsRoot;
+        kept = builtins.filter (e: isSecretFile e.basename e.ftype) entries;
+      in
+      types.ok (map (e: {
+        slug = stripSecretSuffix e.basename;
+        file = "secrets/" + e.relPath;
+      }) kept)
+    else
+      types.err {
+        kind = "secret";
+        message = "SecretRef: secrets/ directory missing, no inventory";
+        context = {
+          path = "secrets";
+        };
+      };
+
+  inventoryEntries = if types.isOk inventoryResult then inventoryResult.value else [ ];
+
+  isInventoryEmpty = types.isOk inventoryResult && inventoryResult.value == [ ];
+
+  inventoryWarn =
+    if isInventoryEmpty then
+      {
+        level = "warn";
+        code = "SEC002";
+        message = "SecretRef: secrets/ empty, no secret files found";
+        context = {
+          path = "secrets";
+        };
+      }
+    else
+      null;
+
+  checkInventory = types.mapOk (_: true) inventoryResult;
+
+  secretSlugs = strings.uniqueSorted (map (e: e.slug) inventoryEntries);
+
+  secretFiles = strings.uniqueSorted (map (e: e.file) inventoryEntries);
+
+  secretInventory = {
+    slugs = secretSlugs;
+    files = secretFiles;
+  };
+
+  isKnownSecretRef = ref: builtins.isString ref && ref != "" && builtins.elem ref secretSlugs;
 
   checkSecretRef =
     ref:
-    if types.isNonEmptyStr ref then
+    if types.isErr inventoryResult then
+      types.withContext { field = "ref"; } inventoryResult
+    else if types.isNonEmptyStr ref && builtins.elem ref secretSlugs then
       types.ok { inherit ref; }
-    else
+    else if !types.isNonEmptyStr ref then
       types.err {
         kind = "secret";
         message = "SecretRef: `ref` must be a non-empty string";
         context = {
           field = "ref";
         };
+      }
+    else
+      types.err {
+        kind = "secret";
+        message = "SecretRef: unknown `ref`, no such slug under secrets/";
+        context = {
+          field = "ref";
+          ref = ref;
+        };
       };
 
   isSecretRef =
     v: builtins.isAttrs v && builtins.attrNames v == [ "ref" ] && types.isNonEmptyStr (v.ref or null);
 
-  isSecretKey = name: match.isSecretKeyName name;
-
   isScalar =
     v: v == null || builtins.isBool v || builtins.isInt v || builtins.isFloat v || builtins.isString v;
 
-  checkBareAttempt =
+  checkUndeclaredRef =
     path: allowBare: v:
     if !isSecretRef v then
       types.err {
@@ -38,16 +106,28 @@ let
     else
       types.err {
         kind = "secret";
-        message = "SecretRef misplaced: allowed only under secret keys";
+        message = "SecretRef misplaced: allowed only under secret fields";
         context = {
           inherit path;
         };
       };
 
-  checkSecretField =
+  checkDeclaredField =
     path: child:
-    if isSecretRef child then
-      types.ok true
+    if types.isErr inventoryResult then
+      inventoryResult
+    else if isSecretRef child then
+      if builtins.elem child.ref secretSlugs then
+        types.ok true
+      else
+        types.err {
+          kind = "secret";
+          message = "SecretRef: unknown `ref`, no such slug under secrets/";
+          context = {
+            inherit path;
+            ref = child.ref;
+          };
+        }
     else if builtins.isAttrs child && builtins.attrNames child == [ "ref" ] then
       types.err {
         kind = "secret";
@@ -66,33 +146,35 @@ let
       };
 
   checkOne =
-    path: parent: name:
+    path: secretFields: parent: name:
     let
       child = parent.${name};
       sub = path + "." + name;
+      declared = builtins.elem name secretFields || builtins.elem sub secretFields;
     in
-    if match.isSecretKeyName name then
-      checkSecretField sub child
+    if declared then
+      checkDeclaredField sub child
     else
-      types.withContext { path = sub; } (checkValue sub false child);
+      types.withContext { path = sub; } (checkValue sub false secretFields child);
 
   checkAttrs =
-    path: v: types.mapOk (_: true) (types.collect (map (checkOne path v) (builtins.attrNames v)));
+    path: secretFields: v:
+    types.mapOk (_: true) (types.collect (map (checkOne path secretFields v) (builtins.attrNames v)));
 
   checkList =
-    path: allowBare: v:
-    types.mapOk (_: true) (types.collect (map (checkValue path allowBare) v));
+    path: allowBare: secretFields: v:
+    types.mapOk (_: true) (types.collect (map (checkValue path allowBare secretFields) v));
 
   checkValue =
-    path: allowBare: v:
+    path: allowBare: secretFields: v:
     if isScalar v then
       types.ok true
     else if builtins.isList v then
-      checkList path allowBare v
+      checkList path allowBare secretFields v
     else if builtins.isAttrs v && builtins.attrNames v == [ "ref" ] then
-      checkBareAttempt path allowBare v
+      checkUndeclaredRef path allowBare v
     else if builtins.isAttrs v then
-      checkAttrs path v
+      checkAttrs path secretFields v
     else
       types.err {
         kind = "secret";
@@ -102,7 +184,17 @@ let
         };
       };
 
-  checkSecretRefsOnly = data: checkValue "data" false data;
+  checkSecretRefsIn =
+    { data, secretFields ? secretSlugs }:
+    if types.isErr inventoryResult then
+      inventoryResult
+    else
+      checkValue "data" false secretFields data;
+
+  # Deprecated alias: prefer `checkSecretRefsIn { data, secretFields }`.
+  checkSecretRefsOnlyWith = args: checkSecretRefsIn ({ data = args.data; } // (if args ? secretKeys then { secretFields = args.secretKeys; } else { }) // (if args ? secretFields then { secretFields = args.secretFields; } else { }));
+
+  checkSecretRefsOnly = data: checkSecretRefsIn { inherit data; };
 
   checkNoKnownSecrets =
     secrets: message: dataJson:
@@ -145,11 +237,35 @@ in
 
   inherit isSecretRef;
 
-  inherit isSecretKey;
+  inherit isKnownSecretRef;
+
+  inherit secretSlugs;
+
+  inherit secretFiles;
+
+  inherit secretInventory;
+
+  inherit hasSecretsDir;
+
+  inherit inventoryResult;
+
+  inherit isInventoryEmpty;
+
+  inherit inventoryWarn;
+
+  inherit checkInventory;
 
   inherit checkSecretRefsOnly;
 
+  inherit checkSecretRefsIn;
+
+  inherit checkSecretRefsOnlyWith;
+
   assertSecretRefsOnly = data: types.unwrap (checkSecretRefsOnly data);
+
+  assertSecretRefsIn = args: types.unwrap (checkSecretRefsIn args);
+
+  assertSecretRefsOnlyWith = args: types.unwrap (checkSecretRefsOnlyWith args);
 
   inherit checkNoKnownSecrets;
 

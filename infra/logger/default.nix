@@ -69,9 +69,21 @@ in
   SecretRef = secretRefMod.SecretRef;
   checkSecretRef = secretRefMod.checkSecretRef;
   isSecretRef = secretRefMod.isSecretRef;
-  isSecretKey = secretRefMod.isSecretKey;
+  isKnownSecretRef = secretRefMod.isKnownSecretRef;
+  secretSlugs = secretRefMod.secretSlugs;
+  secretFiles = secretRefMod.secretFiles;
+  secretInventory = secretRefMod.secretInventory;
+  hasSecretsDir = secretRefMod.hasSecretsDir;
+  inventoryResult = secretRefMod.inventoryResult;
+  isInventoryEmpty = secretRefMod.isInventoryEmpty;
+  inventoryWarn = secretRefMod.inventoryWarn;
+  checkInventory = secretRefMod.checkInventory;
   checkSecretRefsOnly = secretRefMod.checkSecretRefsOnly;
+  checkSecretRefsIn = secretRefMod.checkSecretRefsIn;
+  checkSecretRefsOnlyWith = secretRefMod.checkSecretRefsOnlyWith;
   assertSecretRefsOnly = secretRefMod.assertSecretRefsOnly;
+  assertSecretRefsIn = secretRefMod.assertSecretRefsIn;
+  assertSecretRefsOnlyWith = secretRefMod.assertSecretRefsOnlyWith;
   checkNoKnownSecrets = secretRefMod.checkNoKnownSecrets;
   assertNoKnownSecrets = secretRefMod.assertNoKnownSecrets;
 
@@ -85,6 +97,7 @@ in
       message,
       data ? { },
       secrets ? [ ],
+      secretFields ? secretRefMod.secretSlugs,
     }:
     assert builtins.isAttrs data;
     let
@@ -98,7 +111,8 @@ in
         (checkPackages packages)
         (checkNonEmptyString "phase" phase)
         (checkNonEmptyString "message" message)
-        (secretRefMod.checkSecretRefsOnly data)
+        secretRefMod.checkInventory
+        (secretRefMod.checkSecretRefsIn { inherit data secretFields; })
         (secretRefMod.checkNoKnownSecrets secrets message (builtins.toJSON data))
       ];
     in
@@ -127,6 +141,7 @@ in
       message,
       data ? { },
       secrets ? [ ],
+      secretFields ? secretRefMod.secretSlugs,
     }:
     assert builtins.isAttrs data;
     let
@@ -142,7 +157,8 @@ in
         (checkPackages packages)
         (checkNonEmptyString "phase" phase)
         (checkNonEmptyString "message" message)
-        (secretRefMod.checkSecretRefsOnly data)
+        secretRefMod.checkInventory
+        (secretRefMod.checkSecretRefsIn { inherit data secretFields; })
         (secretRefMod.checkNoKnownSecrets secrets message (builtins.toJSON data))
       ];
     in

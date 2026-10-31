@@ -48,6 +48,21 @@ func IsLogCodePrefix(s string) bool {
 	return false
 }
 
+// IsKnownSecretRef reports whether ref resolves to a secrets/ inventory slug.
+// Exact match only, no substring guessing. Empty and unknown refs are false.
+// Caller supplies inventory; this package embeds none, so no drift.
+func IsKnownSecretRef(ref string, slugs []string) bool {
+	if ref == "" {
+		return false
+	}
+	for _, s := range slugs {
+		if ref == s {
+			return true
+		}
+	}
+	return false
+}
+
 // LevelOf maps a backend line to a Level. Backend-agnostic fallback:
 // error/fail -> ERROR, warn -> WARN, step/==> -> STEP, else INFO.
 func LevelOf(line string) Level {

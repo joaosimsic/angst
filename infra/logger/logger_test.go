@@ -3,10 +3,13 @@ package logger_test
 import (
 	"bytes"
 	"encoding/json"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"sort"
+	"strings"
 	"testing"
 
 	"logger"
@@ -109,5 +112,76 @@ func TestImmutability(t *testing.T) {
 	a[0] = "MUT"
 	if logger.LogCodes()[0] == "MUT" {
 		t.Fatalf("LogCodes() must return a clone")
+	}
+}
+
+// fixtureSlugs mirrors the secrets/ stub inventory. loadSecretsSlugs guards drift.
+func fixtureSlugs() []string {
+	return []string{"cursor-api-key", "example", "opencode-go-key", "personal.ed25519", "work.ed25519"}
+}
+
+func stripSecretSuffix(base string) string {
+	for _, suf := range []string{".placeholder", ".age", ".pub"} {
+		base = strings.TrimSuffix(base, suf)
+	}
+	return base
+}
+
+func loadSecretsSlugs(t *testing.T) []string {
+	t.Helper()
+	root, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatalf("repo root: %v", err)
+	}
+	var out []string
+	err = filepath.WalkDir(filepath.Join(root, "secrets"), func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		name := d.Name()
+		if !(strings.HasSuffix(name, ".age") || strings.HasSuffix(name, ".placeholder") || strings.HasSuffix(name, ".pub")) {
+			return nil
+		}
+		out = append(out, stripSecretSuffix(name))
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk secrets/: %v", err)
+	}
+	sort.Strings(out)
+	out = uniqueSorted(out)
+	return out
+}
+
+func uniqueSorted(in []string) []string {
+	var out []string
+	for _, s := range in {
+		if len(out) == 0 || out[len(out)-1] != s {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func TestSecretsInventoryNoDrift(t *testing.T) {
+	if got, want := loadSecretsSlugs(t), fixtureSlugs(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("secrets/ inventory drift: dir=%v fixture=%v (update fixture + Nix tests together)", got, want)
+	}
+}
+
+func TestIsKnownSecretRefExact(t *testing.T) {
+	slugs := fixtureSlugs()
+	for _, s := range []string{"opencode-go-key", "cursor-api-key", "example", "personal.ed25519", "work.ed25519"} {
+		if !logger.IsKnownSecretRef(s, slugs) {
+			t.Fatalf("IsKnownSecretRef(%q) = false, want true", s)
+		}
+	}
+	for _, s := range []string{"password", "apiKey", "token", "authToken", "foo", "host", "author", "Opencode-Go-Key", "", "nope"} {
+		if logger.IsKnownSecretRef(s, slugs) {
+			t.Fatalf("IsKnownSecretRef(%q) = true, want false (exact inventory match only)", s)
+		}
 	}
 }

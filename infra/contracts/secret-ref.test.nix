@@ -4,8 +4,9 @@ let
   logger = import ../logger/default.nix;
 
   msgBadRef = "SecretRef: `ref` must be a non-empty string";
+  msgUnknown = "SecretRef: unknown `ref`, no such slug under secrets/";
   msgField = "secret field must be `SecretRef { ref }`, never a plain string";
-  msgMisplaced = "SecretRef misplaced: allowed only under secret keys";
+  msgMisplaced = "SecretRef misplaced: allowed only under secret fields";
   msgUnsupported = "SecretRef edge rejected: unsupported value type";
   msgLeak = "plain secret value present in message/data; wrap as `SecretRef` instead";
 
@@ -40,14 +41,34 @@ let
     else
       true;
 
+  withFields = data: secretFields: mod.checkSecretRefsIn { inherit data secretFields; };
+
   tests = [
-    # checkSecretRef
-    (assertOk "ref-accept" (mod.checkSecretRef "k1"))
+    # inventory comes from secrets/, never regex
+    (assertTrue "inv-opencode" (builtins.elem "opencode-go-key" mod.secretSlugs))
+    (assertTrue "inv-cursor" (builtins.elem "cursor-api-key" mod.secretSlugs))
+    (assertTrue "inv-example" (builtins.elem "example" mod.secretSlugs))
+    (assertTrue "inv-files" (mod.secretFiles != [ ]))
+
+    # inventory stays soft: Result, caller handles missing vs empty
+    (assertTrue "inv-has-dir" (mod.hasSecretsDir == true))
+    (assertOk "inv-result-ok" (types.mapOk (_: true) mod.inventoryResult))
+    (assertTrue "inv-result-nonempty" (mod.inventoryResult.value != [ ]))
+    (assertOk "inv-check-ok" mod.checkInventory)
+    (assertFalse "inv-not-empty" mod.isInventoryEmpty)
+    (assertTrue "inv-warn-null" (mod.inventoryWarn == null))
+    (assertTrue "logger-inv-passthrough" (logger.inventoryResult.value == mod.inventoryResult.value))
+    (assertOk "logger-check-ok" logger.checkInventory)
+    (assertTrue "logger-warn-null" (logger.inventoryWarn == null))
+
+    # checkSecretRef resolves against inventory
+    (assertOk "ref-accept" (mod.checkSecretRef "opencode-go-key"))
     (assertErrMsg "ref-empty" msgBadRef null (mod.checkSecretRef ""))
     (assertErrMsg "ref-null" msgBadRef null (mod.checkSecretRef null))
     (assertErrMsg "ref-int" msgBadRef null (mod.checkSecretRef 123))
+    (assertErrMsg "ref-unknown" msgUnknown null (mod.checkSecretRef "nope"))
 
-    # isSecretRef
+    # isSecretRef is shape only, no inventory
     (assertTrue "isRef-valid" (mod.isSecretRef { ref = "x"; }))
     (assertFalse "isRef-empty" (mod.isSecretRef { ref = ""; }))
     (assertFalse "isRef-int" (mod.isSecretRef { ref = 123; }))
@@ -61,14 +82,23 @@ let
     (assertFalse "isRef-string" (mod.isSecretRef "x"))
     (assertFalse "isRef-null" (mod.isSecretRef null))
 
-    # isSecretKey sampling secretKeyPattern
-    (assertTrue "key-password" (mod.isSecretKey "password"))
-    (assertTrue "key-apiKey" (mod.isSecretKey "apiKey"))
-    (assertTrue "key-token" (mod.isSecretKey "token"))
-    (assertTrue "key-mySecret" (mod.isSecretKey "mySecret"))
-    (assertTrue "key-authToken" (mod.isSecretKey "authToken"))
-    (assertFalse "key-foo" (mod.isSecretKey "foo"))
-    (assertFalse "key-host" (mod.isSecretKey "host"))
+    # isKnownSecretRef is inventory membership, exact, no guessing
+    (assertTrue "known-opencode" (mod.isKnownSecretRef "opencode-go-key"))
+    (assertTrue "known-cursor" (mod.isKnownSecretRef "cursor-api-key"))
+    (assertTrue "known-example" (mod.isKnownSecretRef "example"))
+    (assertTrue "known-ssh" (mod.isKnownSecretRef "personal.ed25519"))
+    (assertFalse "known-empty" (mod.isKnownSecretRef ""))
+    (assertFalse "known-nope" (mod.isKnownSecretRef "nope"))
+    (assertFalse "known-int" (mod.isKnownSecretRef 123))
+    (assertFalse "known-password" (mod.isKnownSecretRef "password"))
+    (assertFalse "known-apiKey" (mod.isKnownSecretRef "apiKey"))
+    (assertFalse "known-token" (mod.isKnownSecretRef "token"))
+    (assertFalse "known-authToken" (mod.isKnownSecretRef "authToken"))
+    (assertFalse "known-mySecret" (mod.isKnownSecretRef "mySecret"))
+    (assertFalse "known-case" (mod.isKnownSecretRef "Opencode-Go-Key"))
+    (assertFalse "known-foo" (mod.isKnownSecretRef "foo"))
+    (assertFalse "known-host" (mod.isKnownSecretRef "host"))
+    (assertFalse "known-author" (mod.isKnownSecretRef "author"))
 
     # refsOnly accepts
     (assertOk "ok-empty" (mod.checkSecretRefsOnly { }))
@@ -97,18 +127,18 @@ let
         ];
       }
     ))
-    (assertOk "ok-valid-ref" (
+    (assertOk "ok-slug-field" (
       mod.checkSecretRefsOnly {
-        password = {
-          ref = "k";
+        opencode-go-key = {
+          ref = "opencode-go-key";
         };
       }
     ))
-    (assertOk "ok-nested-ref" (
+    (assertOk "ok-nested-slug" (
       mod.checkSecretRefsOnly {
         db = {
-          password = {
-            ref = "k";
+          cursor-api-key = {
+            ref = "cursor-api-key";
           };
         };
       }
@@ -117,34 +147,52 @@ let
       mod.checkSecretRefsOnly {
         items = [
           {
-            password = {
-              ref = "k";
+            opencode-go-key = {
+              ref = "opencode-go-key";
             };
           }
         ];
       }
     ))
+    (assertOk "ok-declared" (withFields { password = { ref = "opencode-go-key"; }; } [ "password" ]))
+    (assertOk "ok-declared-path" (
+      withFields
+        {
+          db = {
+            password = {
+              ref = "example";
+            };
+          };
+        }
+        [ "data.db.password" ]
+    ))
+    (assertOk "ok-plain-undeclared" (mod.checkSecretRefsOnly { password = "plain"; }))
 
-    # refsOnly rejects plain under secret keys
+    # refsOnly rejects plain under declared secret fields
     (assertErrMsg "rej-plain" msgField "data.password" (
-      mod.checkSecretRefsOnly { password = "plain"; }
+      withFields { password = "plain"; } [ "password" ]
     ))
     (assertErrMsg "rej-nested-plain" msgField "data.db.password" (
-      mod.checkSecretRefsOnly {
-        db = {
-          password = "plain";
-        };
-      }
+      withFields
+        {
+          db = {
+            password = "plain";
+          };
+        }
+        [ "data.db.password" ]
     ))
     (assertErrMsg "rej-list-under-secret" msgField "data.tokens" (
-      mod.checkSecretRefsOnly { tokens = [ "a" ]; }
+      withFields { tokens = [ "a" ]; } [ "tokens" ]
+    ))
+    (assertErrMsg "rej-unknown-ref" msgUnknown "data.password" (
+      withFields { password = { ref = "nope"; }; } [ "password" ]
     ))
 
-    # strict: bare ref only under secret keys
+    # strict: bare ref only under secret fields
     (assertErrMsg "rej-misplaced" msgMisplaced "data.foo" (
       mod.checkSecretRefsOnly {
         foo = {
-          ref = "x";
+          ref = "opencode-go-key";
         };
       }
     ))
@@ -152,7 +200,7 @@ let
       mod.checkSecretRefsOnly {
         a = {
           foo = {
-            ref = "x";
+            ref = "opencode-go-key";
           };
         };
       }
@@ -165,18 +213,10 @@ let
       }
     ))
     (assertErrMsg "rej-empty-secret" msgBadRef "data.password" (
-      mod.checkSecretRefsOnly {
-        password = {
-          ref = "";
-        };
-      }
+      withFields { password = { ref = ""; }; } [ "password" ]
     ))
     (assertErrMsg "rej-nonstr-secret" msgBadRef "data.password" (
-      mod.checkSecretRefsOnly {
-        password = {
-          ref = 123;
-        };
-      }
+      withFields { password = { ref = 123; }; } [ "password" ]
     ))
 
     # unsupported types
@@ -200,12 +240,19 @@ let
     )
 
     # assert wrappers throw on bad, pass on good
-    (assertThrow "assert-refs-throw" (mod.assertSecretRefsOnly { password = "plain"; }))
+    (assertThrow "assert-refs-throw" (
+      mod.assertSecretRefsIn {
+        data = {
+          password = "plain";
+        };
+        secretFields = [ "password" ];
+      }
+    ))
     (assertThrow "assert-leak-throw" (mod.assertNoKnownSecrets [ "s3cr3t" ] "leak s3cr3t" "{}"))
     (assertTrue "assert-refs-ok" (
       mod.assertSecretRefsOnly {
-        password = {
-          ref = "k";
+        opencode-go-key = {
+          ref = "opencode-go-key";
         };
       }
     ))
@@ -220,8 +267,25 @@ let
         packages = [ ];
         phase = "validate";
         message = "hi";
+        secretFields = [ "password" ];
         data = {
           password = "plain";
+        };
+      }
+    ))
+    (assertThrow "log-diag-unknown" (
+      logger.diagnostic {
+        code = "SEC001";
+        scope = "s";
+        host = "h";
+        packages = [ ];
+        phase = "validate";
+        message = "hi";
+        secretFields = [ "password" ];
+        data = {
+          password = {
+            ref = "nope";
+          };
         };
       }
     ))
@@ -235,7 +299,7 @@ let
         message = "hi";
         data = {
           foo = {
-            ref = "x";
+            ref = "opencode-go-key";
           };
         };
       }
@@ -253,6 +317,33 @@ let
         data = { };
         secrets = [ "hunter2" ];
       }
+    ))
+    # hard edges pass when inventory present, even with empty data
+    (assertTrue "log-diag-ok-empty" (
+      (logger.diagnostic {
+        code = "SEC001";
+        scope = "s";
+        host = "h";
+        packages = [ ];
+        phase = "validate";
+        message = "hi";
+        data = { };
+      }).message
+      == "hi"
+    ))
+    (assertTrue "log-event-ok-empty" (
+      (logger.event {
+        ts = "t";
+        level = "info";
+        code = "SEC001";
+        scope = "s";
+        host = "h";
+        packages = [ ];
+        phase = "validate";
+        message = "hi";
+        data = { };
+      }).message
+      == "hi"
     ))
   ];
 in
