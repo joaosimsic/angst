@@ -158,6 +158,93 @@ function M.branch_entries_for(toplevels, target)
 	return entries
 end
 
+-- Commit-to-HEAD entries: everything reachable from HEAD but not from
+-- `rev`, i.e. `rev..HEAD`. Same compact rows as the branch source.
+---@param toplevels string[]
+---@param rev string
+---@return ReviewExtraEntry[]
+function M.commit_entries_for(toplevels, rev)
+	if rev == nil or rev == "" then
+		return {}
+	end
+	local entries = {}
+	for _, top in ipairs(toplevels) do
+		for _, e in ipairs(parse_diff(top, { rev .. "..HEAD" })) do
+			entries[#entries + 1] = e
+		end
+	end
+	return entries
+end
+
+---@class CommitChoice
+---@field value string full commit hash
+---@field label string short hash + subject
+---@field short string abbreviated hash
+---@field subject string first line of the message
+
+---@param cwd? string
+---@param limit? integer
+---@return CommitChoice[] newest first, all refs
+function M.list_commits(cwd, limit)
+	limit = limit or 1000
+	local out = {}
+	local cmd = {
+		"-c",
+		"core.quotepath=false",
+		"log",
+		"--all",
+		"--format=%H%x09%h%x09%s",
+		"-n",
+		tostring(limit),
+	}
+	for _, line in ipairs(git_lines(cwd or vim.fn.getcwd(), cmd)) do
+		local full, short, subject = line:match("^(%x+)\t(%x+)\t(.*)$")
+		if full ~= nil then
+			out[#out + 1] = {
+				value = full,
+				label = short .. " " .. subject,
+				short = short,
+				subject = subject,
+			}
+		end
+	end
+	return out
+end
+
+---@param cwd? string
+---@return string? current HEAD hash
+function M.head_sha(cwd)
+	local lines = git_lines(cwd or vim.fn.getcwd(), { "rev-parse", "HEAD" })
+	local sha = lines[1]
+	if sha == nil or sha == "" then
+		return nil
+	end
+	return sha
+end
+
+-- Resolve a typed hash (full/short) first, then fall back to the newest
+-- commit whose message contains the query.
+---@param cwd? string
+---@param query string
+---@return string? full commit hash
+function M.resolve_commit(cwd, query)
+	query = vim.trim(query or "")
+	if query == "" then
+		return nil
+	end
+	local dir = cwd or vim.fn.getcwd()
+	local by_hash = git_lines(dir, { "rev-parse", "--verify", "--quiet", query .. "^{commit}" })
+	if by_hash[1] ~= nil and by_hash[1] ~= "" then
+		return by_hash[1]
+	end
+	local by_message =
+		git_lines(dir, { "log", "--all", "--fixed-strings", "--grep=" .. query, "--format=%H", "-n", "1" })
+	if by_message[1] ~= nil and by_message[1] ~= "" then
+		return by_message[1]
+	end
+	return nil
+end
+
 ---@param cwd? string
 ---@return string[] local + remote short branch names, deduped
 function M.list_branches(cwd)

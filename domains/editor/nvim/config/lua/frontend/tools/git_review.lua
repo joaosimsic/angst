@@ -6,6 +6,9 @@ local review_files = require("frontend.tools.git_review_files")
 local hunk_display = require("frontend.tools.git_hunk_display")
 local pages = require("frontend.tools.git_review_pages")
 local branch = require("frontend.tools.git_review_branch")
+local commit = require("frontend.tools.git_review_commit")
+local review_range = require("frontend.tools.git_review_range")
+local Picker = require("frontend.tools.git_review_picker")
 
 local palette = require("config.theme.palette")
 local p = palette.p
@@ -16,9 +19,11 @@ local p = palette.p
 -- normal cursor motion. `d` toggles the bg diff (deleted overlay + line
 -- bg; added/removed text is real buffer text), `h`/`l` cycle diffs in
 -- the same file only, `n` / `N` step files. No floating preview anywhere.
--- `<Tab>` swaps the whole column to a branch-diff view (current branch
--- vs a picked branch) that persists across hydra exits until `<Tab>`
--- disables it again.
+-- `<Tab>` cycles the tabs worktree -> branch -> commit -> worktree;
+-- `<S-Tab>` reverses it. Branch/commit always open their full-height
+-- picker; selecting a target applies it to the worktree tab and
+-- returns there. `t` reopens the applied source's picker. Tab state,
+-- applied range and targets persist across hydra exits.
 
 local function gs()
 	local ok, gitsigns = pcall(require, "gitsigns")
@@ -62,25 +67,33 @@ end
 
 -- Never run jumps from inside a pane: step back to code first.
 local function leave_pages_win()
-	-- open() leaves focus in code, but the user may have moved
-	-- into a pane with `wincmd l`: come back before jumping.
-	-- Branch panes replace the whole column, so they count too.
 	local filetype = vim.bo[vim.api.nvim_get_current_buf()].filetype
-	if
-		filetype == "angst-git-files"
-		or filetype == "angst-git-diffs"
-		or filetype == "angst-git-branch-files"
-		or filetype == "angst-git-branch-diffs"
-	then
+	if filetype == "angst-git-files" or filetype == "angst-git-diffs" or filetype == Picker.FILETYPE then
 		pcall(vim.cmd, "wincmd p")
 	end
 end
 
--- Branch-diff mode replaces the whole column: while enabled, h/l and
--- n/N navigate branch entries (never the worktree quickfix), and the
--- mode survives hydra exits via vim.g until Tab disables it again.
-local function branch_mode()
-	return branch.is_enabled()
+-- MODE_VAR is the active tab: nil for worktree, branch/commit while
+-- their picker is open. APPLIED_VAR is the range displayed by the
+-- worktree tab; it survives picker visits and hydra exits.
+local function picker_view()
+	local mode = vim.g[review_range.MODE_VAR]
+	if mode == "branch" then
+		return branch
+	elseif mode == "commit" then
+		return commit
+	end
+	return nil
+end
+
+local function applied_view()
+	local applied = vim.g[review_range.APPLIED_VAR]
+	if applied == "branch" then
+		return branch
+	elseif applied == "commit" then
+		return commit
+	end
+	return nil
 end
 
 -- Single synchronous collection, one writer, one tick: worktree hunks
@@ -117,11 +130,21 @@ end
 -- An empty list collects on demand, then steps. No floating preview:
 -- the bg diff plus the list highlight show where you are.
 local function entry_jump(dir)
-	leave_pages_win()
-	if branch_mode() then
-		branch.entry_jump(dir)
+	local view = applied_view()
+	if view ~= nil then
+		if Picker.is_open() then
+			return
+		end
+		leave_pages_win()
+		if view.is_enabled() then
+			view.entry_jump(dir)
+			if pages.is_open() then
+				pages.render_all(view.State.context.file, view.State.context.eidx)
+			end
+		end
 		return
 	end
+	leave_pages_win()
 	ensure_files_or_collect(function()
 		local cur_buf = vim.api.nvim_get_current_buf()
 		local cur = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(cur_buf), ":p")
@@ -189,44 +212,109 @@ local function toggle_hunks()
 		return
 	end
 	hunk_display.toggle()
-	-- The `d` switch drives gitsigns; re-apply the branch overlay so
-	-- both surfaces flip together while branch mode is active.
-	if branch_mode() then
-		branch.paint_current()
+	-- The `d` switch drives gitsigns; re-apply the range overlay so
+	-- both surfaces flip together while a range is applied.
+	local view = applied_view()
+	if view ~= nil then
+		view.paint_current()
 	end
 end
 
--- Tab toggles the branch-diff column: enable picks the other branch
--- once, then the whole sidebar shows branch files/diffs until Tab
--- disables it again. Enable/disable swaps the column immediately;
--- the vim.g flag keeps the mode across hydra exits.
-local function toggle_branch_diff()
-	if branch.is_enabled() then
-		branch.disable()
-		branch.close()
-		pcall(vim.cmd, "cclose")
-		if vim.g.active_hydra ~= nil and vim.g.active_hydra.name == "Git" then
-			pages.open()
-		end
-		vim.notify("Git branch diff off", vim.log.levels.INFO)
+-- Tab cycles the tabs worktree -> branch -> commit -> worktree;
+-- S-Tab walks the same list backwards. Branch/commit always open their
+-- full-height picker. Selecting a target applies it to the worktree tab
+-- and returns there; cancelling restores the previously applied range.
+local function show_view_panes(view)
+	local context = view.State.context or {}
+	pages.close()
+	pages.show_range(view.State.entries, view.State.tops, view.State.label)
+	pages.open()
+	if context.file ~= nil then
+		pages.render_all(context.file, context.eidx)
+	end
+end
+
+local function show_worktree_panes()
+	pages.close()
+	pages.show_worktree()
+	pages.open()
+end
+
+local function restore_worktree_tab()
+	vim.g[review_range.MODE_VAR] = nil
+	local view = applied_view()
+	if view ~= nil and view.target() ~= nil and view.activate() then
+		show_view_panes(view)
 		return
 	end
-	branch.pick_target(function(target)
-		if target == nil or target == "" then
-			return
-		end
-		pages.close()
-		pcall(vim.cmd, "cclose")
-		-- Empty ranges auto-disable inside open() (with their own
-		-- notice); fall back to the worktree panes then.
-		if branch.open(target) == nil then
-			if vim.g.active_hydra ~= nil and vim.g.active_hydra.name == "Git" then
-				pages.open()
-			end
-			return
-		end
-		vim.notify("Git branch diff vs " .. target, vim.log.levels.INFO)
+	if view ~= nil then
+		view.clear_applied()
+	end
+	show_worktree_panes()
+end
+
+local function enter_view(view)
+	local applied = applied_view()
+	if applied ~= nil then
+		applied.hide()
+	end
+	vim.g[review_range.MODE_VAR] = view.mode
+	pages.close()
+	pcall(vim.cmd, "cclose")
+	view.open_picker(restore_worktree_tab, function()
+		vim.g[review_range.MODE_VAR] = nil
+		show_view_panes(view)
 	end)
+end
+
+local function cycle_source(dir)
+	local order = { branch, commit }
+	local current = picker_view()
+	local index
+	if current == nil then
+		index = dir > 0 and 1 or #order
+	else
+		for i, view in ipairs(order) do
+			if view == current then
+				index = i + (dir > 0 and 1 or -1)
+				break
+			end
+		end
+	end
+	if current ~= nil then
+		current.hide()
+	end
+	if index == nil or index < 1 or index > #order then
+		restore_worktree_tab()
+		return
+	end
+	enter_view(order[index])
+end
+
+local function change_target()
+	local view = picker_view() or applied_view()
+	if view == nil then
+		return
+	end
+	local applied = applied_view()
+	if applied ~= nil then
+		applied.hide()
+	end
+	vim.g[review_range.MODE_VAR] = view.mode
+	pages.close()
+	pcall(vim.cmd, "cclose")
+	view.open_picker(restore_worktree_tab, function()
+		vim.g[review_range.MODE_VAR] = nil
+		show_view_panes(view)
+	end)
+end
+
+local function next_source()
+	cycle_source(1)
+end
+
+local function prev_source()
+	cycle_source(-1)
 end
 
 -- Jump to the first quickfix entry of `abs_path` (cc index).
@@ -246,13 +334,24 @@ end
 
 -- n/N step files in quickfix order (one stop per file).
 local function next_file()
-	leave_pages_win()
-	if branch_mode() then
-		branch.next_file()
+	local view = applied_view()
+	if view ~= nil then
+		if Picker.is_open() then
+			return
+		end
+		leave_pages_win()
+		if view.is_enabled() then
+			view.next_file()
+			if pages.is_open() then
+				pages.render_all(view.State.context.file, view.State.context.eidx)
+			end
+		end
 		return
 	end
+	leave_pages_win()
 	ensure_files_or_collect(function()
 		if not pages.is_open() then
+			pages.show_worktree()
 			pages.open()
 		end
 		local files = pages.ordered_files()
@@ -276,13 +375,24 @@ local function next_file()
 end
 
 local function prev_file()
-	leave_pages_win()
-	if branch_mode() then
-		branch.prev_file()
+	local view = applied_view()
+	if view ~= nil then
+		if Picker.is_open() then
+			return
+		end
+		leave_pages_win()
+		if view.is_enabled() then
+			view.prev_file()
+			if pages.is_open() then
+				pages.render_all(view.State.context.file, view.State.context.eidx)
+			end
+		end
 		return
 	end
+	leave_pages_win()
 	ensure_files_or_collect(function()
 		if not pages.is_open() then
+			pages.show_worktree()
 			pages.open()
 		end
 		local files = pages.ordered_files()
@@ -315,43 +425,42 @@ local function setup()
 		enter = "<leader>g",
 		global = true,
 		persist = true,
+		keep_insert_filetypes = { Picker.FILETYPE },
 		logger = logger,
 		on_enter = function()
 			-- The panes open with the hydra (empty placeholders until
 			-- the first collect); the quickfix window never appears.
 			-- Collection stays lazy: it happens on first n/N/h/l via
 			-- ensure_files_or_collect, never on enter.
-			-- Branch-diff mode replaces the whole column and persists
-			-- in vim.g across hydra exits: re-enter reopens it instead
-			-- of the worktree panes until Tab disables it.
+			-- The active tab and applied range persist in vim.g across
+			-- hydra exits: re-enter restores the picker or the applied
+			-- range on the worktree tab.
 			-- Respect the global hunk switch (default-on): toggles are
 			-- global and may have changed since the last session.
 			-- Hint stays hidden: `?` toggles the help float.
 			-- `j`/`k` are intentionally unbound: normal motion.
 			hunk_display.apply()
 			pcall(vim.cmd, "cclose")
-			if branch.is_enabled() then
-				-- A stale enable (e.g. target merged away) auto-disables
-				-- inside open(); fall back to the worktree panes then.
-				if branch.open() == nil then
-					pages.open()
-				end
+			local view = picker_view()
+			if view ~= nil then
+				enter_view(view)
 			else
-				pages.open()
+				restore_worktree_tab()
 			end
 		end,
 		on_exit = function()
 			pages.close()
-			-- Visible quit: the branch column always closes, but the
-			-- enabled flag and target persist so the next enter
-			-- restores it until Tab disables it. Badge and code
-			-- tints stay as the persisted-mode indicator.
-			branch.close()
+			-- Visible quit: pane/picker windows close, but the active
+			-- tab, applied range and targets persist so the next enter
+			-- restores them. Badge and code tints stay as the indicator.
+			Picker.close()
 			pcall(vim.cmd, "cclose")
 		end,
 		heads = {
 			{ "d", toggle_hunks, "Diff bg on/off" },
-			{ "<Tab>", toggle_branch_diff, "Branch diff on/off" },
+			{ "<Tab>", next_source, "Next diff source" },
+			{ "<S-Tab>", prev_source, "Previous diff source" },
+			{ "t", change_target, "Change diff target" },
 			{ "h", function() entry_jump(-1) end, "Prev diff" },
 			{ "l", function() entry_jump(1) end, "Next diff" },
 			{ "n", next_file, "Next file" },

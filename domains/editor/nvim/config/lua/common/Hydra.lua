@@ -17,6 +17,7 @@ local Logger = require("common.Logger")
 ---@field exit_keys? string[]
 ---@field global? boolean
 ---@field persist? boolean
+---@field keep_insert_filetypes? string[]
 ---@field bufnr? number
 ---@field hint? boolean
 ---@field on_enter? fun(hydra: Hydra)
@@ -38,6 +39,7 @@ local Logger = require("common.Logger")
 ---@field heads HydraHead[]
 ---@field exit_keys string[]
 ---@field global boolean
+---@field keep_insert_filetypes string[]
 ---@field bufnr? number
 ---@field hint boolean
 ---@field on_enter? fun(hydra: Hydra)
@@ -81,6 +83,7 @@ function Hydra.new(cfg, bufnr)
 	self.exit_keys = cfg.exit_keys or { "<Esc>", "<C-c>" }
 	self.global = cfg.global or false
 	self.persist = cfg.persist or false
+	self.keep_insert_filetypes = cfg.keep_insert_filetypes or {}
 	self.hint = cfg.hint or false
 	self.on_enter = cfg.on_enter
 	self.on_exit = cfg.on_exit
@@ -115,10 +118,14 @@ end
 
 ---@param event string|string[]
 ---@param opts table
-function Hydra:add_lifecycle_autocmd(event, opts)
+---@param guard? fun(): boolean skip deactivation when true
+function Hydra:add_lifecycle_autocmd(event, opts, guard)
 	opts = vim.tbl_extend("force", opts, {
 		group = lifecycle_group,
 		callback = function()
+			if guard ~= nil and guard() then
+				return
+			end
 			self:deactivate()
 		end,
 	})
@@ -130,7 +137,10 @@ end
 function Hydra:setup_lifecycle_autocmds(bufnr)
 	self:clear_active_autocmds()
 
-	self:add_lifecycle_autocmd("InsertEnter", self.global and {} or { buffer = bufnr })
+	self:add_lifecycle_autocmd("InsertEnter", self.global and {} or { buffer = bufnr }, function()
+		local ft = vim.bo[vim.api.nvim_get_current_buf()].filetype
+		return vim.tbl_contains(self.keep_insert_filetypes, ft)
+	end)
 
 	if not self.global and not self.persist then
 		self:add_lifecycle_autocmd({ "BufLeave", "BufWipeout" }, { buffer = bufnr })
