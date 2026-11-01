@@ -210,7 +210,12 @@ infra/
   contracts/
     codes.nix
     levels.nix
-    secret-ref.nix
+    secret-ref/
+      default.nix
+      errors.nix
+      inventory.nix
+      leak.nix
+      validate.nix
   nixpkgs-config.nix
 secrets/                       # encrypted data only
 githooks/
@@ -1755,14 +1760,17 @@ plus nixpkgs lib. Lists live in `infra/contracts/log-vocab.json`
   Canonical wire values lowercase, matching `## Logging` example.
   Go mirror: `infra/logger/vocab_gen.go` (generated, `DO NOT EDIT`) + `infra/logger/logger.go`
   (`Level`, `LogCodes()`, `LogLevels()`, clones only). Parity test reads JSON.
-- `infra/contracts/secret-ref.nix`: `SecretRef` `{ ref }` only plus
+- `infra/contracts/secret-ref/default.nix`: public facade. `SecretRef` `{ ref }` only plus
   `checkSecretRef` plus `isSecretRef` plus `isKnownSecretRef` plus
   `secretSlugs`/`secretFiles`/`secretInventory` plus
   `checkSecretRefsOnly`/`assertSecretRefsOnly` plus
   `checkSecretRefsIn`/`assertSecretRefsIn` plus
   `checkNoKnownSecrets`/`assertNoKnownSecrets`. Secret inventory comes from
   `secrets/` presence-only (`builtins.readDir` basenames, values never read);
-  no inline `builtins.match` here. Not just null/string
+  no inline `builtins.match` here. Private `errors.nix`, `inventory.nix`,
+  `validate.nix`, and `leak.nix` split those concerns; only `default.nix`
+  is public, and no other contract may import the private modules.
+  Duplicate slug mappings fail closed. Not just null/string
   checking: recursive edge guards returning `Result` with `path` context
   for declared secret fields (default: inventory slugs), ref-must-resolve
   guard, known-value guard for `message`/`data` JSON.

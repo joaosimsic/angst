@@ -11,6 +11,5 @@
 
   outputs = { self, ... }: {
     lib.logger = import ./infra/logger/default.nix;
-    lib.tests.secret-ref = import ./infra/contracts/secret-ref.test.nix;
   };
 }

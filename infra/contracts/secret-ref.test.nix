@@ -1,5 +1,8 @@
 let
-  mod = import ./secret-ref.nix;
+  mod = import ./secret-ref/default.nix;
+  inventoryMod = import ./secret-ref/inventory.nix;
+  validateMod = import ./secret-ref/validate.nix;
+  leakMod = import ./secret-ref/leak.nix;
   types = import ../lib/types.nix;
   logger = import ../logger/default.nix;
 
@@ -9,6 +12,9 @@ let
   msgMisplaced = "SecretRef misplaced: allowed only under secret fields";
   msgUnsupported = "SecretRef edge rejected: unsupported value type";
   msgLeak = "plain secret value present in message/data; wrap as `SecretRef` instead";
+  msgDup = "SecretRef: duplicate slug maps to multiple files";
+  msgSecretFields = "checkSecretRefsIn: `secretFields` must be a list of non-empty strings";
+  msgSecretElements = "checkNoKnownSecrets: `secrets` must contain only non-empty strings";
 
   assertOk =
     name: r: if types.isOk r then true else throw "FAIL ${name}: expected ok, got ${builtins.toJSON r}";
@@ -43,6 +49,26 @@ let
 
   withFields = data: secretFields: mod.checkSecretRefsIn { inherit data secretFields; };
 
+  entryAt = dir: basename: {
+    inherit basename;
+    relPath = if dir == "" then basename else dir + "/" + basename;
+    ftype = "regular";
+  };
+
+  mkFixture =
+    {
+      hasDir ? true,
+      entries ? [ ],
+    }:
+    let
+      inventory = inventoryMod.mk { inherit hasDir entries; };
+    in
+    inventory
+    // (validateMod.mk inventory)
+    // {
+      inherit (leakMod) checkNoKnownSecrets;
+    };
+
   tests = [
     # inventory comes from secrets/, never regex
     (assertTrue "inv-opencode" (builtins.elem "opencode-go-key" mod.secretSlugs))
@@ -60,6 +86,129 @@ let
     (assertTrue "logger-inv-passthrough" (logger.inventoryResult.value == mod.inventoryResult.value))
     (assertOk "logger-check-ok" logger.checkInventory)
     (assertTrue "logger-warn-null" (logger.inventoryWarn == null))
+
+    # pure core fixtures: missing, empty, ignored files
+    (
+      let
+        inv = mkFixture { hasDir = false; };
+      in
+      assertErrMsg "fx-missing" "SecretRef: secrets/ directory missing, no inventory" "secrets"
+        inv.inventoryResult
+    )
+    (
+      let
+        inv = mkFixture { };
+      in
+      assertTrue "fx-empty-ok" (types.isOk inv.inventoryResult && inv.secretSlugs == [ ])
+    )
+    (
+      let
+        inv = mkFixture { };
+      in
+      assertTrue "fx-empty-flag" inv.isInventoryEmpty
+    )
+    (
+      let
+        inv = mkFixture { };
+      in
+      assertTrue "fx-empty-warn" (inv.inventoryWarn != null && inv.inventoryWarn.code == "SEC002")
+    )
+    (
+      let
+        inv = mkFixture {
+          entries = [
+            (entryAt "" "README.md")
+            {
+              basename = "apps";
+              relPath = "apps";
+              ftype = "directory";
+            }
+          ];
+        };
+      in
+      assertTrue "fx-ignored" (types.isOk inv.inventoryResult && inv.secretSlugs == [ ])
+    )
+
+    # pure core fixtures: suffix forms and collisions
+    (
+      let
+        inv = mkFixture {
+          entries = [
+            (entryAt "apps/a" "alpha.placeholder")
+            (entryAt "apps/b" "beta.age")
+            (entryAt "passwd" "gamma.age.placeholder")
+            (entryAt "ssh" "delta.pub")
+            (entryAt "" "README.md")
+          ];
+        };
+      in
+      assertTrue "fx-suffix-slugs" (
+        inv.secretSlugs == [
+          "alpha"
+          "beta"
+          "delta"
+          "gamma"
+        ]
+      )
+    )
+    (
+      let
+        inv = mkFixture {
+          entries = [
+            (entryAt "apps/a" "dup.age")
+            (entryAt "apps/b" "dup.age")
+          ];
+        };
+      in
+      assertErrMsg "fx-duplicate" msgDup null inv.inventoryResult
+    )
+    (
+      let
+        inv = mkFixture {
+          entries = [
+            (entryAt "apps/a" "pair.age")
+            (entryAt "apps/a" "pair.pub")
+          ];
+        };
+      in
+      assertTrue "fx-pair" (types.isOk inv.inventoryResult && inv.secretSlugs == [ "pair" ])
+    )
+    (
+      let
+        inv = mkFixture {
+          entries = [
+            (entryAt "apps/a" "mixed.placeholder")
+            (entryAt "apps/a" "mixed.age")
+          ];
+        };
+      in
+      assertErrMsg "fx-placeholder-mixed" msgDup null inv.inventoryResult
+    )
+    (
+      let
+        inv = mkFixture {
+          entries = [
+            (entryAt "apps/a" "split.age")
+            (entryAt "apps/b" "split.pub")
+          ];
+        };
+      in
+      assertErrMsg "fx-cross-dir-pair" msgDup null inv.inventoryResult
+    )
+    (
+      let
+        inv = mkFixture {
+          entries = [ (entryAt "" "fixture.age") ];
+        };
+      in
+      assertOk "fx-ref" (inv.checkSecretRef "fixture")
+    )
+    (
+      let
+        inv = mkFixture { };
+      in
+      assertErrMsg "fx-ref-unknown" msgUnknown null (inv.checkSecretRef "nope")
+    )
 
     # checkSecretRef resolves against inventory
     (assertOk "ref-accept" (mod.checkSecretRef "opencode-go-key"))
@@ -154,17 +303,21 @@ let
         ];
       }
     ))
-    (assertOk "ok-declared" (withFields { password = { ref = "opencode-go-key"; }; } [ "password" ]))
+    (assertOk "ok-declared" (
+      withFields {
+        password = {
+          ref = "opencode-go-key";
+        };
+      } [ "password" ]
+    ))
     (assertOk "ok-declared-path" (
-      withFields
-        {
-          db = {
-            password = {
-              ref = "example";
-            };
+      withFields {
+        db = {
+          password = {
+            ref = "example";
           };
-        }
-        [ "data.db.password" ]
+        };
+      } [ "data.db.password" ]
     ))
     (assertOk "ok-plain-undeclared" (mod.checkSecretRefsOnly { password = "plain"; }))
 
@@ -173,19 +326,21 @@ let
       withFields { password = "plain"; } [ "password" ]
     ))
     (assertErrMsg "rej-nested-plain" msgField "data.db.password" (
-      withFields
-        {
-          db = {
-            password = "plain";
-          };
-        }
-        [ "data.db.password" ]
+      withFields {
+        db = {
+          password = "plain";
+        };
+      } [ "data.db.password" ]
     ))
     (assertErrMsg "rej-list-under-secret" msgField "data.tokens" (
       withFields { tokens = [ "a" ]; } [ "tokens" ]
     ))
     (assertErrMsg "rej-unknown-ref" msgUnknown "data.password" (
-      withFields { password = { ref = "nope"; }; } [ "password" ]
+      withFields {
+        password = {
+          ref = "nope";
+        };
+      } [ "password" ]
     ))
 
     # strict: bare ref only under secret fields
@@ -213,15 +368,50 @@ let
       }
     ))
     (assertErrMsg "rej-empty-secret" msgBadRef "data.password" (
-      withFields { password = { ref = ""; }; } [ "password" ]
+      withFields {
+        password = {
+          ref = "";
+        };
+      } [ "password" ]
     ))
     (assertErrMsg "rej-nonstr-secret" msgBadRef "data.password" (
-      withFields { password = { ref = 123; }; } [ "password" ]
+      withFields {
+        password = {
+          ref = 123;
+        };
+      } [ "password" ]
     ))
 
     # unsupported types
     (assertErrMsg "rej-fn-top" msgUnsupported "data" (mod.checkSecretRefsOnly (x: x)))
     (assertErrMsg "rej-fn-nested" msgUnsupported "data.foo" (mod.checkSecretRefsOnly { foo = x: x; }))
+    (
+      let
+        inv = mkFixture { };
+      in
+      assertErrMsg "rej-list-index" msgUnsupported "data.items.1" (
+        inv.checkSecretRefsIn {
+          data = {
+            items = [
+              1
+              (x: x)
+            ];
+          };
+          secretFields = [ ];
+        }
+      )
+    )
+    (
+      let
+        inv = mkFixture { };
+      in
+      assertErrMsg "rej-secret-fields" msgSecretFields null (
+        inv.checkSecretRefsIn {
+          data = { };
+          secretFields = "password";
+        }
+      )
+    )
 
     # noKnownSecrets
     (assertOk "leak-clean" (mod.checkNoKnownSecrets [ "hunter2" ] "hello" "{\"a\":1}"))
@@ -232,6 +422,10 @@ let
     (assertErrMsg "leak-data" msgLeak null (
       mod.checkNoKnownSecrets [ "hunter2" ] "hi" "{\"k\":\"hunter2\"}"
     ))
+    (assertErrMsg "leak-json-escaped" msgLeak null (
+      mod.checkNoKnownSecrets [ "a\"b\\c" ] "clean" (builtins.toJSON { k = "a\"b\\c"; })
+    ))
+    (assertErrMsg "leak-bad-elements" msgSecretElements null (mod.checkNoKnownSecrets [ "" ] "hi" "{}"))
     (assertErrMsg "leak-bad-secrets" "checkNoKnownSecrets: `secrets` must be a list" null (
       mod.checkNoKnownSecrets "nope" "hi" "{}"
     ))
@@ -328,8 +522,7 @@ let
         phase = "validate";
         message = "hi";
         data = { };
-      }).message
-      == "hi"
+      }).message == "hi"
     ))
     (assertTrue "log-event-ok-empty" (
       (logger.event {
@@ -342,8 +535,7 @@ let
         phase = "validate";
         message = "hi";
         data = { };
-      }).message
-      == "hi"
+      }).message == "hi"
     ))
   ];
 in

@@ -15,7 +15,7 @@ let
   types = import ../lib/types.nix;
   codesMod = import ../contracts/codes.nix;
   levelsMod = import ../contracts/levels.nix;
-  secretRefMod = import ../contracts/secret-ref.nix;
+  secretRefMod = import ../contracts/secret-ref/default.nix;
 
   renderDiagnosticFn =
     d:
@@ -80,10 +80,8 @@ in
   checkInventory = secretRefMod.checkInventory;
   checkSecretRefsOnly = secretRefMod.checkSecretRefsOnly;
   checkSecretRefsIn = secretRefMod.checkSecretRefsIn;
-  checkSecretRefsOnlyWith = secretRefMod.checkSecretRefsOnlyWith;
   assertSecretRefsOnly = secretRefMod.assertSecretRefsOnly;
   assertSecretRefsIn = secretRefMod.assertSecretRefsIn;
-  assertSecretRefsOnlyWith = secretRefMod.assertSecretRefsOnlyWith;
   checkNoKnownSecrets = secretRefMod.checkNoKnownSecrets;
   assertNoKnownSecrets = secretRefMod.assertNoKnownSecrets;
 
