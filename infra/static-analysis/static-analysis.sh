@@ -6,7 +6,7 @@ cd "$root"
 
 for tool in git go statix deadnix nixfmt nix-instantiate yamllint golangci-lint; do
     if ! command -v "$tool" >/dev/null 2>&1; then
-        printf 'static-analysis: missing %s; run via: nix-shell infra/static-analysis --run ./infra/static-analysis/static-analysis.sh\n' "$tool" >&2
+        printf 'static-analysis: missing %s; run via: nix-shell infra/static-analysis/shell.nix --run ./infra/static-analysis/static-analysis.sh\n' "$tool" >&2
         exit 1
     fi
 done

@@ -9,7 +9,7 @@ Read and follow [`CODING_STYLE.md`](./CODING_STYLE.md) for all code changes. It 
 Before reporting any code change complete, run from the repository root:
 
 ```bash
-nix-shell infra/static-analysis --run ./infra/static-analysis/static-analysis.sh
+nix-shell infra/static-analysis/shell.nix --run ./infra/static-analysis/static-analysis.sh
 ```
 
 If `statix`, `deadnix`, `nixfmt`, `nix-instantiate`, `yamllint`, `golangci-lint`, and Go are already on `PATH`, `./infra/static-analysis/static-analysis.sh` is equivalent.

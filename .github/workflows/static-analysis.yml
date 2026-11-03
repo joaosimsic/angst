@@ -20,5 +20,5 @@ jobs:
           go-version: "1.26"
       - name: Run static analysis
         run: |
-          nix-shell infra/static-analysis \
+          nix-shell infra/static-analysis/shell.nix \
             --run ./infra/static-analysis/static-analysis.sh
