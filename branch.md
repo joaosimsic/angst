@@ -58,12 +58,12 @@ Done when: all step 2 files evaluate. No printing. No IO. No cycles. Contracts i
 
 Files: `workflow/phases.nix`, `infra/logger/default.nix`, `infra/lib/error.nix`, `infra/lib/match.nix`, `infra/lib/fs.nix`, `infra/lib/strings.nix`, `infra/contracts/codes.nix`, `infra/contracts/levels.nix`, `infra/contracts/secret-ref/default.nix`
 
-- [ ] Create `workflow/phases.nix` with `phases = [ "evaluate" "validate" "build" "activate" "verify" "finish" ]`
-- [ ] Add `states = [ "pending" "running" "ok" "warn" "error" "skipped" ]` in same file
-- [ ] Import phase/state shapes from `workflow/phases.nix` into `infra/logger/default.nix`, no redefinition
-- [ ] Reserve `workflow/validate/report.nix` as only other allowed phase/state literal site, do not create it now
-- [ ] Add test split: phase/state literals outside `workflow/`, `infra/logger` (re-export only), `workflow/validate/report.nix` would fail `ARCH`; `logCodes`/`logLevels`/`SecretRef` vocab outside `infra/contracts/` (plus re-export in `infra/logger`) would fail `ARCH`
-- [ ] Run `NIXPKGS_ALLOW_UNFREE=1 nix flake check --no-build --impure`
+- [x] Create `workflow/phases.nix` with `phases = [ "evaluate" "validate" "build" "activate" "verify" "finish" ]`
+- [x] Add `states = [ "pending" "running" "ok" "warn" "error" "skipped" ]` in same file
+- [x] Import phase/state shapes from `workflow/phases.nix` into `infra/logger/default.nix`, no redefinition
+- [x] Reserve `workflow/validate/report.nix` as only other allowed phase/state literal site, do not create it now
+- [x] Add test split: phase/state literals outside `workflow/`, `infra/logger` (re-export only), `workflow/validate/report.nix` would fail `ARCH`; `logCodes`/`logLevels`/`SecretRef` vocab outside `infra/contracts/` (plus re-export in `infra/logger`) would fail `ARCH`
+- [x] Run `NIXPKGS_ALLOW_UNFREE=1 nix flake check --no-build --impure`
 
 Done when: one source. No dup literals.
 

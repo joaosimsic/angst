@@ -1,5 +1,6 @@
 let
   logger = import ./default.nix;
+  phasesModule = import ../../workflow/phases.nix;
 
   assertTrue = name: condition: if condition then true else throw "FAIL ${name}: expected true";
 
@@ -42,6 +43,16 @@ let
     (assertFalse "level-uppercase" (logger.isLogLevel "INFO"))
     (assertThrow "level-unknown" (logger.checkLogLevel "INFO"))
     (assertThrow "level-null" (logger.checkLogLevel null))
+
+    (assertTrue "phases-reexport" (logger.phases == phasesModule.phases))
+    (assertTrue "states-reexport" (logger.states == phasesModule.states))
+    (assertTrue "phase-known" (
+      builtins.all (
+        phase: (logger.diagnostic (diagnostic // { inherit phase; })).phase == phase
+      ) phasesModule.phases
+    ))
+    (assertThrow "diagnostic-unknown-phase" (logger.diagnostic (diagnostic // { phase = "deploy"; })))
+    (assertThrow "event-unknown-phase" (logger.event (event // { phase = "deploy"; })))
 
     (assertTrue "diagnostic-shape" (
       builtins.attrNames (logger.diagnostic diagnostic) == [

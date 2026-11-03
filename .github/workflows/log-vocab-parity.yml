@@ -3,38 +3,23 @@ name: log-vocab-parity
 "on":
   push:
     paths:
-      - "infra/contracts/log-vocab.json"
-      - "infra/contracts/codes.nix"
-      - "infra/contracts/levels.nix"
-      - "infra/contracts/secret-ref/**"
-      - "infra/lib/error.nix"
-      - "infra/lib/fs.nix"
-      - "infra/lib/match.nix"
-      - "infra/lib/strings.nix"
-      - "infra/logger/default.nix"
-      - "infra/logger/test.nix"
-      - "infra/logger/logger.go"
-      - "infra/logger/vocab_gen.go"
-      - "infra/logger/logger_test.go"
-      - "infra/logger/go.mod"
+      - "infra/contracts/**"
+      - "infra/lib/**"
+      - "infra/logger/**"
+      - "workflow/phases.nix"
       - ".github/workflows/log-vocab-parity.yml"
   pull_request:
     paths:
-      - "infra/contracts/log-vocab.json"
-      - "infra/contracts/codes.nix"
-      - "infra/contracts/levels.nix"
-      - "infra/contracts/secret-ref/**"
-      - "infra/lib/error.nix"
-      - "infra/lib/fs.nix"
-      - "infra/lib/match.nix"
-      - "infra/lib/strings.nix"
-      - "infra/logger/default.nix"
-      - "infra/logger/test.nix"
-      - "infra/logger/logger.go"
-      - "infra/logger/vocab_gen.go"
-      - "infra/logger/logger_test.go"
-      - "infra/logger/go.mod"
+      - "infra/contracts/**"
+      - "infra/lib/**"
+      - "infra/logger/**"
+      - "workflow/phases.nix"
       - ".github/workflows/log-vocab-parity.yml"
+permissions:
+  contents: read
+concurrency:
+  group: log-vocab-parity-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   log_vocab_parity:
     name: log domain vocab parity
@@ -44,22 +29,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Nix
         uses: cachix/install-nix-action@v27
-      - name: Nix log vocab eval
-        working-directory: .
+      - name: Nix log domain tests
         run: |
           set -euo pipefail
-          log_expr='(import ./infra/logger/default.nix)'
           nix eval --impure --expr 'import ./infra/logger/test.nix'
-          nix eval --impure --json --expr "${log_expr}.logCodes"
-          nix eval --impure --json --expr "${log_expr}.logLevels"
           NIXPKGS_ALLOW_UNFREE=1 nix flake check --no-build --impure
       - name: Setup Go 1.26
         uses: actions/setup-go@v5
         with:
           go-version: "1.26"
-      - name: Go log vocab tests
+      - name: Go logger tests
         working-directory: infra/logger
-        run: |
-          set -euo pipefail
-          test_pattern='Test(Vocab|NixParity|Level|LogCodes|Immutability)'
-          CGO_ENABLED=0 go test ./... -count=1 -run "${test_pattern}" -v
+        run: CGO_ENABLED=0 go test ./... -count=1 -v

@@ -26,6 +26,10 @@
           logLevels
           ;
         inherit (logger)
+          phases
+          states
+          ;
+        inherit (logger)
           SecretRef
           checkNoKnownSecrets
           hasSecretsDir

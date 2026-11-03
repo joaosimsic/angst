@@ -4,6 +4,7 @@ let
   codesModule = import ../contracts/codes.nix;
   levelsModule = import ../contracts/levels.nix;
   secretRefModule = import ../contracts/secret-ref/default.nix;
+  phasesModule = import ../../workflow/phases.nix;
 
   renderDiagnosticLine =
     diagnostic:
@@ -49,6 +50,20 @@ let
     else
       throwField "packages" "logger: `packages` must be a list of strings";
 
+  checkPhase =
+    phase:
+    if builtins.elem phase phasesModule.phases then
+      phase
+    else
+      error.throwError {
+        kind = "field";
+        message = "logger: unknown `phase`";
+        context = {
+          inherit phase;
+          expected = phasesModule.phases;
+        };
+      };
+
   checkData =
     data: if builtins.isAttrs data then data else throwField "data" "logger: `data` must be an attrset";
 
@@ -69,7 +84,7 @@ let
       checkedScope = checkNonEmptyString "scope" scope;
       checkedHost = checkNonEmptyString "host" host;
       checkedPackages = checkPackages packages;
-      checkedPhase = checkNonEmptyString "phase" phase;
+      checkedPhase = checkPhase phase;
       validatedMessage = checkNonEmptyString "message" message;
       checkedData = secretRefModule.checkSecretRefsIn {
         data = checkData data;
@@ -118,6 +133,10 @@ in
     checkLogLevel
     isLogLevel
     logLevels
+    ;
+  inherit (phasesModule)
+    phases
+    states
     ;
   inherit (secretRefModule)
     SecretRef
