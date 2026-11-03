@@ -11,7 +11,7 @@ return {
 
 		local golangci_builtin = require("lint.linters.golangcilint")
 
-		local function golangci_args(root)
+		local function golangci_args(target)
 			local version = vim.fn.system({ "golangci-lint", "version" })
 
 			if version:find("version v1") or version:find("version 1") then
@@ -23,7 +23,7 @@ return {
 					"--show-stats=false",
 					"--print-issued-lines=false",
 					"--print-linter-name=false",
-					root,
+					target,
 				}
 			end
 
@@ -46,7 +46,7 @@ return {
 				table.insert(args, "--path-mode=abs")
 			end
 
-			table.insert(args, root)
+			table.insert(args, target)
 			return args
 		end
 
@@ -56,7 +56,7 @@ return {
 
 			return {
 				cmd = "golangci-lint",
-				args = golangci_args(root),
+				args = golangci_args(file),
 				cwd = root,
 				append_fname = false,
 				stream = "stdout",
