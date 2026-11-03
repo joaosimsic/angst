@@ -56,7 +56,7 @@ return {
 
 			return {
 				cmd = "golangci-lint",
-				args = golangci_args(file),
+				args = golangci_args(vim.fs.dirname(file)),
 				cwd = root,
 				append_fname = false,
 				stream = "stdout",

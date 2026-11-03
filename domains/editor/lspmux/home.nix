@@ -9,7 +9,6 @@
 let
   cfg = config.domains.editor.lspmux;
   socket = "/run/user/1000/lspmux.sock";
-  goSocket = "/run/user/1000/gopls.sock";
   hasRust = (store.editorLsp or { }) ? rust;
   hasGo = (store.editorLsp or { }) ? gopls;
   rustAnalyzerMux = pkgs.writeShellScriptBin "rust-analyzer-mux" ''
@@ -30,16 +29,8 @@ in
           exec ${pkgs.lspmux}/bin/lspmux client "$@"
         '';
       };
-      file.".local/bin/gopls" = lib.mkIf hasGo {
-        executable = true;
-        text = ''
-          #!${pkgs.bash}/bin/bash
-          exec ${pkgs.gopls}/bin/gopls '-remote=unix;${goSocket}' "$@"
-        '';
-      };
       sessionVariables = {
         LSPMUX_SOCKET = socket;
-        GOPLS_REMOTE = "unix;${goSocket}";
       };
     };
 
@@ -74,21 +65,6 @@ in
           "RUSTUP_HOME"
           "RUSTUP_TOOLCHAIN"
         ];
-      };
-      Install.WantedBy = [ "default.target" ];
-    };
-
-    systemd.user.services.gopls-daemon = lib.mkIf hasGo {
-      Unit = {
-        Description = "gopls daemon (shared, -remote multiplex)";
-        After = [ "network.target" ];
-      };
-      Service = {
-        Type = "simple";
-        ExecStartPre = "${pkgs.coreutils}/bin/rm -f ${goSocket}";
-        ExecStart = "${pkgs.gopls}/bin/gopls -listen=unix;${goSocket} -listen.timeout=1h";
-        Restart = "always";
-        RestartSec = "5s";
       };
       Install.WantedBy = [ "default.target" ];
     };
