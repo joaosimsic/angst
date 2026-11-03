@@ -1,4 +1,11 @@
 ---@type Adapter
+
+local ConfigPath = require("common.ConfigPath")
+
+local function workspace_library()
+	return ConfigPath.filter(vim.api.nvim_get_runtime_file("", true))
+end
+
 return {
 	filetypes = { "lua" },
 	lsp = "lua_ls",
@@ -14,7 +21,7 @@ return {
 			},
 			diagnostics = { enable = true, globals = { "vim" } },
 			workspace = {
-				library = vim.api.nvim_get_runtime_file("", true),
+				library = workspace_library(),
 				checkThirdParty = false,
 			},
 			telemetry = { enable = false },

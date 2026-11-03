@@ -80,6 +80,15 @@ M.setup = function(logger)
 		group = group,
 		callback = function(event)
 			local bufnr = event.buf
+			local client_id = event.data and event.data.client_id
+
+			if client_id then
+				local ok, namespace = pcall(vim.lsp.diagnostic.get_namespace, client_id)
+
+				if ok and namespace then
+					vim.diagnostic.reset(namespace, bufnr)
+				end
+			end
 
 			inlay_hints.cleanup(bufnr)
 			lsp_keys.purge(bufnr)

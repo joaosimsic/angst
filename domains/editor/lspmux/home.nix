@@ -34,7 +34,7 @@ in
         executable = true;
         text = ''
           #!${pkgs.bash}/bin/bash
-          exec ${pkgs.gopls}/bin/gopls -remote=unix;${goSocket} "$@"
+          exec ${pkgs.gopls}/bin/gopls '-remote=unix;${goSocket}' "$@"
         '';
       };
       sessionVariables = {
@@ -59,8 +59,9 @@ in
       };
       Service = {
         Type = "simple";
+        ExecStartPre = "${pkgs.coreutils}/bin/rm -f ${socket}";
         ExecStart = "${pkgs.lspmux}/bin/lspmux server";
-        Restart = "on-failure";
+        Restart = "always";
         RestartSec = "5s";
         Environment = [
           "PATH=/home/joao/.nix-profile/bin:/home/joao/.local/bin:/home/joao/.cargo/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -84,8 +85,9 @@ in
       };
       Service = {
         Type = "simple";
+        ExecStartPre = "${pkgs.coreutils}/bin/rm -f ${goSocket}";
         ExecStart = "${pkgs.gopls}/bin/gopls -listen=unix;${goSocket} -listen.timeout=1h";
-        Restart = "on-failure";
+        Restart = "always";
         RestartSec = "5s";
       };
       Install.WantedBy = [ "default.target" ];

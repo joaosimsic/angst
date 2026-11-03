@@ -10,13 +10,14 @@
 - [x] break distance based either on tab space or formatters
 - [x] leave yazi returns heirline in terminal mode
 - [x] update scratch plugin to allow run compiler on it
-- [ ] better git handling(neogit/diffview)
+- [x] better git handling(neogit/diffview)
 - [x] md handling(md-preview/render-md)
 - [x] add file line length in heirline
 - [x] fix render md badge and move through zellij
 - [ ] add profiler, benchmark and assembly view for scratch plugin
 - [x] move adapter to use new toolchain definitions
 - [ ] spring idea, pull the string until reach a file, then release it to return to where u first pulled. a quick recall
+- [ ] find references across files, like looking where a var is used or function is imported across files in the code base
 
 # nu
 
