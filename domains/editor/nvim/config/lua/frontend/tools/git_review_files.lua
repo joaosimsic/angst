@@ -27,8 +27,42 @@ local function git_lines(cwd, args)
 	return out
 end
 
----@return string[] repo toplevels for cwd + open buffers, deduped
-function M.repo_toplevels()
+local function split_lines(out)
+	local text = out or ""
+	return vim.split(text, "\n", { trimempty = true })
+end
+
+-- Async twin of git_lines. The callback always runs on the main loop, so
+-- callers can touch buffers, windows and the quickfix list safely.
+---@param cwd string
+---@param args string[]
+---@param cb fun(lines: string[])
+local function git_lines_async(cwd, args, cb)
+	if vim.fn.executable("git") ~= 1 then
+		vim.schedule(function()
+			cb({})
+		end)
+		return
+	end
+	local cmd = { "git", "-C", cwd }
+	vim.list_extend(cmd, args)
+	local ok = pcall(vim.system, cmd, { text = true }, function(out)
+		vim.schedule(function()
+			if out == nil or out.code ~= 0 then
+				cb({})
+				return
+			end
+			cb(split_lines(out.stdout))
+		end)
+	end)
+	if not ok then
+		vim.schedule(function()
+			cb({})
+		end)
+	end
+end
+
+local function toplevel_dirs()
 	local dirs = { vim.fn.getcwd() }
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 		if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buflisted then
@@ -38,11 +72,13 @@ function M.repo_toplevels()
 			end
 		end
 	end
+	return dirs
+end
 
+local function dedupe_toplevels(lines_by_dir)
 	local tops, seen = {}, {}
-	for _, dir in ipairs(dirs) do
-		local lines = git_lines(dir, { "rev-parse", "--show-toplevel" })
-		local top = lines[1]
+	for _, lines in ipairs(lines_by_dir) do
+		local top = lines and lines[1]
 		if top ~= nil and top ~= "" and not seen[top] then
 			seen[top] = true
 			tops[#tops + 1] = top
@@ -51,18 +87,41 @@ function M.repo_toplevels()
 	return tops
 end
 
+---@return string[] repo toplevels for cwd + open buffers, deduped
+function M.repo_toplevels()
+	local dirs = toplevel_dirs()
+	local results = {}
+	for i, dir in ipairs(dirs) do
+		results[i] = git_lines(dir, { "rev-parse", "--show-toplevel" })
+	end
+	return dedupe_toplevels(results)
+end
+
+-- Async twin of repo_toplevels; preserves directory order in the result.
+local function repo_toplevels_async(cb)
+	local dirs = toplevel_dirs()
+	local results, remaining = {}, #dirs
+	if remaining == 0 then
+		cb({})
+		return
+	end
+	for i, dir in ipairs(dirs) do
+		git_lines_async(dir, { "rev-parse", "--show-toplevel" }, function(lines)
+			results[i] = lines
+			remaining = remaining - 1
+			if remaining == 0 then
+				cb(dedupe_toplevels(results))
+			end
+		end)
+	end
+end
+
 ---@class ReviewExtraEntry
 ---@field filename string absolute path
 ---@field lnum integer
 ---@field text string
 
----@param toplevel string
----@param diff_args string[]
----@return ReviewExtraEntry[] entries with compact "lnum(signN) kind" text
-local function parse_diff(toplevel, diff_args)
-	local cmd = { "-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "-U0" }
-	vim.list_extend(cmd, diff_args)
-
+local function parse_diff_lines(toplevel, lines)
 	local entries = {}
 	local path = nil
 	local pending_c, pending_sign, pending_n, pending_kind = nil, nil, nil, nil
@@ -78,7 +137,7 @@ local function parse_diff(toplevel, diff_args)
 		pending_c, pending_sign, pending_n, pending_kind = nil, nil, nil, nil
 	end
 
-	for _, line in ipairs(git_lines(toplevel, cmd)) do
+	for _, line in ipairs(lines) do
 		local git_path = line:match("^diff %-%-git a/.+ b/(.+)$")
 		if git_path then
 			flush()
@@ -111,6 +170,20 @@ local function parse_diff(toplevel, diff_args)
 	end
 	flush()
 	return entries
+end
+
+local function parse_diff(toplevel, diff_args)
+	local cmd = { "-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "-U0" }
+	vim.list_extend(cmd, diff_args)
+	return parse_diff_lines(toplevel, git_lines(toplevel, cmd))
+end
+
+local function parse_diff_async(toplevel, diff_args, cb)
+	local cmd = { "-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "-U0" }
+	vim.list_extend(cmd, diff_args)
+	git_lines_async(toplevel, cmd, function(lines)
+		cb(parse_diff_lines(toplevel, lines))
+	end)
 end
 
 ---@param toplevel string
@@ -290,12 +363,31 @@ local function unpushed_base(toplevel)
 	return mb[1]
 end
 
----@param toplevel string
----@return ReviewExtraEntry[] one {filename, lnum=1} stop per untracked file
-local function untracked_entries(toplevel)
+local function unpushed_base_async(toplevel, cb)
+	git_lines_async(toplevel, { "rev-parse", "--verify", "@{u}" }, function(up)
+		if #up == 0 then
+			cb(nil)
+			return
+		end
+		git_lines_async(toplevel, { "merge-base", "HEAD", up[1] }, function(mb)
+			if #mb == 0 then
+				cb(nil)
+				return
+			end
+			git_lines_async(toplevel, { "rev-parse", "HEAD" }, function(head)
+				if #head == 0 or mb[1] == head[1] then
+					cb(nil)
+					return
+				end
+				cb(mb[1])
+			end)
+		end)
+	end)
+end
+
+local function untracked_entries_from_lines(toplevel, lines)
 	local entries = {}
-	local cmd = { "-c", "core.quotepath=false", "status", "--porcelain", "-uall" }
-	for _, line in ipairs(git_lines(toplevel, cmd)) do
+	for _, line in ipairs(lines) do
 		if line:sub(1, 2) == "??" then
 			local rel = line:sub(4)
 			-- Defensive: strip quotes if quotepath ever kicks back in.
@@ -324,6 +416,20 @@ local function untracked_entries(toplevel)
 		end
 	end
 	return entries
+end
+
+---@param toplevel string
+---@return ReviewExtraEntry[] one {filename, lnum=1} stop per untracked file
+local function untracked_entries(toplevel)
+	local cmd = { "-c", "core.quotepath=false", "status", "--porcelain", "-uall" }
+	return untracked_entries_from_lines(toplevel, git_lines(toplevel, cmd))
+end
+
+local function untracked_entries_async(toplevel, cb)
+	local cmd = { "-c", "core.quotepath=false", "status", "--porcelain", "-uall" }
+	git_lines_async(toplevel, cmd, function(lines)
+		cb(untracked_entries_from_lines(toplevel, lines))
+	end)
 end
 
 -- Worktree hunks for attached buffers, straight from the gitsigns cache.
@@ -402,6 +508,60 @@ function M.extra_entries_for(toplevels)
 	return entries
 end
 
+local function collect_top_async(top, cb)
+	local entries = {}
+	local function add(more)
+		vim.list_extend(entries, more or {})
+	end
+	local function finish()
+		cb(entries)
+	end
+	local function untracked()
+		untracked_entries_async(top, function(extra)
+			add(extra)
+			finish()
+		end)
+	end
+	-- Same order as extra_entries_for: unstaged, staged, unpushed, untracked.
+	parse_diff_async(top, {}, function(unstaged)
+		add(unstaged)
+		parse_diff_async(top, { "--cached" }, function(cached)
+			add(cached)
+			unpushed_base_async(top, function(base)
+				if base then
+					parse_diff_async(top, { base .. "..HEAD" }, function(unpushed)
+						add(unpushed)
+						untracked()
+					end)
+				else
+					untracked()
+				end
+			end)
+		end)
+	end)
+end
+
+local function extra_entries_for_async(toplevels, cb)
+	local results, remaining = {}, #toplevels
+	if remaining == 0 then
+		cb({})
+		return
+	end
+	for i, top in ipairs(toplevels) do
+		collect_top_async(top, function(entries)
+			results[i] = entries
+			remaining = remaining - 1
+			if remaining == 0 then
+				local all = {}
+				for _, top_entries in ipairs(results) do
+					vim.list_extend(all, top_entries or {})
+				end
+				cb(all)
+			end
+		end)
+	end
+end
+
 -- Per-hunk dedupe (file + lnum): one stop per hunk. A staged file
 -- with N hunks must contribute N entries, not one. Entries at a
 -- lnum already covered are skipped to avoid double stops on the same
@@ -451,14 +611,7 @@ function M.append_missing(entries)
 	return #fresh
 end
 
--- Single synchronous collection: worktree hunks for attached buffers
--- first, then CLI extras (unstaged/staged/unpushed/untracked, covering
--- unopened files). Written as one list in one tick: unlike gitsigns'
--- async setqflist, no later tick can replace the combined list under
--- us and reset the index, which surfaced as perpetual "collecting…"
--- and h/l stuck on the first/last diff.
----@return integer number of entries in the rebuilt list
-function M.collect()
+local function combine_entries(worktree, extras)
 	local combined, seen = {}, {}
 	local function offer(entry)
 		local abs = abs_of(entry)
@@ -478,14 +631,41 @@ function M.collect()
 			text = entry.text,
 		}
 	end
-	for _, e in ipairs(worktree_entries()) do
+	for _, e in ipairs(worktree) do
 		offer(e)
 	end
-	for _, e in ipairs(M.extra_entries_for(M.repo_toplevels())) do
+	for _, e in ipairs(extras) do
 		offer(e)
 	end
+	return combined
+end
+
+-- Single synchronous collection: worktree hunks for attached buffers
+-- first, then CLI extras (unstaged/staged/unpushed/untracked, covering
+-- unopened files). Written as one list in one tick: unlike gitsigns'
+-- async setqflist, no later tick can replace the combined list under
+-- us and reset the index, which surfaced as perpetual "collecting…"
+-- and h/l stuck on the first/last diff.
+---@return integer number of entries in the rebuilt list
+function M.collect()
+	local combined = combine_entries(worktree_entries(), M.extra_entries_for(M.repo_toplevels()))
 	vim.fn.setqflist(combined, "r")
 	return #combined
+end
+
+-- Async worktree collection. gitsigns hunks are read synchronously on
+-- the main loop (cache only), while every git CLI probe runs through
+-- vim.system. The callback receives the same deduped quickfix-shaped
+-- list as collect(), always on the main loop. Nothing is written to the
+-- quickfix list here: the caller owns that single write.
+---@param cb fun(entries: table[])
+function M.collect_async(cb)
+	local worktree = worktree_entries()
+	repo_toplevels_async(function(tops)
+		extra_entries_for_async(tops, function(extras)
+			cb(combine_entries(worktree, extras))
+		end)
+	end)
 end
 
 return M
