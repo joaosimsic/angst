@@ -50,7 +50,7 @@ let
   parseEntries =
     entries:
     let
-      parsedEntries = builtins.map parseSecretFile entries;
+      parsedEntries = map parseSecretFile entries;
       secretEntries = builtins.filter (entry: entry != null) parsedEntries;
     in
     sortEntries secretEntries;
@@ -79,7 +79,7 @@ let
     grouped:
     let
       slugs = builtins.attrNames grouped;
-      collisions = builtins.map (slug: collisionFor grouped slug) slugs;
+      collisions = map (slug: collisionFor grouped slug) slugs;
     in
     builtins.filter (collision: collision != null) collisions;
 

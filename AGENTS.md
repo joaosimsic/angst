@@ -12,7 +12,7 @@ Before reporting any code change complete, run from the repository root:
 nix-shell infra/static-analysis --run ./infra/static-analysis/static-analysis.sh
 ```
 
-If `statix`, `deadnix`, `nixfmt`, `nix-instantiate`, `golangci-lint`, and Go are already on `PATH`, `./infra/static-analysis/static-analysis.sh` is equivalent.
+If `statix`, `deadnix`, `nixfmt`, `nix-instantiate`, `yamllint`, `golangci-lint`, and Go are already on `PATH`, `./infra/static-analysis/static-analysis.sh` is equivalent.
 
 This validation is mandatory and repo-wide. Do not replace it with a per-file or narrowed command. Do not suppress, disable, or ignore warnings. Fix failures before finishing.
 
@@ -21,6 +21,7 @@ This validation is mandatory and repo-wide. Do not replace it with a per-file or
 - `statix check .`
 - `deadnix --fail .`
 - `nixfmt --check` on every tracked `.nix` file
+- `yamllint` on every tracked `.yml`/`.yaml` file
 - export-use check: global exports used outside their module; private module exports used inside their module; test files never justify exports
 - `gofmt -l` on every tracked `.go` file
 - `CGO_ENABLED=0 go vet ./...` in every Go module

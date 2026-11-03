@@ -1,24 +1,27 @@
 let
-  contextSuffix =
-    context:
-    let
-      names = builtins.attrNames context;
-      rendered = builtins.concatStringsSep " " (
-        map (name: "${name}=${builtins.toJSON context.${name}}") names
-      );
-    in
-    if names == [ ] then "" else " (${rendered})";
+  error = import ../../lib/error.nix;
 
-  throwError = message: context: throw "${message}${contextSuffix context}";
+  throwError =
+    message: context:
+    error.throwError {
+      kind = "SecretRef";
+      inherit message context;
+    };
+
+  duplicateCause = duplicate: {
+    kind = "SecretRef";
+    message = "slug `${duplicate.slug}` maps to multiple files";
+    context = { inherit (duplicate) files; };
+  };
 in
 {
   inherit throwError;
 
-  throwBadRef = context: throwError "SecretRef: `ref` must be a non-empty string" context;
+  throwBadRef = context: throwError "`ref` must be a non-empty string" context;
 
   throwUnknownRef =
     context: ref:
-    throwError "SecretRef: unknown `ref`, no such slug under secrets/ ref=${builtins.toJSON ref}" context;
+    throwError "unknown `ref`, no such slug under secrets/ ref=${builtins.toJSON ref}" context;
 
   throwField =
     context: throwError "secret field must be `SecretRef { ref }`, never a plain string" context;
@@ -34,11 +37,14 @@ in
 
   throwDuplicate =
     duplicates:
-    throw "SecretRef: duplicate slug maps to multiple files duplicates=${builtins.toJSON duplicates}";
+    error.throwError {
+      kind = "SecretRef";
+      message = "duplicate slug maps to multiple files";
+      causes = map duplicateCause duplicates;
+    };
 
   throwSecretFields =
     context: throwError "checkSecretRefsIn: `secretFields` must be a list of non-empty strings" context;
 
-  throwMissingInventory =
-    context: throwError "SecretRef: secrets/ directory missing, no inventory" context;
+  throwMissingInventory = context: throwError "secrets/ directory missing, no inventory" context;
 }

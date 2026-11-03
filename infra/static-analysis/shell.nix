@@ -15,6 +15,7 @@ pkgs.mkShell {
     statix
     deadnix
     nixfmt
+    yamllint
     golangci-lint
   ];
 }

@@ -1,13 +1,15 @@
 let
   hasSuffix =
     suffix: value:
-    let
-      valueLength = builtins.stringLength value;
-      suffixLength = builtins.stringLength suffix;
-    in
-    builtins.isString value
-    && valueLength >= suffixLength
-    && builtins.substring (valueLength - suffixLength) suffixLength value == suffix;
+    if !(builtins.isString suffix) || !(builtins.isString value) then
+      false
+    else
+      let
+        valueLength = builtins.stringLength value;
+        suffixLength = builtins.stringLength suffix;
+      in
+      valueLength >= suffixLength
+      && builtins.substring (valueLength - suffixLength) suffixLength value == suffix;
 
   stripSuffix =
     suffix: value:

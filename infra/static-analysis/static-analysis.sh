@@ -4,7 +4,7 @@ set -euo pipefail
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-for tool in git go statix deadnix nixfmt nix-instantiate golangci-lint; do
+for tool in git go statix deadnix nixfmt nix-instantiate yamllint golangci-lint; do
     if ! command -v "$tool" >/dev/null 2>&1; then
         printf 'static-analysis: missing %s; run via: nix-shell infra/static-analysis --run ./infra/static-analysis/static-analysis.sh\n' "$tool" >&2
         exit 1
@@ -20,6 +20,11 @@ fi
 statix check .
 deadnix --fail .
 nixfmt --check "${nix_files[@]}"
+
+mapfile -d '' -t yaml_files < <(git ls-files -z -- '*.yml' '*.yaml')
+if ((${#yaml_files[@]} > 0)); then
+    yamllint "${yaml_files[@]}"
+fi
 
 (
     cd infra/static-analysis/exportcheck

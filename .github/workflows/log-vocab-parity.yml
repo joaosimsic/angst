@@ -1,10 +1,18 @@
+---
 name: log-vocab-parity
-on:
+"on":
   push:
     paths:
       - "infra/contracts/log-vocab.json"
       - "infra/contracts/codes.nix"
       - "infra/contracts/levels.nix"
+      - "infra/contracts/secret-ref/**"
+      - "infra/lib/error.nix"
+      - "infra/lib/fs.nix"
+      - "infra/lib/match.nix"
+      - "infra/lib/strings.nix"
+      - "infra/logger/default.nix"
+      - "infra/logger/test.nix"
       - "infra/logger/logger.go"
       - "infra/logger/vocab_gen.go"
       - "infra/logger/logger_test.go"
@@ -15,6 +23,13 @@ on:
       - "infra/contracts/log-vocab.json"
       - "infra/contracts/codes.nix"
       - "infra/contracts/levels.nix"
+      - "infra/contracts/secret-ref/**"
+      - "infra/lib/error.nix"
+      - "infra/lib/fs.nix"
+      - "infra/lib/match.nix"
+      - "infra/lib/strings.nix"
+      - "infra/logger/default.nix"
+      - "infra/logger/test.nix"
       - "infra/logger/logger.go"
       - "infra/logger/vocab_gen.go"
       - "infra/logger/logger_test.go"
@@ -33,8 +48,10 @@ jobs:
         working-directory: .
         run: |
           set -euo pipefail
-          nix eval --impure --json --expr '(import ./infra/logger/default.nix).logCodes'
-          nix eval --impure --json --expr '(import ./infra/logger/default.nix).logLevels'
+          log_expr='(import ./infra/logger/default.nix)'
+          nix eval --impure --expr 'import ./infra/logger/test.nix'
+          nix eval --impure --json --expr "${log_expr}.logCodes"
+          nix eval --impure --json --expr "${log_expr}.logLevels"
           NIXPKGS_ALLOW_UNFREE=1 nix flake check --no-build --impure
       - name: Setup Go 1.26
         uses: actions/setup-go@v5
@@ -44,4 +61,5 @@ jobs:
         working-directory: infra/logger
         run: |
           set -euo pipefail
-          CGO_ENABLED=0 go test ./... -count=1 -run 'TestVocab|TestNixParity|TestLevel|TestLogCodes|TestImmutability' -v
+          test_pattern='Test(Vocab|NixParity|Level|LogCodes|Immutability)'
+          CGO_ENABLED=0 go test ./... -count=1 -run "${test_pattern}" -v

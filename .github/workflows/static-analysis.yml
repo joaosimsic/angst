@@ -1,6 +1,7 @@
+---
 name: static-analysis
 
-on:
+"on":
   push:
   pull_request:
 
@@ -18,4 +19,6 @@ jobs:
         with:
           go-version: "1.26"
       - name: Run static analysis
-        run: nix-shell infra/static-analysis --run ./infra/static-analysis/static-analysis.sh
+        run: |
+          nix-shell infra/static-analysis \
+            --run ./infra/static-analysis/static-analysis.sh

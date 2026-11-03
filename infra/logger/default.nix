@@ -1,5 +1,6 @@
 let
   strings = import ../lib/strings.nix;
+  error = import ../lib/error.nix;
   codesModule = import ../contracts/codes.nix;
   levelsModule = import ../contracts/levels.nix;
   secretRefModule = import ../contracts/secret-ref/default.nix;
@@ -26,23 +27,32 @@ let
     in
     line;
 
+  throwField =
+    field: message:
+    error.throwError {
+      kind = "field";
+      inherit message;
+      context = { inherit field; };
+    };
+
   checkNonEmptyString =
     field: value:
     if strings.isNonEmptyString value then
       value
     else
-      throw "logger: `${field}` must be a non-empty string";
+      throwField field "logger: `${field}` must be a non-empty string";
 
   checkPackages =
     packages:
     if builtins.isList packages && builtins.all (package: builtins.isString package) packages then
       packages
     else
-      throw "logger: `packages` must be a list of strings";
+      throwField "packages" "logger: `packages` must be a list of strings";
 
-  checkData = data: if builtins.isAttrs data then data else throw "logger: `data` must be an attrset";
+  checkData =
+    data: if builtins.isAttrs data then data else throwField "data" "logger: `data` must be an attrset";
 
-  validateDiagnostic =
+  validateFields =
     {
       code,
       scope,
@@ -70,49 +80,6 @@ let
       );
     in
     {
-      code = checkedCode;
-      scope = checkedScope;
-      host = checkedHost;
-      packages = checkedPackages;
-      phase = checkedPhase;
-      message = checkedMessage;
-      data = checkedData;
-    };
-
-  validateEvent =
-    {
-      ts,
-      level,
-      code,
-      scope,
-      host,
-      packages,
-      phase,
-      message,
-      data ? { },
-      secrets ? [ ],
-      secretFields ? secretRefModule.secretSlugs,
-    }:
-    let
-      checkedTimestamp = checkNonEmptyString "ts" ts;
-      checkedLevel = levelsModule.checkLogLevel level;
-      checkedCode = codesModule.checkLogCode code;
-      checkedScope = checkNonEmptyString "scope" scope;
-      checkedHost = checkNonEmptyString "host" host;
-      checkedPackages = checkPackages packages;
-      checkedPhase = checkNonEmptyString "phase" phase;
-      validatedMessage = checkNonEmptyString "message" message;
-      checkedData = secretRefModule.checkSecretRefsIn {
-        data = checkData data;
-        inherit secretFields;
-      };
-      checkedMessage = secretRefModule.checkNoKnownSecrets secrets validatedMessage (
-        builtins.toJSON checkedData
-      );
-    in
-    {
-      ts = checkedTimestamp;
-      level = checkedLevel;
       code = checkedCode;
       scope = checkedScope;
       host = checkedHost;
@@ -139,7 +106,7 @@ let
       null;
 
   renderDiagnosticsLines =
-    diagnostics: builtins.concatStringsSep "\n" (builtins.map renderDiagnosticLine diagnostics);
+    diagnostics: builtins.concatStringsSep "\n" (map renderDiagnosticLine diagnostics);
 in
 {
   inherit (codesModule)
@@ -175,16 +142,45 @@ in
   diagnostic =
     arguments:
     let
-      validatedDiagnostic = validateDiagnostic arguments;
+      fields = validateFields arguments;
     in
-    validatedDiagnostic;
+    {
+      inherit (fields)
+        code
+        data
+        host
+        message
+        packages
+        phase
+        scope
+        ;
+    };
 
   event =
     arguments:
     let
-      validatedEvent = validateEvent arguments;
+      checkedTimestamp = checkNonEmptyString "ts" arguments.ts;
+      checkedLevel = levelsModule.checkLogLevel arguments.level;
+      fields = validateFields (
+        removeAttrs arguments [
+          "ts"
+          "level"
+        ]
+      );
     in
-    validatedEvent;
+    {
+      ts = checkedTimestamp;
+      level = checkedLevel;
+      inherit (fields)
+        code
+        data
+        host
+        message
+        packages
+        phase
+        scope
+        ;
+    };
 
   renderDiagnostic = renderDiagnosticLine;
 
@@ -196,7 +192,7 @@ in
       kind = renderKind value;
     in
     if kind == null then
-      throw "logger render: expected diagnostic or event"
+      throwField "value" "logger render: expected diagnostic or event"
     else
       renderers.${kind} value;
 
@@ -205,7 +201,7 @@ in
   throwDiagnostics =
     diagnostics:
     if !(builtins.isList diagnostics) then
-      throw "logger throwDiagnostics: expected a list of diagnostics"
+      throwField "diagnostics" "logger throwDiagnostics: expected a list of diagnostics"
     else if diagnostics == [ ] then
       null
     else
@@ -219,7 +215,7 @@ in
   toJSONL =
     events:
     builtins.concatStringsSep "\n" (
-      builtins.map (
+      map (
         event:
         let
           encodedEvent = builtins.toJSON event;

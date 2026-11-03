@@ -216,6 +216,7 @@ infra/
     wrappers/
   outputs/
   lib/
+    error.nix
     strings.nix
   contracts/
     codes.nix
@@ -711,7 +712,7 @@ Rules:
 | `infra/monads` | The edge. Imported only by files under `compose/`, `systems/`, `workflow/`, `infra/`. Never imported by `catalog/*` or `secrets/`. |
 | `*/default.nix` (bucket facades) | Public API only. Returns plain data, modules, packages, diagnostics, or monadic programs. Never leaks internals. |
 | `*/internal/` | Private to that bucket member. No other member may import it. `workflow/validate` never imports `workflow/activate` internals. |
-| `infra/lib/` | Nix shared utilities only. Imports only `infra/lib/` and nixpkgs lib. Never imports `compose/`, `systems/`, `workflow/`, `catalog/`. Holds shared string and filesystem helpers (`infra/lib/strings.nix`), plus the single regex home (`infra/lib/match.nix`: `parseLogCode`/`logCodePrefix`; patterns stay private; leaf, no imports; no secret-name regex). Validation happens at boundaries and throws on invalid input; no `Result` core. |
+| `infra/lib/` | Nix shared utilities only. Imports only `infra/lib/` and nixpkgs lib. Never imports `compose/`, `systems/`, `workflow/`, `catalog/`. Holds shared string and filesystem helpers (`infra/lib/strings.nix`), the shared throw helper (`infra/lib/error.nix`), plus the single regex home (`infra/lib/match.nix`: `parseLogCode`/`logCodePrefix`; patterns stay private; leaf, no imports; no secret-name regex). Validation happens at boundaries and throws on invalid input; no `Result` core. |
 | `infra/golib/` | Go shared mechanics only. Imports stdlib plus `infra/golib/`. Never imports `infra/logger`, `infra/cli`, `infra/contracts`, `workflow/`, `systems/`, `compose/`, `catalog/`, or `infra/static-analysis/`. Holds repository IO, Nix invocation, and Nix text scanning. No domain policy. |
 | `infra/nixpkgs-config.nix` | Single nixpkgs configuration. Imported by `infra/outputs`, `workflow/build`, and compose builds via args. Never hardcoded from `catalog/*`. |
 | `catalog/features/*/default.nix` | Declarative record (`type`, `requires`, `provides`, `conflicts`, `sides`, `targets`, `placement`, `persist`). No imports from `compose/`, `systems/`, `workflow/`, or non-lib `infra/` (local files plus `infra/lib/` only); no effects. |
@@ -1835,6 +1836,8 @@ pre-refac `lib/core/` port:
 - never imports `compose/`, `systems/`, `workflow/`, `catalog/`, or
   `infra/contracts/`
 - generic helpers with no domain logic
+- `infra/lib/error.nix`: generic tree-formatted error throw. Leaf, no imports.
+  Formatter stays private; `throwError` is the sole public throw helper.
 - `infra/lib/match.nix`: single regex home. Leaf, no imports. Patterns stay private; `parseLogCode`/`logCodePrefix` are public. Secret identity comes from `secrets/` inventory, never regex. Callers use functions, not literals. No inline `builtins.match` outside this file.
 - `infra/lib/strings.nix`: shared string helpers, including `isNonEmptyString`,
   `hasSuffix`, `stripSuffix`, and `uniqueSorted`. No `TGT`, no `logLevels`,
@@ -1889,8 +1892,8 @@ plus nixpkgs lib. Lists live in `infra/contracts/log-vocab.json`
   Never by `catalog/*` (only `infra/lib/`). Never imports `compose/`,
   `systems/`, `workflow/`, `catalog/`, or `infra/logger`.
 - `infra/logger/default.nix` `let`-imports these 3 plus
-  `workflow/phases.nix` and `infra/lib/strings.nix` (plus transitive
-  `infra/lib/match.nix`, `infra/lib/fs.nix`),
+  `workflow/phases.nix`, `infra/lib/strings.nix`, and `infra/lib/error.nix`
+  (plus transitive `infra/lib/match.nix`, `infra/lib/fs.nix`),
   drops `rec`, re-exports
   same public names plus `check*` validators.
 

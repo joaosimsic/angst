@@ -1,4 +1,6 @@
 let
+  error = import ../lib/error.nix;
+
   logLevelsList = (builtins.fromJSON (builtins.readFile ./log-vocab.json)).logLevels;
 
   checkLogLevel =
@@ -6,7 +8,14 @@ let
     if builtins.elem level logLevelsList then
       level
     else
-      throw "logger: `level` must be one of ${builtins.concatStringsSep " " logLevelsList}, got `${builtins.toJSON level}`";
+      error.throwError {
+        kind = "LOG";
+        message = "logger: unknown `level`";
+        context = {
+          inherit level;
+          expected = logLevelsList;
+        };
+      };
 in
 {
   logLevels = logLevelsList;
