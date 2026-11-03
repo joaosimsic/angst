@@ -1,24 +1,31 @@
 let
-  relPathFor = prefix: basename: if prefix == "" then basename else prefix + "/" + basename;
+  relativePathFor = prefix: basename: if prefix == "" then basename else prefix + "/" + basename;
 
-  walkOne = dir: prefix: entries: basename:
+  walkEntry =
+    directory: prefix: entries: basename:
     let
-      ftype = entries.${basename};
-      relPath = relPathFor prefix basename;
+      fileType = entries.${basename};
+      relativePath = relativePathFor prefix basename;
     in
-    if ftype == "directory" then walkGo (dir + "/${basename}") relPath else [
-      {
-        inherit basename relPath ftype;
-      }
-    ];
+    if fileType == "directory" then
+      walkDirectoryTree (directory + "/${basename}") relativePath
+    else
+      [
+        {
+          inherit basename fileType relativePath;
+        }
+      ];
 
-  walkGo = dir: prefix:
+  walkDirectoryTree =
+    directory: prefix:
     let
-      entries = builtins.readDir dir;
+      entries = builtins.readDir directory;
     in
-    builtins.concatLists (map (walkOne dir prefix entries) (builtins.attrNames entries));
+    builtins.concatLists (
+      map (basename: walkEntry directory prefix entries basename) (builtins.attrNames entries)
+    );
 
-  walkDir = root: walkGo root "";
+  walkDir = root: walkDirectoryTree root "";
 in
 {
   inherit walkDir;

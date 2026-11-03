@@ -1,5 +1,4 @@
 let
-  types = import ../../lib/types.nix;
   errors = import ./errors.nix;
 
   contains =
@@ -9,7 +8,7 @@ let
     && builtins.isString haystack
     && haystack != builtins.replaceStrings [ needle ] [ "" ] haystack;
 
-  jsonNeedle =
+  jsonEncodedValue =
     value:
     let
       encoded = builtins.toJSON value;
@@ -18,20 +17,20 @@ let
 in
 {
   checkNoKnownSecrets =
-    secrets: message: dataJson:
-    let
-      leaks =
-        secret:
-        contains secret message || contains secret dataJson || contains (jsonNeedle secret) dataJson;
-    in
+    secrets: message: dataJSON:
     if !builtins.isList secrets then
-      errors.err "checkNoKnownSecrets: `secrets` must be a list" { }
-    else if !builtins.all types.isNonEmptyStr secrets then
-      errors.err "checkNoKnownSecrets: `secrets` must contain only non-empty strings" { }
-    else if !(builtins.isString message && builtins.isString dataJson) then
-      errors.err "checkNoKnownSecrets: `message` and `dataJson` must be strings" { }
-    else if builtins.filter leaks secrets == [ ] then
-      types.ok true
+      errors.throwError "checkNoKnownSecrets: `secrets` must be a list" { }
+    else if !builtins.all (secret: builtins.isString secret && secret != "") secrets then
+      errors.throwError "checkNoKnownSecrets: `secrets` must contain only non-empty strings" { }
+    else if !(builtins.isString message && builtins.isString dataJSON) then
+      errors.throwError "checkNoKnownSecrets: `message` and `dataJSON` must be strings" { }
+    else if
+      builtins.any (
+        secret:
+        contains secret message || contains secret dataJSON || contains (jsonEncodedValue secret) dataJSON
+      ) secrets
+    then
+      errors.throwLeak { }
     else
-      errors.leak { };
+      message;
 }

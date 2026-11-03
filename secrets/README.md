@@ -3,7 +3,7 @@
 Placeholder layout only. No values. No ciphertext. No behavior.
 
 Mirrors old shape for future `systems/secrets` owner:
-- `secrets/master/` per-host master material
+- `secrets/passwd/` per-host master material
 - `secrets/apps/<scope>/<slug>` app slugs
 - `secrets/ssh/` scope keys
 

@@ -1,30 +1,24 @@
 let
-  types = import ../../lib/types.nix;
+  strings = import ../../lib/strings.nix;
   errors = import ./errors.nix;
 
-  mk =
+  mkSecretRefValidation =
     inventory:
     let
-      result = inventory.inventoryResult;
-      slugSet = builtins.listToAttrs (
-        map (slug: {
-          name = slug;
-          value = true;
-        }) inventory.secretSlugs
-      );
-      inventoryErr = types.isErr result;
+      nameSet =
+        names:
+        builtins.listToAttrs (
+          map (name: {
+            inherit name;
+            value = true;
+          }) names
+        );
 
-      badRef = errors.badRef;
-      unknownRef = errors.unknownRef;
-      fieldError = errors.field;
-      misplaced = errors.misplaced;
-      unsupported = errors.unsupported;
+      slugSet = nameSet inventory.secretSlugs;
 
-      isSecretRef =
-        value:
-        builtins.isAttrs value
-        && builtins.attrNames value == [ "ref" ]
-        && types.isNonEmptyStr (value.ref or null);
+      isRefAttrs = value: builtins.isAttrs value && builtins.attrNames value == [ "ref" ];
+
+      isSecretRef = value: isRefAttrs value && strings.isNonEmptyString (value.ref or null);
 
       isScalar =
         value:
@@ -38,91 +32,99 @@ let
 
       checkSecretRef =
         ref:
-        if inventoryErr then
-          types.withContext { field = "ref"; } result
-        else if types.isNonEmptyStr ref && builtins.hasAttr ref slugSet then
-          types.ok { inherit ref; }
-        else if !types.isNonEmptyStr ref then
-          badRef { field = "ref"; }
+        if isKnownSecretRef ref then
+          { inherit ref; }
+        else if !strings.isNonEmptyString ref then
+          errors.throwBadRef { field = "ref"; }
         else
-          unknownRef { field = "ref"; } ref;
+          errors.throwUnknownRef { field = "ref"; } ref;
 
       checkSecretFields =
         secretFields:
-        if builtins.isList secretFields && builtins.all types.isNonEmptyStr secretFields then
-          types.ok (
-            builtins.listToAttrs (
-              map (name: {
-                name = name;
-                value = true;
-              }) secretFields
-            )
-          )
+        if
+          builtins.isList secretFields && builtins.all (field: strings.isNonEmptyString field) secretFields
+        then
+          nameSet secretFields
         else
-          errors.secretFields { field = "secretFields"; };
+          errors.throwSecretFields { field = "secretFields"; };
 
       isDeclared =
         fieldSet: path: name:
         builtins.hasAttr name fieldSet || builtins.hasAttr (path + "." + name) fieldSet;
 
+      walkDeclared =
+        path: value:
+        if isSecretRef value then
+          if isKnownSecretRef value.ref then value else errors.throwUnknownRef { inherit path; } value.ref
+        else if isRefAttrs value then
+          errors.throwBadRef { inherit path; }
+        else
+          errors.throwField { inherit path; };
+
+      walkList =
+        fieldSet: path: value:
+        builtins.genList (
+          index: walk fieldSet (path + "." + toString index) false (builtins.elemAt value index)
+        ) (builtins.length value);
+
+      walkAttr =
+        fieldSet: path: name: value:
+        let
+          childPath = path + "." + name;
+        in
+        walk fieldSet childPath (isDeclared fieldSet path name) value;
+
+      walkAttrs =
+        fieldSet: path: value:
+        if isRefAttrs value then
+          if isSecretRef value then
+            errors.throwMisplaced { inherit path; }
+          else
+            errors.throwBadRef { inherit path; }
+        else
+          builtins.listToAttrs (
+            map (name: {
+              inherit name;
+              value = walkAttr fieldSet path name value.${name};
+            }) (builtins.attrNames value)
+          );
+
       walk =
         fieldSet: path: declared: value:
         if declared then
-          if inventoryErr then
-            types.withContext { inherit path; } result
-          else if isSecretRef value then
-            if builtins.hasAttr value.ref slugSet then types.ok true else unknownRef { inherit path; } value.ref
-          else if builtins.isAttrs value && builtins.attrNames value == [ "ref" ] then
-            badRef { inherit path; }
-          else
-            fieldError { inherit path; }
+          walkDeclared path value
         else if isScalar value then
-          types.ok true
+          value
         else if builtins.isList value then
-          types.mapOk (_: true) (
-            types.collect (
-              builtins.genList (i: walk fieldSet (path + "." + toString i) false (builtins.elemAt value i)) (
-                builtins.length value
-              )
-            )
-          )
-        else if builtins.isAttrs value && builtins.attrNames value == [ "ref" ] then
-          if isSecretRef value then misplaced { inherit path; } else badRef { inherit path; }
+          walkList fieldSet path value
         else if builtins.isAttrs value then
-          types.mapOk (_: true) (
-            types.collect (
-              map (
-                name:
-                let
-                  childPath = path + "." + name;
-                in
-                walk fieldSet childPath (isDeclared fieldSet path name) value.${name}
-              ) (builtins.attrNames value)
-            )
-          )
+          walkAttrs fieldSet path value
         else
-          unsupported { inherit path; };
+          errors.throwUnsupported { inherit path; };
 
       checkSecretRefsIn =
         {
           data,
           secretFields ? inventory.secretSlugs,
         }:
-        if inventoryErr then
-          result
-        else
-          types.andThen (fieldSet: walk fieldSet "data" false data) (checkSecretFields secretFields);
+        let
+          fieldSet = checkSecretFields secretFields;
+          validatedData = walk fieldSet "data" false data;
+        in
+        builtins.deepSeq fieldSet (builtins.deepSeq validatedData validatedData);
 
       checkSecretRefsOnly = data: checkSecretRefsIn { inherit data; };
     in
     {
-      inherit checkSecretRef;
-      inherit isSecretRef;
-      inherit isKnownSecretRef;
-      inherit checkSecretRefsOnly;
-      inherit checkSecretRefsIn;
+      inherit
+        checkSecretRef
+        isSecretRef
+        isKnownSecretRef
+        checkSecretRefsOnly
+        checkSecretRefsIn
+        ;
     };
 in
 {
-  inherit mk;
+  inherit mkSecretRefValidation;
 }

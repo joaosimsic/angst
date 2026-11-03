@@ -1,33 +1,40 @@
 let
   hasSuffix =
-    suffix: str:
+    suffix: value:
     let
-      strLen = builtins.stringLength str;
-      suffixLen = builtins.stringLength suffix;
+      valueLength = builtins.stringLength value;
+      suffixLength = builtins.stringLength suffix;
     in
-    builtins.isString str && strLen >= suffixLen && builtins.substring (strLen - suffixLen) suffixLen str == suffix;
+    builtins.isString value
+    && valueLength >= suffixLength
+    && builtins.substring (valueLength - suffixLength) suffixLength value == suffix;
 
   stripSuffix =
-    suffix: str:
-    if hasSuffix suffix str then
-      builtins.substring 0 (builtins.stringLength str - builtins.stringLength suffix) str
+    suffix: value:
+    if hasSuffix suffix value then
+      builtins.substring 0 (builtins.stringLength value - builtins.stringLength suffix) value
     else
-      str;
-
-  stripSuffixes = suffixes: str: builtins.foldl' (acc: suffix: stripSuffix suffix acc) str suffixes;
+      value;
 
   uniqueSorted =
-    xs:
+    values:
     builtins.foldl' (
-      acc: x:
-      if acc == [ ] || builtins.elemAt acc (builtins.length acc - 1) != x then acc ++ [ x ] else acc
-    ) [ ] (builtins.sort builtins.lessThan xs);
+      sortedValues: value:
+      if
+        sortedValues == [ ] || builtins.elemAt sortedValues (builtins.length sortedValues - 1) != value
+      then
+        sortedValues ++ [ value ]
+      else
+        sortedValues
+    ) [ ] (builtins.sort (left: right: left < right) values);
+
+  isNonEmptyString = value: builtins.isString value && value != "";
 in
 {
   inherit
     hasSuffix
+    isNonEmptyString
     stripSuffix
-    stripSuffixes
     uniqueSorted
     ;
 }

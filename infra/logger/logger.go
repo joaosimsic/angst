@@ -1,9 +1,10 @@
 package logger
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
-// Level is the wire log level. Canonical wire values are lowercase,
-// matching infra/contracts/log-vocab.json and Nix logLevels.
 type Level string
 
 const (
@@ -13,66 +14,38 @@ const (
 	LevelStep  Level = "step"
 )
 
-// LogCodes returns the 12 log code prefixes. Returns a clone;
-// caller cannot mutate embedded vocab.
 func LogCodes() []string {
-	out := make([]string, len(generatedLogCodes))
-	copy(out, generatedLogCodes)
-	return out
+	return slices.Clone(generatedLogCodes)
 }
 
-// LogLevels returns the wire level values. Returns a clone.
 func LogLevels() []string {
-	out := make([]string, len(generatedLogLevels))
-	copy(out, generatedLogLevels)
-	return out
+	return slices.Clone(generatedLogLevels)
 }
 
-// IsLogLevel reports whether s is a known wire level.
-func IsLogLevel(s string) bool {
-	for _, l := range generatedLogLevels {
-		if s == l {
-			return true
-		}
-	}
-	return false
+func IsLogLevel(value string) bool {
+	return slices.Contains(generatedLogLevels, value)
 }
 
-// IsLogCodePrefix reports whether s is a known code prefix.
-func IsLogCodePrefix(s string) bool {
-	for _, c := range generatedLogCodes {
-		if s == c {
-			return true
-		}
-	}
-	return false
+func IsLogCodePrefix(value string) bool {
+	return slices.Contains(generatedLogCodes, value)
 }
 
-// IsKnownSecretRef reports whether ref resolves to a secrets/ inventory slug.
-// Exact match only, no substring guessing. Empty and unknown refs are false.
-// Caller supplies inventory; this package embeds none, so no drift.
 func IsKnownSecretRef(ref string, slugs []string) bool {
 	if ref == "" {
 		return false
 	}
-	for _, s := range slugs {
-		if ref == s {
-			return true
-		}
-	}
-	return false
+
+	return slices.Contains(slugs, ref)
 }
 
-// LevelOf maps a backend line to a Level. Backend-agnostic fallback:
-// error/fail -> ERROR, warn -> WARN, step/==> -> STEP, else INFO.
 func LevelOf(line string) Level {
-	l := strings.ToLower(line)
+	lowercaseLine := strings.ToLower(line)
 	switch {
-	case strings.Contains(l, "error") || strings.Contains(l, "fail"):
+	case strings.Contains(lowercaseLine, "error") || strings.Contains(lowercaseLine, "fail"):
 		return LevelError
-	case strings.Contains(l, "warn"):
+	case strings.Contains(lowercaseLine, "warn"):
 		return LevelWarn
-	case strings.Contains(l, "step") || strings.Contains(l, "==>"):
+	case strings.Contains(lowercaseLine, "step") || strings.Contains(lowercaseLine, "==>"):
 		return LevelStep
 	default:
 		return LevelInfo

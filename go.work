@@ -1,0 +1,7 @@
+go 1.26
+
+use (
+	./infra/golib
+	./infra/logger
+	./infra/static-analysis/exportcheck
+)

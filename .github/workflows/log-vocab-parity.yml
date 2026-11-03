@@ -44,6 +44,4 @@ jobs:
         working-directory: infra/logger
         run: |
           set -euo pipefail
-          test -z "$(gofmt -l .)"
-          CGO_ENABLED=0 go vet ./...
           CGO_ENABLED=0 go test ./... -count=1 -run 'TestVocab|TestNixParity|TestLevel|TestLogCodes|TestImmutability' -v

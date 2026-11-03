@@ -1,91 +1,48 @@
-# infra/logger/default.nix — thin facade: shapes, render, throw only.
-#
-# Pure data only. No printing. No IO. No `builtins.trace`.
-# Vocab lives in `infra/contracts/` and is re-exported here, never
-# redefined. Generic checks plus the `Result` core live in
-# `infra/lib/types.nix`, regex matchers in `infra/lib/match.nix`
-# (transitive via contracts/types). Validation accumulates via `collect` and throws
-# once via `unwrap` with tree-formatted errors; single-field failures read
-# the same as before.
-# Phase/state literals stay unvalidated strings here; Step 3 imports the
-# single source from `workflow/phases.nix` (no redefinition).
-# JSONL (`builtins.toJSON` of `event`) is canonical; `render*` is a human
-# terminal view. Secret values never enter events; only `SecretRef`.
 let
-  types = import ../lib/types.nix;
-  codesMod = import ../contracts/codes.nix;
-  levelsMod = import ../contracts/levels.nix;
-  secretRefMod = import ../contracts/secret-ref/default.nix;
+  strings = import ../lib/strings.nix;
+  codesModule = import ../contracts/codes.nix;
+  levelsModule = import ../contracts/levels.nix;
+  secretRefModule = import ../contracts/secret-ref/default.nix;
 
-  renderDiagnosticFn =
-    d:
+  renderDiagnosticLine =
+    diagnostic:
     let
-      pkgs =
-        if (d.packages or [ ]) == [ ] then "" else " packages=" + builtins.concatStringsSep "," d.packages;
-      dataStr = if (d.data or { }) == { } then "" else " data=" + builtins.toJSON d.data;
+      packages =
+        if (diagnostic.packages or [ ]) == [ ] then
+          ""
+        else
+          " packages=" + builtins.concatStringsSep "," diagnostic.packages;
+      dataText =
+        if (diagnostic.data or { }) == { } then "" else " data=" + builtins.toJSON diagnostic.data;
+      line = "${diagnostic.code} [${diagnostic.phase}] ${diagnostic.scope}/${diagnostic.host}${packages}: ${diagnostic.message}${dataText}";
     in
-    "${d.code} [${d.phase}] ${d.scope}/${d.host}${pkgs}: ${d.message}${dataStr}";
+    line;
 
-  renderEventFn = e: "${e.ts} ${e.level} ${e.code} [${e.phase}] ${e.scope}/${e.host}: ${e.message}";
+  renderEventLine =
+    event:
+    let
+      data = builtins.toJSON (event.data or { });
+      line = "ts=${event.ts} level=${event.level} code=${event.code} scope=${event.scope} host=${event.host} phase=${event.phase} message=${event.message} data=${data}";
+    in
+    line;
 
   checkNonEmptyString =
-    field: v:
-    if types.isNonEmptyStr v then
-      types.ok v
+    field: value:
+    if strings.isNonEmptyString value then
+      value
     else
-      types.err {
-        kind = "field";
-        message = "logger: `${field}` must be a non-empty string";
-        context = {
-          field = field;
-        };
-      };
+      throw "logger: `${field}` must be a non-empty string";
 
   checkPackages =
     packages:
-    if builtins.isList packages && builtins.all builtins.isString packages then
-      types.ok packages
+    if builtins.isList packages && builtins.all (package: builtins.isString package) packages then
+      packages
     else
-      types.err {
-        kind = "field";
-        message = "logger: `packages` must be a list of strings";
-        context = {
-          field = "packages";
-        };
-      };
+      throw "logger: `packages` must be a list of strings";
 
-  checkShape =
-    ctx: checks: types.unwrap (types.mapOk (_: true) (types.withContext ctx (types.collect checks)));
-in
-{
-  logCodes = codesMod.logCodes;
-  logCodePrefix = codesMod.logCodePrefix;
-  checkLogCode = codesMod.checkLogCode;
-  assertLogCode = codesMod.assertLogCode;
-  logLevels = levelsMod.logLevels;
-  checkLogLevel = levelsMod.checkLogLevel;
-  assertLogLevel = levelsMod.assertLogLevel;
-  isLogLevel = levelsMod.isLogLevel;
-  SecretRef = secretRefMod.SecretRef;
-  checkSecretRef = secretRefMod.checkSecretRef;
-  isSecretRef = secretRefMod.isSecretRef;
-  isKnownSecretRef = secretRefMod.isKnownSecretRef;
-  secretSlugs = secretRefMod.secretSlugs;
-  secretFiles = secretRefMod.secretFiles;
-  secretInventory = secretRefMod.secretInventory;
-  hasSecretsDir = secretRefMod.hasSecretsDir;
-  inventoryResult = secretRefMod.inventoryResult;
-  isInventoryEmpty = secretRefMod.isInventoryEmpty;
-  inventoryWarn = secretRefMod.inventoryWarn;
-  checkInventory = secretRefMod.checkInventory;
-  checkSecretRefsOnly = secretRefMod.checkSecretRefsOnly;
-  checkSecretRefsIn = secretRefMod.checkSecretRefsIn;
-  assertSecretRefsOnly = secretRefMod.assertSecretRefsOnly;
-  assertSecretRefsIn = secretRefMod.assertSecretRefsIn;
-  checkNoKnownSecrets = secretRefMod.checkNoKnownSecrets;
-  assertNoKnownSecrets = secretRefMod.assertNoKnownSecrets;
+  checkData = data: if builtins.isAttrs data then data else throw "logger: `data` must be an attrset";
 
-  diagnostic =
+  validateDiagnostic =
     {
       code,
       scope,
@@ -95,39 +52,34 @@ in
       message,
       data ? { },
       secrets ? [ ],
-      secretFields ? secretRefMod.secretSlugs,
+      secretFields ? secretRefModule.secretSlugs,
     }:
-    assert builtins.isAttrs data;
     let
-      ctx = {
-        inherit scope host phase;
+      checkedCode = codesModule.checkLogCode code;
+      checkedScope = checkNonEmptyString "scope" scope;
+      checkedHost = checkNonEmptyString "host" host;
+      checkedPackages = checkPackages packages;
+      checkedPhase = checkNonEmptyString "phase" phase;
+      validatedMessage = checkNonEmptyString "message" message;
+      checkedData = secretRefModule.checkSecretRefsIn {
+        data = checkData data;
+        inherit secretFields;
       };
-      _ = checkShape ctx [
-        (codesMod.checkLogCode code)
-        (checkNonEmptyString "scope" scope)
-        (checkNonEmptyString "host" host)
-        (checkPackages packages)
-        (checkNonEmptyString "phase" phase)
-        (checkNonEmptyString "message" message)
-        secretRefMod.checkInventory
-        (secretRefMod.checkSecretRefsIn { inherit data secretFields; })
-        (secretRefMod.checkNoKnownSecrets secrets message (builtins.toJSON data))
-      ];
+      checkedMessage = secretRefModule.checkNoKnownSecrets secrets validatedMessage (
+        builtins.toJSON checkedData
+      );
     in
-    assert _;
     {
-      inherit
-        code
-        scope
-        host
-        packages
-        phase
-        message
-        data
-        ;
+      code = checkedCode;
+      scope = checkedScope;
+      host = checkedHost;
+      packages = checkedPackages;
+      phase = checkedPhase;
+      message = checkedMessage;
+      data = checkedData;
     };
 
-  event =
+  validateEvent =
     {
       ts,
       level,
@@ -139,72 +91,140 @@ in
       message,
       data ? { },
       secrets ? [ ],
-      secretFields ? secretRefMod.secretSlugs,
+      secretFields ? secretRefModule.secretSlugs,
     }:
-    assert builtins.isAttrs data;
     let
-      ctx = {
-        inherit scope host phase;
+      checkedTimestamp = checkNonEmptyString "ts" ts;
+      checkedLevel = levelsModule.checkLogLevel level;
+      checkedCode = codesModule.checkLogCode code;
+      checkedScope = checkNonEmptyString "scope" scope;
+      checkedHost = checkNonEmptyString "host" host;
+      checkedPackages = checkPackages packages;
+      checkedPhase = checkNonEmptyString "phase" phase;
+      validatedMessage = checkNonEmptyString "message" message;
+      checkedData = secretRefModule.checkSecretRefsIn {
+        data = checkData data;
+        inherit secretFields;
       };
-      _ = checkShape ctx [
-        (checkNonEmptyString "ts" ts)
-        (levelsMod.checkLogLevel level)
-        (codesMod.checkLogCode code)
-        (checkNonEmptyString "scope" scope)
-        (checkNonEmptyString "host" host)
-        (checkPackages packages)
-        (checkNonEmptyString "phase" phase)
-        (checkNonEmptyString "message" message)
-        secretRefMod.checkInventory
-        (secretRefMod.checkSecretRefsIn { inherit data secretFields; })
-        (secretRefMod.checkNoKnownSecrets secrets message (builtins.toJSON data))
-      ];
+      checkedMessage = secretRefModule.checkNoKnownSecrets secrets validatedMessage (
+        builtins.toJSON checkedData
+      );
     in
-    assert _;
     {
-      inherit
-        ts
-        level
-        code
-        scope
-        host
-        packages
-        phase
-        message
-        data
-        ;
+      ts = checkedTimestamp;
+      level = checkedLevel;
+      code = checkedCode;
+      scope = checkedScope;
+      host = checkedHost;
+      packages = checkedPackages;
+      phase = checkedPhase;
+      message = checkedMessage;
+      data = checkedData;
     };
 
-  renderDiagnostic = renderDiagnosticFn;
+  renderers = {
+    diagnostic = renderDiagnosticLine;
+    event = renderEventLine;
+  };
 
-  renderEvent = renderEventFn;
+  renderKind =
+    value:
+    if !(builtins.isAttrs value) then
+      null
+    else if value ? ts && value ? level then
+      "event"
+    else if value ? code && value ? message then
+      "diagnostic"
+    else
+      null;
+
+  renderDiagnosticsLines =
+    diagnostics: builtins.concatStringsSep "\n" (builtins.map renderDiagnosticLine diagnostics);
+in
+{
+  inherit (codesModule)
+    checkLogCode
+    logCodePrefix
+    logCodes
+    ;
+  inherit (levelsModule)
+    checkLogLevel
+    isLogLevel
+    logLevels
+    ;
+  inherit (secretRefModule)
+    SecretRef
+    checkNoKnownSecrets
+    hasSecretsDir
+    ;
+  inherit (secretRefModule)
+    checkSecretRef
+    checkSecretRefsIn
+    checkSecretRefsOnly
+    isKnownSecretRef
+    isSecretRef
+    ;
+  inherit (secretRefModule)
+    inventoryWarn
+    isInventoryEmpty
+    secretFiles
+    secretInventory
+    secretSlugs
+    ;
+
+  diagnostic =
+    arguments:
+    let
+      validatedDiagnostic = validateDiagnostic arguments;
+    in
+    validatedDiagnostic;
+
+  event =
+    arguments:
+    let
+      validatedEvent = validateEvent arguments;
+    in
+    validatedEvent;
+
+  renderDiagnostic = renderDiagnosticLine;
+
+  renderEvent = renderEventLine;
 
   render =
-    v:
-    if builtins.isAttrs v && v ? ts && v ? level then
-      "ts=${v.ts} level=${v.level} code=${v.code} scope=${v.scope} host=${v.host} phase=${v.phase} message=${v.message} data=${
-        builtins.toJSON (v.data or { })
-      }"
-    else if builtins.isAttrs v && v ? code && v ? message then
-      "code=${v.code} scope=${v.scope or ""} host=${v.host or ""} phase=${v.phase or ""} message=${v.message} data=${
-        builtins.toJSON (v.data or { })
-      }"
+    value:
+    let
+      kind = renderKind value;
+    in
+    if kind == null then
+      throw "logger render: expected diagnostic or event"
     else
-      throw "logger render: expected diagnostic or event";
+      renderers.${kind} value;
 
-  renderDiagnostics = diags: builtins.concatStringsSep "\n" (builtins.map renderDiagnosticFn diags);
+  renderDiagnostics = renderDiagnosticsLines;
 
   throwDiagnostics =
-    diags:
-    if !(builtins.isList diags) then
+    diagnostics:
+    if !(builtins.isList diagnostics) then
       throw "logger throwDiagnostics: expected a list of diagnostics"
-    else if diags == [ ] then
+    else if diagnostics == [ ] then
       null
     else
-      throw (
-        "angst diagnostics (${toString (builtins.length diags)}):\n"
-        + builtins.concatStringsSep "\n" (builtins.map renderDiagnosticFn diags)
-      );
+      let
+        count = builtins.length diagnostics;
+        renderedDiagnostics = renderDiagnosticsLines diagnostics;
+        message = "angst diagnostics (${toString count}):\n" + renderedDiagnostics;
+      in
+      throw message;
 
-  toJSONL = events: builtins.concatStringsSep "\n" (builtins.map builtins.toJSON events);
+  toJSONL =
+    events:
+    builtins.concatStringsSep "\n" (
+      builtins.map (
+        event:
+        let
+          encodedEvent = builtins.toJSON event;
+        in
+        encodedEvent
+      ) events
+    );
 }

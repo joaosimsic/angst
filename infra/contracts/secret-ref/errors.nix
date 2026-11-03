@@ -1,33 +1,44 @@
 let
-  types = import ../../lib/types.nix;
+  contextSuffix =
+    context:
+    let
+      names = builtins.attrNames context;
+      rendered = builtins.concatStringsSep " " (
+        map (name: "${name}=${builtins.toJSON context.${name}}") names
+      );
+    in
+    if names == [ ] then "" else " (${rendered})";
 
-  err =
-    message: context:
-    types.err {
-      kind = "secret";
-      inherit message context;
-    };
+  throwError = message: context: throw "${message}${contextSuffix context}";
 in
 {
-  inherit err;
+  inherit throwError;
 
-  badRef = context: err "SecretRef: `ref` must be a non-empty string" context;
+  throwBadRef = context: throwError "SecretRef: `ref` must be a non-empty string" context;
 
-  unknownRef =
+  throwUnknownRef =
     context: ref:
-    err "SecretRef: unknown `ref`, no such slug under secrets/" (context // { inherit ref; });
+    throwError "SecretRef: unknown `ref`, no such slug under secrets/ ref=${builtins.toJSON ref}" context;
 
-  field = context: err "secret field must be `SecretRef { ref }`, never a plain string" context;
+  throwField =
+    context: throwError "secret field must be `SecretRef { ref }`, never a plain string" context;
 
-  misplaced = context: err "SecretRef misplaced: allowed only under secret fields" context;
+  throwMisplaced =
+    context: throwError "SecretRef misplaced: allowed only under secret fields" context;
 
-  unsupported = context: err "SecretRef edge rejected: unsupported value type" context;
+  throwUnsupported = context: throwError "SecretRef edge rejected: unsupported value type" context;
 
-  leak =
-    context: err "plain secret value present in message/data; wrap as `SecretRef` instead" context;
+  throwLeak =
+    context:
+    throwError "plain secret value present in message/data; wrap as `SecretRef` instead" context;
 
-  duplicate = context: err "SecretRef: duplicate slug maps to multiple files" context;
+  throwDuplicate =
+    duplicates:
+    throw "SecretRef: duplicate slug maps to multiple files duplicates=${builtins.toJSON duplicates}";
 
-  secretFields =
-    context: err "checkSecretRefsIn: `secretFields` must be a list of non-empty strings" context;
+  throwSecretFields =
+    context: throwError "checkSecretRefsIn: `secretFields` must be a list of non-empty strings" context;
+
+  throwMissingInventory =
+    context: throwError "SecretRef: secrets/ directory missing, no inventory" context;
 }
