@@ -1,14 +1,21 @@
 local Logger = require("common.Logger")
 
+---@alias BadgeAlign "left"|"right"
+
 ---@class Badge
 ---@field entries table<string, string>
 ---@field win number|nil
 ---@field buf number|nil
+---@field name? string
+---@field fg? string
+---@field bg? string
+---@field prefix string
+---@field align BadgeAlign
 ---@field logger Logger
 local Badge = {}
 Badge.__index = Badge
 
----@param opts? {name?: string, fg?: string, bg?: string, prefix?: string}
+---@param opts? {name?: string, fg?: string, bg?: string, prefix?: string, align?: BadgeAlign}
 ---@return Badge
 function Badge.new(opts)
 	opts = opts or {}
@@ -17,6 +24,7 @@ function Badge.new(opts)
 	self.fg = opts.fg
 	self.bg = opts.bg
 	self.prefix = opts.prefix or "●"
+	self.align = opts.align or "right"
 	self.logger = Logger.new("BADGE:" .. (opts.name and opts.name:upper() or "?"))
 	return self
 end
@@ -54,21 +62,22 @@ function Badge:_refresh()
 	vim.bo[self.buf].buflisted = false
 
 	local ui = vim.api.nvim_list_uis()[1]
-	if not ui then
-		return
-	end
-	local my_width = vim.fn.strdisplaywidth(content) + 2
+	local viewport_width = ui and ui.width or vim.o.columns
+	local badge_width = math.max(1, math.min(vim.fn.strdisplaywidth(content) + 2, viewport_width))
 
 	local max_bottom = 0
-	local badges = {}
+	local left_badges = {}
+	local right_badges = {}
 	for _, win in ipairs(vim.api.nvim_list_wins()) do
-		local config = vim.api.nvim_win_get_config(win)
-		if config.relative == "" then
-			local pos = vim.api.nvim_win_get_position(win)
-			local height = vim.api.nvim_win_get_height(win)
-			max_bottom = math.max(max_bottom, pos[1] + height)
-		elseif config.relative == "editor" and config.focusable == false and win ~= self.win then
-			table.insert(badges, { win = win, width = config.width })
+		local win_config = vim.api.nvim_win_get_config(win)
+		if win_config.relative == "" then
+			local window_position = vim.api.nvim_win_get_position(win)
+			local window_height = vim.api.nvim_win_get_height(win)
+			max_bottom = math.max(max_bottom, window_position[1] + window_height)
+		elseif win_config.relative == "editor" and win_config.focusable == false and win ~= self.win then
+			local align = vim.w[win].badge_align or "right"
+			local alignment_bucket = align == "left" and left_badges or right_badges
+			table.insert(alignment_bucket, { win = win, width = win_config.width })
 		end
 	end
 
@@ -83,7 +92,7 @@ function Badge:_refresh()
 		end)
 		self.win = vim.api.nvim_open_win(self.buf, false, {
 			relative = "editor",
-			width = my_width,
+			width = badge_width,
 			height = 1,
 			row = max_bottom - 1,
 			col = 0,
@@ -93,27 +102,44 @@ function Badge:_refresh()
 		})
 	end
 
-	table.insert(badges, { win = self.win, width = my_width, is_self = true })
-	table.sort(badges, function(a, b)
-		return vim.api.nvim_win_get_config(a.win).col < vim.api.nvim_win_get_config(b.win).col
-	end)
+	vim.w[self.win].badge_align = self.align
+	table.insert(self.align == "left" and left_badges or right_badges, { win = self.win, width = badge_width })
+
+	local function position_badge(badge, col)
+		local win_config = vim.api.nvim_win_get_config(badge.win)
+		vim.api.nvim_win_set_config(badge.win, {
+			relative = win_config.relative,
+			width = win_config.width,
+			height = win_config.height,
+			col = col,
+			row = max_bottom - 1,
+			style = win_config.style,
+			border = win_config.border,
+			focusable = win_config.focusable,
+		})
+	end
+
+	local function sort_by_column(a, b)
+		return (vim.api.nvim_win_get_config(a.win).col or 0) < (vim.api.nvim_win_get_config(b.win).col or 0)
+	end
 
 	local gap = 1
-	local right_edge = ui.width
-	for i = #badges, 1, -1 do
-		local bw = badges[i]
-		local cfg = vim.api.nvim_win_get_config(bw.win)
-		vim.api.nvim_win_set_config(bw.win, {
-			relative = cfg.relative,
-			width = cfg.width,
-			height = cfg.height,
-			col = right_edge - bw.width,
-			row = max_bottom - 1,
-			style = cfg.style,
-			border = cfg.border,
-			focusable = cfg.focusable,
-		})
-		right_edge = right_edge - bw.width - gap
+
+	table.sort(right_badges, sort_by_column)
+
+	local right_edge = viewport_width
+	for i = #right_badges, 1, -1 do
+		local badge = right_badges[i]
+		position_badge(badge, right_edge - badge.width)
+		right_edge = right_edge - badge.width - gap
+	end
+
+	table.sort(left_badges, sort_by_column)
+
+	local left_edge = 0
+	for _, badge in ipairs(left_badges) do
+		position_badge(badge, left_edge)
+		left_edge = left_edge + badge.width + gap
 	end
 
 	if self.fg or self.bg then
