@@ -37,6 +37,7 @@ local function fresh()
 	package.loaded["frontend.navigation.spring"] = nil
 	package.loaded["frontend.navigation.spring.state"] = nil
 	package.loaded["frontend.navigation.spring.actions"] = nil
+	package.loaded["common.Badge"] = nil
 	package.loaded["common.Keybinder"] = nil
 
 	local state = require("frontend.navigation.spring.state")
@@ -172,6 +173,40 @@ return function()
 			press("gs")
 
 			vim.api.nvim_buf_delete(buf_a, { force = true })
+
+			if vim.api.nvim_buf_is_valid(original) then
+				vim.api.nvim_set_current_buf(original)
+			end
+		end)
+
+		it("resizes the badge when the chain grows", function()
+			local state = fresh()
+			local original = vim.api.nvim_get_current_buf()
+			local buf_a = make_buffer(vim.fn.tempname() .. "_spring_resize_a.lua")
+			local buf_b = make_buffer(vim.fn.tempname() .. "_spring_resize_b.lua")
+
+			vim.api.nvim_set_current_buf(buf_a)
+			press("gs")
+
+			local label_a = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf_a), ":t")
+			local label_b = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf_b), ":t")
+
+			vim.api.nvim_set_current_buf(buf_b)
+
+			assert(vim.inspect(state.chain()) == vim.inspect({ label_a, label_b }), "chain must grow")
+
+			local win = badge_window(label_a .. " > " .. label_b)
+			assert(win ~= nil, "badge must show the full chain")
+
+			local content = table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(win), 0, -1, false), "\n")
+			local width = vim.api.nvim_win_get_config(win).width
+
+			assert(width >= vim.fn.strdisplaywidth(content), "badge window must resize to fit the full chain")
+
+			press("gs")
+
+			vim.api.nvim_buf_delete(buf_a, { force = true })
+			vim.api.nvim_buf_delete(buf_b, { force = true })
 
 			if vim.api.nvim_buf_is_valid(original) then
 				vim.api.nvim_set_current_buf(original)

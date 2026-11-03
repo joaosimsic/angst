@@ -109,7 +109,7 @@ function Badge:_refresh()
 		local win_config = vim.api.nvim_win_get_config(badge.win)
 		vim.api.nvim_win_set_config(badge.win, {
 			relative = win_config.relative,
-			width = win_config.width,
+			width = badge.width,
 			height = win_config.height,
 			col = col,
 			row = max_bottom - 1,
