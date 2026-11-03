@@ -24,10 +24,14 @@ in
       };
 
       activation.seedNvimLazyLock = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        lock="${config.home.homeDirectory}/.config/nvim/lazy-lock.json"
         $DRY_RUN_CMD mkdir -p "${config.home.homeDirectory}/.config/nvim"
-        if [ ! -f "${config.home.homeDirectory}/.config/nvim/lazy-lock.json" ]; then
-          $DRY_RUN_CMD cp ${./config/lazy-lock.json} "${config.home.homeDirectory}/.config/nvim/lazy-lock.json"
-          $DRY_RUN_CMD chmod 600 "${config.home.homeDirectory}/.config/nvim/lazy-lock.json"
+        if [ -L "$lock" ] && [ ! -e "$lock" ]; then
+          $DRY_RUN_CMD rm -f "$lock"
+        fi
+        if [ ! -e "$lock" ]; then
+          $DRY_RUN_CMD cp ${./config/lazy-lock.json} "$lock"
+          $DRY_RUN_CMD chmod 600 "$lock"
         fi
       '';
     };
