@@ -52,6 +52,8 @@ in
         services.tailscale = {
           enable = true;
           openFirewall = true;
+          extraUpFlags = [ "--ssh" ];
+          extraSetFlags = [ "--ssh" ];
         }
         // lib.optionalAttrs hasTailscaleKey {
           authKeyFile = "/run/angst/host-secrets/tailscale";
