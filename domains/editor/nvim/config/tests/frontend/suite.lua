@@ -5,4 +5,5 @@ dofile(test_dir .. "/../rtp_pin.lua")
 
 describe("Frontend Validations", function()
 	dofile(test_dir .. "/git_spec.lua")()
+	dofile(test_dir .. "/opencode_spec.lua")()
 end)

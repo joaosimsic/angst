@@ -1,15 +1,15 @@
--- Background-only code overlay for branch-diff hunks.
+-- Background-only code overlay for branch/commit range hunks.
 --
--- Worktree mode tints the code buffer through gitsigns, but branch hunks
--- are committed (`base..HEAD`) with a clean worktree, so gitsigns paints
--- nothing. This module paints the same bg-only tints from branch entries
--- instead: added/changed lines take GitSignsAddLn/ChangeLn, deleted
+-- Worktree mode tints the code buffer through gitsigns, but range hunks
+-- are committed (`base..HEAD` / `rev..HEAD`) with a clean worktree, so
+-- gitsigns paints nothing. This module paints the same bg-only tints from
+-- range entries instead: added/changed lines take GitSignsAddLn/ChangeLn, deleted
 -- hunks tint their anchor line DeleteLn (no virtual deleted lines, no
 -- text recolor — same contract as the worktree mode). Only the current
 -- code buffer is painted; the sidebar panes are untouched.
 local M = {}
 
-M.ns = vim.api.nvim_create_namespace("angst_git_branch_hunks")
+M.ns = vim.api.nvim_create_namespace("angst_git_range_hunks")
 
 local HL_BY_KIND = {
 	A = "GitSignsAddLn",
@@ -59,7 +59,7 @@ function M.clear_all()
 	end
 end
 
--- Paint branch hunks for one buffer. `hunks` are { lnum, text } rows
+-- Paint range hunks for one buffer. `hunks` are { lnum, text } rows
 -- already filtered to the buffer's file.
 ---@param bufnr integer
 ---@param hunks table[]

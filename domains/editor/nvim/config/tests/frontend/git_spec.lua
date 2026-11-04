@@ -21,6 +21,24 @@ local function collect_repos(spec)
 	return repos
 end
 
+local REVIEW_MODULES = {
+	"git_review",
+	"git_review_pages",
+	"git_review_picker",
+	"git_review_range",
+	"git_review_branch",
+	"git_review_commit",
+	"git_range_hunks",
+}
+
+local function evict_review_modules()
+	for _, name in ipairs(REVIEW_MODULES) do
+		package.loaded["frontend.tools." .. name] = nil
+	end
+	vim.g.angst_git_review_mode = nil
+	vim.g.angst_git_review_applied = nil
+end
+
 return function()
 	describe("git review tooling", function()
 		-- Invoke mapping callbacks directly: headless typeahead does not
@@ -285,6 +303,7 @@ return function()
 			package.loaded["frontend.tools.git_review_pages"] = nil
 			package.loaded["frontend.tools.git_review"] = nil
 			vim.g.angst_git_hunks_enabled = nil
+			evict_review_modules()
 			local spec = require("frontend.tools.git_review")
 			assert(spec.virtual == true, "review must be a virtual spec")
 			assert(type(spec.config) == "function", "review spec must define config()")
@@ -297,7 +316,7 @@ return function()
 
 			local review_source = spec_source("git_review")
 			local pages_source = spec_source("git_review_pages")
-			for _, lhs in ipairs({ '"d"', '"<Tab>"', '"h"', '"l"', '"n"', '"N"', '"q"' }) do
+			for _, lhs in ipairs({ '"d"', '"<Tab>"', '"<S-Tab>"', '"t"', '"h"', '"l"', '"n"', '"N"', '"q"' }) do
 				assert(review_source:find(lhs, 1, true), lhs .. " must be a hydra head")
 			end
 			for _, lhs in ipairs({ '"j"', '"k"', '"f"', '"s"', '"u"', '"x"', '"v"', '"b"', '"r"', '"p"' }) do
@@ -311,29 +330,63 @@ return function()
 			assert(review_source:find('"cc "', 1, true), "h/l must step quickfix entries via cc")
 			assert(review_source:find("git_review_pages", 1, true), "hydra must drive the page pane")
 			assert(review_source:find("git_review_branch", 1, true), "hydra must drive the branch pane")
+			assert(review_source:find("git_review_commit", 1, true), "hydra must drive the commit pane")
+			assert(review_source:find("git_review_picker", 1, true), "hydra must drive the picker")
+			assert(review_source:find("cycle_source(-1)", 1, true), "S-Tab must reverse the source cycle")
 			assert(review_source:find("on_exit", 1, true), "hydra must close the pane on every exit path")
+			assert(
+				review_source:find("keep_insert_filetypes", 1, true),
+				"hydra must stay active while typing in the picker search line"
+			)
 			local branch_source = spec_source("git_review_branch")
+			local commit_source = spec_source("git_review_commit")
+			local range_source = spec_source("git_review_range")
+			local picker_source = spec_source("git_review_picker")
 			assert(
-				branch_source:find("angst_git_branch_diff_enabled", 1, true),
-				"branch mode must persist in vim.g across hydra exits"
+				branch_source:find("angst_git_branch_target", 1, true),
+				"branch target must persist in vim.g across hydra exits"
+			)
+			assert(branch_source:find("filter_target", 1, true), "branch picker must filter by name")
+			assert(
+				commit_source:find("angst_git_commit_target", 1, true),
+				"commit target must persist in vim.g across hydra exits"
+			)
+			for _, source in ipairs({ branch_source, commit_source }) do
+				assert(
+					not source:find("angst-git-branch-files", 1, true)
+						and not source:find("angst-git-branch-diffs", 1, true)
+						and not source:find("angst-git-commit-files", 1, true)
+						and not source:find("angst-git-commit-diffs", 1, true),
+					"range sources must not create their own panes"
+				)
+			end
+			assert(
+				not range_source:find("botright vertical", 1, true),
+				"range sources must not open sidebar panes"
 			)
 			assert(
-				branch_source:find("angst-git-branch-files", 1, true),
-				"branch column must use its own files pane"
+				range_source:find("function self.activate", 1, true),
+				"range sources must apply entries without opening panes"
 			)
 			assert(
-				branch_source:find("angst-git-branch-diffs", 1, true),
-				"branch column must use its own diffs pane"
-			)
-			assert(
-				branch_source:find("common.Badge", 1, true),
-				"branch mode must badge the target markdown-style"
+				range_source:find("common.Badge", 1, true),
+				"range mode must badge the target markdown-style"
 			)
 			assert(branch_source:find('"⇄ "', 1, true), "badge must show the compared-against branch")
-			assert(
-				branch_source:find("git_branch_hunks", 1, true),
-				"branch mode must tint code hunks bg-only"
-			)
+			assert(commit_source:find('"⇢ "', 1, true), "badge must show the commit range")
+			assert(range_source:find("git_range_hunks", 1, true), "range mode must tint code hunks bg-only")
+			assert(range_source:find("MODE_VAR", 1, true), "range mode must persist its active tab in vim.g")
+			assert(range_source:find("APPLIED_VAR", 1, true), "range mode must persist the applied range in vim.g")
+			assert(picker_source:find("Find: ", 1, true), "commit picker must expose a live search line")
+			assert(picker_source:find('"?"', 1, true), "commit picker must toggle search with ?")
+			assert(picker_source:find("search_open", 1, true), "commit picker must track search visibility")
+			assert(picker_source:find("InsertLeave", 1, true), "picker search must hide when insert mode ends")
+			assert(picker_source:find('"<C-c>"', 1, true), "picker must handle CTRL-C leaving insert")
+			assert(picker_source:find("startinsert", 1, true), "picker must take focus for search")
+			for _, source in ipairs({ branch_source, commit_source, picker_source }) do
+				assert(not source:find("fzf", 1, true), "pickers must not use fzf")
+				assert(not source:find("vim.ui.select", 1, true), "pickers must not use vim.ui.select")
+			end
 			assert(
 				pages_source:find("botright vertical", 1, true),
 				"file list must open as a right-side vertical column"
@@ -646,6 +699,7 @@ return function()
 			package.loaded["frontend.tools.git_hunk_display"] = nil
 			package.loaded["frontend.tools.git_review_pages"] = nil
 			package.loaded["frontend.tools.git_review"] = nil
+			evict_review_modules()
 			require("frontend.tools.git_review").config()
 
 			-- Per-hunk dedupe: four hunks in one staged file must all
@@ -739,6 +793,7 @@ return function()
 			package.loaded["frontend.tools.git_hunk_display"] = nil
 			package.loaded["frontend.tools.git_review_pages"] = nil
 			package.loaded["frontend.tools.git_review"] = nil
+			evict_review_modules()
 			require("frontend.tools.git_review").config()
 
 			-- Stale idx: the list was rebuilt under us (idx reset to an
@@ -835,6 +890,7 @@ return function()
 			package.loaded["frontend.tools.git_hunk_display"] = nil
 			package.loaded["frontend.tools.git_review_pages"] = nil
 			package.loaded["frontend.tools.git_review"] = nil
+			evict_review_modules()
 			require("frontend.tools.git_review").config()
 			local pages_mod = require("frontend.tools.git_review_pages")
 
@@ -892,12 +948,12 @@ return function()
 			vim.api.nvim_buf_delete(buf_a, { force = true })
 		end)
 
-		it("Tab swaps the whole column to a branch diff that persists across hydra exits", function()
+		it("Tab/S-Tab cycle sources and selections return to the worktree", function()
 			vim.g.mapleader = " "
 			assert(vim.fn.executable("git") == 1, "git binary required for fixture")
 
 			local saved_cwd = vim.fn.getcwd()
-			local root = vim.fn.tempname() .. "_gitbranch_tab"
+			local root = vim.fn.tempname() .. "_angst_git_ranges"
 			vim.fn.mkdir(root, "p")
 			local function git(args)
 				local cmd = { "git", "-C", root }
@@ -913,6 +969,12 @@ return function()
 				fh:write(text)
 				fh:close()
 			end
+			local function sha(...)
+				local cmd = { "git", "-C", root, "rev-parse" }
+				vim.list_extend(cmd, { ... })
+				local out = vim.fn.systemlist(cmd)
+				return vim.trim(out[1] or "")
+			end
 			git({ "init", "-b", "main" })
 			git({ "config", "user.email", "test@local" })
 			git({ "config", "user.name", "test" })
@@ -922,155 +984,12 @@ return function()
 			git({ "checkout", "-qb", "feature" })
 			write(root .. "/a.txt", "one\nTWO\nthree\nfour\nfive\n")
 			git({ "add", "a.txt" })
-			git({ "commit", "-m", "feature change" })
-
-			package.loaded["gitsigns"] = {
-				toggle_deleted = function() end,
-				toggle_linehl = function() end,
-				toggle_word_diff = function() end,
-			}
-			package.loaded["common.Hydra"] = nil
-			package.loaded["common.Keybinder"] = nil
-			package.loaded["frontend.tools.git_review_files"] = nil
-			package.loaded["frontend.tools.git_review_pages"] = nil
-			package.loaded["frontend.tools.git_review_branch"] = nil
-			package.loaded["frontend.tools.git_review"] = nil
-			vim.g.angst_git_branch_diff_enabled = nil
-			vim.g.angst_git_branch_diff_target = nil
-			require("frontend.tools.git_review").config()
-			local branch = require("frontend.tools.git_review_branch")
-			local pages_mod = require("frontend.tools.git_review_pages")
-
-			vim.cmd("cd " .. vim.fn.fnameescape(root))
-			vim.cmd("edit " .. vim.fn.fnameescape(root .. "/a.txt"))
-			local buf = vim.api.nvim_get_current_buf()
-
-			press(" g")
-			assert(pages_mod.is_open(), "enter must open the worktree panes")
-			assert(not branch.is_enabled(), "branch mode must start disabled")
-
-			branch._pick_override = function(cb)
-				cb("main")
-			end
-			press("<Tab>")
-			assert(branch.is_enabled(), "Tab must enable branch mode")
-			assert(branch.target() == "main", "Tab must diff against the picked branch")
-			assert(branch.is_open(), "Tab must open the branch column")
-			assert(not pages_mod.is_open(), "Tab must replace the whole worktree column")
-			local branch_files = branch.ordered_files()
-			assert(
-				#branch_files == 1 and branch_files[1].filename == root .. "/a.txt",
-				"branch column must list the branch-changed file"
-			)
-
-			-- Markdown-style badge shows the compared-against branch.
-			assert(
-				branch._badge.entries["git-branch-diff"] == "⇄ main",
-				"badge must show the diff target, got: " .. vim.inspect(branch._badge.entries)
-			)
-
-			-- Bg-tint overlay paints the branch hunks in the code
-			-- buffer (feature changed line 2, added line 5).
-			local branch_hunks = require("frontend.tools.git_branch_hunks")
-			local function tint_groups()
-				local seen = {}
-				for _, m in ipairs(vim.api.nvim_buf_get_extmarks(buf, branch_hunks.ns, 0, -1, { details = true })) do
-					seen[m[4].line_hl_group] = true
-				end
-				return seen
-			end
-			local tints = tint_groups()
-			assert(
-				tints["GitSignsChangeLn"] and tints["GitSignsAddLn"],
-				"code buffer must tint branch hunks bg-only, got: " .. vim.inspect(tints)
-			)
-
-			vim.fn.setqflist({}, "r")
-			press("l")
-			assert(vim.api.nvim_get_current_buf() == buf, "branch l must not leave the file")
-			assert(
-				vim.fn.getqflist({ size = 0 }).size == 0,
-				"branch navigation must not touch the worktree quickfix"
-			)
-			assert(next(tint_groups()) ~= nil, "branch l must keep the overlay painted")
-
-			-- `d` flips the branch overlay together with gitsigns.
-			vim.b[buf].gitsigns_status_dict = {}
-			press("d")
-			assert(next(tint_groups()) == nil, "d off must clear the branch overlay")
-			press("d")
-			assert(next(tint_groups()) ~= nil, "d on must restore the branch overlay")
-			vim.b[buf].gitsigns_status_dict = nil
-
-			press("q")
-			assert(vim.g.active_hydra == nil, "q head never exited review mode")
-			assert(branch.is_enabled(), "branch mode must persist after hydra exit")
-			assert(not branch.is_open(), "q must close the branch column")
-			assert(
-				branch._badge.entries["git-branch-diff"] == "⇄ main",
-				"badge must persist after hydra exit"
-			)
-			assert(next(tint_groups()) ~= nil, "overlay must persist after hydra exit")
-
-			press(" g")
-			assert(branch.is_open(), "re-enter must reopen the branch column")
-			assert(not pages_mod.is_open(), "re-enter must not reopen worktree panes while branch persists")
-
-			branch._pick_override = function()
-				error("picker must not run on disable")
-			end
-			press("<Tab>")
-			assert(not branch.is_enabled(), "second Tab must disable branch mode")
-			assert(not branch.is_open(), "second Tab must close the branch column")
-			assert(pages_mod.is_open(), "second Tab must restore the worktree column")
-			assert(
-				next(branch._badge.entries) == nil,
-				"disable must hide the badge, got: " .. vim.inspect(branch._badge.entries)
-			)
-			assert(
-				#vim.api.nvim_buf_get_extmarks(buf, branch_hunks.ns, 0, -1, {}) == 0,
-				"disable must clear the branch overlay"
-			)
-			press("q")
-
-			branch._reset()
-			pages_mod._reset()
-			vim.g.angst_git_branch_diff_enabled = nil
-			vim.g.angst_git_branch_diff_target = nil
-			vim.cmd("cd " .. vim.fn.fnameescape(saved_cwd))
-			package.loaded["gitsigns"] = nil
-			package.loaded["frontend.tools.git_review_pages"] = nil
-			package.loaded["frontend.tools.git_review_branch"] = nil
-			vim.api.nvim_buf_delete(buf, { force = true })
-			vim.fn.setqflist({}, "r")
-			vim.fn.delete(root, "rf")
-		end)
-
-		it("branch toggle skips the current branch and auto-disables on empty ranges", function()
-			vim.g.mapleader = " "
-			assert(vim.fn.executable("git") == 1, "git binary required for fixture")
-
-			local saved_cwd = vim.fn.getcwd()
-			local root = vim.fn.tempname() .. "_gitbranch_empty"
-			vim.fn.mkdir(root, "p")
-			local function git(args)
-				local cmd = { "git", "-C", root }
-				vim.list_extend(cmd, args)
-				local out = vim.fn.system(cmd)
-				assert(
-					vim.v.shell_error == 0,
-					"fixture git failed: " .. table.concat(cmd, " ") .. "\n" .. out
-				)
-			end
-			git({ "init", "-b", "main" })
-			git({ "config", "user.email", "test@local" })
-			git({ "config", "user.name", "test" })
-			local fh = assert(io.open(root .. "/a.txt", "w"))
-			fh:write("one\n")
-			fh:close()
-			git({ "add", "." })
-			git({ "commit", "-m", "base" })
-			git({ "checkout", "-qb", "feature" })
+			git({ "commit", "-m", "first change" })
+			local picked = sha("HEAD")
+			local picked_short = sha("--short", "HEAD")
+			write(root .. "/a.txt", "one\nTWO\nTHREE\nfour\nfive\n")
+			git({ "add", "a.txt" })
+			git({ "commit", "-m", "second change" })
 
 			package.loaded["gitsigns"] = {
 				toggle_deleted = function() end,
@@ -1082,78 +1001,370 @@ return function()
 			package.loaded["frontend.tools.git_hunk_display"] = nil
 			package.loaded["frontend.tools.git_review_files"] = nil
 			package.loaded["frontend.tools.git_review_pages"] = nil
+			package.loaded["frontend.tools.git_review_picker"] = nil
+			package.loaded["frontend.tools.git_range_hunks"] = nil
+			package.loaded["frontend.tools.git_review_range"] = nil
 			package.loaded["frontend.tools.git_review_branch"] = nil
+			package.loaded["frontend.tools.git_review_commit"] = nil
 			package.loaded["frontend.tools.git_review"] = nil
-			vim.g.angst_git_branch_diff_enabled = nil
-			vim.g.angst_git_branch_diff_target = nil
+			vim.g.angst_git_review_mode = nil
+			vim.g.angst_git_review_applied = nil
+			vim.g.angst_git_branch_target = nil
+			vim.g.angst_git_commit_target = nil
+			vim.g.angst_git_hunks_enabled = nil
+			evict_review_modules()
 			require("frontend.tools.git_review").config()
+			local range = require("frontend.tools.git_review_range")
 			local branch = require("frontend.tools.git_review_branch")
+			local commit = require("frontend.tools.git_review_commit")
+			local Picker = require("frontend.tools.git_review_picker")
 			local pages_mod = require("frontend.tools.git_review_pages")
+			local range_hunks = require("frontend.tools.git_range_hunks")
 
 			vim.cmd("cd " .. vim.fn.fnameescape(root))
 			vim.cmd("edit " .. vim.fn.fnameescape(root .. "/a.txt"))
 			local buf = vim.api.nvim_get_current_buf()
-
-			-- The picker must not offer the current branch:
-			-- self-compare is always empty.
-			package.preload["fzf-lua"] = function()
-				error("fzf must stay out of the picker test")
+			local function has_value(items, value)
+				for _, item in ipairs(items) do
+					if item.value == value then
+						return true
+					end
+				end
+				return false
 			end
-			local picked_items = nil
-			local orig_select = vim.ui.select
-			vim.ui.select = function(items, _, on_choice)
-				picked_items = items
-				on_choice(nil)
+			local function has_range_panes()
+				for _, win in ipairs(vim.api.nvim_list_wins()) do
+					local ft = vim.bo[vim.api.nvim_win_get_buf(win)].filetype
+					if ft == "angst-git-branch-files" or ft == "angst-git-branch-diffs" then
+						return true
+					end
+					if ft == "angst-git-commit-files" or ft == "angst-git-commit-diffs" then
+						return true
+					end
+				end
+				return false
 			end
-			branch._pick_override = nil
-			local chosen = "unset"
-			branch.pick_target(function(target)
-				chosen = target
-			end)
-			assert(chosen == nil, "cancelling the picker must yield nil")
-			assert(picked_items ~= nil, "picker must list branches")
-			assert(
-				not vim.tbl_contains(picked_items, "feature"),
-				"picker must skip the current branch, got: " .. vim.inspect(picked_items)
-			)
-			assert(
-				vim.tbl_contains(picked_items, "main"),
-				"picker must keep other branches, got: " .. vim.inspect(picked_items)
-			)
-			vim.ui.select = orig_select
-			package.preload["fzf-lua"] = nil
+			local function tint_groups()
+				local seen = {}
+				for _, m in ipairs(vim.api.nvim_buf_get_extmarks(buf, range_hunks.ns, 0, -1, { details = true })) do
+					seen[m[4].line_hl_group] = true
+				end
+				return seen
+			end
+			local function sidebar_buffers()
+				local files, diffs = {}, {}
+				for _, win in ipairs(vim.api.nvim_list_wins()) do
+					local b = vim.api.nvim_win_get_buf(win)
+					local ft = vim.bo[b].filetype
+					if ft == pages_mod.FILES_FILETYPE then
+						files[#files + 1] = b
+					elseif ft == pages_mod.DIFFS_FILETYPE then
+						diffs[#diffs + 1] = b
+					end
+				end
+				return files, diffs
+			end
+			local function pane_lines(b)
+				return vim.api.nvim_buf_get_lines(b, 0, -1, false)
+			end
+			local function assert_single_pane_pair()
+				local files, diffs = sidebar_buffers()
+				assert(#files == 1, "expected exactly one files pane, got " .. #files)
+				assert(#diffs == 1, "expected exactly one diffs pane, got " .. #diffs)
+				return files[1], diffs[1]
+			end
 
-			-- Enabling against the current branch finds no changes:
-			-- auto-disable with a notice, worktree column restored.
 			press(" g")
-			local notes = {}
-			local orig_notify = vim.notify
-			vim.notify = function(msg, ...)
-				notes[#notes + 1] = tostring(msg)
-			end
-			branch._pick_override = function(cb)
-				cb("feature")
-			end
+			assert(pages_mod.is_open(), "enter must open the worktree panes")
+			assert(not Picker.is_open(), "worktree mode must not open a picker")
+			assert(vim.g[range.MODE_VAR] == nil, "worktree mode must not pin a range source")
+
+			-- First Tab: full-height branch picker, not a float.
 			press("<Tab>")
-			vim.notify = orig_notify
-			assert(not branch.is_enabled(), "empty range must auto-disable branch mode")
-			assert(not branch.is_open(), "empty range must not leave a branch column")
-			assert(next(branch._badge.entries) == nil, "empty range must not show a badge")
-			assert(pages_mod.is_open(), "empty range must restore the worktree column")
+			assert(vim.g[range.MODE_VAR] == "branch", "first Tab must select the branch source")
+			assert(Picker.is_open(), "branch source must open the full-height picker")
+			assert(not pages_mod.is_open(), "picker must replace the worktree panes")
+			assert(not branch.is_enabled(), "branch is not enabled before a target is picked")
+			local items = Picker.visible_items()
+			assert(has_value(items, "main"), "branch picker must list other branches")
+			assert(not has_value(items, "feature"), "branch picker must skip the current branch")
+
+			-- Branch search works with ? and hides on InsertLeave.
+			local branch_picker_buf = vim.api.nvim_get_current_buf()
+			press("?")
+			assert(Picker.is_search_open(), "? must reveal the branch search line")
+			Picker.set_query("mai")
+			assert(#Picker.visible_items() == 1, "branch search must filter by name")
+			vim.api.nvim_exec_autocmds("InsertLeave", { buffer = branch_picker_buf })
+			assert(not Picker.is_search_open(), "leaving insert must hide the branch search line")
+			assert(#Picker.visible_items() == 1, "branch filter must stay applied after leaving insert")
 			assert(
-				table.concat(notes, "\n"):find("no changes between HEAD and feature", 1, true),
-				"empty range must explain itself, got: " .. vim.inspect(notes)
+				not (vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] or ""):find("Find:", 1, true),
+				"hidden branch search must not occupy a row"
 			)
+			press("?")
+			assert(Picker.is_search_open(), "? must reopen the branch search line")
+			local ctrl_c = vim.fn.maparg("<C-c>", "i", false, true)
+			assert(type(ctrl_c) == "table" and type(ctrl_c.callback) == "function", "branch picker needs insert Ctrl-C")
+			ctrl_c.callback()
+			assert(not Picker.is_search_open(), "Ctrl-C must hide the branch search line")
+			assert(#Picker.visible_items() == 1, "Ctrl-C must keep the branch filter")
+			Picker.set_query("")
+
+			-- Cancelling a first-time picker returns to the worktree.
+			Picker.cancel()
+			assert(vim.g[range.MODE_VAR] == nil, "cancelled picker must return to worktree mode")
+			assert(not Picker.is_open(), "cancelled picker must close")
+			assert(pages_mod.is_open(), "cancelled picker must restore worktree panes")
+
+			-- Selecting a branch applies the overlay and returns to worktree.
+			press("<Tab>")
+			assert(Picker.select("main"), "branch picker must select main")
+			assert(branch.is_enabled(), "selecting a branch must enable branch mode")
+			assert(branch.target() == "main", "branch target must be main")
+			assert(vim.g[range.MODE_VAR] == nil, "selection must return to the worktree tab")
+			assert(vim.g[range.APPLIED_VAR] == "branch", "selection must apply the branch range")
+			assert(not Picker.is_open(), "selection must close the picker")
+			assert(pages_mod.is_open(), "selection must restore worktree panes")
+			assert(not has_range_panes(), "selection must not open branch/commit range panes")
+			assert(
+				branch._badge.entries["git-branch-diff"] == "⇄ main",
+				"badge must show the compared-against branch"
+			)
+			assert(
+				tint_groups()["GitSignsChangeLn"] and tint_groups()["GitSignsAddLn"],
+				"code buffer must tint branch hunks bg-only"
+			)
+			assert(#branch.ordered_files() == 1, "branch range must still know its changed file")
+			local branch_files_buf, branch_diffs_buf = assert_single_pane_pair()
+			assert(
+				#pane_lines(branch_files_buf) == 1 and pane_lines(branch_files_buf)[1]:find("a.txt", 1, true) ~= nil,
+				"files pane must list the branch range file"
+			)
+			local branch_diff_lines = pane_lines(branch_diffs_buf)
+			assert(
+				#branch_diff_lines == #branch.State.entries,
+				"diffs pane must list every branch range hunk"
+			)
+			for i, entry in ipairs(branch.State.entries) do
+				assert(
+					branch_diff_lines[i]:find(entry.text, 1, true) ~= nil,
+					"diffs pane must show the branch hunk: " .. entry.text
+				)
+			end
+
+			-- h/l navigate range entries while the worktree panes stay open.
+			vim.fn.setqflist({}, "r")
+			press("l")
+			assert(vim.api.nvim_get_current_buf() == buf, "branch l must stay in the code file")
+			assert(vim.fn.getqflist({ size = 0 }).size == 0, "branch l must not touch the worktree quickfix")
+			assert(next(tint_groups()) ~= nil, "branch l must keep the overlay painted")
+			assert(pages_mod.is_open(), "branch navigation must leave worktree panes open")
+			local _, marked_diffs_buf = assert_single_pane_pair()
+			local marked = 0
+			for _, line in ipairs(pane_lines(marked_diffs_buf)) do
+				if line:sub(1, 2) == "> " then
+					marked = marked + 1
+				end
+			end
+			assert(marked == 1, "h/l must mark the active branch hunk in the diffs pane")
+
+			-- Quit keeps the source and target, badge and overlay.
+			press("q")
+			assert(vim.g.active_hydra == nil, "q head never exited review mode")
+			assert(vim.g[range.MODE_VAR] == nil, "worktree tab must persist after hydra exit")
+			assert(vim.g[range.APPLIED_VAR] == "branch", "applied branch range must persist after hydra exit")
+			assert(branch.target() == "main", "branch target must persist after hydra exit")
+			assert(not pages_mod.is_open(), "q must close the worktree panes")
+			assert(branch._badge.entries["git-branch-diff"] == "⇄ main", "badge must persist after hydra exit")
+			assert(next(tint_groups()) ~= nil, "overlay must persist after hydra exit")
+
+			press(" g")
+			assert(pages_mod.is_open(), "re-enter must reopen worktree panes")
+			assert(not Picker.is_open(), "re-enter must apply the target without a picker")
+			assert(next(tint_groups()) ~= nil, "re-enter must restore the branch overlay")
+
+			-- t reopens the same source's picker; cancelling restores the range.
+			press("t")
+			assert(Picker.is_open(), "t must reopen the branch picker")
+			assert(not pages_mod.is_open(), "picker must replace the worktree panes")
+			assert(branch.target() == "main", "re-picking must keep the previous target until a new pick")
+			Picker.cancel()
+			assert(not Picker.is_open(), "cancelling re-pick must close the picker")
+			assert(vim.g[range.MODE_VAR] == nil, "cancelling re-pick must return to the worktree tab")
+			assert(vim.g[range.APPLIED_VAR] == "branch", "cancelling re-pick must keep the branch range applied")
+			assert(pages_mod.is_open(), "cancelling re-pick must restore worktree panes")
+			assert(next(tint_groups()) ~= nil, "cancelling re-pick must restore the branch overlay")
+
+			-- From the worktree tab, the first Tab opens the branch picker,
+			-- the second opens the commit picker.
+			press("<Tab>")
+			assert(vim.g[range.MODE_VAR] == "branch", "Tab from worktree must open the branch picker")
+			assert(Picker.is_open(), "branch picker must open")
+			assert(not pages_mod.is_open(), "branch picker must replace worktree panes")
+			press("<Tab>")
+			assert(vim.g[range.MODE_VAR] == "commit", "second Tab must select the commit source")
+			assert(Picker.is_open(), "commit source must open the full-height picker")
+			assert(not pages_mod.is_open(), "commit picker must replace worktree panes")
+			assert(not commit.is_enabled(), "commit is not enabled before a target is picked")
+			assert(next(tint_groups()) == nil, "switching sources must clear the branch overlay")
+
+			-- The query line stays hidden until ? is pressed.
+			local function first_line()
+				return vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] or ""
+			end
+			assert(not Picker.is_search_open(), "commit picker must start with the search line hidden")
+			assert(not first_line():find("Find:", 1, true), "hidden search must not occupy a row")
+
+			-- Hidden filtering still works by hash and message.
+			Picker.set_query(picked_short)
+			local visible = Picker.visible_items()
+			assert(#visible == 1 and visible[1].value == picked, "hash search must find the picked commit")
+			Picker.set_query("first")
+			visible = Picker.visible_items()
+			assert(#visible == 1 and visible[1].value == picked, "message search must find the first commit")
+			Picker.set_query("")
+
+			local commit_picker_buf = vim.api.nvim_get_current_buf()
+			press("?")
+			assert(Picker.is_search_open(), "? must reveal the search line")
+			assert(first_line() == "Find: ", "search line must show the query prompt")
+			Picker.set_query("e")
+			visible = Picker.visible_items()
+			assert(#visible == 2, "message filter must match both candidate commits")
+
+			vim.api.nvim_exec_autocmds("InsertLeave", { buffer = commit_picker_buf })
+			assert(not Picker.is_search_open(), "leaving insert must hide the commit search line")
+			assert(Picker.is_open(), "leaving insert must keep the picker open")
+			assert(#Picker.visible_items() == 2, "commit filter must stay applied after leaving insert")
+			assert(not first_line():find("Find:", 1, true), "hidden search must not occupy a row")
+			press("?")
+			assert(first_line() == "Find: e", "reopened search must keep the query")
+
+			-- Enter applies the query and hides the line again.
+			local cr = vim.fn.maparg("<CR>", "i", false, true)
+			assert(type(cr) == "table" and type(cr.callback) == "function", "picker needs an insert-mode Enter")
+			cr.callback()
+			assert(not Picker.is_search_open(), "Enter must hide the search line")
+			assert(Picker.is_open(), "Enter with multiple matches must keep the picker open")
+			assert(#Picker.visible_items() == 2, "Enter must keep the filtered results")
+
+			-- ? again reveals the same query.
+			press("?")
+			assert(Picker.is_search_open(), "? must reopen the search line")
+			assert(first_line() == "Find: e", "reopened search must keep the query")
+			Picker.set_query("first")
+			visible = Picker.visible_items()
+			assert(#visible == 1 and visible[1].value == picked, "search must keep filtering after reopening")
+
+			-- Selecting a commit also returns to the worktree panes.
+			assert(Picker.select(picked), "commit picker must select the picked commit")
+			assert(commit.is_enabled(), "selecting a commit must enable commit mode")
+			assert(commit.target() == picked, "commit target must persist the full hash")
+			assert(vim.g[range.MODE_VAR] == nil, "commit selection must return to the worktree tab")
+			assert(vim.g[range.APPLIED_VAR] == "commit", "commit selection must apply the commit range")
+			assert(not Picker.is_open(), "commit selection must close the picker")
+			assert(pages_mod.is_open(), "commit selection must restore worktree panes")
+			assert(not has_range_panes(), "commit selection must not open range panes")
+			assert(
+				commit._badge.entries["git-commit-diff"] == "⇢ " .. picked:sub(1, 7) .. "..HEAD",
+				"commit badge must show the range"
+			)
+			assert(
+				#branch.State.entries > #commit.State.entries,
+				"commit range must exclude the picked commit's own changes"
+			)
+			assert(#commit.State.entries == 1, "commit range must contain only the second change")
+			assert(
+				commit.State.entries[1].text:find("3:", 1, true) ~= nil,
+				"commit range must land on the line changed after the picked commit"
+			)
+			local commit_files_buf, commit_diffs_buf = assert_single_pane_pair()
+			assert(
+				#pane_lines(commit_files_buf) == 1 and pane_lines(commit_files_buf)[1]:find("a.txt", 1, true) ~= nil,
+				"files pane must list the selected commit range file"
+			)
+			local commit_diff_lines = pane_lines(commit_diffs_buf)
+			assert(
+				#commit_diff_lines == #commit.State.entries,
+				"diffs pane must list every selected commit range hunk"
+			)
+			assert(
+				commit_diff_lines[1]:find(commit.State.entries[1].text, 1, true) ~= nil,
+				"diffs pane must show the commit range hunk"
+			)
+			assert(
+				tint_groups()["GitSignsChangeLn"] ~= nil,
+				"code buffer must tint commit-range hunks bg-only"
+			)
+
+			-- Commit source persists across hydra exits too.
+			press("q")
+			assert(vim.g.active_hydra == nil, "q head never exited commit review")
+			assert(vim.g[range.MODE_VAR] == nil, "worktree tab must persist after hydra exit")
+			assert(vim.g[range.APPLIED_VAR] == "commit", "applied commit range must persist after hydra exit")
+			assert(commit.target() == picked, "commit target must persist after hydra exit")
+			assert(not pages_mod.is_open(), "q must close the worktree panes")
+			assert(
+				commit._badge.entries["git-commit-diff"] == "⇢ " .. picked:sub(1, 7) .. "..HEAD",
+				"commit badge must persist after hydra exit"
+			)
+			assert(next(tint_groups()) ~= nil, "commit overlay must persist after hydra exit")
+
+			press(" g")
+			assert(pages_mod.is_open(), "re-enter must reopen worktree panes")
+			assert(not Picker.is_open(), "re-enter must apply the commit target without a picker")
+			assert(next(tint_groups()) ~= nil, "re-enter must restore the commit overlay")
+
+			-- Revisiting a picker keeps the applied worktree diff behind it.
+			press("<Tab>")
+			assert(vim.g[range.MODE_VAR] == "branch", "Tab from worktree must open the branch picker")
+			assert(vim.g[range.APPLIED_VAR] == "commit", "picker visits must not drop the applied commit range")
+			assert(Picker.is_open(), "branch picker must open")
+			Picker.cancel()
+			assert(vim.g[range.MODE_VAR] == nil, "cancelling the branch picker must return to worktree")
+			assert(vim.g[range.APPLIED_VAR] == "commit", "cancelling must keep the commit range applied")
+			assert(pages_mod.is_open(), "cancelling must restore the applied commit panes")
+			assert(tint_groups()["GitSignsChangeLn"] ~= nil, "cancelling must restore the commit overlay")
+
+			-- S-Tab reverses the tab order: worktree -> commit -> branch -> worktree.
+			press("<S-Tab>")
+			assert(vim.g[range.MODE_VAR] == "commit", "S-Tab from worktree must open the commit picker")
+			assert(Picker.is_open(), "commit picker must open from S-Tab")
+			assert(not pages_mod.is_open(), "commit picker must replace worktree panes")
+			press("<S-Tab>")
+			assert(vim.g[range.MODE_VAR] == "branch", "S-Tab from commit must open the branch picker")
+			assert(Picker.is_open(), "branch picker must open from S-Tab")
+			press("<S-Tab>")
+			assert(vim.g[range.MODE_VAR] == nil, "S-Tab from branch must return to the worktree tab")
+			assert(vim.g[range.APPLIED_VAR] == "commit", "worktree tab must keep the applied commit range")
+			assert(pages_mod.is_open(), "worktree tab must restore the applied panes")
+			assert(
+				commit._badge.entries["git-commit-diff"] == "⇢ " .. picked:sub(1, 7) .. "..HEAD",
+				"worktree tab must restore the commit badge"
+			)
+			assert(tint_groups()["GitSignsChangeLn"] ~= nil, "worktree tab must restore the commit overlay")
 			press("q")
 
 			branch._reset()
+			commit._reset()
+			Picker._reset()
 			pages_mod._reset()
-			vim.g.angst_git_branch_diff_enabled = nil
-			vim.g.angst_git_branch_diff_target = nil
+			vim.g.angst_git_review_mode = nil
+			vim.g.angst_git_review_applied = nil
+			vim.g.angst_git_branch_target = nil
+			vim.g.angst_git_commit_target = nil
+			vim.g.angst_git_hunks_enabled = nil
 			vim.cmd("cd " .. vim.fn.fnameescape(saved_cwd))
 			package.loaded["gitsigns"] = nil
+			package.loaded["frontend.tools.git_hunk_display"] = nil
+			package.loaded["frontend.tools.git_review_files"] = nil
 			package.loaded["frontend.tools.git_review_pages"] = nil
+			package.loaded["frontend.tools.git_review_picker"] = nil
+			package.loaded["frontend.tools.git_range_hunks"] = nil
+			package.loaded["frontend.tools.git_review_range"] = nil
 			package.loaded["frontend.tools.git_review_branch"] = nil
+			package.loaded["frontend.tools.git_review_commit"] = nil
 			vim.api.nvim_buf_delete(buf, { force = true })
 			vim.fn.setqflist({}, "r")
 			vim.fn.delete(root, "rf")
@@ -1188,6 +1399,55 @@ return function()
 			assert(exited == 1, "on_exit must run once on deactivate")
 			hydra:purge()
 			assert(vim.g.active_hydra == nil, "test hydra never deactivated")
+		end)
+
+		it("hydra keeps running while a listed filetype enters insert mode", function()
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			local Hydra = require("common.Hydra")
+			local palette = require("config.theme.palette")
+
+			local exited = 0
+			local hydra = Hydra.new({
+				name = "InsertTest",
+				fg_color = palette.p.accent.base,
+				bg_color = palette.p.background.base,
+				enter = "<leader>X",
+				global = true,
+				keep_insert_filetypes = { "angst-test-picker" },
+				logger = require("common.Logger").new("TEST"),
+				on_exit = function()
+					exited = exited + 1
+				end,
+				heads = {
+					{ "a", function() end, "Alpha" },
+				},
+			})
+
+			local original = vim.api.nvim_get_current_buf()
+			local buf = vim.api.nvim_create_buf(false, true)
+			vim.bo[buf].filetype = "angst-test-picker"
+			vim.api.nvim_set_current_buf(buf)
+			press("<leader>X")
+			assert(vim.g.active_hydra ~= nil, "test hydra never activated")
+
+			vim.api.nvim_exec_autocmds("InsertEnter", { buffer = buf })
+			assert(
+				vim.g.active_hydra ~= nil,
+				"insert mode in a listed picker filetype must not exit the hydra"
+			)
+			assert(exited == 0, "guarded insert must not run on_exit")
+
+			vim.bo[buf].filetype = "lua"
+			vim.api.nvim_exec_autocmds("InsertEnter", { buffer = buf })
+			assert(vim.g.active_hydra == nil, "normal insert mode must still exit the hydra")
+			assert(exited == 1, "normal insert must run on_exit once")
+
+			hydra:purge()
+			if vim.api.nvim_buf_is_valid(original) then
+				vim.api.nvim_set_current_buf(original)
+			end
+			vim.api.nvim_buf_delete(buf, { force = true })
 		end)
 
 		it("every hydra toggles help with ?", function()
@@ -1287,6 +1547,7 @@ return function()
 				end,
 			}
 			package.loaded["frontend.tools.git_review"] = nil
+			evict_review_modules()
 			require("frontend.tools.git_review").config()
 
 			package.loaded["gitsigns"] = {
@@ -1356,6 +1617,7 @@ return function()
 			}
 			-- Rebind: the hydra holds the previous fake as an upvalue.
 			package.loaded["frontend.tools.git_review"] = nil
+			evict_review_modules()
 			require("frontend.tools.git_review").config()
 			vim.fn.setqflist({}, "r")
 			local messages = {}

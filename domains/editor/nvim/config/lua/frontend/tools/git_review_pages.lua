@@ -1,19 +1,10 @@
--- Two-pane file review for the Git review hydra (replaces the quickfix list).
+-- Worktree/range file review for the Git review hydra (replaces quickfix).
 --
 -- Right-side column, 70% files on top / 30% diffs below, each with a
--- titled winbar separator (▸ FILES (7) / ▸ DIFFS · foo.lua (2)).
--- Files show bare tail names; only the current file shows its whole
--- repo-rooted path, soft-wrapped to fit the pane (one logical line, so
--- cursor and <CR> never land mid-path). Diffs are compact kind rows:
---   ▸ domains/foo.lua           |  > 112: (+21) A
---     bar.lua                 |    11: (~5) M
---     other.lua               |    4: (+1) ??
--- One big list, no pages: `n` / `N` step files, `h` / `l` cycle diffs
--- in the current file. Each pane follows with its own window cursor
--- plus a ▸/> marker row; focus never leaves the code window, and no
--- extmark hover exists to duplicate. The diffs cursor takes the marked
--- hunk's kind color instead of the accent block. Panes open with the
--- hydra and show placeholder rows when the list is empty.
+-- titled winbar separator. The same panes serve the worktree quickfix
+-- and a selected branch/commit range; only the entry source changes.
+-- `n` / `N` step files, `h` / `l` cycle diffs, and focus never leaves
+-- the code window. Panes show placeholders when the source is empty.
 local M = {}
 
 local review_files = require("frontend.tools.git_review_files")
@@ -28,7 +19,15 @@ M.DIFFS_HEADER = "DIFFS"
 M.FILES_EMPTY = "(no changed files)"
 M.DIFFS_EMPTY = "(no diffs)"
 
--- Diff row kind tints, matched on the compact "lnum(signN) kind" tail.
+local SIDEBAR_FILETYPES = {
+	M.FILES_FILETYPE,
+	M.DIFFS_FILETYPE,
+	"angst-git-branch-files",
+	"angst-git-branch-diffs",
+	"angst-git-commit-files",
+	"angst-git-commit-diffs",
+}
+
 local KIND_MATCHES = {
 	{ group = "GitReviewAdded", pattern = "\\v\\(\\+\\d+\\) A$", cursor = "GitReviewCursorAdded" },
 	{ group = "GitReviewChanged", pattern = "\\v\\(\\~\\d+\\) M$", cursor = "GitReviewCursorChanged" },
@@ -36,8 +35,6 @@ local KIND_MATCHES = {
 	{ group = "GitReviewUntracked", pattern = "\\v\\(\\+\\d+\\) \\?\\?$", cursor = "GitReviewCursorUntracked" },
 }
 
--- Cursor group for a rendered diff row's kind, or nil when the row
--- carries no kind (placeholders, legacy texts).
 ---@param row? string
 ---@return string?
 local function cursor_kind_for(row)
@@ -53,13 +50,17 @@ local function cursor_kind_for(row)
 end
 
 local state = {
+	source = "worktree",
+	range_entries = {},
+	range_tops = {},
+	range_label = nil,
 	files_win = nil,
 	files_buf = nil,
 	diffs_win = nil,
 	diffs_buf = nil,
 	files = {},
 	tops = {},
-	context = { file = nil, qidx = nil },
+	context = { file = nil, index = nil },
 	file_rowmap = {},
 	diff_rowmap = {},
 	diffs_match = {},
@@ -73,6 +74,28 @@ local function valid_buf(buf)
 	return buf ~= nil and vim.api.nvim_buf_is_valid(buf)
 end
 
+---@param entry table
+---@return string? absolute path
+local function entry_abs(entry)
+	local name = nil
+	if entry.bufnr ~= nil and entry.bufnr > 0 and vim.api.nvim_buf_is_valid(entry.bufnr) then
+		name = vim.api.nvim_buf_get_name(entry.bufnr)
+	elseif entry.filename ~= nil and entry.filename ~= "" then
+		name = entry.filename
+	end
+	if name == nil or name == "" then
+		return nil
+	end
+	return vim.fn.fnamemodify(name, ":p")
+end
+
+local function source_entries()
+	if state.source == "range" then
+		return state.range_entries
+	end
+	return vim.fn.getqflist()
+end
+
 ---@return boolean
 function M.is_open()
 	return valid_win(state.files_win)
@@ -81,29 +104,51 @@ function M.is_open()
 		and valid_buf(state.diffs_buf)
 end
 
--- Deduped absolute-path file list from the quickfix, quickfix order kept.
----@return table[] { filename = abs path, lnum = int }
+-- Close every sidebar window, including stale branch/commit panes from
+-- older sessions or hot reloads. Tracked handles are not enough: a lost
+-- handle would otherwise leave a duplicate column behind.
+function M.close_sidebars()
+	local wins = vim.api.nvim_list_wins()
+	for _, win in ipairs(wins) do
+		if valid_win(win) then
+			local ft = vim.bo[vim.api.nvim_win_get_buf(win)].filetype
+			for _, sidebar_ft in ipairs(SIDEBAR_FILETYPES) do
+				if ft == sidebar_ft then
+					pcall(vim.api.nvim_win_close, win, true)
+					break
+				end
+			end
+		end
+	end
+	state.files_win = nil
+	state.diffs_win = nil
+	if not valid_buf(state.files_buf) then
+		state.files_buf = nil
+	end
+	if not valid_buf(state.diffs_buf) then
+		state.diffs_buf = nil
+	end
+end
+
+-- Deduped absolute-path file list from the current source.
+---@return table[] { filename = abs path, lnum = int, index = entry index }
 function M.files_from_quickfix()
 	local files, seen = {}, {}
-	for _, item in ipairs(vim.fn.getqflist()) do
-		local name = nil
-		if item.bufnr ~= nil and item.bufnr > 0 and vim.api.nvim_buf_is_valid(item.bufnr) then
-			name = vim.api.nvim_buf_get_name(item.bufnr)
-		elseif item.filename ~= nil and item.filename ~= "" then
-			name = item.filename
-		end
-		if name ~= nil and name ~= "" then
-			local abs = vim.fn.fnamemodify(name, ":p")
-			if not seen[abs] then
-				seen[abs] = true
-				files[#files + 1] = { filename = abs, lnum = item.lnum and item.lnum > 0 and item.lnum or 1 }
-			end
+	for i, item in ipairs(source_entries()) do
+		local abs = entry_abs(item)
+		if abs ~= nil and not seen[abs] then
+			seen[abs] = true
+			files[#files + 1] = {
+				filename = abs,
+				lnum = item.lnum and item.lnum > 0 and item.lnum or 1,
+				index = i,
+			}
 		end
 	end
 	return files
 end
 
--- Deduped absolute paths in quickfix order (one per file).
+-- Deduped absolute paths in source order (one per file).
 ---@return string[]
 function M.ordered_files()
 	local out = {}
@@ -128,9 +173,7 @@ function M.bufnr_for(abs_path)
 	return nil
 end
 
--- True when a quickfix item belongs to buffer `bufnr` / path `abs_path`.
--- Bufnr identity first (immune to path normalization quirks),
--- `:p` string match as fallback for filename-form entries.
+-- True when a source entry belongs to buffer `bufnr` / path `abs_path`.
 ---@param item table
 ---@param bufnr? integer
 ---@param abs_path string
@@ -147,17 +190,16 @@ function M.same_file(item, bufnr, abs_path)
 	return name ~= nil and vim.fn.fnamemodify(name, ":p") == abs_path
 end
 
--- Quickfix entries (one per diff) for `abs_path`, in list order.
+-- Source entries (one per diff) for `abs_path`, in source order.
 ---@param abs_path string
----@return table[] { qidx = quickfix index, lnum = int|string, text = string }
+---@return table[] { index = entry index, lnum = int|string, text = string }
 local function owned_entries(abs_path)
-	-- Resolve the buffer once so items match by identity, not strings.
 	local bufnr = M.bufnr_for(abs_path)
 	local out = {}
-	for i, item in ipairs(vim.fn.getqflist()) do
+	for i, item in ipairs(source_entries()) do
 		if M.same_file(item, bufnr, abs_path) then
 			out[#out + 1] = {
-				qidx = i,
+				index = i,
 				lnum = item.lnum and item.lnum > 0 and item.lnum or "?",
 				text = item.text or "",
 			}
@@ -167,7 +209,6 @@ local function owned_entries(abs_path)
 end
 
 -- File icon plus trailing space, or "" when devicons is unavailable.
--- Mirrors the heirline file component's lookup (no setup required).
 ---@param abs string absolute path
 ---@return string
 function M.icon_for(abs)
@@ -184,10 +225,9 @@ function M.icon_for(abs)
 	return icon .. " "
 end
 
--- Repo-toplevel-relative path for display (absolute fallback when the
--- file sits outside every known toplevel, e.g. /tmp fixtures).
+-- Repo-toplevel-relative path for display.
 ---@param abs string absolute path
----@param tops? string[] toplevels to root against (defaults to the list state)
+---@param tops? string[]
 ---@return string
 function M.relpath(abs, tops)
 	tops = tops or state.tops
@@ -195,7 +235,6 @@ function M.relpath(abs, tops)
 	for _, top in ipairs(tops) do
 		if abs:sub(1, #top) == top and (abs:sub(#top + 1, #top + 1) == "/" or #abs == #top) then
 			if best == nil or #top > #best then
-				-- Longest match wins for nested repos.
 				best = top
 			end
 		end
@@ -229,9 +268,7 @@ function M.file_row(abs, is_current, tops)
 	return "▸ " .. icon .. M.relpath(abs, tops)
 end
 
--- (Re)apply the diff row kind tints, replacing the previous matches so
--- re-renders never pile them up. Window-scoped matches die with the
--- window; the stored ids only guard the re-render path.
+-- (Re)apply the diff row kind tints, replacing the previous matches.
 ---@param win integer
 local function mark_kinds(win)
 	if state.diffs_match ~= nil then
@@ -259,7 +296,7 @@ function M.render_files()
 	state.file_rowmap = {}
 	for _, e in ipairs(state.files) do
 		lines[#lines + 1] = M.file_row(e.filename, e.filename == state.context.file)
-		state.file_rowmap[#lines] = e.filename
+		state.file_rowmap[#lines] = e
 	end
 	if #lines == 0 then
 		lines[#lines + 1] = M.FILES_EMPTY
@@ -268,12 +305,9 @@ function M.render_files()
 	vim.api.nvim_buf_set_lines(state.files_buf, 0, -1, false, lines)
 	vim.bo[state.files_buf].modifiable = false
 	pcall(vim.api.nvim_win_set_width, state.files_win, M.PANE_WIDTH)
-	-- Park the files cursor on the current file (row 1 fallback keeps
-	-- the cursor valid on empty lists). The strong cursorline plus the
-	-- ▸ marker is the hover; focus never leaves the code window.
 	local parked = false
-	for row, path in pairs(state.file_rowmap) do
-		if path == state.context.file then
+	for row, e in pairs(state.file_rowmap) do
+		if e.filename == state.context.file then
 			parked = pcall(vim.api.nvim_win_set_cursor, state.files_win, { row, 0 })
 			break
 		end
@@ -304,12 +338,12 @@ function M.render_diffs()
 	state.diff_rowmap = {}
 	local marked = nil
 	for _, d in ipairs(diffs) do
-		local current = d.qidx == state.context.qidx
+		local current = d.index == state.context.index
 		if current then
 			marked = #lines + 1
 		end
 		lines[#lines + 1] = (current and "> " or "  ") .. d.text
-		state.diff_rowmap[#lines] = d.qidx
+		state.diff_rowmap[#lines] = d
 	end
 	if #lines == 0 then
 		lines[#lines + 1] = M.DIFFS_EMPTY
@@ -319,8 +353,6 @@ function M.render_diffs()
 	vim.bo[state.diffs_buf].modifiable = false
 	pcall(vim.api.nvim_win_set_width, state.diffs_win, M.PANE_WIDTH)
 	mark_kinds(state.diffs_win)
-	-- Park the diffs cursor on the current diff (or the first row) and
-	-- paint the selection with that hunk's kind color.
 	local cursor_group = "GitReviewCursor"
 	if marked ~= nil then
 		local kind = cursor_kind_for(lines[marked])
@@ -337,57 +369,78 @@ function M.render()
 	M.render_diffs()
 end
 
--- Rebuild everything for `file_abs` with the `qidx` diff marked.
--- Pass nil qidx for no marker.
+-- Rebuild everything for `file_abs` with the `index` entry marked.
 ---@param file_abs? string
----@param qidx? integer
-function M.render_all(file_abs, qidx)
+---@param index? integer
+function M.render_all(file_abs, index)
 	state.files = M.files_from_quickfix()
-	state.tops = review_files.repo_toplevels()
-	state.context = { file = file_abs, qidx = qidx }
+	state.tops = state.source == "range" and state.range_tops or review_files.repo_toplevels()
+	state.context = { file = file_abs, index = index }
 	M.render()
 end
 
 function M.refresh()
 	state.files = M.files_from_quickfix()
-	state.tops = review_files.repo_toplevels()
+	state.tops = state.source == "range" and state.range_tops or review_files.repo_toplevels()
 	M.render()
 end
 
-local function jump_to_entry(entry)
+-- Switch the panes to a branch/commit range entry list.
+---@param entries table[]
+---@param tops? string[]
+---@param label? string
+function M.show_range(entries, tops, label)
+	state.source = "range"
+	state.range_entries = entries or {}
+	state.range_tops = tops or {}
+	state.range_label = label
+	state.context = { file = nil, index = nil }
+	if M.is_open() then
+		M.refresh()
+	end
+end
+
+-- Switch the panes back to the worktree quickfix.
+function M.show_worktree()
+	state.source = "worktree"
+	state.range_entries = {}
+	state.range_tops = {}
+	state.range_label = nil
+	state.context = { file = nil, index = nil }
+	if M.is_open() then
+		M.refresh()
+	end
+end
+
+---@param index integer
+---@return boolean
+local function jump_to_index(index)
+	if state.source ~= "range" then
+		local ok = pcall(vim.cmd, "cc " .. index)
+		return ok
+	end
+	local entry = state.range_entries[index]
 	if entry == nil then
 		return false
 	end
-	-- Never run `cc` from inside a pane: it would land the cursor there.
-	local cur = vim.api.nvim_get_current_win()
-	if cur == state.files_win or cur == state.diffs_win then
-		pcall(vim.cmd, "wincmd p")
+	local abs = entry_abs(entry)
+	if abs == nil then
+		return false
 	end
-	-- Prefer the quickfix index so we land on the hunk line.
-	local idx = nil
-	for i, item in ipairs(vim.fn.getqflist()) do
-		local name = nil
-		if item.bufnr ~= nil and item.bufnr > 0 and vim.api.nvim_buf_is_valid(item.bufnr) then
-			name = vim.api.nvim_buf_get_name(item.bufnr)
-		elseif item.filename ~= nil and item.filename ~= "" then
-			name = item.filename
-		end
-		if name ~= nil and vim.fn.fnamemodify(name, ":p") == entry.filename then
-			idx = i
-			break
+	local cur_name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf()), ":p")
+	if cur_name ~= abs then
+		local ok = pcall(vim.cmd, "edit " .. vim.fn.fnameescape(abs))
+		if not ok then
+			return false
 		end
 	end
-	if idx ~= nil then
-		pcall(vim.cmd, "cc " .. idx)
-	else
-		pcall(vim.cmd, "edit " .. vim.fn.fnameescape(entry.filename))
-		pcall(vim.api.nvim_win_set_cursor, 0, { entry.lnum, 0 })
-	end
+	local lnum = entry.lnum and entry.lnum > 0 and entry.lnum or 1
+	pcall(vim.api.nvim_win_set_cursor, 0, { lnum, 0 })
 	pcall(vim.cmd, "normal! zz")
 	return true
 end
 
-local function jump_from_pane_cursor(win, rowmap, kind)
+local function jump_from_pane_cursor(win, rowmap, _kind)
 	if not M.is_open() then
 		return
 	end
@@ -399,11 +452,7 @@ local function jump_from_pane_cursor(win, rowmap, kind)
 	if target == nil then
 		return
 	end
-	if kind == "diff" then
-		pcall(vim.cmd, "cc " .. target)
-	elseif target ~= nil then
-		jump_to_entry({ filename = target, lnum = 1 })
-	end
+	jump_to_index(target.index)
 	pcall(vim.cmd, "normal! zz")
 end
 
@@ -436,19 +485,10 @@ local function setup_pane_win(win)
 	vim.wo[win].number = false
 	vim.wo[win].relativenumber = false
 	vim.wo[win].winfixwidth = true
-	-- Long selected paths soft-wrap to fit (one logical line, so the
-	-- cursor and <CR> never land mid-path); continuation lines get a
-	-- two-space showbreak instead of looking like new rows.
 	vim.wo[win].wrap = true
 	pcall(vim.api.nvim_win_set_option, win, "showbreak", "  ")
-	-- The hover is this window's own cursorline, painted strong so the
-	-- parked row is unmissable. Never inherit the code window's
-	-- cursorline: that painted a second, duplicated hover.
-	-- No extmarks anywhere (their end_row is inclusive and bled below).
 	vim.wo[win].cursorline = true
 	pcall(vim.api.nvim_win_set_option, win, "winhighlight", "CursorLine:GitReviewCursor")
-	-- Blank window-local statusline: keeps heirline out of the narrow
-	-- panes. Titles live in the winbars, set per render.
 	pcall(vim.api.nvim_win_set_option, win, "statusline", " ")
 end
 
@@ -457,11 +497,9 @@ function M.open()
 		M.refresh()
 		return state.files_win
 	end
-	-- The bottom quickfix window must never share the screen with the
-	-- list: close it (list data is preserved, only the window closes).
+	-- Stale sidebars (lost handles, old range panes) must never survive.
 	pcall(vim.cmd, "cclose")
-	-- Drop stray halves (e.g. the user closed one pane by hand).
-	M.close()
+	M.close_sidebars()
 	local code_win = vim.api.nvim_get_current_win()
 	local files_buf = vim.api.nvim_create_buf(false, true)
 	setup_pane_buf(files_buf, M.FILES_FILETYPE, jump_from_files_cursor, "Jump to file")
@@ -478,14 +516,8 @@ function M.open()
 	vim.api.nvim_win_set_buf(state.diffs_win, diffs_buf)
 	setup_pane_win(state.diffs_win)
 	-- 70% files on top, diffs take the rest of the column.
-	local total = vim.api.nvim_win_get_height(state.files_win)
-		+ vim.api.nvim_win_get_height(state.diffs_win)
-		+ 1
-	pcall(
-		vim.api.nvim_win_set_height,
-		state.files_win,
-		math.max(1, math.floor(total * M.FILES_SHARE))
-	)
+	local total = vim.api.nvim_win_get_height(state.files_win) + vim.api.nvim_win_get_height(state.diffs_win) + 1
+	pcall(vim.api.nvim_win_set_height, state.files_win, math.max(1, math.floor(total * M.FILES_SHARE)))
 	-- Back to the code window: `j`/`k` stay normal motion there.
 	if valid_win(code_win) then
 		pcall(vim.api.nvim_set_current_win, code_win)
@@ -493,36 +525,25 @@ function M.open()
 		pcall(vim.cmd, "wincmd p")
 		pcall(vim.cmd, "wincmd p")
 	end
-	M.render_all(
-		vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p"),
-		vim.fn.getqflist({ idx = 0 }).idx
-	)
+	local index = state.source == "range" and state.context.index or vim.fn.getqflist({ idx = 0 }).idx
+	M.render_all(vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p"), index)
 	return state.files_win
 end
 
 function M.close()
-	for _, win in ipairs({ state.files_win, state.diffs_win }) do
-		if valid_win(win) then
-			pcall(vim.api.nvim_win_close, win, true)
-		end
-	end
-	state.files_win = nil
-	state.diffs_win = nil
-	-- Buffers wipe themselves (`bufhidden=wipe`); drop stale handles.
-	if not valid_buf(state.files_buf) then
-		state.files_buf = nil
-	end
-	if not valid_buf(state.diffs_buf) then
-		state.diffs_buf = nil
-	end
+	M.close_sidebars()
 end
 
 -- Test seam: reset module state between specs.
 function M._reset()
 	M.close()
+	state.source = "worktree"
+	state.range_entries = {}
+	state.range_tops = {}
+	state.range_label = nil
 	state.files = {}
 	state.tops = {}
-	state.context = { file = nil, qidx = nil }
+	state.context = { file = nil, index = nil }
 	state.file_rowmap = {}
 	state.diff_rowmap = {}
 	state.diffs_match = {}
