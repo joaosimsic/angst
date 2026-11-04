@@ -15,6 +15,7 @@ return {
 	treesitter = "go",
 	lsp_settings = {
 		gopls = {
+			fileWatcher = "fsnotify",
 			analyses = {
 				ST1000 = false,
 			},

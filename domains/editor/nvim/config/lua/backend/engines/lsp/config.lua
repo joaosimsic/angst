@@ -60,6 +60,10 @@ M.setup = function(logger)
 	capabilities.experimental = capabilities.experimental or {}
 	capabilities.experimental.serverStatusNotification = true
 
+	capabilities.workspace = capabilities.workspace or {}
+	capabilities.workspace.didChangeWatchedFiles =
+		vim.tbl_extend("force", capabilities.workspace.didChangeWatchedFiles or {}, { dynamicRegistration = true })
+
 	local all_servers = AdapterScanner:by_tool("lsp")
 	local bufnr = vim.api.nvim_get_current_buf()
 	local ft = vim.bo[bufnr].filetype
