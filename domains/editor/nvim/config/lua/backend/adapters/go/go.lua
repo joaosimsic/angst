@@ -15,6 +15,9 @@ return {
 	treesitter = "go",
 	lsp_settings = {
 		gopls = {
+			analyses = {
+				ST1000 = false,
+			},
 			hints = {
 				assignVariableTypes = true,
 				compositeLiteralFields = true,
