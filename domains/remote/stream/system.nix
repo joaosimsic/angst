@@ -17,7 +17,18 @@ let
 
   sunshineCreds = "/run/angst/host-secrets/sunshine";
 
-  sunshineCredsScript = pkgs.writeShellScript "angst-sunshine-credentials" ''
+  capSysAdmin = true;
+  sunshineBin =
+    if capSysAdmin then "${config.security.wrapperDir}/sunshine" else "${pkgs.sunshine}/bin/sunshine";
+
+  sunshineSettings = {
+    capture = "kms";
+    output_name = "DP-1";
+    csrf_allowed_origins = ''["https://100.118.236.87:47990" "https://nixos.tail97bc58.ts.net:47990"]'';
+  };
+  sunshineConf = (pkgs.formats.keyValue { }).generate "sunshine.conf" sunshineSettings;
+
+  sunshineStartScript = pkgs.writeShellScript "angst-sunshine-start" ''
     set -eu
     umask 0077
     creds=${lib.escapeShellArg sunshineCreds}
@@ -25,9 +36,9 @@ let
       echo "sunshine credentials are not ready at $creds; retrying" >&2
       exit 1
     fi
-    user=$(sed -n '1p' "$creds")
-    pass=$(sed -n '2p' "$creds")
-    exec ${pkgs.sunshine}/bin/sunshine --creds "$user" "$pass"
+    user=$(${pkgs.gnused}/bin/sed -n '1p' "$creds")
+    pass=$(${pkgs.gnused}/bin/sed -n '2p' "$creds")
+    exec ${sunshineBin} --creds "$user" "$pass" ${sunshineConf}
   '';
 in
 {
@@ -61,7 +72,7 @@ in
             # first switch, failing activation with status 4.
             autoStart = false;
             openFirewall = false;
-            capSysAdmin = false;
+            inherit capSysAdmin;
           };
           displayManager.defaultSession = "i3";
           displayManager.autoLogin = {
@@ -73,7 +84,7 @@ in
         systemd = {
           user = {
             services = {
-              sunshine.serviceConfig.ExecStartPre = [ "${sunshineCredsScript}" ];
+              sunshine.serviceConfig.ExecStart = lib.mkForce [ "${sunshineStartScript}" ];
               sunshine-creds-restart = {
                 description = "angst: restart sunshine after credential rotation";
                 after = [ "sunshine.service" ];
@@ -113,6 +124,7 @@ in
         };
 
         users.users.${userConfig.username}.extraGroups = [
+          "input"
           "uinput"
           "render"
         ];

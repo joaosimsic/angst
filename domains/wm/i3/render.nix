@@ -1,53 +1,26 @@
 {
+  config,
   lib,
   themesLib,
   themeName,
   host,
   fontFamily,
-  monitors ? { },
   homeDirectory,
 }:
 
 let
   t = themesLib.get themeName;
   p = t.palette;
+  profileDirectory = config.home.profileDirectory;
 
   ftpBind = lib.optionalString ((host.ftp.mounts or [ ]) != [ ]) ''
     bindsym $mod+Shift+p exec --no-startup-id angst-ftp-status toggle
   '';
-
-  monitorOrder = lib.unique (
-    lib.filter (n: lib.hasAttr n monitors) (
-      [
-        "primary"
-        "secondary"
-      ]
-      ++ lib.attrNames monitors
-    )
-  );
-
-  monitorLine =
-    name:
-    let
-      m = monitors.${name};
-    in
-    if m.resolution == "auto" then
-      "exec --no-startup-id xrandr --output ${m.name} --auto --pos ${m.position}"
-    else if m.resolution == "kernel" then
-      "# ${m.name} resolution applied by the X session"
-    else
-      "exec --no-startup-id xrandr --output ${m.name} --mode ${m.resolution} --rate ${toString m.refreshRate} --pos ${m.position}";
-
-  monitorsConf =
-    if monitors == { } then
-      "# no monitor overrides configured"
-    else
-      lib.concatStringsSep "\n" (map monitorLine monitorOrder);
 in
 [
   {
     path = "domains/wm/i3/config/monitors.conf";
-    text = monitorsConf + "\n";
+    text = "# Monitor layout is applied by the X session before i3 starts.\n";
   }
   {
     path = "domains/wm/i3/config/config";
@@ -168,22 +141,25 @@ in
       for_window [class="^i3-cheatsheet$"] floating enable, border none, move to workspace current, move position center
       no_focus [class="^i3-cheatsheet$"]
 
-      bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
-      bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ghostty
-      bindsym $mod+e exec --no-startup-id GDK_BACKEND=x11 ghostty -e yazi
-      exec_always --no-startup-id env ANGST_INACTIVE_OPACITY=75 i3-workspace-group daemon
+      bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ${profileDirectory}/bin/ghostty
+      bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ${profileDirectory}/bin/ghostty
+      bindsym $mod+e exec --no-startup-id GDK_BACKEND=x11 ${profileDirectory}/bin/ghostty -e yazi
+      exec_always --no-startup-id env ANGST_INACTIVE_OPACITY=75 ${profileDirectory}/bin/i3-workspace-group daemon
       exec_always --no-startup-id hsetroot -solid '#${p.background.base}'
       exec --no-startup-id dbus-update-activation-environment --systemd --all
       exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY PATH XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
       exec --no-startup-id systemctl --user start graphical-session.target
-      bindsym $mod+space exec --no-startup-id rofi -show drun
+      bindsym $mod+space exec --no-startup-id ${profileDirectory}/bin/rofi -show drun
       bindsym --release $mod+i exec --no-startup-id i3-hardware-menu
       bindsym --release $mod+n exec --no-startup-id i3-network-menu
       bindsym --release $mod+Shift+slash exec --no-startup-id i3-cheatsheet toggle
+      bindsym $mod+Shift+o exec --no-startup-id ${profileDirectory}/bin/angst-display toggle
 
       bar {
-          status_command i3status-rs ~/.config/i3status-rust/config.toml
-          workspace_command i3-workspace-group bar ${t.ansi.error}
+          status_command ${profileDirectory}/bin/i3status-rs ~/.config/i3status-rust/config.toml
+          workspace_command ${profileDirectory}/bin/i3-workspace-group bar ${t.ansi.error}
+          output primary
+          output nonprimary
           position top
           tray_output none
           font pango:${fontFamily} 10

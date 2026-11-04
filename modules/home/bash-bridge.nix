@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 {
   # Bash (and tools launched from bash, e.g. opencode) never sourced
@@ -8,7 +8,7 @@
   # source line to ~/.profile (login shells) and ~/.bashrc (interactive
   # non-login shells).
   home.activation.hmSessionVarsForBash = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    SRC_LINE='[ -f "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh" ] && . "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"'
+    SRC_LINE='[ -f "${config.home.profileDirectory}/etc/profile.d/hm-session-vars.sh" ] && . "${config.home.profileDirectory}/etc/profile.d/hm-session-vars.sh"'
     for target in "$HOME/.profile" "$HOME/.bashrc"; do
       if [ -f "$target" ]; then
         if ! grep -q 'hm-session-vars\.sh' "$target" 2>/dev/null; then
