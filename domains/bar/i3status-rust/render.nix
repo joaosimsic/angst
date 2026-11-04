@@ -12,6 +12,28 @@ let
   grabStatus = if isVm then "i3-vm-grab status --guest" else "i3-vm-grab status";
   grabClick = if isVm then "i3-vm-grab request" else "i3-vm-grab toggle";
 
+  isSunshineHost = host.remoteStream.role == "host" || host.remoteStream.role == "both";
+
+  sunshineStatusBlock = lib.optionalString isSunshineHost ''
+    [[block]]
+    block = "custom"
+    interval = 2
+    json = true
+    shell = "/bin/sh"
+    command = "i3-sunshine-status"
+    format = " $icon "
+    [block.theme_overrides]
+    idle_fg = "#${p.foreground.variant}"
+    idle_bg = "#${p.background.base}"
+    good_fg = "#${t.ansi.success}"
+    good_bg = "#${p.background.base}"
+    critical_fg = "#${t.ansi.error}"
+    critical_bg = "#${p.background.base}"
+    [[block.click]]
+    button = "left"
+    cmd = "xdg-open https://localhost:47990"
+  '';
+
   ftpStatusBlock = lib.optionalString ((host.ftp.mounts or [ ]) != [ ]) ''
     [[block]]
     block = "custom"
@@ -42,6 +64,9 @@ in
       [icons.overrides]
       net_wifi = "\U000F05A9"
       net_offline = "\U000F05AA"
+      sunshine = "\U000F0118"
+      sunshine_active = "\U000F0119"
+      sunshine_off = "\U000F078A"
 
       [theme]
       theme = "plain"
@@ -81,6 +106,7 @@ in
       button = "left"
       cmd = "sh -c 'command -v i3-network-menu >/dev/null 2>&1 && i3-network-menu'"
 
+      ${sunshineStatusBlock}
       ${ftpStatusBlock}
       [[block]]
       block = "sound"
