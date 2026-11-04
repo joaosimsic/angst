@@ -117,6 +117,7 @@
     "Throughput-Releases"
     "vault"
     "TCC"
+    "TiConnect"
     "box"
     "intelligence/backend"
     "intelligence/frontend"

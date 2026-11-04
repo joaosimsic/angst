@@ -103,6 +103,7 @@
     "Throughput-Releases"
     "vault"
     "TCC"
+    "TiConnect"
     "Tyto"
     "box"
     "intelligence/backend"
