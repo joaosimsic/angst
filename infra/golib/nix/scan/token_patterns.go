@@ -17,78 +17,78 @@ func (matcher tokenMatcher) matches(candidate token) bool {
 	return true
 }
 
-type referenceMatch struct {
+type tokenMatch struct {
 	target token
 	name   token
 }
 
-type referencePattern struct {
+type tokenPattern struct {
 	matchers    []tokenMatcher
 	targetIndex int
 	nameIndex   int
 }
 
-func (pattern referencePattern) match(tokens []token, start int) (referenceMatch, bool) {
-	if start+len(pattern.matchers) > len(tokens) {
-		return referenceMatch{}, false
+func (pattern tokenPattern) match(tokens []token, start int) (tokenMatch, bool) {
+	if start < 0 || start+len(pattern.matchers) > len(tokens) {
+		return tokenMatch{}, false
 	}
 
 	for offset, matcher := range pattern.matchers {
 		if !matcher.matches(tokens[start+offset]) {
-			return referenceMatch{}, false
+			return tokenMatch{}, false
 		}
 	}
 
-	return referenceMatch{
+	return tokenMatch{
 		target: tokens[start+pattern.targetIndex],
 		name:   tokens[start+pattern.nameIndex],
 	}, true
 }
 
-var directReferencePattern = referencePattern{
+var directReferencePattern = tokenPattern{
 	matchers: []tokenMatcher{
-		{text: "("},
-		{kind: kindIdent, text: "import"},
+		{text: openParenthesisSymbol},
+		{kind: kindIdent, text: importKeyword},
 		{kind: kindPath},
-		{text: ")"},
-		{text: "."},
+		{text: closeParenthesisSymbol},
+		{text: fieldAccessSymbol},
 		{kind: kindIdent},
 	},
 	targetIndex: 2,
 	nameIndex:   5,
 }
 
-var doubleParenReferencePattern = referencePattern{
+var doubleParenReferencePattern = tokenPattern{
 	matchers: []tokenMatcher{
-		{text: "("},
-		{text: "("},
-		{kind: kindIdent, text: "import"},
+		{text: openParenthesisSymbol},
+		{text: openParenthesisSymbol},
+		{kind: kindIdent, text: importKeyword},
 		{kind: kindPath},
-		{text: ")"},
-		{text: ")"},
-		{text: "."},
+		{text: closeParenthesisSymbol},
+		{text: closeParenthesisSymbol},
+		{text: fieldAccessSymbol},
 		{kind: kindIdent},
 	},
 	targetIndex: 3,
 	nameIndex:   7,
 }
 
-var aliasCallReferencePattern = referencePattern{
+var aliasCallReferencePattern = tokenPattern{
 	matchers: []tokenMatcher{
-		{text: "("},
+		{text: openParenthesisSymbol},
 		{kind: kindIdent},
-		{text: ")"},
-		{text: "."},
+		{text: closeParenthesisSymbol},
+		{text: fieldAccessSymbol},
 		{kind: kindIdent},
 	},
 	targetIndex: 1,
 	nameIndex:   4,
 }
 
-var aliasFieldReferencePattern = referencePattern{
+var aliasFieldReferencePattern = tokenPattern{
 	matchers: []tokenMatcher{
 		{kind: kindIdent},
-		{text: "."},
+		{text: fieldAccessSymbol},
 		{kind: kindIdent},
 	},
 	targetIndex: 0,

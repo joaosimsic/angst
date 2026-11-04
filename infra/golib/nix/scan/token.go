@@ -18,3 +18,15 @@ type token struct {
 func (candidate token) isIdent(text string) bool {
 	return candidate.Kind == kindIdent && candidate.Text == text
 }
+
+func (candidate token) isSymbol(text string) bool {
+	return candidate.Kind == kindSymbol && candidate.Text == text
+}
+
+func tokenAt(tokens []token, index int) (token, bool) {
+	if index < 0 || index >= len(tokens) {
+		return token{}, false
+	}
+
+	return tokens[index], true
+}

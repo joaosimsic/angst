@@ -2,64 +2,58 @@ package scan
 
 import "github.com/joaosimsic/angst/infra/golib/repo"
 
-type importAnalysis struct {
-	Imports map[string]struct{}
-	Aliases map[string]string
-	Issues  []string
+const (
+	dynamicImportIssue = "dynamic import"
+	nonPathImportIssue = "dynamic or non-path import"
+)
+
+type importScanner struct {
+	worktree repo.Worktree
+	files    map[string]struct{}
+	findings importFindings
 }
 
-func analyzeImports(worktree repo.Worktree, files map[string]struct{}, tokens []token) importAnalysis {
-	result := importAnalysis{
-		Imports: map[string]struct{}{},
-		Aliases: map[string]string{},
+func analyzeImports(worktree repo.Worktree, files map[string]struct{}, tokens []token) importFindings {
+	scanner := importScanner{
+		worktree: worktree,
+		files:    files,
+		findings: newImportFindings(),
 	}
 
-	for i := range len(tokens) {
-		scanImport(worktree, files, tokens, i, &result)
+	for start := range len(tokens) {
+		scanner.scanImport(tokens, start)
+
+		scanner.scanAlias(tokens, start)
 	}
 
-	for i := 0; i+3 < len(tokens); i++ {
-		scanAlias(worktree, tokens, i, &result)
-	}
-
-	return result
+	return scanner.findings
 }
 
-func scanImport(worktree repo.Worktree, files map[string]struct{}, tokens []token, start int, result *importAnalysis) {
-	if !tokens[start].isIdent("import") {
-		return
-	}
-	if start+1 >= len(tokens) {
-		result.Issues = append(result.Issues, "dynamic import")
-		return
-	}
-	if tokens[start+1].Kind != kindPath {
-		result.Issues = append(result.Issues, "dynamic or non-path import")
+func (scanner *importScanner) scanImport(tokens []token, start int) {
+	keyword, ok := tokenAt(tokens, start)
+	if !ok || !keyword.isIdent(importKeyword) {
 		return
 	}
 
-	target := relativePath(worktree, tokens[start+1].Text)
-	if target == "" {
+	match, ok := directImportPattern.match(tokens, start)
+	if ok {
+		scanner.recordImport(match.target)
 		return
 	}
-	if _, ok := files[target]; ok {
-		result.Imports[target] = struct{}{}
+
+	if _, ok := tokenAt(tokens, start+1); !ok {
+		scanner.findings.addIssue(dynamicImportIssue)
+		return
 	}
+
+	scanner.findings.addIssue(nonPathImportIssue)
 }
 
-func scanAlias(worktree repo.Worktree, tokens []token, start int, result *importAnalysis) {
-	if tokens[start].Kind != kindIdent || tokens[start].Text == "import" {
-		return
-	}
-	if start > 0 && tokens[start-1].Text == "." {
-		return
-	}
-	if tokens[start+1].Text != "=" {
+func (scanner *importScanner) recordImport(pathToken token) {
+	target := relativePath(scanner.worktree, pathToken.Text)
+	if _, ok := scanner.files[target]; !ok {
 		return
 	}
 
-	importStart := start + 2
-	if importStart+3 < len(tokens) && tokens[importStart].Text == "(" && tokens[importStart+1].isIdent("import") && tokens[importStart+2].Kind == kindPath && tokens[importStart+3].Text == ")" {
-		result.Aliases[tokens[start].Text] = relativePath(worktree, tokens[importStart+2].Text)
-	}
+	scanner.findings.addImport(target)
 }

@@ -22,16 +22,18 @@ func (scanner Scanner) Scan(parsedExpression string) (Result, error) {
 
 	imported := analyzeImports(scanner.Worktree, scanner.Files, tokens)
 
-	referenced := analyzeReferences(scanner.Worktree, scanner.Files, imported.Aliases, tokens)
+	aliases := imported.aliasTargets()
 
-	inherited := analyzeInherit(scanner.Worktree, scanner.Files, imported.Aliases, tokens)
+	referenced := analyzeReferences(scanner.Worktree, scanner.Files, aliases, tokens)
+
+	inherited := analyzeInherit(scanner.Worktree, scanner.Files, aliases, tokens)
 
 	referenced.merge(inherited)
 
 	return Result{
-		Imports: imported.Imports,
-		Aliases: imported.Aliases,
+		Imports: imported.importSet(),
+		Aliases: aliases,
 		Refs:    map[string]map[string]struct{}(referenced),
-		Issues:  imported.Issues,
+		Issues:  imported.foundIssues(),
 	}, nil
 }

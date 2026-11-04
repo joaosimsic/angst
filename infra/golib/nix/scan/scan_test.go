@@ -58,3 +58,45 @@ func TestScanDynamicImport(t *testing.T) {
 		t.Fatalf("expected one issue, got %#v", result.Issues)
 	}
 }
+
+func TestScanInheritImportForms(t *testing.T) {
+	worktree := repo.Worktree{Root: "/tmp/repo"}
+
+	files := map[string]struct{}{
+		"mod/default.nix": {},
+	}
+
+	testCases := []struct {
+		name             string
+		parsedExpression string
+		members          []string
+	}{
+		{"direct", `inherit (import /tmp/repo/mod/default.nix) one two;`, []string{"one", "two"}},
+		{"parenthesized", `inherit ((import /tmp/repo/mod/default.nix)) three four;`, []string{"three", "four"}},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result, err := (Scanner{Worktree: worktree, Files: files}).Scan(testCase.parsedExpression)
+			if err != nil {
+				t.Fatalf("scan: %v", err)
+			}
+
+			for _, member := range testCase.members {
+				if !hasKey(result.Refs["mod/default.nix"], member) {
+					t.Fatalf("missing ref %s: %#v", member, result.Refs)
+				}
+			}
+		})
+	}
+}
+
+func TestScanIgnoresAliasOutsideWorktree(t *testing.T) {
+	result, err := (Scanner{Worktree: repo.Worktree{Root: "/tmp/repo"}}).Scan(`let outside = (import /tmp/other/file.nix); in outside`)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if _, ok := result.Aliases["outside"]; ok {
+		t.Fatalf("unexpected alias: %#v", result.Aliases)
+	}
+}

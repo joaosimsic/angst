@@ -9,6 +9,15 @@ type inheritScanner struct {
 	output   referenceSet
 }
 
+var inheritAliasPattern = tokenPattern{
+	matchers: []tokenMatcher{
+		{kind: kindIdent},
+		{text: closeParenthesisSymbol},
+	},
+	targetIndex: 0,
+	nameIndex:   0,
+}
+
 func analyzeInherit(worktree repo.Worktree, files map[string]struct{}, aliases map[string]string, tokens []token) referenceSet {
 	analyzer := inheritScanner{
 		worktree: worktree,
@@ -25,7 +34,8 @@ func analyzeInherit(worktree repo.Worktree, files map[string]struct{}, aliases m
 }
 
 func (analyzer inheritScanner) scanInherit(tokens []token, start int) {
-	if !tokens[start].isIdent("inherit") {
+	keyword, ok := tokenAt(tokens, start)
+	if !ok || !keyword.isIdent(inheritKeyword) {
 		return
 	}
 
@@ -38,49 +48,39 @@ func (analyzer inheritScanner) scanInherit(tokens []token, start int) {
 }
 
 func (analyzer inheritScanner) inheritTarget(tokens []token, start int) (string, int, bool) {
-	if start >= len(tokens) || tokens[start].Text != "(" {
+	opening, ok := tokenAt(tokens, start)
+	if !ok || !opening.isSymbol(openParenthesisSymbol) {
 		return "", 0, false
 	}
+
 	start++
 
-	if start >= len(tokens) {
+	if match, ok := inheritAliasPattern.match(tokens, start); ok {
+		target := analyzer.aliases[match.name.Text]
+
+		return target, start + len(inheritAliasPattern.matchers), target != ""
+	}
+
+	imported, ok := matchImportTarget(tokens, start)
+	if !ok {
 		return "", 0, false
 	}
 
-	if tokens[start].Kind == kindIdent && start+1 < len(tokens) && tokens[start+1].Text == ")" {
-		target := analyzer.aliases[tokens[start].Text]
-
-		return target, start + 2, target != ""
+	target := relativePath(analyzer.worktree, imported.pathToken.Text)
+	next := start + imported.consumed
+	if next < len(tokens) && tokens[next].isSymbol(closeParenthesisSymbol) {
+		next++
 	}
 
-	if tokens[start].Text == "(" && start+3 < len(tokens) && tokens[start+1].isIdent("import") && tokens[start+2].Kind == kindPath && tokens[start+3].Text == ")" {
-		target := relativePath(analyzer.worktree, tokens[start+2].Text)
-		next := start + 4
-		if next < len(tokens) && tokens[next].Text == ")" {
-			next++
-		}
-
-		return target, next, target != ""
-	}
-
-	if tokens[start].isIdent("import") && start+1 < len(tokens) && tokens[start+1].Kind == kindPath {
-		target := relativePath(analyzer.worktree, tokens[start+1].Text)
-		next := start + 2
-		if next < len(tokens) && tokens[next].Text == ")" {
-			next++
-		}
-
-		return target, next, target != ""
-	}
-
-	return "", 0, false
+	return target, next, target != ""
 }
 
 func (analyzer inheritScanner) addInheritRefs(tokens []token, start int, target string) {
-	for start < len(tokens) && tokens[start].Text != ";" {
+	for start < len(tokens) && !tokens[start].isSymbol(statementTerminatorSymbol) {
 		if tokens[start].Kind == kindIdent {
 			analyzer.output.add(analyzer.files, target, tokens[start].Text)
 		}
+
 		start++
 	}
 }
