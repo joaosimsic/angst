@@ -40,6 +40,7 @@
   db = [ "work/intelligence" ];
 
   nixos = {
+    imports = [ ./display-edid.nix ];
     keyboardLayout = "br-abnt2";
     angst.wakeOnLan = {
       enable = true;
