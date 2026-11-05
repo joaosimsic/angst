@@ -24,11 +24,11 @@ let
   sunshineSettings = {
     capture = "kms";
     output_name = "DP-1";
-    csrf_allowed_origins = ''["https://100.118.236.87:47990" "https://nixos.tail97bc58.ts.net:47990"]'';
+    csrf_allowed_origins = "https://100.118.236.87:47990,https://nixos.tail97bc58.ts.net:47990";
   };
   sunshineConf = (pkgs.formats.keyValue { }).generate "sunshine.conf" sunshineSettings;
 
-  sunshineStartScript = pkgs.writeShellScript "angst-sunshine-start" ''
+  sunshineCredsScript = pkgs.writeShellScript "angst-sunshine-creds" ''
     set -eu
     umask 0077
     creds=${lib.escapeShellArg sunshineCreds}
@@ -38,7 +38,12 @@ let
     fi
     user=$(${pkgs.gnused}/bin/sed -n '1p' "$creds")
     pass=$(${pkgs.gnused}/bin/sed -n '2p' "$creds")
-    exec ${sunshineBin} --creds "$user" "$pass" ${sunshineConf}
+    exec ${sunshineBin} --creds "$user" "$pass"
+  '';
+
+  sunshineStartScript = pkgs.writeShellScript "angst-sunshine-start" ''
+    set -eu
+    exec ${sunshineBin} ${sunshineConf}
   '';
 in
 {
@@ -67,12 +72,9 @@ in
         services = {
           sunshine = {
             enable = true;
-            # Started via systemd.user.paths.sunshine-creds once
-            # /run/angst/host-secrets/sunshine exists. Direct WantedBy
-            # would restart the user unit before the system
-            # angst-provision-host-secrets.service creates the file on
-            # first switch, failing activation with status 4.
-            autoStart = false;
+            # Safe to start directly: the unit is skipped via
+            # ConditionPathExists until the host secret exists.
+            autoStart = true;
             openFirewall = false;
             inherit capSysAdmin;
           };
@@ -86,13 +88,17 @@ in
         systemd = {
           user = {
             services = {
-              sunshine.serviceConfig.ExecStart = lib.mkForce [ "${sunshineStartScript}" ];
+              sunshine.unitConfig.ConditionPathExists = sunshineCreds;
+              sunshine.serviceConfig = {
+                ExecStartPre = lib.mkForce [ "${sunshineCredsScript}" ];
+                ExecStart = lib.mkForce [ "${sunshineStartScript}" ];
+              };
               sunshine-creds-restart = {
-                description = "angst: restart sunshine after credential rotation";
+                description = "angst: start or restart sunshine after credential rotation";
                 after = [ "sunshine.service" ];
                 serviceConfig = {
                   Type = "oneshot";
-                  ExecStart = "${pkgs.systemd}/bin/systemctl --user try-restart sunshine.service";
+                  ExecStart = "${pkgs.systemd}/bin/systemctl --user restart sunshine.service";
                 };
               };
             };
@@ -110,9 +116,9 @@ in
                 };
               };
 
-              # Rotation: PathModified fires on credential rewrite. Unit only
-              # starts, never restarts, so fan out to a oneshot that
-              # try-restarts (no-op when sunshine is not running).
+              # Rotation: PathModified fires on credential rewrite. Restart
+              # rather than try-restart so an inactive Sunshine is started
+              # too; switches rewrite the secret while the service is down.
               sunshine-creds-changed = {
                 wantedBy = [ "graphical-session.target" ];
                 partOf = [ "graphical-session.target" ];
