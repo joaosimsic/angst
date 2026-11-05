@@ -57,7 +57,7 @@ M.get = function()
 		["@keyword.directive.define"] = { link = "Define" },
 		["@keyword.exception"] = { link = "Exception" },
 		["@keyword.function"] = { link = "Keyword" },
-		["@keyword.import"] = { link = "Include" },
+		["@keyword.import"] = { link = "Keyword" },
 		["@keyword.modifier"] = { link = "@keyword" },
 		["@keyword.operator"] = { link = "Operator" },
 		["@keyword.type"] = { link = "@keyword" },
