@@ -93,6 +93,7 @@ M.get = function()
 		["@lsp.typemod.function.declaration"] = { link = "@function" },
 		["@lsp.typemod.function.defaultLibrary"] = { link = "@function" },
 		["@lsp.typemod.interface.defaultLibrary"] = { link = "@type" },
+		["@lsp.typemod.keyword.constant"] = { link = "@keyword" },
 		["@lsp.typemod.macro.defaultLibrary"] = { link = "@function.macro" },
 		["@lsp.typemod.method.declaration"] = { link = "@function.method" },
 		["@lsp.typemod.method.defaultLibrary"] = { link = "@function.method" },
