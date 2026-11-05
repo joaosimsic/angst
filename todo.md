@@ -66,6 +66,7 @@
 - [x] firefox
 - [x] persistent and not persistent prints
 - [x] notifications and add print notifications
+- [ ] i3 shortcut or shell cmd that kill a random process(could add more silly things)
 
 # i3
 
