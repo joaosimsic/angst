@@ -8,43 +8,58 @@
 
 let
   cfg = config.domains.display.x11;
-  secondary = monitors.secondary or null;
 
-  secondaryOn =
-    if secondary == null then
+  nonPrimary = lib.filterAttrs (name: m: name != "primary" && m ? name) monitors;
+
+  monitorOn =
+    m:
+    if (m.resolution or "auto") == "auto" then
       ''
-        echo "no secondary monitor configured" >&2
-        exit 1
+        xrandr --output ${m.name} --auto --pos ${m.position or "1920x0"}
       ''
-    else if (secondary.resolution or "auto") == "auto" then
-      ''
-        xrandr --output "$secondary" --auto --pos ${secondary.position or "1920x0"}
-      ''
-    else if (secondary.resolution or "auto") == "kernel" then
+    else if (m.resolution or "auto") == "kernel" then
       ''
         res=""
         for arg in $(cat /proc/cmdline); do
           case "$arg" in
-            video=${secondary.name}:*)
-              res="''${arg#video=${secondary.name}:}"
+            video=${m.name}:*)
+              res="''${arg#video=${m.name}:}"
               res="''${res%@*}"
               ;;
           esac
         done
         if [ -z "$res" ]; then
-          echo "no kernel mode configured for $secondary" >&2
+          echo "no kernel mode configured for ${m.name}" >&2
           exit 1
         fi
-        xrandr --output "$secondary" --mode "$res" --rate ${
-          toString (secondary.refreshRate or 60)
-        } --pos ${secondary.position or "1920x0"}
+        xrandr --output ${m.name} --mode "$res" --rate ${toString (m.refreshRate or 60)} --pos ${m.position or "1920x0"}
       ''
     else
       ''
-        xrandr --output "$secondary" --mode ${secondary.resolution} --rate ${
-          toString (secondary.refreshRate or 60)
-        } --pos ${secondary.position or "1920x0"}
+        xrandr --output ${m.name} --mode ${m.resolution} --rate ${toString (m.refreshRate or 60)} --pos ${m.position or "1920x0"}
       '';
+
+  enableLines = lib.concatStrings (
+    lib.mapAttrsToList (_: m: ''
+      if xrandr --query | grep -qE "^${m.name} connected"; then
+        ${monitorOn m}
+      fi
+    '') nonPrimary
+  );
+
+  disableLines = lib.concatStrings (
+    lib.mapAttrsToList (_: m: ''
+      xrandr --output ${m.name} --off 2>/dev/null || true
+    '') nonPrimary
+  );
+
+  activeLines = lib.concatStrings (
+    lib.mapAttrsToList (_: m: ''
+      if xrandr --query | grep -qE "^${m.name} connected [0-9]"; then
+        return 0
+      fi
+    '') nonPrimary
+  );
 
   angstDisplay = pkgs.writeShellApplication {
     name = "angst-display";
@@ -56,36 +71,86 @@ let
     text = ''
       set -euo pipefail
 
-      secondary=${lib.escapeShellArg (secondary.name or "")}
-      if [ -z "$secondary" ]; then
-        echo "no secondary monitor configured" >&2
-        exit 1
-      fi
+      state_home="''${XDG_STATE_HOME:-$HOME/.local/state}"
+      mode_file="$state_home/angst/display/mode"
 
-      is_active() {
-        xrandr --query | grep -qE "^$secondary connected [0-9]"
+      enable_all() {
+        ${enableLines}
       }
 
-      on() {
-        ${secondaryOn}
+      disable_all() {
+        ${disableLines}
       }
 
-      off() {
-        xrandr --output "$secondary" --off
+      any_active() {
+        ${activeLines}
+        return 1
+      }
+
+      read_mode() {
+        local fallback="''${1:-dual}"
+        if [ -r "$mode_file" ]; then
+          local saved
+          saved=$(cat "$mode_file")
+          case "$saved" in
+            dual|stream)
+              printf '%s\n' "$saved"
+              return 0
+              ;;
+          esac
+        fi
+        printf '%s\n' "$fallback"
+      }
+
+      write_mode() {
+        mkdir -p "$(dirname "$mode_file")"
+        local tmp="$mode_file.tmp.$$"
+        printf '%s\n' "$1" > "$tmp"
+        mv "$tmp" "$mode_file"
+      }
+
+      apply_mode() {
+        case "$1" in
+          dual) enable_all ;;
+          stream) disable_all ;;
+          *)
+            echo "unknown display mode: $1" >&2
+            exit 2
+            ;;
+        esac
       }
 
       case "''${1:-toggle}" in
-        on) on ;;
-        off) off ;;
+        stream|off)
+          write_mode stream
+          disable_all
+          ;;
+        dual|on)
+          write_mode dual
+          enable_all
+          ;;
         toggle)
-          if is_active; then
-            off
+          if any_active; then
+            write_mode stream
+            disable_all
           else
-            on
+            write_mode dual
+            enable_all
+          fi
+          ;;
+        apply)
+          apply_mode "$(read_mode "''${2:-dual}")"
+          ;;
+        status)
+          printf 'persisted: %s\n' "$(read_mode "''${2:-dual}")"
+          if any_active; then
+            echo "active: dual"
+          else
+            echo "active: stream"
           fi
           ;;
         *)
-          echo "usage: angst-display [on|off|toggle]" >&2
+          echo "usage: angst-display [stream|dual|toggle|apply|status]" >&2
           exit 2
           ;;
       esac

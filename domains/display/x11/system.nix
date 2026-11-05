@@ -58,31 +58,25 @@ let
   primaryLine =
     if monitors ? primary && monitors.primary ? name then monitorCommand monitors.primary true else "";
 
-  nonPrimary = lib.filterAttrs (name: m: name != "primary" && m ? name) monitors;
-
-  secondaryLines =
-    if cfg.headlessPrimaryOnly then
-      lib.concatStrings (
-        lib.mapAttrsToList (_: m: ''
-          ${pkgs.xrandr}/bin/xrandr --output ${m.name} --off 2>/dev/null || true
-        '') nonPrimary
-      )
-    else
-      lib.concatStrings (lib.mapAttrsToList (_: m: monitorCommand m false) nonPrimary);
-
-  homeManagerSessionVars = "/etc/profiles/per-user/${userConfig.username}/etc/profile.d/hm-session-vars.sh";
+  homeManagerProfile = "/etc/profiles/per-user/${userConfig.username}";
+  homeManagerSessionVars = "${homeManagerProfile}/etc/profile.d/hm-session-vars.sh";
+  displayApply = "${homeManagerProfile}/bin/angst-display";
 in
 {
   options.domains.display.x11 = {
     enable = lib.mkEnableOption "X11 session autostart";
 
-    headlessPrimaryOnly = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
+    defaultMode = lib.mkOption {
+      type = lib.types.enum [
+        "dual"
+        "stream"
+      ];
+      default = "dual";
       description = ''
-        Configure only the primary output in the X session and power off the
-        remaining configured outputs. Useful for headless streaming; enable a
-        secondary output again with `angst-display`.
+        Default display mode when no persisted runtime state exists. "dual"
+        enables all configured outputs; "stream" keeps only the primary output
+        enabled. Runtime state is stored in ~/.local/state/angst/display/mode
+        and can be changed with `angst-display stream|dual|toggle`.
       '';
     };
 
@@ -120,7 +114,9 @@ in
           fi
 
           ${primaryLine}
-          ${secondaryLines}
+          if [ -x ${lib.escapeShellArg displayApply} ]; then
+            ${lib.escapeShellArg displayApply} apply ${lib.escapeShellArg cfg.defaultMode} || true
+          fi
 
           ${pkgs.hsetroot}/bin/hsetroot -solid "#${p.background.base}"
 

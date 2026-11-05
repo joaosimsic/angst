@@ -41,7 +41,6 @@
 
   nixos = {
     imports = [ ./display-edid.nix ];
-    domains.display.x11.headlessPrimaryOnly = true;
     keyboardLayout = "br-abnt2";
     angst.wakeOnLan = {
       enable = true;

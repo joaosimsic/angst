@@ -49,6 +49,11 @@
         durable = true;
       }
     ];
+    "display.x11" = [
+      {
+        dir = ".local/state/angst/display";
+      }
+    ];
     "display.gpu" = [
       {
         dir = ".cache/mesa_shader_cache";
