@@ -102,6 +102,9 @@ let
     "php intelephense" = {
       disabled = true;
     };
+    "rust" = {
+      disabled = true;
+    };
   };
 
   # MCPs are project-local (repo-root opencode.json), not global HM config —

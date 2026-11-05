@@ -47,6 +47,7 @@ M.get = function()
 		["@type.definition"] = { link = "Typedef" },
 		["@type.qualifier"] = { link = "Keyword" },
 		["@attribute"] = { link = "PreProc" },
+		["@attribute.builtin"] = { link = "@attribute" },
 
 		["@keyword"] = { link = "Keyword" },
 		["@keyword.conditional"] = { link = "Conditional" },
@@ -57,7 +58,9 @@ M.get = function()
 		["@keyword.exception"] = { link = "Exception" },
 		["@keyword.function"] = { link = "Keyword" },
 		["@keyword.import"] = { link = "Include" },
+		["@keyword.modifier"] = { link = "@keyword" },
 		["@keyword.operator"] = { link = "Operator" },
+		["@keyword.type"] = { link = "@keyword" },
 		["@keyword.repeat"] = { link = "Repeat" },
 		["@keyword.return"] = { link = "Keyword" },
 		["@keyword.storage"] = { link = "Keyword" },
