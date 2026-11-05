@@ -125,6 +125,15 @@ in
           };
         };
 
+        system.activationScripts.angstTailscaleSet = lib.stringAfter [ "users" ] ''
+          if ${config.systemd.package}/bin/systemctl is-active --quiet tailscaled.service; then
+            echo "angst: applying Tailscale set flags"
+            if ! ${config.systemd.package}/bin/systemctl start tailscaled-set.service; then
+              echo "angst: failed to apply Tailscale set flags" >&2
+            fi
+          fi
+        '';
+
         users.users.${userConfig.username}.extraGroups = [
           "input"
           "uinput"
