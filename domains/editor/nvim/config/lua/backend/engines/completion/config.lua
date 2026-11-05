@@ -8,7 +8,7 @@ function M.capabilities()
 	if not ok then
 		return vim.lsp.protocol.make_client_capabilities()
 	end
-	return blink.get_lsp_capabilities()
+	return blink.get_lsp_capabilities(nil, true)
 end
 
 function M.setup()

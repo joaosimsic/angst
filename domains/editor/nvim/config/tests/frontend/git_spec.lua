@@ -293,6 +293,10 @@ return function()
 					calls[#calls + 1] = "collect"
 					return vim.fn.getqflist({ size = 0 }).size
 				end,
+				collect_async = function(cb)
+					calls[#calls + 1] = "collect_async"
+					cb(vim.fn.getqflist())
+				end,
 			}
 
 			-- Evict framework modules: the harness may hand us preloaded
@@ -429,7 +433,8 @@ return function()
 			press(" g")
 			assert(vim.g.active_hydra ~= nil and vim.g.active_hydra.name == "Git", "Git hydra never activated")
 			assert(hint_win("Prev diff") == nil, "Git hydra hint must stay hidden by default")
-			assert(not vim.tbl_contains(calls, "setqflist"), "enter must not populate the file list")
+			assert(vim.tbl_contains(calls, "collect_async"), "enter must start async collection")
+			assert(not vim.tbl_contains(calls, "setqflist"), "enter must not use gitsigns async setqflist")
 			assert(vim.g.angst_git_hunks_enabled == true, "hunk switch must default on")
 			assert(vim.tbl_contains(calls, "deleted:true"), "enter must enable deleted overlay")
 			assert(vim.tbl_contains(calls, "linehl:true"), "enter must enable line bg")
@@ -693,6 +698,9 @@ return function()
 				collect = function()
 					return vim.fn.getqflist({ size = 0 }).size
 				end,
+				collect_async = function(cb)
+					cb(vim.fn.getqflist())
+				end,
 			}
 			package.loaded["common.Hydra"] = nil
 			package.loaded["common.Keybinder"] = nil
@@ -786,6 +794,9 @@ return function()
 				end,
 				collect = function()
 					return vim.fn.getqflist({ size = 0 }).size
+				end,
+				collect_async = function(cb)
+					cb(vim.fn.getqflist())
 				end,
 			}
 			package.loaded["common.Hydra"] = nil
@@ -884,6 +895,9 @@ return function()
 				collect = function()
 					return vim.fn.getqflist({ size = 0 }).size
 				end,
+				collect_async = function(cb)
+					cb(vim.fn.getqflist())
+				end,
 			}
 			package.loaded["common.Hydra"] = nil
 			package.loaded["common.Keybinder"] = nil
@@ -946,6 +960,91 @@ return function()
 			package.loaded["gitsigns"] = nil
 			package.loaded["frontend.tools.git_review_pages"] = nil
 			vim.api.nvim_buf_delete(buf_a, { force = true })
+		end)
+
+		it("enter shows loading immediately, then fills the panes when async collection completes", function()
+			vim.g.mapleader = " "
+			package.loaded["gitsigns"] = {
+				setqflist = function() end,
+				nav_hunk = function() end,
+				toggle_deleted = function() end,
+				toggle_linehl = function() end,
+				toggle_word_diff = function() end,
+			}
+			local pending = nil
+			package.loaded["frontend.tools.git_review_files"] = {
+				repo_toplevels = function()
+					return {}
+				end,
+				extra_entries_for = function()
+					return {}
+				end,
+				append_missing = function()
+					return 0
+				end,
+				collect = function()
+					return 0
+				end,
+				collect_async = function(cb)
+					pending = cb
+				end,
+			}
+			package.loaded["common.Hydra"] = nil
+			package.loaded["common.Keybinder"] = nil
+			package.loaded["frontend.tools.git_hunk_display"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			package.loaded["frontend.tools.git_review"] = nil
+			evict_review_modules()
+			require("frontend.tools.git_review").config()
+			local pages_mod = require("frontend.tools.git_review_pages")
+
+			local buf_a = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_buf_set_name(buf_a, "/tmp/gitpages_loading.lua")
+			vim.fn.setqflist({}, "r")
+
+			press(" g")
+			assert(pages_mod.is_open(), "enter must open panes before collection finishes")
+			assert(pending ~= nil, "enter must start async worktree collection")
+			local files_buf, diffs_buf = nil, nil
+			for _, win in ipairs(vim.api.nvim_list_wins()) do
+				local buf = vim.api.nvim_win_get_buf(win)
+				if vim.bo[buf].filetype == "angst-git-files" then
+					files_buf = buf
+				elseif vim.bo[buf].filetype == "angst-git-diffs" then
+					diffs_buf = buf
+				end
+			end
+			assert(
+				vim.inspect(vim.api.nvim_buf_get_lines(files_buf, 0, -1, false))
+					== vim.inspect({ "(collecting changed files…)" }),
+				"files pane must show its loading row immediately"
+			)
+			assert(
+				vim.inspect(vim.api.nvim_buf_get_lines(diffs_buf, 0, -1, false))
+					== vim.inspect({ "(waiting for changed files…)" }),
+				"diffs pane must show its loading row immediately"
+			)
+
+			local before_n = vim.api.nvim_get_current_buf()
+			local before_pending = pending
+			press("n")
+			assert(vim.api.nvim_get_current_buf() == before_n, "n must be a no-op while collection is running")
+			assert(pending == before_pending, "navigation must not replace the pending collection")
+
+			pending({ { bufnr = buf_a, lnum = 1, text = "1: (+1) A" } })
+			assert(vim.fn.getqflist({ size = 0 }).size == 1, "completed collection must fill the quickfix list")
+			local files_lines = vim.api.nvim_buf_get_lines(files_buf, 0, -1, false)
+			assert(
+				files_lines[1] ~= nil and files_lines[1]:find("gitpages_loading.lua", 1, true) ~= nil,
+				"files pane must replace loading with collected rows, got: " .. vim.inspect(files_lines)
+			)
+			press("q")
+			assert(not pages_mod.is_open(), "exit must close the loaded panes")
+
+			package.loaded["gitsigns"] = nil
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			vim.api.nvim_buf_delete(buf_a, { force = true })
+			vim.fn.setqflist({}, "r")
 		end)
 
 		it("Tab/S-Tab cycle sources and selections return to the worktree", function()
@@ -1517,7 +1616,7 @@ return function()
 			hydra:purge()
 		end)
 
-		it("n collects once synchronously, then diagnoses emptiness", function()
+		it("enter collects once asynchronously, then n jumps without re-collecting", function()
 			package.loaded["common.Hydra"] = nil
 			package.loaded["common.Keybinder"] = nil
 			package.loaded["frontend.tools.git_review_pages"] = nil
@@ -1526,6 +1625,14 @@ return function()
 			vim.api.nvim_buf_set_name(buf_a, "/tmp/gitpages_async_a.lua")
 			vim.api.nvim_buf_set_name(buf_b, "/tmp/gitpages_async_b.lua")
 			local fills = 0
+			local function rows()
+				fills = fills + 1
+				return {
+					{ bufnr = buf_a, lnum = 1, text = "1: (+1) A" },
+					{ bufnr = buf_a, lnum = 2, text = "2: (~2) M" },
+					{ bufnr = buf_b, lnum = 1, text = "1: (+1) A" },
+				}
+			end
 			package.loaded["frontend.tools.git_review_files"] = {
 				repo_toplevels = function()
 					return {}
@@ -1537,13 +1644,12 @@ return function()
 					return 0
 				end,
 				collect = function()
-					fills = fills + 1
-					vim.fn.setqflist({
-						{ bufnr = buf_a, lnum = 1, text = "1: (+1) A" },
-						{ bufnr = buf_a, lnum = 2, text = "2: (~2) M" },
-						{ bufnr = buf_b, lnum = 1, text = "1: (+1) A" },
-					}, "r")
-					return 3
+					local entries = rows()
+					vim.fn.setqflist(entries, "r")
+					return #entries
+				end,
+				collect_async = function(cb)
+					cb(rows())
 				end,
 			}
 			package.loaded["frontend.tools.git_review"] = nil
@@ -1560,12 +1666,10 @@ return function()
 			}
 
 			press(" g")
-			vim.fn.setqflist({}, "r")
+			assert(fills == 1, "enter must collect exactly once, got " .. fills)
 			press("n")
-			-- Single synchronous fill: the jump lands in the same tick,
-			-- no waiting for a deferred or async pass.
-			assert(vim.api.nvim_get_current_buf() == buf_a, "n must jump after a single fill")
-			assert(fills == 1, "n must fill exactly once, got " .. fills)
+			assert(vim.api.nvim_get_current_buf() == buf_a, "n must jump from the async-filled list")
+			assert(fills == 1, "n must not re-collect after enter, got " .. fills)
 			assert(vim.fn.getqflist({ winid = 0 }).winid == 0, "collection must never show a bottom quickfix window")
 			-- The diffs pane lists every diff and h/l cycles them.
 			local pages_mod = require("frontend.tools.git_review_pages")
@@ -1614,6 +1718,9 @@ return function()
 				collect = function()
 					return 0
 				end,
+				collect_async = function(cb)
+					cb({})
+				end,
 			}
 			-- Rebind: the hydra holds the previous fake as an upvalue.
 			package.loaded["frontend.tools.git_review"] = nil
@@ -1628,11 +1735,11 @@ return function()
 			press(" g")
 			press("n")
 			vim.wait(1500, function()
-				return #messages > 1
+				return #messages > 0
 			end)
 			vim.notify = orig_notify
 			local text = table.concat(messages, "\n")
-			assert(text:find("collecting", 1, true), "must announce collection, got: " .. text)
+			assert(not text:find("collecting", 1, true), "completed enter must not re-announce collection: " .. text)
 			assert(text:find("no changed files", 1, true), "must diagnose emptiness, got: " .. text)
 			assert(text:find(vim.fn.getcwd(), 1, true), "diagnosis must show cwd, got: " .. text)
 			press("q")
@@ -1685,8 +1792,25 @@ return function()
 			vim.fn.setqflist({}, "r")
 			local n = files.collect()
 			local n2 = files.collect()
+			local async_done, async_entries = false, nil
+			files.collect_async(function(entries)
+				async_done = true
+				async_entries = entries
+			end)
+			local awaited = vim.wait(5000, function()
+				return async_done
+			end)
+			assert(awaited, "collect_async must complete")
 			vim.cmd("cd " .. vim.fn.fnameescape(saved_cwd))
 			assert(n == 2, "collect must write both cached hunks, got " .. n)
+			assert(
+				type(async_entries) == "table" and #async_entries == 2,
+				"collect_async must return both cached hunks, got: " .. vim.inspect(async_entries)
+			)
+			assert(
+				async_entries[1].bufnr == buf_a and async_entries[1].text == "3: (~1) M",
+				"async collect must keep bufnr and compact text, got: " .. vim.inspect(async_entries[1])
+			)
 			local items = vim.fn.getqflist()
 			assert(#items == 2, "quickfix must hold exactly the combined list")
 			assert(

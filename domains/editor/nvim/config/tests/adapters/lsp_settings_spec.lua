@@ -198,6 +198,41 @@ return function(t)
 			t.assert_same(t.all_adapters.lua.lsp_settings, lsp_servers.lua_ls.settings)
 		end)
 
+		it("should exclude duplicated config copies from the lua_ls library", function()
+			local uv = vim.uv or vim.loop
+			local config_dir = vim.fs.normalize(vim.fn.stdpath("config"))
+			local config_real = uv.fs_realpath(config_dir) or config_dir
+			local library = t.all_adapters.lua.lsp_settings.Lua.workspace.library
+			local seen = {}
+
+			assert(type(library) == "table", "lua_ls library must be a list")
+
+			for _, path in ipairs(library) do
+				local normalized = vim.fs.normalize(path)
+				local real = uv.fs_realpath(normalized) or normalized
+
+				assert(normalized ~= config_dir, "lua_ls library must not include the active config directory")
+				assert(real ~= config_real, "lua_ls library must not include the active config directory")
+				assert(not seen[real], "lua_ls library must not contain duplicate paths")
+
+				seen[real] = true
+			end
+		end)
+
+		it("should filter config paths from workspace libraries", function()
+			local ConfigPath = require("common.ConfigPath")
+			local config_dir = vim.fn.stdpath("config")
+			local config_lua = config_dir .. "/lua"
+			local other = "/tmp/angst-not-config"
+
+			assert(ConfigPath.is_config_path(config_dir), "config dir must be filtered")
+			assert(ConfigPath.is_config_path(config_lua), "config subpaths must be filtered")
+			assert(not ConfigPath.is_config_path(other), "unrelated paths must stay")
+
+			local filtered = ConfigPath.filter({ config_dir, config_lua, other })
+			t.assert_same({ other }, filtered)
+		end)
+
 		it("should only declare supported inlay hint settings", function()
 			local lsp_servers = t.AdapterScanner:by_tool("lsp", { check_executable = false })
 

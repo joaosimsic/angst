@@ -18,6 +18,8 @@ M.FILES_HEADER = "FILES"
 M.DIFFS_HEADER = "DIFFS"
 M.FILES_EMPTY = "(no changed files)"
 M.DIFFS_EMPTY = "(no diffs)"
+M.FILES_LOADING = "(collecting changed files…)"
+M.DIFFS_LOADING = "(waiting for changed files…)"
 
 local SIDEBAR_FILETYPES = {
 	M.FILES_FILETYPE,
@@ -64,6 +66,7 @@ local state = {
 	file_rowmap = {},
 	diff_rowmap = {},
 	diffs_match = {},
+	loading = false,
 }
 
 local function valid_win(win)
@@ -254,6 +257,12 @@ local function set_winbar(win, text)
 	end
 end
 
+local function set_pane_lines(buf, lines)
+	vim.bo[buf].modifiable = true
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+	vim.bo[buf].modifiable = false
+end
+
 -- One file row: bare tail name, except the current file which shows
 -- its whole repo-rooted path on a single (soft-wrapped) line.
 ---@param abs string absolute path
@@ -291,6 +300,14 @@ function M.render_files()
 	if not valid_win(state.files_win) or not valid_buf(state.files_buf) then
 		return
 	end
+	if state.loading then
+		set_winbar(state.files_win, string.format("▸ %s (loading…)", M.FILES_HEADER))
+		state.file_rowmap = {}
+		set_pane_lines(state.files_buf, { M.FILES_LOADING })
+		pcall(vim.api.nvim_win_set_width, state.files_win, M.PANE_WIDTH)
+		pcall(vim.api.nvim_win_set_cursor, state.files_win, { 1, 0 })
+		return
+	end
 	set_winbar(state.files_win, string.format("▸ %s (%d)", M.FILES_HEADER, #state.files))
 	local lines = {}
 	state.file_rowmap = {}
@@ -301,9 +318,7 @@ function M.render_files()
 	if #lines == 0 then
 		lines[#lines + 1] = M.FILES_EMPTY
 	end
-	vim.bo[state.files_buf].modifiable = true
-	vim.api.nvim_buf_set_lines(state.files_buf, 0, -1, false, lines)
-	vim.bo[state.files_buf].modifiable = false
+	set_pane_lines(state.files_buf, lines)
 	pcall(vim.api.nvim_win_set_width, state.files_win, M.PANE_WIDTH)
 	local parked = false
 	for row, e in pairs(state.file_rowmap) do
@@ -319,6 +334,14 @@ end
 
 function M.render_diffs()
 	if not valid_win(state.diffs_win) or not valid_buf(state.diffs_buf) then
+		return
+	end
+	if state.loading then
+		set_winbar(state.diffs_win, string.format("▸ %s (loading…)", M.DIFFS_HEADER))
+		state.diff_rowmap = {}
+		set_pane_lines(state.diffs_buf, { M.DIFFS_LOADING })
+		pcall(vim.api.nvim_win_set_width, state.diffs_win, M.PANE_WIDTH)
+		pcall(vim.api.nvim_win_set_cursor, state.diffs_win, { 1, 0 })
 		return
 	end
 	local file = state.context.file
@@ -380,9 +403,36 @@ function M.render_all(file_abs, index)
 end
 
 function M.refresh()
+	if state.loading then
+		M.render()
+		return
+	end
 	state.files = M.files_from_quickfix()
 	state.tops = state.source == "range" and state.range_tops or review_files.repo_toplevels()
 	M.render()
+end
+
+---@return boolean
+function M.is_worktree()
+	return state.source == "worktree"
+end
+
+-- Show a loading placeholder while the worktree source is collected.
+-- Turning loading off only clears the flag; the caller then refreshes
+-- with the freshly written quickfix list.
+---@param loading boolean
+function M.set_loading(loading)
+	state.loading = loading and true or false
+	if state.loading then
+		state.files = {}
+		state.tops = {}
+		state.context = { file = nil, index = nil }
+		state.file_rowmap = {}
+		state.diff_rowmap = {}
+		if M.is_open() then
+			M.render()
+		end
+	end
 end
 
 -- Switch the panes to a branch/commit range entry list.
@@ -391,6 +441,7 @@ end
 ---@param label? string
 function M.show_range(entries, tops, label)
 	state.source = "range"
+	state.loading = false
 	state.range_entries = entries or {}
 	state.range_tops = tops or {}
 	state.range_label = label
@@ -403,6 +454,7 @@ end
 -- Switch the panes back to the worktree quickfix.
 function M.show_worktree()
 	state.source = "worktree"
+	state.loading = false
 	state.range_entries = {}
 	state.range_tops = {}
 	state.range_label = nil
@@ -525,8 +577,12 @@ function M.open()
 		pcall(vim.cmd, "wincmd p")
 		pcall(vim.cmd, "wincmd p")
 	end
-	local index = state.source == "range" and state.context.index or vim.fn.getqflist({ idx = 0 }).idx
-	M.render_all(vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p"), index)
+	if state.loading then
+		M.render()
+	else
+		local index = state.source == "range" and state.context.index or vim.fn.getqflist({ idx = 0 }).idx
+		M.render_all(vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p"), index)
+	end
 	return state.files_win
 end
 
@@ -547,6 +603,7 @@ function M._reset()
 	state.file_rowmap = {}
 	state.diff_rowmap = {}
 	state.diffs_match = {}
+	state.loading = false
 end
 
 return M

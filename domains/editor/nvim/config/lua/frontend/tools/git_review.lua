@@ -65,6 +65,15 @@ local function diagnose_empty()
 	)
 end
 
+local collecting = false
+local worktree_ready = false
+local collect_generation = 0
+
+local function cancel_worktree_collection()
+	collect_generation = collect_generation + 1
+	collecting = false
+end
+
 -- Never run jumps from inside a pane: step back to code first.
 local function leave_pages_win()
 	local filetype = vim.bo[vim.api.nvim_get_current_buf()].filetype
@@ -96,25 +105,32 @@ local function applied_view()
 	return nil
 end
 
--- Single synchronous collection, one writer, one tick: worktree hunks
--- for attached buffers (gitsigns cache) plus CLI extras (unstaged for
--- unopened files, staged, unpushed, untracked), written as one list.
+-- Single synchronous fallback for navigation when the worktree list is
+-- still empty and no async collection is running. Async enter/refresh
+-- uses review_files.collect_async and owns the quickfix write itself.
 -- Never calls gitsigns' async setqflist: its completion lands on a
 -- later tick and would replace the combined list under us (resetting
 -- the index), which surfaced as perpetual "collecting…" and h/l stuck
--- on the first/last diff. Never runs on enter: the pane must not
--- appear uninvited. Never opens a quickfix window (pages replace it):
--- the cclose only clears windows left open from elsewhere.
+-- on the first/last diff. Never opens a quickfix window (pages replace
+-- it): the cclose only clears windows left open from elsewhere.
 local function refresh_files()
 	review_files.collect()
+	worktree_ready = true
 	pcall(vim.cmd, "cclose")
 	pages.refresh()
 end
 
 local function ensure_files_or_collect(after)
+	if collecting then
+		return
+	end
 	if vim.fn.getqflist({ size = 0 }).size > 0 then
 		pages.refresh()
 		after()
+		return
+	end
+	if worktree_ready then
+		diagnose_empty()
 		return
 	end
 	vim.notify("Git review: collecting changed files…", vim.log.levels.INFO)
@@ -234,10 +250,31 @@ local function show_view_panes(view)
 	end
 end
 
+-- Worktree entry shows the panes immediately with a loading row, then
+-- collects git data asynchronously. A generation token keeps a slow
+-- collection from overwriting panes after a newer enter or exit.
 local function show_worktree_panes()
 	pages.close()
 	pages.show_worktree()
+	pages.set_loading(true)
 	pages.open()
+	collecting = true
+	worktree_ready = false
+	collect_generation = collect_generation + 1
+	local generation = collect_generation
+	review_files.collect_async(function(entries)
+		if generation ~= collect_generation then
+			return
+		end
+		collecting = false
+		worktree_ready = true
+		vim.fn.setqflist(entries or {}, [[r]])
+		pcall(vim.cmd, "cclose")
+		pages.set_loading(false)
+		if pages.is_worktree() then
+			pages.refresh()
+		end
+	end)
 end
 
 local function restore_worktree_tab()
@@ -254,6 +291,7 @@ local function restore_worktree_tab()
 end
 
 local function enter_view(view)
+	cancel_worktree_collection()
 	local applied = applied_view()
 	if applied ~= nil then
 		applied.hide()
@@ -428,10 +466,12 @@ local function setup()
 		keep_insert_filetypes = { Picker.FILETYPE },
 		logger = logger,
 		on_enter = function()
-			-- The panes open with the hydra (empty placeholders until
-			-- the first collect); the quickfix window never appears.
-			-- Collection stays lazy: it happens on first n/N/h/l via
-			-- ensure_files_or_collect, never on enter.
+			-- The worktree panes open immediately with a loading row
+			-- while changed files are collected asynchronously. The
+			-- quickfix window never appears. Branch/commit targets keep
+			-- their synchronous range collection.
+			-- Navigation keys are no-ops while collection is running;
+			-- they never start a competing sync collect.
 			-- The active tab and applied range persist in vim.g across
 			-- hydra exits: re-enter restores the picker or the applied
 			-- range on the worktree tab.
@@ -449,6 +489,7 @@ local function setup()
 			end
 		end,
 		on_exit = function()
+			cancel_worktree_collection()
 			pages.close()
 			-- Visible quit: pane/picker windows close, but the active
 			-- tab, applied range and targets persist so the next enter
