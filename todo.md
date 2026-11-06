@@ -87,6 +87,7 @@
 - [x] make add/remove diff lines be derived from ansi green/red and the bg colors
 - [x] add gg and G binds to go to top and bottom of chat
 - [x] accept all mode
+- [ ] display usage in side panel, if possible display model infos like mounthly usage
 
 # vial
 

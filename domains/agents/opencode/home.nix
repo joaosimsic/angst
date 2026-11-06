@@ -24,7 +24,7 @@ let
     muxFallback = cfg.mux.fallbackStandalone;
   };
   prune = import ./prune.nix {
-    inherit pkgs lib;
+    inherit pkgs;
     opencodePackage = pkgs.opencode;
     olderThanDays = cfg.prune.olderThanDays;
   };

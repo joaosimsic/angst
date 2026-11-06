@@ -110,6 +110,7 @@ in
           statix
           lspmux
           rustAnalyzerMux
+          ripgrep
         ]
         ++ allToolchainPkgsMux;
       shellHook = "${treesitterShellHook}\n${muxEnvHook}";
