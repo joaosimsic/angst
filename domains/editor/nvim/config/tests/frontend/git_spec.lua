@@ -40,6 +40,8 @@ local function evict_review_modules()
 end
 
 return function()
+	vim.g.angst_git_hunks_state_file = vim.fn.tempname() .. "_angst_git_hunks_state.json"
+
 	describe("git review tooling", function()
 		-- Invoke mapping callbacks directly: headless typeahead does not
 		-- dispatch fed keys, but this exercises the identical code path.
@@ -671,6 +673,46 @@ return function()
 			package.loaded["frontend.tools.git_review_pages"] = nil
 			vim.api.nvim_buf_delete(buf_a, { force = true })
 			vim.api.nvim_buf_delete(buf_b, { force = true })
+		end)
+
+		it("hunk display switch persists across restarts", function()
+			local previous_state_file = vim.g.angst_git_hunks_state_file
+			local state_file = vim.fn.tempname() .. "_angst_git_hunks_persist.json"
+			local module = "frontend.tools.git_hunk_display"
+
+			package.loaded["gitsigns"] = {
+				toggle_deleted = function() end,
+				toggle_linehl = function() end,
+				toggle_word_diff = function() end,
+			}
+			vim.g.angst_git_hunks_state_file = state_file
+			vim.g.angst_git_hunks_enabled = nil
+			package.loaded[module] = nil
+
+			local display = require(module)
+			assert(display.is_enabled() == true, "missing state file must default on")
+			display.set(false)
+
+			assert(vim.fn.filereadable(state_file) == 1, "disabling hunks must write the state file")
+			local decoded_ok, saved = pcall(vim.json.decode, table.concat(vim.fn.readfile(state_file), "\n"))
+			assert(decoded_ok and saved.enabled == false, "state file must record disabled hunks")
+
+			package.loaded[module] = nil
+			vim.g.angst_git_hunks_enabled = nil
+			display = require(module)
+			assert(display.is_enabled() == false, "disabled hunks must survive a restart")
+			display.set(true)
+
+			package.loaded[module] = nil
+			vim.g.angst_git_hunks_enabled = nil
+			display = require(module)
+			assert(display.is_enabled() == true, "enabled hunks must survive a restart")
+
+			package.loaded["gitsigns"] = nil
+			package.loaded[module] = nil
+			vim.g.angst_git_hunks_enabled = nil
+			vim.g.angst_git_hunks_state_file = previous_state_file
+			vim.fn.delete(state_file)
 		end)
 
 		it("h/l cycles four staged diffs in one file without leaving it", function()

@@ -4,9 +4,51 @@
 -- full-line background via linehl, and the floating hunk preview on jumps.
 -- Word diff is never enabled: it recolors code text, this module keeps
 -- hunks to background tints only. Signs in the signcolumn stay always on.
+-- The switch persists across Neovim restarts in the state directory.
 local M = {}
 
 M.GLOBAL_VAR = "angst_git_hunks_enabled"
+M.STATE_FILE_VAR = "angst_git_hunks_state_file"
+
+local loaded = false
+
+local function state_file()
+	if vim.g[M.STATE_FILE_VAR] ~= nil then
+		return vim.g[M.STATE_FILE_VAR]
+	end
+	return vim.fn.stdpath("state") .. "/angst/git-hunks.json"
+end
+
+local function load_state()
+	if loaded then
+		return
+	end
+	loaded = true
+	local path = state_file()
+	if vim.fn.filereadable(path) == 0 then
+		return
+	end
+	local ok, lines = pcall(vim.fn.readfile, path)
+	if not ok or type(lines) ~= "table" or #lines == 0 then
+		return
+	end
+	local decoded_ok, data = pcall(vim.json.decode, table.concat(lines, "\n"))
+	if not decoded_ok or type(data) ~= "table" or type(data.enabled) ~= "boolean" then
+		return
+	end
+	if vim.g[M.GLOBAL_VAR] == nil then
+		vim.g[M.GLOBAL_VAR] = data.enabled
+	end
+end
+
+local function save_state(on)
+	local path = state_file()
+	pcall(vim.fn.mkdir, vim.fn.fnamemodify(path, ":h"), "p")
+	local ok, encoded = pcall(vim.json.encode, { enabled = on })
+	if ok then
+		pcall(vim.fn.writefile, { encoded }, path)
+	end
+end
 
 local function gs()
 	local ok, gitsigns = pcall(require, "gitsigns")
@@ -18,6 +60,7 @@ end
 
 ---@return boolean
 function M.is_enabled()
+	load_state()
 	if vim.g[M.GLOBAL_VAR] == nil then
 		vim.g[M.GLOBAL_VAR] = true
 	end
@@ -40,7 +83,9 @@ end
 
 ---@param on boolean
 function M.set(on)
+	loaded = true
 	vim.g[M.GLOBAL_VAR] = on and true or false
+	save_state(on and true or false)
 	return M.apply()
 end
 
