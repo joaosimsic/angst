@@ -117,6 +117,7 @@
     "vault"
     "TCC"
     "TiConnect"
+    "TiCrafter"
     "TicoTron"
     "box"
     "intelligence/backend"
