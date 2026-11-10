@@ -445,6 +445,44 @@ func TestPlanInnerSwap(t *testing.T) {
 	}
 }
 
+func TestPlanInnerSwapKeepsStickyFloatingWindows(t *testing.T) {
+	tree := i3.Tree{Root: &i3.Node{
+		Nodes: []*i3.Node{{
+			Type: i3.OutputNode,
+			Nodes: []*i3.Node{
+				{
+					Type:  i3.WorkspaceNode,
+					Name:  "1:1",
+					Nodes: []*i3.Node{{ID: 1}},
+					FloatingNodes: []*i3.Node{{
+						Type: i3.FloatingCon,
+						Nodes: []*i3.Node{{
+							ID:     5,
+							Sticky: true,
+						}},
+					}},
+				},
+				{
+					Type:  i3.WorkspaceNode,
+					Name:  "1:2",
+					Nodes: []*i3.Node{{ID: 3}},
+				},
+			},
+		}},
+	}}
+
+	commands, err := PlanInnerSwap(tree, testWorkspaces(), 1, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"[con_id=1] swap container with con_id 3",
+	}
+	if !reflect.DeepEqual(commands, want) {
+		t.Fatalf("PlanInnerSwap() = %#v, want %#v", commands, want)
+	}
+}
+
 func TestPlanInnerSwapMissingWorkspace(t *testing.T) {
 	tree := i3.Tree{Root: &i3.Node{}}
 	if _, err := PlanInnerSwap(tree, testWorkspaces(), 1, 2); err == nil {

@@ -97,7 +97,18 @@ func Run(args []string) int {
 			return 1
 		}
 	case "daemon":
-		if err := Daemon(); err != nil {
+		replace := false
+		if len(args) == 2 {
+			if args[1] != "--replace" {
+				fmt.Fprintln(os.Stderr, "usage: i3-workspace-group daemon [--replace]")
+				return 2
+			}
+			replace = true
+		} else if len(args) > 2 {
+			fmt.Fprintln(os.Stderr, "usage: i3-workspace-group daemon [--replace]")
+			return 2
+		}
+		if err := Daemon(replace); err != nil {
 			fmt.Fprintf(os.Stderr, "i3-workspace-group daemon: %v\n", err)
 			return 1
 		}
@@ -162,6 +173,6 @@ func usage(output *os.File) {
   i3-workspace-group urgent
   i3-workspace-group adopt
   i3-workspace-group bar URGENT_COLOR
-  i3-workspace-group daemon
+  i3-workspace-group daemon [--replace]
 `)
 }

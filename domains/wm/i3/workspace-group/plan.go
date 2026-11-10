@@ -473,13 +473,24 @@ func planSwapNames(tree i3.Tree, firstName, secondName string) ([]string, error)
 	for _, id := range secondTiling[paired:] {
 		commands = append(commands, MoveContainerToWorkspaceCommand(id, firstName))
 	}
-	for _, id := range nodeIDs(firstWorkspace.FloatingNodes) {
+	for _, id := range movableFloatingNodeIDs(firstWorkspace.FloatingNodes) {
 		commands = append(commands, MoveContainerToWorkspaceCommand(id, secondName))
 	}
-	for _, id := range nodeIDs(secondWorkspace.FloatingNodes) {
+	for _, id := range movableFloatingNodeIDs(secondWorkspace.FloatingNodes) {
 		commands = append(commands, MoveContainerToWorkspaceCommand(id, firstName))
 	}
 	return commands, nil
+}
+
+func movableFloatingNodeIDs(nodes []*i3.Node) []i3.NodeID {
+	ids := make([]i3.NodeID, 0, len(nodes))
+	for _, node := range nodes {
+		if nodeIsSticky(node) {
+			continue
+		}
+		ids = append(ids, node.ID)
+	}
+	return ids
 }
 
 func findWorkspace(root *i3.Node, name string) *i3.Node {

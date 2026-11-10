@@ -108,6 +108,14 @@ let
 
         echo "Validating i3 config for theme ${themeName}..."
         HOME="$PWD/home" i3 -C -c i3.conf
+        if ! grep -qF 'popup_during_fullscreen all' i3.conf; then
+          echo "i3 config does not keep floating windows visible over fullscreen" >&2
+          exit 1
+        fi
+        if ! grep -qF 'i3-workspace-group daemon --replace' i3.conf; then
+          echo "i3 config does not replace the previous workspace-group daemon" >&2
+          exit 1
+        fi
         if ! grep -qE "urgent_workspace[[:space:]]+#${themeError}[[:space:]]+#${themeError}" i3.conf; then
           echo "urgent workspace background did not use theme error color #${themeError}" >&2
           exit 1
@@ -152,7 +160,7 @@ let
           echo "i3 config is missing the Sunshine toggle binding" >&2
           exit 1
         fi
-        if ! grep -qF 'for_window [class="^i3-toggles-menu$"] floating enable, border none, move to workspace current, move position center' i3.conf; then
+        if ! grep -qF 'for_window [class="^i3-toggles-menu$"] floating enable, border none, move to workspace current, move position center, sticky enable' i3.conf; then
           echo "i3 config is missing the toggles menu window rule" >&2
           exit 1
         fi
@@ -178,7 +186,7 @@ let
           echo "i3 config is missing the mod+Shift+slash cheatsheet binding" >&2
           exit 1
         fi
-        if ! grep -qF 'for_window [class="^i3-cheatsheet$"] floating enable, border none, move to workspace current, move position center' i3.conf; then
+        if ! grep -qF 'for_window [class="^i3-cheatsheet$"] floating enable, border none, move to workspace current, move position center, sticky enable' i3.conf; then
           echo "i3 config is missing the cheatsheet window rule" >&2
           exit 1
         fi

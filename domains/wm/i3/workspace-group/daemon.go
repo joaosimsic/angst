@@ -8,8 +8,8 @@ import (
 	"go.i3wm.org/i3/v4"
 )
 
-func Daemon() error {
-	lock, err := acquireDaemonLock()
+func Daemon(replace bool) error {
+	lock, err := acquireDaemonLock(replace)
 	if err != nil {
 		return err
 	}
@@ -21,6 +21,12 @@ func Daemon() error {
 		log.Printf("i3-workspace-group daemon: adopted %d workspace(s)", renamed)
 	}
 
+	if err := syncFloatingSticky(); err != nil {
+		log.Printf("i3-workspace-group daemon: sticky: %v", err)
+	}
+	if err := syncStickyPins(); err != nil {
+		log.Printf("i3-workspace-group daemon: sticky pins: %v", err)
+	}
 	if err := syncOpacity(); err != nil {
 		log.Printf("i3-workspace-group daemon: %v", err)
 	}
@@ -31,7 +37,8 @@ func Daemon() error {
 	for {
 		receiver := i3.Subscribe(i3.WorkspaceEventType, i3.OutputEventType, i3.WindowEventType)
 		triggers := make(chan struct{}, 1)
-		go collectTriggers(receiver, triggers)
+		stickyTriggers := make(chan i3.NodeID, 16)
+		go collectTriggers(receiver, triggers, stickyTriggers)
 
 		ticker := time.NewTicker(time.Second)
 	loop:
@@ -45,6 +52,13 @@ func Daemon() error {
 				drainTriggers(triggers)
 				if err := syncOnce(); err != nil {
 					log.Printf("i3-workspace-group daemon: %v", err)
+				}
+			case id, ok := <-stickyTriggers:
+				if !ok {
+					break loop
+				}
+				if err := enableSticky(id); err != nil {
+					log.Printf("i3-workspace-group daemon: sticky: %v", err)
 				}
 			case <-ticker.C:
 				if _, _, err := syncAttention(); err != nil {
@@ -61,8 +75,9 @@ func Daemon() error {
 	}
 }
 
-func collectTriggers(receiver *i3.EventReceiver, triggers chan<- struct{}) {
+func collectTriggers(receiver *i3.EventReceiver, triggers chan<- struct{}, stickyTriggers chan<- i3.NodeID) {
 	defer close(triggers)
+	defer close(stickyTriggers)
 	for receiver.Next() {
 		switch event := receiver.Event().(type) {
 		case *i3.WorkspaceEvent:
@@ -73,7 +88,15 @@ func collectTriggers(receiver *i3.EventReceiver, triggers chan<- struct{}) {
 			notifyTrigger(triggers)
 		case *i3.WindowEvent:
 			switch event.Change {
-			case "new", "close", "focus", "move", "floating", "fullscreen_mode":
+			case "new", "floating":
+				if event.Container.IsFloating() {
+					select {
+					case stickyTriggers <- event.Container.ID:
+					default:
+					}
+				}
+				notifyTrigger(triggers)
+			case "close", "focus", "move", "fullscreen_mode":
 				notifyTrigger(triggers)
 			}
 		}
@@ -81,6 +104,9 @@ func collectTriggers(receiver *i3.EventReceiver, triggers chan<- struct{}) {
 }
 
 func syncOnce() error {
+	if err := syncStickyPins(); err != nil {
+		log.Printf("i3-workspace-group daemon: sticky pins: %v", err)
+	}
 	if err := syncOpacity(); err != nil {
 		log.Printf("i3-workspace-group daemon: %v", err)
 	}
@@ -122,7 +148,10 @@ func syncOnce() error {
 	if err != nil {
 		return fmt.Errorf("get outputs: %w", err)
 	}
-	return runCommands(PlanSync(outputs, workspaces, loadCurrentState(), group))
+	if err := runCommands(PlanSync(outputs, workspaces, loadCurrentState(), group)); err != nil {
+		return err
+	}
+	return syncStickyPins()
 }
 
 func notifyTrigger(triggers chan<- struct{}) {

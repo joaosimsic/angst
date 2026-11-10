@@ -35,6 +35,7 @@ in
       default_border pixel 0
       default_floating_border pixel 0
       hide_edge_borders smart
+      popup_during_fullscreen all
 
       client.focused          #${p.background.base} #${p.background.variant} #${p.foreground.base} #${p.background.base} #${p.background.base}
       client.focused_inactive #${p.background.base} #${p.background.base} #${p.dim} #${p.background.base} #${p.background.base}
@@ -140,15 +141,15 @@ in
       for_window [class=".*"] title_format %title
       for_window [class="^i3-hardware-menu$"] floating enable, border none, sticky enable
       for_window [class="^i3-network-menu$"] floating enable, border none, sticky enable
-      for_window [class="^i3-toggles-menu$"] floating enable, border none, move to workspace current, move position center
+      for_window [class="^i3-toggles-menu$"] floating enable, border none, move to workspace current, move position center, sticky enable
       no_focus [class="^i3-toggles-menu$"]
-      for_window [class="^i3-cheatsheet$"] floating enable, border none, move to workspace current, move position center
+      for_window [class="^i3-cheatsheet$"] floating enable, border none, move to workspace current, move position center, sticky enable
       no_focus [class="^i3-cheatsheet$"]
 
       bindsym $mod+Return exec --no-startup-id GDK_BACKEND=x11 ${profileDirectory}/bin/ghostty
       bindsym $mod+Shift+Return exec --no-startup-id GDK_BACKEND=x11 ${profileDirectory}/bin/ghostty
       bindsym $mod+e exec --no-startup-id GDK_BACKEND=x11 ${profileDirectory}/bin/ghostty -e yazi
-      exec_always --no-startup-id env ANGST_INACTIVE_OPACITY=75 ${profileDirectory}/bin/i3-workspace-group daemon
+      exec_always --no-startup-id env ANGST_INACTIVE_OPACITY=75 ${profileDirectory}/bin/i3-workspace-group daemon --replace
       exec_always --no-startup-id hsetroot -solid '#${p.background.base}'
       exec --no-startup-id dbus-update-activation-environment --systemd --all
       exec --no-startup-id systemctl --user import-environment DISPLAY XAUTHORITY PATH XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
