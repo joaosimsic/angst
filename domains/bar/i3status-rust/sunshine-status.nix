@@ -13,7 +13,7 @@ pkgs.writeShellApplication {
     log="''${SUNSHINE_LOG:-$HOME/.config/sunshine/sunshine.log}"
 
     if ! systemctl --user is-active --quiet sunshine.service; then
-      printf '{"icon":"sunshine_off","state":"Idle","text":""}\n'
+      printf '{"icon":"","state":"Idle","text":""}\n'
       exit 0
     fi
 
@@ -24,13 +24,13 @@ pkgs.writeShellApplication {
 
     case "$event" in
       *"CLIENT DISCONNECTED"*)
-        printf '{"icon":"sunshine","state":"Idle","text":""}\n'
+        printf '{"icon":"sunshine","state":"Idle","text":"sunshine"}\n'
         ;;
       *"New streaming session started"*)
-        printf '{"icon":"sunshine_active","state":"Good","text":""}\n'
+        printf '{"icon":"sunshine_active","state":"Good","text":"stream"}\n'
         ;;
       *)
-        printf '{"icon":"sunshine","state":"Idle","text":""}\n'
+        printf '{"icon":"sunshine","state":"Idle","text":"sunshine"}\n'
         ;;
     esac
   '';

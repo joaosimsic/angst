@@ -15,6 +15,8 @@ in
     home.packages = [
       (pkgs.callPackage ./hardware-metrics.nix { })
       (pkgs.callPackage ./network-metrics.nix { })
+      (pkgs.callPackage ./vpn-status.nix { })
+      (pkgs.callPackage ./services-separator.nix { })
     ]
     ++ lib.optional isSunshineHost (pkgs.callPackage ./sunshine-status.nix { });
   };

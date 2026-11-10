@@ -42,7 +42,7 @@ pkgs.writeShellApplication {
       local active
       active=$(active_count)
       if (( active == 0 )); then
-        printf '{"icon":"net_down","state":"Idle","text":"ftp"}\n'
+        printf '{"icon":"","state":"Idle","text":""}\n'
       elif (( active == total )); then
         printf '{"icon":"net_up","state":"Good","text":"ftp"}\n'
       else

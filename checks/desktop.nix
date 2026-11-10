@@ -10,6 +10,8 @@ let
   themeNames = lib.attrNames themesLib.themes;
   hardwareMetrics = pkgs.callPackage ../domains/bar/i3status-rust/hardware-metrics.nix { };
   networkMetrics = pkgs.callPackage ../domains/bar/i3status-rust/network-metrics.nix { };
+  vpnStatus = pkgs.callPackage ../domains/bar/i3status-rust/vpn-status.nix { };
+  servicesSeparator = pkgs.callPackage ../domains/bar/i3status-rust/services-separator.nix { };
   cheatsheet = pkgs.callPackage ../domains/wm/i3/cheatsheet.nix { };
   toggles = pkgs.callPackage ../domains/wm/i3/toggles.nix { };
   togglesMenu = pkgs.callPackage ../domains/wm/i3/toggles-menu.nix { };
@@ -24,6 +26,7 @@ let
   renderForTheme = themeName: {
     inherit themeName;
     themeBg = (themesLib.get themeName).palette.background.base;
+    themeBgVariant = (themesLib.get themeName).palette.background.variant;
     themeError = (themesLib.get themeName).ansi.error;
     themeWarn = (themesLib.get themeName).ansi.warn;
     i3Config = renderDomainOutputFor themeName "domains/wm/i3/config/config";
@@ -41,6 +44,7 @@ let
     {
       themeName,
       themeBg,
+      themeBgVariant,
       themeError,
       themeWarn,
       i3Config,
@@ -62,6 +66,8 @@ let
           pkgs.jq
           hardwareMetrics
           networkMetrics
+          vpnStatus
+          servicesSeparator
           cheatsheet
           toggles
           togglesMenu
@@ -238,7 +244,7 @@ let
           exit 1
         fi
         XDG_RUNTIME_DIR="$PWD/runtime" i3-network-metrics >network.json
-        if ! jq -e 'type == "object" and (.icon == "net_offline" or .icon == "net_wifi" or .icon == "net_wired" or .icon == "net_vpn") and .text == "" and (.state == "Idle" or .state == "Warning" or .state == "Critical")' network.json >/dev/null; then
+        if ! jq -e 'type == "object" and (.icon == "net_offline" or .icon == "net_wifi" or .icon == "net_wired") and .text == "" and (.state == "Idle" or .state == "Warning" or .state == "Critical")' network.json >/dev/null; then
           echo "network summary returned unexpected output" >&2
           cat network.json >&2
           exit 1
@@ -247,6 +253,61 @@ let
         if ! grep -qF 'STATUS' network-details.txt || ! grep -qF 'TYPE' network-details.txt; then
           echo "network details returned unexpected output" >&2
           cat network-details.txt >&2
+          exit 1
+        fi
+        if ! grep -qF 'command = "i3-vpn-status"' config.toml; then
+          echo "bar config is missing the VPN service command" >&2
+          exit 1
+        fi
+        if ! grep -qF 'cmd = "i3-toggles toggle work-vpn"' config.toml; then
+          echo "bar config is missing the VPN toggle click handler" >&2
+          exit 1
+        fi
+        if ! grep -qF 'command = "i3-services-separator"' config.toml; then
+          echo "bar config is missing the service section separator" >&2
+          exit 1
+        fi
+        if grep -qF 'merge_with_next = false' config.toml; then
+          echo "service blocks still disable grouping" >&2
+          exit 1
+        fi
+        if ! grep -qF "idle_bg = \"#${themeBgVariant}\"" config.toml; then
+          echo "service blocks did not use the theme variant background #${themeBgVariant}" >&2
+          exit 1
+        fi
+        merge_count=$(grep -c 'merge_with_next = true' config.toml || true)
+        if [ "$merge_count" -lt 4 ]; then
+          echo "service blocks are not merged into a single group" >&2
+          exit 1
+        fi
+        hide_count=$(grep -c 'hide_when_empty = true' config.toml || true)
+        if [ "$hide_count" -lt 5 ]; then
+          echo "service blocks do not hide when inactive" >&2
+          exit 1
+        fi
+        vpn_line=$(grep -n 'command = "i3-vpn-status"' config.toml | head -1 | cut -d: -f1)
+        sunshine_line=$(grep -n 'command = "i3-sunshine-status"' config.toml | head -1 | cut -d: -f1)
+        mouse_line=$(grep -n 'command = "i3-mouse-hide status"' config.toml | head -1 | cut -d: -f1)
+        separator_line=$(grep -n 'command = "i3-services-separator"' config.toml | head -1 | cut -d: -f1)
+        hardware_line=$(grep -n 'command = "i3-hardware-metrics"' config.toml | head -1 | cut -d: -f1)
+        if [ "$vpn_line" -ge "$hardware_line" ] || [ "$sunshine_line" -ge "$hardware_line" ] || [ "$mouse_line" -ge "$hardware_line" ]; then
+          echo "service blocks are not left of the host info blocks" >&2
+          exit 1
+        fi
+        if [ "$separator_line" -le "$mouse_line" ] || [ "$separator_line" -ge "$hardware_line" ]; then
+          echo "service separator is not between services and host info" >&2
+          exit 1
+        fi
+        vpnOut=$(i3-vpn-status)
+        if ! jq -e 'type == "object" and .icon == "" and .text == "" and .state == "Idle"' <<< "$vpnOut" >/dev/null; then
+          echo "VPN status did not hide when the service is inactive" >&2
+          echo "$vpnOut" >&2
+          exit 1
+        fi
+        separatorOut=$(i3-services-separator)
+        if ! jq -e 'type == "object" and .text == "" and .state == "Idle"' <<< "$separatorOut" >/dev/null; then
+          echo "service separator did not hide when no service is active" >&2
+          echo "$separatorOut" >&2
           exit 1
         fi
 
@@ -269,8 +330,8 @@ let
             exit 1
           fi
           ftpOut=$(HOME="$PWD/home" angst-ftp-status)
-          if [ "$ftpOut" != '{"icon":"net_down","state":"Idle","text":"ftp"}' ]; then
-            echo "ftp status did not show an idle toggle when no mount is active" >&2
+          if [ "$ftpOut" != '{"icon":"","state":"Idle","text":""}' ]; then
+            echo "ftp status did not hide when no mount is active" >&2
             echo "$ftpOut" >&2
             exit 1
           fi

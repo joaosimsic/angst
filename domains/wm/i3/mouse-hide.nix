@@ -114,9 +114,9 @@ pkgs.writeShellApplication {
 
     status() {
       if is_disabled; then
-        printf '{"icon":"mouse","state":"Critical","text":""}\n'
+        printf '{"icon":"mouse","state":"Critical","text":"mouse"}\n'
       else
-        printf '{"icon":"mouse","state":"Good","text":""}\n'
+        printf '{"icon":"","state":"Idle","text":""}\n'
       fi
     }
 

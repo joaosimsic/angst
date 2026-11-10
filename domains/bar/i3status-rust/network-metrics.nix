@@ -28,32 +28,6 @@ pkgs.writeShellApplication {
       [ -d "/sys/class/net/$iface/wireless" ] || [ -e "/sys/class/net/$iface/phy80211" ]
     }
 
-    vpn_iface() {
-      local dev name flags ip
-      for dev in /sys/class/net/*; do
-        [ -e "$dev" ] || continue
-        name="''${dev##*/}"
-        case "$name" in
-          tun* | tap* | wg* | ppp* | tailscale* | vpn*) ;;
-          *)
-            if [ -e "$dev/tun_flags" ] || [[ "$(cat "$dev/uevent" 2>/dev/null || true)" == *wireguard* ]]; then
-              :
-            else
-              continue
-            fi
-            ;;
-        esac
-        flags=$(cat "$dev/flags" 2>/dev/null || printf '0x0')
-        (( flags & 1 )) || continue
-        ip=$(iface_ipv4 "$name")
-        if [ -n "$ip" ]; then
-          printf '%s %s\n' "$name" "$ip"
-          return 0
-        fi
-      done
-      return 1
-    }
-
     default_iface() {
       ip route show default 2>/dev/null \
         | awk '/^default/ { for (i = 1; i <= NF; i++) if ($i == "dev") { print $(i + 1); exit } }'
@@ -65,13 +39,7 @@ pkgs.writeShellApplication {
     }
 
     active_connection() {
-      local vpn name ip
-      if vpn=$(vpn_iface); then
-        name="''${vpn%% *}"
-        ip="''${vpn#* }"
-        printf 'vpn %s %s\n' "$name" "$ip"
-        return 0
-      fi
+      local name ip
       name=$(default_iface)
       if [ -n "$name" ]; then
         ip=$(iface_ipv4 "$name")
@@ -132,7 +100,6 @@ pkgs.writeShellApplication {
 
     icon_for() {
       case "$1" in
-        vpn) printf 'net_vpn\n' ;;
         wireless) printf 'net_wifi\n' ;;
         wired) printf 'net_wired\n' ;;
         *) printf 'net_offline\n' ;;
@@ -223,7 +190,6 @@ pkgs.writeShellApplication {
         return
       fi
       case "$kind" in
-        vpn) type="VPN" ;;
         wireless) type="Wi-Fi" ;;
         wired) type="Wired" ;;
       esac

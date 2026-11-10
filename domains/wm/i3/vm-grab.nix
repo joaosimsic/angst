@@ -61,7 +61,7 @@ pkgs.writeShellApplication {
           printf '{"icon":"gpu","state":"Critical","text":"Super+G"}\n'
           ;;
         *)
-          printf '{"icon":"gpu","state":"Good","text":"Super+G"}\n'
+          printf '{"icon":"","state":"Idle","text":""}\n'
           ;;
       esac
     }
