@@ -83,6 +83,7 @@ let
     plugin = [
       "./tui-plugins/session-nav.ts"
       "./tui-plugins/vim-indicator.tsx"
+      "./tui-plugins/usage.tsx"
     ];
     keybinds = {
       messages_half_page_up = "ctrl+u";
@@ -100,6 +101,9 @@ let
 
   lspWithDisabled = lspWithMux // {
     "php intelephense" = {
+      disabled = true;
+    };
+    "rust" = {
       disabled = true;
     };
   };

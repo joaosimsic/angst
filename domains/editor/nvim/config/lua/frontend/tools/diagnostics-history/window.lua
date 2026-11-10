@@ -1,6 +1,7 @@
 ---@type Keybinder
 local Keybinder = require("common.Keybinder")
 local icons = require("common.icons")
+local layout = require("frontend.tools.diagnostics-history.layout")
 
 local M = {}
 
@@ -32,6 +33,31 @@ local ns_id = vim.api.nvim_create_namespace("DiagnosticsHistoryWindow")
 
 local function sanitize(msg)
 	return msg:gsub("\n", " "):gsub("\r", " ")
+end
+
+---@param row table
+---@param expanded? boolean
+---@return string
+local function row_text(row, expanded)
+	local indent = string.rep("  ", row.indent or 0)
+	if row.kind == "separator" then
+		return "── " .. row.label .. " ──"
+	elseif row.kind == "folder" then
+		return indent .. "▾ " .. (expanded and row.dir or row.name) .. "/"
+	elseif row.kind == "file" then
+		return indent .. "▸ " .. row.label
+	elseif row.kind == "line" then
+		return indent .. row.label .. ":"
+	elseif row.kind == "diagnostic" then
+		local item = row.item
+		local icon = severity_icons[item.severity] or "?"
+		local source = ""
+		if item.source ~= nil and item.source ~= "" then
+			source = "[" .. item.source .. "] "
+		end
+		return indent .. icon .. " " .. tostring(item.col + 1) .. ": " .. source .. sanitize(item.message or "")
+	end
+	return ""
 end
 
 ---@param item table
@@ -100,6 +126,9 @@ function M.toggle(state)
 		return
 	end
 
+	local current_bufnr = vim.api.nvim_get_current_buf()
+	local rows = layout.build(items, current_bufnr, vim.fn.getcwd())
+
 	local width = math.floor(vim.o.columns * 0.8)
 	local height = math.floor(vim.o.lines * 0.6)
 	local col = math.floor((vim.o.columns - width) / 2)
@@ -119,49 +148,116 @@ function M.toggle(state)
 	})
 
 	vim.bo[buf_handle].filetype = "DiagnosticsHistory"
+	vim.bo[buf_handle].bufhidden = "wipe"
 	vim.wo[win_handle].cursorline = true
-	vim.wo[win_handle].number = true
+	vim.wo[win_handle].number = false
+	vim.wo[win_handle].relativenumber = false
 
+	local rowmap = {}
+	local folder_rows = {}
+	local ordered_items = {}
 	local lines = {}
-	for _, item in ipairs(items) do
-		local icon = severity_icons[item.severity] or "?"
-		local bufname = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(item.bufnr), ":.")
-		table.insert(
-			lines,
-			string.format("%s %s:%d:%d  %s", icon, bufname, item.lnum + 1, item.col + 1, sanitize(item.message))
-		)
+	for i, item in ipairs(rows) do
+		lines[i] = row_text(item, false)
+		if item.kind == "diagnostic" then
+			rowmap[i] = item.item
+			ordered_items[#ordered_items + 1] = item.item
+		elseif item.kind == "folder" then
+			folder_rows[item.dir] = i
+		end
 	end
 
 	vim.api.nvim_buf_set_lines(buf_handle, 0, -1, false, lines)
 
-	for i, item in ipairs(items) do
-		local icon = severity_icons[item.severity] or "?"
-		local icon_len = vim.fn.strchars(icon)
-		vim.api.nvim_buf_set_extmark(buf_handle, ns_id, i - 1, 0, {
-			end_col = icon_len,
-			hl_group = severity_colors[item.severity],
-			priority = 100,
-		})
+	for i, item in ipairs(rows) do
+		if item.kind == "diagnostic" then
+			local indent = string.rep("  ", item.indent or 0)
+			local icon = severity_icons[item.item.severity] or "?"
+			vim.api.nvim_buf_set_extmark(buf_handle, ns_id, i - 1, #indent, {
+				end_col = #indent + #icon,
+				hl_group = severity_colors[item.item.severity],
+				priority = 100,
+			})
+		end
+	end
+	vim.bo[buf_handle].modifiable = false
+
+	local expanded_folder = nil
+	local function update_hover()
+		if not (win_handle and vim.api.nvim_win_is_valid(win_handle)) then
+			return
+		end
+		if not (buf_handle and vim.api.nvim_buf_is_valid(buf_handle)) then
+			return
+		end
+		local ok, cursor = pcall(vim.api.nvim_win_get_cursor, win_handle)
+		if not ok then
+			return
+		end
+		local meta = rows[cursor[1]]
+		local folder = nil
+		if meta ~= nil then
+			if meta.kind == "folder" then
+				folder = meta.dir
+			else
+				folder = meta.group
+			end
+		end
+		if folder == expanded_folder then
+			return
+		end
+		local previous = expanded_folder
+		expanded_folder = folder
+		local function relabel(dir, expanded)
+			local index = folder_rows[dir]
+			if index == nil then
+				return
+			end
+			local folder_meta = rows[index]
+			if folder_meta == nil or folder_meta.kind ~= "folder" then
+				return
+			end
+			vim.bo[buf_handle].modifiable = true
+			pcall(vim.api.nvim_buf_set_lines, buf_handle, index - 1, index, false, { row_text(folder_meta, expanded) })
+			vim.bo[buf_handle].modifiable = false
+		end
+		if previous ~= nil then
+			relabel(previous, false)
+		end
+		if folder ~= nil then
+			relabel(folder, true)
+		end
+	end
+	vim.api.nvim_create_autocmd("CursorMoved", {
+		buffer = buf_handle,
+		callback = update_hover,
+	})
+	update_hover()
+
+	local function item_at_cursor()
+		if not (win_handle and vim.api.nvim_win_is_valid(win_handle)) then
+			return nil
+		end
+		local cursor = vim.api.nvim_win_get_cursor(win_handle)
+		return rowmap[cursor[1]]
 	end
 
 	local binder = Keybinder.new(buf_handle, "DIAGNOSTICS-HISTORY")
 	binder:nmap("q", close, { desc = "Close diagnostics history" })
 	binder:nmap("<Esc>", close, { desc = "Close diagnostics history" })
 	binder:nmap("y", function()
-		local cursor = vim.api.nvim_win_get_cursor(win_handle)
-		local idx = cursor[1]
-		if idx >= 1 and idx <= #items then
-			copy_item(items[idx])
+		local item = item_at_cursor()
+		if item ~= nil then
+			copy_item(item)
 		end
 	end, { desc = "Copy diagnostic entry" })
 	binder:nmap("Y", function()
-		copy_all(items)
+		copy_all(ordered_items)
 	end, { desc = "Copy all diagnostics" })
 	binder:nmap("<CR>", function()
-		local cursor = vim.api.nvim_win_get_cursor(win_handle)
-		local idx = cursor[1]
-		if idx >= 1 and idx <= #items then
-			copy_item(items[idx])
+		local item = item_at_cursor()
+		if item ~= nil then
+			copy_item(item)
 		end
 	end, { desc = "Copy diagnostic entry" })
 	binder:nmap("d", function()
@@ -171,13 +267,11 @@ function M.toggle(state)
 		vim.notify("Diagnostics history cleared", vim.log.levels.INFO)
 	end, { desc = "Clear diagnostics history" })
 	binder:nmap("g", function()
-		local cursor = vim.api.nvim_win_get_cursor(win_handle)
-		local idx = cursor[1]
-		if idx >= 1 and idx <= #items then
-			local item = items[idx]
+		local item = item_at_cursor()
+		if item ~= nil then
+			close()
 			pcall(vim.api.nvim_set_current_buf, item.bufnr)
 			pcall(vim.api.nvim_win_set_cursor, 0, { item.lnum + 1, item.col })
-			close()
 		end
 	end, { desc = "Jump to diagnostic location" })
 end

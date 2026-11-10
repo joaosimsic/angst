@@ -65,6 +65,10 @@ local state = {
 	context = { file = nil, index = nil },
 	file_rowmap = {},
 	diff_rowmap = {},
+	rowmap = {},
+	folder_rows = {},
+	hovered_row = nil,
+	expanded_folder = nil,
 	diffs_match = {},
 	loading = false,
 }
@@ -151,12 +155,14 @@ function M.files_from_quickfix()
 	return files
 end
 
--- Deduped absolute paths in source order (one per file).
+-- Deduped absolute paths in display order (one per file).
 ---@return string[]
 function M.ordered_files()
 	local out = {}
-	for _, e in ipairs(M.files_from_quickfix()) do
-		out[#out + 1] = e.filename
+	for _, row in ipairs(M.layout_files(M.files_from_quickfix(), state.tops)) do
+		if row.kind == "file" then
+			out[#out + 1] = row.entry.filename
+		end
 	end
 	return out
 end
@@ -249,6 +255,113 @@ function M.relpath(abs, tops)
 	return rel == "" and abs or rel
 end
 
+local function path_less(a, b)
+	if a.rel == b.rel then
+		return a.entry.filename < b.entry.filename
+	end
+	return a.rel < b.rel
+end
+
+local function basename(path)
+	return vim.fn.fnamemodify(path, ":t")
+end
+
+---@class ReviewFileRow
+---@field kind "file"|"folder"
+---@field entry? table
+---@field label? string
+---@field hover? string
+---@field dir? string
+---@field name? string
+---@field group? string
+---@field indent? boolean
+
+-- Root files first, then shared-folder groups and single nested files,
+-- all sorted alphabetically. Directories with one file stay ungrouped.
+---@param files table[]
+---@param tops? string[]
+---@return ReviewFileRow[]
+function M.layout_files(files, tops)
+	tops = tops or {}
+	local root, loose, grouped, group_order = {}, {}, {}, {}
+	for _, entry in ipairs(files or {}) do
+		local rel = M.relpath(entry.filename, tops)
+		local inside = rel ~= entry.filename
+		local dir = inside and vim.fn.fnamemodify(rel, ":h") or nil
+		if inside and dir == "." then
+			root[#root + 1] = { entry = entry, rel = rel }
+		elseif inside then
+			local group = grouped[dir]
+			if group == nil then
+				group = { dir = dir, files = {} }
+				grouped[dir] = group
+				group_order[#group_order + 1] = dir
+			end
+			group.files[#group.files + 1] = { entry = entry, rel = rel }
+		else
+			loose[#loose + 1] = { entry = entry, rel = rel }
+		end
+	end
+	table.sort(root, path_less)
+
+	local units = {}
+	for _, dir in ipairs(group_order) do
+		local group = grouped[dir]
+		if #group.files >= 2 then
+			table.sort(group.files, path_less)
+			units[#units + 1] = { kind = "folder", dir = dir, files = group.files, key = dir }
+		else
+			local item = group.files[1]
+			units[#units + 1] = { kind = "file", item = item, key = item.rel }
+		end
+	end
+	for _, item in ipairs(loose) do
+		units[#units + 1] = { kind = "file", item = item, key = item.rel }
+	end
+	table.sort(units, function(a, b)
+		if a.key == b.key then
+			return (a.kind or "") < (b.kind or "")
+		end
+		return a.key < b.key
+	end)
+
+	local rows = {}
+	for _, item in ipairs(root) do
+		rows[#rows + 1] = {
+			kind = "file",
+			entry = item.entry,
+			label = basename(item.rel),
+			hover = item.rel,
+			indent = false,
+		}
+	end
+	for _, unit in ipairs(units) do
+		if unit.kind == "folder" then
+			rows[#rows + 1] = { kind = "folder", name = basename(unit.dir), dir = unit.dir }
+			for _, item in ipairs(unit.files) do
+				rows[#rows + 1] = {
+					kind = "file",
+					entry = item.entry,
+					label = basename(item.rel),
+					hover = basename(item.rel),
+					group = unit.dir,
+					indent = true,
+				}
+			end
+		else
+			local item = unit.item
+			rows[#rows + 1] = {
+				kind = "file",
+				entry = item.entry,
+				label = basename(item.rel),
+				hover = item.rel,
+				indent = false,
+			}
+		end
+	end
+	return rows
+end
+
 ---@param win integer
 ---@param text string
 local function set_winbar(win, text)
@@ -264,17 +377,31 @@ local function set_pane_lines(buf, lines)
 end
 
 -- One file row: bare tail name, except the current file which shows
--- its whole repo-rooted path on a single (soft-wrapped) line.
+-- its path relative to the folder it belongs to on one soft-wrapped line.
 ---@param abs string absolute path
 ---@param is_current boolean
 ---@param tops? string[]
+---@param row? ReviewFileRow
 ---@return string display line
-function M.file_row(abs, is_current, tops)
+function M.file_row(abs, is_current, tops, row)
+	row = row or {}
 	local icon = M.icon_for(abs)
+	local indent = row.indent and "  " or ""
+	local label = row.label or vim.fn.fnamemodify(M.relpath(abs, tops), ":t")
+	local hover = row.hover or M.relpath(abs, tops)
 	if not is_current then
-		return "  " .. icon .. vim.fn.fnamemodify(M.relpath(abs, tops), ":t")
+		return indent .. "  " .. icon .. label
 	end
-	return "▸ " .. icon .. M.relpath(abs, tops)
+	return indent .. "▸ " .. icon .. hover
+end
+
+-- Folders show only their basename until hovered, then the path back
+-- to the repo root.
+---@param row ReviewFileRow
+---@param hovered boolean
+---@return string display line
+function M.folder_row(row, hovered)
+	return "▾ " .. (hovered and row.dir or row.name) .. "/"
 end
 
 -- (Re)apply the diff row kind tints, replacing the previous matches.
@@ -296,6 +423,60 @@ local function mark_kinds(win)
 	end
 end
 
+-- Folder labels expand while the cursor sits on the folder or any of its
+-- child rows; files keep their labels.
+function M.update_hovered_row()
+	if not valid_win(state.files_win) or not valid_buf(state.files_buf) then
+		return
+	end
+	local ok, cursor = pcall(vim.api.nvim_win_get_cursor, state.files_win)
+	if not ok then
+		return
+	end
+	local row = cursor[1]
+	local meta = state.rowmap[row]
+	local folder = nil
+	if meta ~= nil then
+		if meta.kind == "folder" then
+			folder = meta.dir
+		else
+			folder = meta.group
+		end
+	end
+	state.hovered_row = row
+	if folder == state.expanded_folder then
+		return
+	end
+	local previous = state.expanded_folder
+	state.expanded_folder = folder
+	local function relabel(dir, expanded)
+		local index = state.folder_rows[dir]
+		if index == nil then
+			return
+		end
+		local folder_meta = state.rowmap[index]
+		if folder_meta == nil or folder_meta.kind ~= "folder" then
+			return
+		end
+		vim.bo[state.files_buf].modifiable = true
+		pcall(
+			vim.api.nvim_buf_set_lines,
+			state.files_buf,
+			index - 1,
+			index,
+			false,
+			{ M.folder_row(folder_meta, expanded) }
+		)
+		vim.bo[state.files_buf].modifiable = false
+	end
+	if previous ~= nil then
+		relabel(previous, false)
+	end
+	if folder ~= nil then
+		relabel(folder, true)
+	end
+end
+
 function M.render_files()
 	if not valid_win(state.files_win) or not valid_buf(state.files_buf) then
 		return
@@ -303,6 +484,10 @@ function M.render_files()
 	if state.loading then
 		set_winbar(state.files_win, string.format("▸ %s (loading…)", M.FILES_HEADER))
 		state.file_rowmap = {}
+		state.rowmap = {}
+		state.folder_rows = {}
+		state.hovered_row = nil
+		state.expanded_folder = nil
 		set_pane_lines(state.files_buf, { M.FILES_LOADING })
 		pcall(vim.api.nvim_win_set_width, state.files_win, M.PANE_WIDTH)
 		pcall(vim.api.nvim_win_set_cursor, state.files_win, { 1, 0 })
@@ -311,9 +496,21 @@ function M.render_files()
 	set_winbar(state.files_win, string.format("▸ %s (%d)", M.FILES_HEADER, #state.files))
 	local lines = {}
 	state.file_rowmap = {}
-	for _, e in ipairs(state.files) do
-		lines[#lines + 1] = M.file_row(e.filename, e.filename == state.context.file)
-		state.file_rowmap[#lines] = e
+	state.rowmap = {}
+	state.folder_rows = {}
+	state.hovered_row = nil
+	state.expanded_folder = nil
+	for _, row in ipairs(M.layout_files(state.files, state.tops)) do
+		local index = #lines + 1
+		state.rowmap[index] = row
+		if row.kind == "folder" then
+			state.folder_rows[row.dir] = index
+			lines[index] = M.folder_row(row, false)
+		else
+			local current = row.entry.filename == state.context.file
+			lines[index] = M.file_row(row.entry.filename, current, state.tops, row)
+			state.file_rowmap[index] = row.entry
+		end
 	end
 	if #lines == 0 then
 		lines[#lines + 1] = M.FILES_EMPTY
@@ -330,6 +527,7 @@ function M.render_files()
 	if not parked then
 		pcall(vim.api.nvim_win_set_cursor, state.files_win, { 1, 0 })
 	end
+	M.update_hovered_row()
 end
 
 function M.render_diffs()
@@ -429,6 +627,10 @@ function M.set_loading(loading)
 		state.context = { file = nil, index = nil }
 		state.file_rowmap = {}
 		state.diff_rowmap = {}
+		state.rowmap = {}
+		state.folder_rows = {}
+		state.hovered_row = nil
+		state.expanded_folder = nil
 		if M.is_open() then
 			M.render()
 		end
@@ -555,6 +757,12 @@ function M.open()
 	local code_win = vim.api.nvim_get_current_win()
 	local files_buf = vim.api.nvim_create_buf(false, true)
 	setup_pane_buf(files_buf, M.FILES_FILETYPE, jump_from_files_cursor, "Jump to file")
+	vim.api.nvim_create_autocmd("CursorMoved", {
+		buffer = files_buf,
+		callback = function()
+			M.update_hovered_row()
+		end,
+	})
 	vim.cmd("botright vertical " .. M.PANE_WIDTH .. "split")
 	state.files_win = vim.api.nvim_get_current_win()
 	state.files_buf = files_buf
@@ -602,6 +810,10 @@ function M._reset()
 	state.context = { file = nil, index = nil }
 	state.file_rowmap = {}
 	state.diff_rowmap = {}
+	state.rowmap = {}
+	state.folder_rows = {}
+	state.hovered_row = nil
+	state.expanded_folder = nil
 	state.diffs_match = {}
 	state.loading = false
 end

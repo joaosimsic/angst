@@ -40,6 +40,8 @@ local function evict_review_modules()
 end
 
 return function()
+	vim.g.angst_git_hunks_state_file = vim.fn.tempname() .. "_angst_git_hunks_state.json"
+
 	describe("git review tooling", function()
 		-- Invoke mapping callbacks directly: headless typeahead does not
 		-- dispatch fed keys, but this exercises the identical code path.
@@ -255,7 +257,7 @@ return function()
 			vim.api.nvim_buf_delete(other, { force = true })
 		end)
 
-		it("git review hydra is minimal with d/h/l/p/n/N and a flat filenames-only list", function()
+		it("git review hydra is minimal with d/h/l/p/n/N and a grouped filenames list", function()
 			vim.g.mapleader = " "
 
 			local calls = {}
@@ -671,6 +673,46 @@ return function()
 			package.loaded["frontend.tools.git_review_pages"] = nil
 			vim.api.nvim_buf_delete(buf_a, { force = true })
 			vim.api.nvim_buf_delete(buf_b, { force = true })
+		end)
+
+		it("hunk display switch persists across restarts", function()
+			local previous_state_file = vim.g.angst_git_hunks_state_file
+			local state_file = vim.fn.tempname() .. "_angst_git_hunks_persist.json"
+			local module = "frontend.tools.git_hunk_display"
+
+			package.loaded["gitsigns"] = {
+				toggle_deleted = function() end,
+				toggle_linehl = function() end,
+				toggle_word_diff = function() end,
+			}
+			vim.g.angst_git_hunks_state_file = state_file
+			vim.g.angst_git_hunks_enabled = nil
+			package.loaded[module] = nil
+
+			local display = require(module)
+			assert(display.is_enabled() == true, "missing state file must default on")
+			display.set(false)
+
+			assert(vim.fn.filereadable(state_file) == 1, "disabling hunks must write the state file")
+			local decoded_ok, saved = pcall(vim.json.decode, table.concat(vim.fn.readfile(state_file), "\n"))
+			assert(decoded_ok and saved.enabled == false, "state file must record disabled hunks")
+
+			package.loaded[module] = nil
+			vim.g.angst_git_hunks_enabled = nil
+			display = require(module)
+			assert(display.is_enabled() == false, "disabled hunks must survive a restart")
+			display.set(true)
+
+			package.loaded[module] = nil
+			vim.g.angst_git_hunks_enabled = nil
+			display = require(module)
+			assert(display.is_enabled() == true, "enabled hunks must survive a restart")
+
+			package.loaded["gitsigns"] = nil
+			package.loaded[module] = nil
+			vim.g.angst_git_hunks_enabled = nil
+			vim.g.angst_git_hunks_state_file = previous_state_file
+			vim.fn.delete(state_file)
 		end)
 
 		it("h/l cycles four staged diffs in one file without leaving it", function()
@@ -1868,7 +1910,7 @@ return function()
 			vim.fn.delete(root, "rf")
 		end)
 
-		it("file rows show tails, selected rows the whole repo-rooted path", function()
+		it("file rows show tails, selected rows the folder-relative path", function()
 			package.loaded["frontend.tools.git_review_pages"] = nil
 			local pages = require("frontend.tools.git_review_pages")
 
@@ -1881,16 +1923,147 @@ return function()
 				pages.file_row("/tmp/x.lua", false, {}) == "  x.lua",
 				"outside-repo tails stay bare"
 			)
-			-- Selected rows: marker plus the whole repo-rooted path on
-			-- one logical line (soft-wrapped by the window itself).
+			-- Selected rows: marker plus the path relative to their folder.
 			assert(
-				pages.file_row("/repo/a/b.lua", true, { "/repo" }) == "▸ a/b.lua",
-				"selected rows show the whole path"
+				pages.file_row("/repo/a/b/c.lua", true, { "/repo" }, {
+					label = "c.lua",
+					hover = "c.lua",
+					indent = true,
+				}) == "  ▸ c.lua",
+				"grouped selected rows show the folder-relative path"
+			)
+			assert(
+				pages.file_row("/repo/a/lone.lua", true, { "/repo" }, {
+					label = "lone.lua",
+					hover = "a/lone.lua",
+				}) == "▸ a/lone.lua",
+				"loose selected rows keep the repo-relative path"
 			)
 			assert(
 				pages.file_row("/tmp/x.lua", true, {}) == "▸ /tmp/x.lua",
 				"selected rows fall back to absolute paths"
 			)
+		end)
+
+		it("file layout puts root rows first and groups shared folders", function()
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			local pages = require("frontend.tools.git_review_pages")
+
+			local files = {
+				{ filename = "/repo/src/z.lua" },
+				{ filename = "/repo/README.md" },
+				{ filename = "/repo/src/a.lua" },
+				{ filename = "/repo/only/lone.lua" },
+				{ filename = "/repo/justfile" },
+			}
+			local rows = pages.layout_files(files, { "/repo" })
+			local got = {}
+			for _, row in ipairs(rows) do
+				if row.kind == "folder" then
+					got[#got + 1] = "folder:" .. row.name .. ":" .. row.dir
+				else
+					got[#got + 1] = (row.indent and "indent:" or "file:") .. row.label .. ":" .. row.hover
+				end
+			end
+			assert(
+				vim.inspect(got)
+					== vim.inspect({
+						"file:README.md:README.md",
+						"file:justfile:justfile",
+						"file:lone.lua:only/lone.lua",
+						"folder:src:src",
+						"indent:a.lua:a.lua",
+						"indent:z.lua:z.lua",
+					}),
+				"layout must sort root files first, then grouped folders, got: " .. vim.inspect(got)
+			)
+			assert(
+				pages.folder_row({ name = "src", dir = "app/src" }, false) == "▾ src/",
+				"idle folders show only their basename"
+			)
+			assert(
+				pages.folder_row({ name = "src", dir = "app/src" }, true) == "▾ app/src/",
+				"hovered folders show the path back to the root"
+			)
+		end)
+
+		it("files pane groups shared folders and expands the hovered folder", function()
+			assert(vim.fn.executable("git") == 1, "git binary required for fixture")
+
+			package.loaded["frontend.tools.git_review_pages"] = nil
+			local pages = require("frontend.tools.git_review_pages")
+			local old_cwd = vim.fn.getcwd()
+			local root = vim.fn.tempname() .. "_gitreview_group"
+			vim.fn.mkdir(root .. "/app/src", "p")
+			local out = vim.fn.system({ "git", "-C", root, "init", "-q" })
+			assert(vim.v.shell_error == 0, "fixture git init failed: " .. out)
+			vim.fn.writefile({ "root" }, root .. "/README.md")
+			vim.fn.writefile({ "a" }, root .. "/app/src/a.lua")
+			vim.fn.writefile({ "b" }, root .. "/app/src/b.lua")
+
+			local buf_a = vim.api.nvim_create_buf(false, true)
+			local buf_b = vim.api.nvim_create_buf(false, true)
+			local buf_root = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_buf_set_name(buf_a, root .. "/app/src/a.lua")
+			vim.api.nvim_buf_set_name(buf_b, root .. "/app/src/b.lua")
+			vim.api.nvim_buf_set_name(buf_root, root .. "/README.md")
+			vim.api.nvim_set_current_buf(buf_b)
+			vim.cmd("cd " .. vim.fn.fnameescape(root))
+			vim.fn.setqflist({
+				{ bufnr = buf_a, lnum = 1, text = "a" },
+				{ bufnr = buf_root, lnum = 1, text = "root" },
+				{ bufnr = buf_b, lnum = 1, text = "b" },
+			})
+			vim.cmd("cc 3")
+
+			pages.open()
+			assert(pages.is_open(), "panes must open for the grouping check")
+			local files_win, files_buf = nil, nil
+			for _, win in ipairs(vim.api.nvim_list_wins()) do
+				local buf = vim.api.nvim_win_get_buf(win)
+				if vim.bo[buf].filetype == "angst-git-files" then
+					files_win, files_buf = win, buf
+					break
+				end
+			end
+			assert(files_win ~= nil, "files pane missing")
+			local lines = vim.api.nvim_buf_get_lines(files_buf, 0, -1, false)
+			assert(
+				vim.inspect(lines)
+					== vim.inspect({
+						"  README.md",
+						"▾ app/src/",
+						"    a.lua",
+						"  ▸ b.lua",
+					}),
+				"current file must expand its folder on open, got: " .. vim.inspect(lines)
+			)
+			assert(
+				vim.api.nvim_win_get_cursor(files_win)[1] == 4,
+				"cursor must park on the current file row, not the folder"
+			)
+
+			vim.api.nvim_set_current_win(files_win)
+			vim.api.nvim_win_set_cursor(files_win, { 3, 0 })
+			vim.api.nvim_exec_autocmds("CursorMoved", { buffer = files_buf })
+			lines = vim.api.nvim_buf_get_lines(files_buf, 0, -1, false)
+			assert(lines[2] == "▾ app/src/", "child file rows must keep the folder expanded, got: " .. lines[2])
+			vim.api.nvim_win_set_cursor(files_win, { 1, 0 })
+			vim.api.nvim_exec_autocmds("CursorMoved", { buffer = files_buf })
+			lines = vim.api.nvim_buf_get_lines(files_buf, 0, -1, false)
+			assert(lines[2] == "▾ src/", "leaving the folder must restore its basename, got: " .. lines[2])
+			vim.api.nvim_win_set_cursor(files_win, { 2, 0 })
+			vim.api.nvim_exec_autocmds("CursorMoved", { buffer = files_buf })
+			lines = vim.api.nvim_buf_get_lines(files_buf, 0, -1, false)
+			assert(lines[2] == "▾ app/src/", "hovering the folder must expand it, got: " .. lines[2])
+
+			pages.close()
+			vim.fn.setqflist({}, "r")
+			vim.cmd("cd " .. vim.fn.fnameescape(old_cwd))
+			vim.fn.delete(root, "rf")
+			vim.api.nvim_buf_delete(buf_a, { force = true })
+			vim.api.nvim_buf_delete(buf_b, { force = true })
+			vim.api.nvim_buf_delete(buf_root, { force = true })
 		end)
 
 		it("diff rows tint by change kind", function()

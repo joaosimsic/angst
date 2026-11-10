@@ -475,8 +475,8 @@ local function setup()
 			-- The active tab and applied range persist in vim.g across
 			-- hydra exits: re-enter restores the picker or the applied
 			-- range on the worktree tab.
-			-- Respect the global hunk switch (default-on): toggles are
-			-- global and may have changed since the last session.
+			-- Respect the persisted global hunk switch (default-on):
+			-- toggles survive Neovim restarts.
 			-- Hint stays hidden: `?` toggles the help float.
 			-- `j`/`k` are intentionally unbound: normal motion.
 			hunk_display.apply()

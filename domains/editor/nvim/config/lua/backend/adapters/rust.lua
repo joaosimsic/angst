@@ -49,6 +49,7 @@ config = {
 	treesitter = "rust",
 	lsp_settings = {
 		["rust-analyzer"] = {
+			files = { watcher = "server" },
 			check = { command = "clippy" },
 			inlayHints = {
 				chainingHints = { enable = true },

@@ -46,6 +46,17 @@
         updateResolvConf = true;
         autoStart = false;
       };
+      domains.network.vpn.openvpn.servers.cvx = {
+        config = ''
+          config /run/secrets/vpn/cvx.ovpn
+          data-ciphers AES-256-CBC
+          data-ciphers-fallback AES-256-CBC
+          compat-mode 2.4.0
+        '';
+        authUserPass = "/run/secrets/vpn/cvx.creds";
+        updateResolvConf = true;
+        autoStart = false;
+      };
 
       # Intel i5-7400 + NVIDIA GT 710 (Fermi/Kepler legacy branch).
       # If the 470 driver fails against a newer kernel, drop the nvidia
@@ -123,7 +134,6 @@
     "angst"
     "advent-of-code"
     "boring"
-    "stealing-eye"
     "datapath"
     "llm-ruler"
     "agent"
@@ -133,6 +143,8 @@
     "vault"
     "TCC"
     "TiConnect"
+    "TiCrafter"
+    "TicoTron"
     "box"
     "intelligence/backend"
     "intelligence/frontend"

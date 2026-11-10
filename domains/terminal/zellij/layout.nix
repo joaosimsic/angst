@@ -1,4 +1,5 @@
 {
+  zjstatusLocation,
   inactiveTab,
   activeTab,
   bellTab,
@@ -27,7 +28,7 @@
     default_tab_template {
       children
       pane size=1 borderless=true {
-        plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
+        plugin location="${zjstatusLocation}" {
                   format_left   "${fmtLeft}"
                   format_center "${fmtCenter}"
                   format_right  "${fmtRight}"

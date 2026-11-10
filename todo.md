@@ -66,6 +66,7 @@
 - [x] firefox
 - [x] persistent and not persistent prints
 - [x] notifications and add print notifications
+- [ ] i3 shortcut or shell cmd that kill a random process(could add more silly things)
 
 # i3
 
@@ -86,6 +87,7 @@
 - [x] make add/remove diff lines be derived from ansi green/red and the bg colors
 - [x] add gg and G binds to go to top and bottom of chat
 - [x] accept all mode
+- [x] display usage in side panel, if possible display model infos like mounthly usage
 
 # vial
 

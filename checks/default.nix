@@ -145,6 +145,8 @@ let
 
   checkOpencodeSessionNav = import ./opencode-session-nav.nix { inherit pkgs; };
 
+  checkOpencodeUsage = import ./opencode-usage.nix { inherit pkgs; };
+
   checkOpencodeMux = import ./opencode-mux.nix { inherit pkgs; };
 
   checkOpencodeSecret = import ./opencode-secret.nix {
@@ -237,6 +239,7 @@ in
   check-zellij = checkZellij;
   check-opencode-attention = checkOpencodeAttention;
   check-opencode-session-nav = checkOpencodeSessionNav;
+  check-opencode-usage = checkOpencodeUsage;
   check-opencode-mux = checkOpencodeMux;
   check-opencode-secret = checkOpencodeSecret;
   check-session-env = checkSessionEnv;
