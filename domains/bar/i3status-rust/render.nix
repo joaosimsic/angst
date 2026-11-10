@@ -93,7 +93,7 @@ in
       command = "i3-vpn-status"
       hide_when_empty = true
       merge_with_next = true
-      format = " $icon "
+      format = " $icon $text "
       ${serviceTheme}
       [[block.click]]
       button = "left"

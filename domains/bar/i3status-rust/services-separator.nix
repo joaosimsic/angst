@@ -12,7 +12,7 @@ pkgs.writeShellApplication {
 
     any=false
 
-    if systemctl is-active --quiet openvpn-cvx.service; then
+    if [[ -n "$(systemctl list-units --type=service --state=active --no-legend --plain --no-pager 'openvpn-*.service' 2>/dev/null || true)" ]]; then
       any=true
     fi
     if systemctl --user is-active --quiet sunshine.service; then

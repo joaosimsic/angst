@@ -263,6 +263,10 @@ let
           echo "bar config is missing the VPN toggle click handler" >&2
           exit 1
         fi
+        if ! grep -qF 'format = " $icon $text "' config.toml; then
+          echo "VPN bar block is not showing the active VPN name" >&2
+          exit 1
+        fi
         if ! grep -qF 'command = "i3-services-separator"' config.toml; then
           echo "bar config is missing the service section separator" >&2
           exit 1
