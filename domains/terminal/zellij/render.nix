@@ -2,6 +2,7 @@
   themesLib,
   themeName,
   checkHelpers,
+  homeDirectory,
 }:
 
 let
@@ -33,9 +34,11 @@ let
   fmtRight = "#[${standard}]{tabs}";
   fmtSpace = "#[${standard}]";
 
+  pluginDir = "${homeDirectory}/.config/zellij/plugins";
+
   configText = ''
     plugins {
-        vim-navigator location="https://github.com/hiasr/vim-zellij-navigator/releases/download/0.3.0/vim-zellij-navigator.wasm"
+        vim-navigator location="file:${pluginDir}/vim-zellij-navigator.wasm"
     }
 
     theme "angst"
@@ -196,6 +199,7 @@ let
 
   themeText = import ./theme.nix { inherit t p; };
   layoutText = import ./layout.nix {
+    zjstatusLocation = "file:${pluginDir}/zjstatus.wasm";
     inherit
       standard
       inactiveTab
@@ -238,6 +242,9 @@ in
       (requireInfix configText ''bind "Ctrl 1" { GoToTab 1; }'' "zellij Ctrl+1 should jump to tab 1")
       (requireInfix configText ''bind "Ctrl 2" { GoToTab 2; }'' "zellij Ctrl+2 should jump to tab 2")
       (requireInfix configText ''bind "Ctrl 9" { GoToTab 9; }'' "zellij Ctrl+9 should jump to tab 9")
+      (requireInfix configText ''vim-navigator location="file:''
+        "zellij vim-navigator should load the vendored plugin"
+      )
     ];
   }
   {
@@ -278,6 +285,7 @@ in
       (requireInfix layoutText "mode_default_to_mode \"normal\""
         "zjstatus should fall back to normal mode formatting"
       )
+      (requireInfix layoutText ''plugin location="file:'' "zjstatus should load the vendored plugin")
       (require (
         p.accent.base != p.background.variant
       ) "zellij active tab and bar surface must differ in ${themeName}")
