@@ -16,12 +16,18 @@ let
   vmGrab = pkgs.callPackage ./vm-grab.nix { };
   audioMute = pkgs.callPackage ./audio-mute.nix { };
   hardwareMetrics = pkgs.callPackage ../../bar/i3status-rust/hardware-metrics.nix { };
-  hardwareMenu = pkgs.callPackage ./hardware-menu.nix { inherit hardwareMetrics; };
+  popoverClose = pkgs.callPackage ./popover-close.nix { };
+  popoverGuard = pkgs.callPackage ./popover-guard.nix { inherit popoverClose; };
+  hardwareMenu = pkgs.callPackage ./hardware-menu.nix {
+    inherit hardwareMetrics popoverGuard;
+  };
   networkMetrics = pkgs.callPackage ../../bar/i3status-rust/network-metrics.nix { };
-  networkMenu = pkgs.callPackage ./network-menu.nix { inherit networkMetrics; };
+  networkMenu = pkgs.callPackage ./network-menu.nix {
+    inherit networkMetrics popoverGuard;
+  };
   toggles = pkgs.callPackage ./toggles.nix { };
-  togglesMenu = pkgs.callPackage ./toggles-menu.nix { };
-  cheatsheet = pkgs.callPackage ./cheatsheet.nix { };
+  togglesMenu = pkgs.callPackage ./toggles-menu.nix { inherit popoverGuard; };
+  cheatsheet = pkgs.callPackage ./cheatsheet.nix { inherit popoverGuard; };
   lock = pkgs.callPackage ./lock.nix {
     theme = themesLib.get config.theme;
   };
@@ -48,6 +54,8 @@ in
       toggles
       togglesMenu
       cheatsheet
+      popoverClose
+      popoverGuard
     ]
     ++ lib.optionals shouldBindAudio [ audioMute ];
 

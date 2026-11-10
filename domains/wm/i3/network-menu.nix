@@ -1,6 +1,7 @@
 {
   pkgs,
   networkMetrics,
+  popoverGuard,
 }:
 
 pkgs.writeShellApplication {
@@ -9,6 +10,7 @@ pkgs.writeShellApplication {
     pkgs.conky
     pkgs.coreutils
     networkMetrics
+    popoverGuard
   ];
   text = ''
     set -euo pipefail
@@ -28,7 +30,9 @@ pkgs.writeShellApplication {
     conky -c "$HOME/.config/i3/network-menu.conky" >/dev/null 2>"$runtime/i3-network-menu.log" &
     pid=$!
     printf '%s\n' "$pid" > "$pidfile"
+    i3-popover-guard start || true
     wait "$pid" || true
     rm -f "$pidfile"
+    i3-popover-guard sync || true
   '';
 }

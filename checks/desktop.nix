@@ -12,9 +12,11 @@ let
   networkMetrics = pkgs.callPackage ../domains/bar/i3status-rust/network-metrics.nix { };
   vpnStatus = pkgs.callPackage ../domains/bar/i3status-rust/vpn-status.nix { };
   servicesSeparator = pkgs.callPackage ../domains/bar/i3status-rust/services-separator.nix { };
-  cheatsheet = pkgs.callPackage ../domains/wm/i3/cheatsheet.nix { };
+  popoverClose = pkgs.callPackage ../domains/wm/i3/popover-close.nix { };
+  popoverGuard = pkgs.callPackage ../domains/wm/i3/popover-guard.nix { inherit popoverClose; };
+  cheatsheet = pkgs.callPackage ../domains/wm/i3/cheatsheet.nix { inherit popoverGuard; };
   toggles = pkgs.callPackage ../domains/wm/i3/toggles.nix { };
-  togglesMenu = pkgs.callPackage ../domains/wm/i3/toggles-menu.nix { };
+  togglesMenu = pkgs.callPackage ../domains/wm/i3/toggles-menu.nix { inherit popoverGuard; };
   ftpStatus = pkgs.callPackage ../domains/remote/ftp/status.nix {
     inherit lib;
     mounts = map (mountPoint: {
@@ -71,6 +73,7 @@ let
           cheatsheet
           toggles
           togglesMenu
+          popoverClose
           ftpStatus
         ];
       }
@@ -88,6 +91,20 @@ let
         cp ${pkgs.writeText "ghostty-${themeName}.conf" ghosttyConfig} ghostty.conf
         cp ${pkgs.writeText "ghostty-colors-${themeName}.conf" ghosttyColors} colors.conf
         mkdir -p home/.config runtime
+
+        sleep 60 &
+        popover_pid=$!
+        printf '%s\n' "$popover_pid" > runtime/i3-toggles-menu.pid
+        XDG_RUNTIME_DIR="$PWD/runtime" i3-popover-close
+        wait "$popover_pid" 2>/dev/null || true
+        if kill -0 "$popover_pid" 2>/dev/null; then
+          echo "i3-popover-close did not terminate the overlay process" >&2
+          exit 1
+        fi
+        if [ -e runtime/i3-toggles-menu.pid ]; then
+          echo "i3-popover-close did not remove the overlay pidfile" >&2
+          exit 1
+        fi
 
         echo "Validating i3 config for theme ${themeName}..."
         HOME="$PWD/home" i3 -C -c i3.conf

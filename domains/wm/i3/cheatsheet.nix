@@ -1,5 +1,6 @@
 {
   pkgs,
+  popoverGuard,
 }:
 
 pkgs.writeShellApplication {
@@ -10,6 +11,7 @@ pkgs.writeShellApplication {
     pkgs.gawk
     pkgs.i3
     pkgs.xdotool
+    popoverGuard
   ];
   text = ''
     set -euo pipefail
@@ -77,12 +79,14 @@ pkgs.writeShellApplication {
       conky -c "$HOME/.config/i3/cheatsheet.conky" >/dev/null 2>"$log_file" &
       local pid=$!
       printf '%s\n' "$pid" > "$pid_file"
+      i3-popover-guard start || true
       if timeout 2 xdotool search --sync --onlyvisible --class '^i3-cheatsheet$' >/dev/null 2>&1; then
         sleep 0.1
         i3-msg -q '[class="^i3-cheatsheet$"] move to workspace current, move position center' >/dev/null 2>&1 || true
       fi
       wait "$pid" || true
       rm -f "$pid_file"
+      i3-popover-guard sync || true
     }
 
     case "''${1:-toggle}" in
