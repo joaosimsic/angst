@@ -102,6 +102,7 @@
     "llm-ruler"
     "agent"
     "threefold"
+    "spec-framework"
     "Throughput"
     "Throughput-Releases"
     "vault"
