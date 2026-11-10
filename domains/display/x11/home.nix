@@ -75,10 +75,12 @@ let
       mode_file="$state_home/angst/display/mode"
 
       enable_all() {
+        :
         ${enableLines}
       }
 
       disable_all() {
+        :
         ${disableLines}
       }
 

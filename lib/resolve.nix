@@ -122,6 +122,34 @@ let
       else
         { inherit role; };
 
+  toggleKeys = [
+    "workVpn"
+    "sunshineHost"
+  ];
+
+  rawToggles = decl.toggles or { };
+
+  toggles =
+    let
+      defaults = {
+        workVpn = false;
+        sunshineHost = false;
+      };
+    in
+    if !(builtins.isAttrs rawToggles) then
+      throw "toggles: must be an attrset of booleans, got ${builtins.typeOf rawToggles}"
+    else
+      let
+        unknown = builtins.filter (n: !builtins.elem n toggleKeys) (builtins.attrNames rawToggles);
+        nonBool = builtins.filter (n: !builtins.isBool rawToggles.${n}) (builtins.attrNames rawToggles);
+      in
+      if unknown != [ ] then
+        throw "toggles: unknown key(s) ${builtins.concatStringsSep ", " unknown}; expected ${builtins.concatStringsSep ", " toggleKeys}"
+      else if nonBool != [ ] then
+        throw "toggles: value(s) for ${builtins.concatStringsSep ", " nonBool} must be booleans"
+      else
+        defaults // rawToggles;
+
   rawSecrets = decl.secrets or { };
 
   secretScopes =
@@ -237,7 +265,7 @@ in
     // (decl.persist or { });
     projects = decl.projects or [ ];
     type = decl.type or "nixos";
-    inherit domain remoteStream;
+    inherit domain remoteStream toggles;
 
     scopes = secretScopes;
     inherit passwordSecret;

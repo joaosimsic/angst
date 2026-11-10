@@ -11,6 +11,8 @@ let
   hardwareMetrics = pkgs.callPackage ../domains/bar/i3status-rust/hardware-metrics.nix { };
   networkMetrics = pkgs.callPackage ../domains/bar/i3status-rust/network-metrics.nix { };
   cheatsheet = pkgs.callPackage ../domains/wm/i3/cheatsheet.nix { };
+  toggles = pkgs.callPackage ../domains/wm/i3/toggles.nix { };
+  togglesMenu = pkgs.callPackage ../domains/wm/i3/toggles-menu.nix { };
   ftpStatus = pkgs.callPackage ../domains/remote/ftp/status.nix {
     inherit lib;
     mounts = map (mountPoint: {
@@ -27,6 +29,7 @@ let
     i3Config = renderDomainOutputFor themeName "domains/wm/i3/config/config";
     cheatsheetConky = renderDomainOutputFor themeName "domains/wm/i3/config/cheatsheet.conky";
     networkMenuConky = renderDomainOutputFor themeName "domains/wm/i3/config/network-menu.conky";
+    togglesMenuConky = renderDomainOutputFor themeName "domains/wm/i3/config/toggles-menu.conky";
     i3statusRustConfig = renderDomainOutputFor themeName "domains/bar/i3status-rust/config/config.toml";
     ghosttyConfig = renderDomainOutputFor themeName "domains/terminal/ghostty/config/config.ghostty";
     ghosttyColors = renderDomainOutputFor themeName "domains/terminal/ghostty/config/colors.conf";
@@ -43,6 +46,7 @@ let
       i3Config,
       cheatsheetConky,
       networkMenuConky,
+      togglesMenuConky,
       i3statusRustConfig,
       ghosttyConfig,
       ghosttyColors,
@@ -59,6 +63,8 @@ let
           hardwareMetrics
           networkMetrics
           cheatsheet
+          toggles
+          togglesMenu
           ftpStatus
         ];
       }
@@ -71,6 +77,7 @@ let
         cp ${pkgs.writeText "i3-${themeName}.conf" i3Config} i3.conf
         cp ${pkgs.writeText "cheatsheet-${themeName}.conky" cheatsheetConky} cheatsheet.conky
         cp ${pkgs.writeText "network-menu-${themeName}.conky" networkMenuConky} network-menu.conky
+        cp ${pkgs.writeText "toggles-menu-${themeName}.conky" togglesMenuConky} toggles-menu.conky
         cp ${pkgs.writeText "i3status-rust-${themeName}.toml" i3statusRustConfig} config.toml
         cp ${pkgs.writeText "ghostty-${themeName}.conf" ghosttyConfig} ghostty.conf
         cp ${pkgs.writeText "ghostty-colors-${themeName}.conf" ghosttyColors} colors.conf
@@ -82,7 +89,7 @@ let
           echo "urgent workspace background did not use theme error color #${themeError}" >&2
           exit 1
         fi
-        if ! grep -qF "workspace_command i3-workspace-group bar ${themeError}" i3.conf; then
+        if ! grep -qE "workspace_command .*i3-workspace-group bar ${themeError}" i3.conf; then
           echo "workspace command did not use theme error color #${themeError} for urgent workspaces" >&2
           exit 1
         fi
@@ -108,6 +115,40 @@ let
         fi
         if ! grep -qF 'for_window [class="^i3-network-menu$"] floating enable, border none, sticky enable' i3.conf; then
           echo "i3 config is missing the network menu window rule" >&2
+          exit 1
+        fi
+        if ! grep -qF 'bindsym --release $mod+Shift+t exec --no-startup-id i3-toggles-menu' i3.conf; then
+          echo "i3 config is missing the mod+Shift+t toggles menu binding" >&2
+          exit 1
+        fi
+        if ! grep -qF 'bindsym $mod+Shift+v exec --no-startup-id i3-toggles toggle work-vpn' i3.conf; then
+          echo "i3 config is missing the work VPN toggle binding" >&2
+          exit 1
+        fi
+        if ! grep -qF 'bindsym $mod+Shift+g exec --no-startup-id i3-toggles toggle sunshine' i3.conf; then
+          echo "i3 config is missing the Sunshine toggle binding" >&2
+          exit 1
+        fi
+        if ! grep -qF 'for_window [class="^i3-toggles-menu$"] floating enable, border none, move to workspace current, move position center' i3.conf; then
+          echo "i3 config is missing the toggles menu window rule" >&2
+          exit 1
+        fi
+        if ! grep -qF 'no_focus [class="^i3-toggles-menu$"]' i3.conf; then
+          echo "i3 config is missing the toggles menu no_focus rule" >&2
+          exit 1
+        fi
+        if ! grep -qF "own_window_class = 'i3-toggles-menu'" toggles-menu.conky; then
+          echo "toggles menu conky config is missing its window class" >&2
+          exit 1
+        fi
+        if ! grep -qF 'execpi 1 i3-toggles status' toggles-menu.conky; then
+          echo "toggles menu conky config is missing the status command" >&2
+          exit 1
+        fi
+        i3-toggles status > toggles.txt
+        if ! grep -qF 'WORK VPN' toggles.txt || ! grep -qF 'SUNSHINE' toggles.txt; then
+          echo "i3-toggles status returned unexpected output" >&2
+          cat toggles.txt >&2
           exit 1
         fi
         if ! grep -qF 'bindsym --release $mod+Shift+slash exec --no-startup-id i3-cheatsheet toggle' i3.conf; then
@@ -139,7 +180,7 @@ let
           exit 1
         fi
         HOME="$PWD/home" i3-cheatsheet generate "$PWD/i3.conf" > cheatsheet.txt
-        for expected in 'Mod+?' 'WINDOWS' 'WORKSPACES' 'toggle shortcuts overlay' 'toggle network menu'; do
+        for expected in 'Mod+?' 'WINDOWS' 'WORKSPACES' 'toggle shortcuts overlay' 'toggle network menu' 'toggle services panel' 'toggle work vpn' 'toggle sunshine'; do
           if ! grep -qF "$expected" cheatsheet.txt; then
             echo "cheatsheet output is missing: $expected" >&2
             cat cheatsheet.txt >&2

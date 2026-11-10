@@ -12,6 +12,7 @@ let
   cfg = config.domains.remote.stream;
   role = host.remoteStream.role;
   isHost = role == "host" || role == "both";
+  sunshineAutoStart = host.toggles.sunshineHost or false;
 
   hasTailscaleKey = lib.any (s: lib.hasSuffix "/tailscale" s) hostHostSecrets;
 
@@ -74,7 +75,7 @@ in
             enable = true;
             # Safe to start directly: the unit is skipped via
             # ConditionPathExists until the host secret exists.
-            autoStart = true;
+            autoStart = sunshineAutoStart;
             openFirewall = false;
             inherit capSysAdmin;
           };
@@ -105,10 +106,10 @@ in
 
             paths = {
               # Event-driven start: path units never fail when the file is
-              # missing, they wait. This covers first switch (host-secrets
-              # service starts after user reload) and fresh boots.
+              # missing, they wait. Only installed when the host opts into
+              # boot autostart; the runtime panel starts Sunshine on demand.
               sunshine-creds = {
-                wantedBy = [ "graphical-session.target" ];
+                wantedBy = lib.optionals sunshineAutoStart [ "graphical-session.target" ];
                 partOf = [ "graphical-session.target" ];
                 pathConfig = {
                   PathExists = sunshineCreds;
@@ -120,7 +121,7 @@ in
               # rather than try-restart so an inactive Sunshine is started
               # too; switches rewrite the secret while the service is down.
               sunshine-creds-changed = {
-                wantedBy = [ "graphical-session.target" ];
+                wantedBy = lib.optionals sunshineAutoStart [ "graphical-session.target" ];
                 partOf = [ "graphical-session.target" ];
                 pathConfig = {
                   PathModified = sunshineCreds;

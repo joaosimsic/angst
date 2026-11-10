@@ -13,7 +13,7 @@ pkgs.writeShellApplication {
     log="''${SUNSHINE_LOG:-$HOME/.config/sunshine/sunshine.log}"
 
     if ! systemctl --user is-active --quiet sunshine.service; then
-      printf '{"icon":"sunshine_off","state":"Critical","text":""}\n'
+      printf '{"icon":"sunshine_off","state":"Idle","text":""}\n'
       exit 0
     fi
 

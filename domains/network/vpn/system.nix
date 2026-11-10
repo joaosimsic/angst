@@ -4,12 +4,27 @@
   flakeSelf,
   runtime,
   userConfig,
+  host,
   hostScopes ? [ ],
   ...
 }:
 
 let
   cfg = config.domains.network.vpn;
+
+  servers = cfg.openvpn.servers // {
+    cvx = {
+      config = ''
+        config /run/secrets/vpn/cvx.ovpn
+        data-ciphers AES-256-CBC
+        data-ciphers-fallback AES-256-CBC
+        compat-mode 2.4.0
+      '';
+      authUserPass = "/run/secrets/vpn/cvx.creds";
+      updateResolvConf = true;
+      autoStart = host.toggles.workVpn or false;
+    };
+  };
 in
 {
   options.domains.network.vpn = {
@@ -97,14 +112,25 @@ in
     lib.mkMerge [
       {
         boot.kernelModules = [ "tun" ];
-        services.openvpn.servers = cfg.openvpn.servers;
+        services.openvpn.servers = servers;
+
+        security.polkit.extraConfig = ''
+          polkit.addRule(function(action, subject) {
+            if (action.id == "org.freedesktop.systemd1.manage-units" &&
+                subject.user == "${userConfig.username}" &&
+                action.lookup("unit") == "openvpn-cvx.service" &&
+                ["start", "stop", "restart"].indexOf(action.lookup("verb")) >= 0) {
+              return polkit.Result.YES;
+            }
+          });
+        '';
       }
 
-      (lib.mkIf (cfg.openvpn.servers != { }) {
+      (lib.mkIf (servers != { }) {
         systemd.services = {
           angst-provision-vpn = {
             description = "angst: decrypt VPN .ovpn + creds (declared scopes, ephemeral)";
-            before = map (n: "openvpn-${n}.service") (builtins.attrNames cfg.openvpn.servers);
+            before = map (n: "openvpn-${n}.service") (builtins.attrNames servers);
             after = [
               "local-fs.target"
               "vm-age-key.service"
@@ -139,7 +165,7 @@ in
             };
           };
         }
-        // lib.genAttrs (map (n: "openvpn-${n}") (builtins.attrNames cfg.openvpn.servers)) (_: {
+        // lib.genAttrs (map (n: "openvpn-${n}") (builtins.attrNames servers)) (_: {
           after = [ "angst-provision-vpn.service" ];
           requires = [ "angst-provision-vpn.service" ];
         });

@@ -19,6 +19,8 @@ let
   hardwareMenu = pkgs.callPackage ./hardware-menu.nix { inherit hardwareMetrics; };
   networkMetrics = pkgs.callPackage ../../bar/i3status-rust/network-metrics.nix { };
   networkMenu = pkgs.callPackage ./network-menu.nix { inherit networkMetrics; };
+  toggles = pkgs.callPackage ./toggles.nix { };
+  togglesMenu = pkgs.callPackage ./toggles-menu.nix { };
   cheatsheet = pkgs.callPackage ./cheatsheet.nix { };
   lock = pkgs.callPackage ./lock.nix {
     theme = themesLib.get config.theme;
@@ -43,6 +45,8 @@ in
       lock
       hardwareMenu
       networkMenu
+      toggles
+      togglesMenu
       cheatsheet
     ]
     ++ lib.optionals shouldBindAudio [ audioMute ];
