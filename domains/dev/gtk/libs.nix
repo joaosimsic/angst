@@ -6,6 +6,12 @@ let
   runtime = with pkgs; [
     gtk4
     libadwaita
+    glib
+    pango
+    cairo
+    gdk-pixbuf
+    graphene
+    harfbuzz
   ];
 
   dev = with pkgs; [
