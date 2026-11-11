@@ -46,15 +46,22 @@ let
     pkgs.libpulseaudio.dev
   ];
 
-  bevyLdPath = lib.makeLibraryPath bevyLibs;
+  # GUI projects (for example TiConnect) need GTK4/libadwaita in the same
+  # native closure as Bevy and media. Include them when dev.gtk is enabled.
+  gtk = import ../../dev/gtk/libs.nix { inherit pkgs; };
+  gtkRuntimeLibs = lib.optionals config.domains.dev.gtk.enable gtk.runtime;
+  gtkDevLibs = lib.optionals config.domains.dev.gtk.enable gtk.dev;
+  nativeLibs = bevyLibs ++ gtkRuntimeLibs;
+
+  nativeLdPath = lib.makeLibraryPath nativeLibs;
   hostLdPath = "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/local/lib:/usr/lib";
   # Full link-time RPATH: nix glibc + gcc + every bevy native lib + media
   # runtime + host system dirs. Shell-independent fallback lives in
   # ~/.cargo/config.toml below so plain `cargo build` works even when
   # CARGO_BUILD_RUSTFLAGS did not reach the shell (bash/opencode).
-  fullRustRpath = "${pkgs.glibc}/lib:${pkgs.stdenv.cc.cc.lib}/lib:${bevyLdPath}:${lib.makeLibraryPath mediaRuntimeLibs}:${hostLdPath}";
-  fullPkgConfig = "${lib.makeSearchPath "lib/pkgconfig" (bevyLibs ++ mediaDevLibs)}:${
-    lib.makeSearchPath "share/pkgconfig" (bevyLibs ++ mediaDevLibs)
+  fullRustRpath = "${pkgs.glibc}/lib:${pkgs.stdenv.cc.cc.lib}/lib:${nativeLdPath}:${lib.makeLibraryPath mediaRuntimeLibs}:${hostLdPath}";
+  fullPkgConfig = "${lib.makeSearchPath "lib/pkgconfig" (nativeLibs ++ mediaDevLibs ++ gtkDevLibs)}:${
+    lib.makeSearchPath "share/pkgconfig" (nativeLibs ++ mediaDevLibs ++ gtkDevLibs)
   }:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig";
   cargoRustflags = "-C link-arg=-fuse-ld=mold -C link-arg=-Wl,-rpath,${fullRustRpath}";
 in
@@ -63,7 +70,7 @@ in
     systemd.user.sessionVariables = {
       PKG_CONFIG_PATH = fullPkgConfig;
       NIX_LD = "${pkgs.stdenv.cc.bintools.dynamicLinker}";
-      NIX_LD_LIBRARY_PATH = bevyLdPath;
+      NIX_LD_LIBRARY_PATH = nativeLdPath;
       CARGO_BUILD_RUSTFLAGS = cargoRustflags;
     };
 
@@ -78,10 +85,10 @@ in
           git-lfs
           bevyBrpMcp
         ]
-        ++ bevyLibs;
+        ++ nativeLibs;
 
       sessionVariables = {
-        NIX_LD_LIBRARY_PATH = lib.mkForce "${bevyLdPath}:\${NIX_LD_LIBRARY_PATH:+:$NIX_LD_LIBRARY_PATH}";
+        NIX_LD_LIBRARY_PATH = lib.mkForce "${nativeLdPath}:\${NIX_LD_LIBRARY_PATH:+:$NIX_LD_LIBRARY_PATH}";
         NIX_LD = lib.mkForce "${pkgs.stdenv.cc.bintools.dynamicLinker}";
         PKG_CONFIG_PATH = lib.mkForce "${fullPkgConfig}:\${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}";
         CARGO_BUILD_RUSTFLAGS = cargoRustflags;

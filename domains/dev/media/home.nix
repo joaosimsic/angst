@@ -7,25 +7,38 @@
 
 let
   inherit (pkgs) ffmpeg libpulseaudio;
+
+  # Compose GTK4/libadwaita into the media dev closure when dev.gtk is on.
+  gtk = import ../../dev/gtk/libs.nix { inherit pkgs; };
+  gtkRuntimeLibs = lib.optionals config.domains.dev.gtk.enable gtk.runtime;
+  gtkDevLibs = lib.optionals config.domains.dev.gtk.enable gtk.dev;
+
   devLibs = [
     ffmpeg.dev
     libpulseaudio.dev
-  ];
+  ]
+  ++ gtkDevLibs;
   pkgConfigPath = lib.makeSearchPath "lib/pkgconfig" devLibs;
   includePath = lib.makeSearchPath "include" devLibs;
-  libPath = lib.makeSearchPath "lib" [
-    ffmpeg.lib
-    ffmpeg.dev
-    libpulseaudio
-    libpulseaudio.dev
-  ];
+  libPath = lib.makeSearchPath "lib" (
+    [
+      ffmpeg.lib
+      ffmpeg.dev
+      libpulseaudio
+      libpulseaudio.dev
+    ]
+    ++ gtkRuntimeLibs
+  );
 
-  rustRpath = lib.makeLibraryPath [
-    pkgs.glibc
-    pkgs.stdenv.cc.cc.lib
-    libpulseaudio
-    ffmpeg
-  ];
+  rustRpath = lib.makeLibraryPath (
+    [
+      pkgs.glibc
+      pkgs.stdenv.cc.cc.lib
+      libpulseaudio
+      ffmpeg
+    ]
+    ++ gtkRuntimeLibs
+  );
   # Host system dirs so the standalone (non-gamedev) fallback also resolves
   # apt-provided libs at runtime on genericLinux.
   hostLdPath = "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/local/lib:/usr/lib";

@@ -131,6 +131,8 @@ let
 
   secretScanHooks = import ./secret-scan-hooks.nix { inherit pkgs; };
 
+  checkGtk = import ./gtk.nix { inherit pkgs; };
+
   checkTex = import ./tex.nix { inherit pkgs lib; };
 
   checkZellij = import ./zellij.nix {
@@ -235,6 +237,7 @@ in
   check-no-store-symlinks = checkNoStoreSymlinks;
   check-treesitter = checkTreesitter;
   check-rust = checkRust;
+  check-gtk = checkGtk;
   check-tex = checkTex;
   check-zellij = checkZellij;
   check-opencode-attention = checkOpencodeAttention;
