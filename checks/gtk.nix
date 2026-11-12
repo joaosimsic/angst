@@ -12,8 +12,10 @@ pkgs.runCommand "check-gtk"
   ''
     set -euo pipefail
     pkg-config --exists 'gtk4 >= 4.14'
+    pkg-config --exists 'gtk4-layer-shell-0 >= 1'
     pkg-config --exists 'libadwaita-1 >= 1.5'
     echo "gtk4: $(pkg-config --modversion gtk4)"
+    echo "gtk4-layer-shell: $(pkg-config --modversion gtk4-layer-shell-0)"
     echo "libadwaita: $(pkg-config --modversion libadwaita-1)"
     touch $out
   ''

@@ -5,6 +5,7 @@
 let
   runtime = with pkgs; [
     gtk4
+    gtk4-layer-shell
     libadwaita
     glib
     pango
@@ -16,6 +17,7 @@ let
 
   dev = with pkgs; [
     gtk4.dev
+    gtk4-layer-shell.dev
     libadwaita.dev
     glib.dev
     pango.dev
