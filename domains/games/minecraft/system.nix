@@ -13,6 +13,7 @@ in
 
   config = lib.mkIf cfg.enable {
     networking.firewall.allowedTCPPorts = [ 25565 ];
+    networking.firewall.allowedUDPPorts = [ 24454 25565 ];
 
     environment.systemPackages = [
       (pkgs.writeShellScriptBin "java8" ''
