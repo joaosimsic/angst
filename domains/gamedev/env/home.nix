@@ -52,6 +52,8 @@ let
   gtkRuntimeLibs = lib.optionals config.domains.dev.gtk.enable gtk.runtime;
   gtkDevLibs = lib.optionals config.domains.dev.gtk.enable gtk.dev;
   nativeLibs = bevyLibs ++ gtkRuntimeLibs;
+  nativeDevLibs = [ pkgs.alsa-lib.dev ];
+  pkgConfigLibs = nativeLibs ++ nativeDevLibs ++ mediaDevLibs ++ gtkDevLibs;
 
   nativeLdPath = lib.makeLibraryPath nativeLibs;
   hostLdPath = "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/local/lib:/usr/lib";
@@ -60,8 +62,8 @@ let
   # ~/.cargo/config.toml below so plain `cargo build` works even when
   # CARGO_BUILD_RUSTFLAGS did not reach the shell (bash/opencode).
   fullRustRpath = "${pkgs.glibc}/lib:${pkgs.stdenv.cc.cc.lib}/lib:${nativeLdPath}:${lib.makeLibraryPath mediaRuntimeLibs}:${hostLdPath}";
-  fullPkgConfig = "${lib.makeSearchPath "lib/pkgconfig" (nativeLibs ++ mediaDevLibs ++ gtkDevLibs)}:${
-    lib.makeSearchPath "share/pkgconfig" (nativeLibs ++ mediaDevLibs ++ gtkDevLibs)
+  fullPkgConfig = "${lib.makeSearchPath "lib/pkgconfig" pkgConfigLibs}:${
+    lib.makeSearchPath "share/pkgconfig" pkgConfigLibs
   }:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig";
   cargoRustflags = "-C link-arg=-fuse-ld=mold -C link-arg=-Wl,-rpath,${fullRustRpath}";
 in
