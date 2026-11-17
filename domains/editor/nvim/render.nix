@@ -30,6 +30,7 @@ let
       vue = "javascript";
       angular = "javascript";
       prisma = "javascript";
+      svelte = "javascript";
       docker_compose = "docker";
     }
     .${n} or n;

@@ -68,12 +68,17 @@ return {
 			if adapter.linter_def then
 				for name, def in pairs(adapter.linter_def) do
 					if not lint.linters[name] then
+						local parser = def.parser
+							or require("lint.parser").from_pattern(def.pattern, def.captures, def.severity)
+
 						lint.linters[name] = {
 							cmd = def.cmd,
 							stdin = def.stdin,
 							args = def.args,
 							ignore_exitcode = def.ignore_exitcode,
-							parser = require("lint.parser").from_pattern(def.pattern, def.captures, def.severity),
+							append_fname = def.append_fname,
+							cwd = def.cwd,
+							parser = parser,
 						}
 					end
 				end

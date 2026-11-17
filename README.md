@@ -283,6 +283,8 @@ Profiles replace host-specific `home.nix` / `configuration.nix` files. Each is a
 
 Supported: `bash`, `blade`, `c`, `clojure`, `conf`, `css`, `docker`, `go`, `html`, `java`, `javascript`, `json`, `just`, `lua`, `markdown`, `nix`, `php`, `python`, `rust`, `terraform`, `toml`, `xml`, `yaml`.
 
+`javascript` also covers Svelte: `svelte-language-server`, `tree-sitter-svelte`, and the nvim `svelte` adapter, plus Biome wrappers for formatting and linting.
+
 Toolchains are auto-discovered by `lib/resolve.nix` and selected via `toolchains = "*"` or a validated list in the host decl. Packages flow into home-manager and dev shells; grammars flow into tree-sitter setup via `lib/treesitter.nix`.
 
 ---
