@@ -11,10 +11,10 @@
 
 let
   pname = "paper-desktop";
-  version = "0.5.15";
+  version = "0.5.19";
   src = fetchurl {
     url = "https://download.paper.design/linux/appImage";
-    hash = "sha256-TxqHdvjFgDt4dSoFES5TC42+5dbRSMQZKXxF0iqjlPs=";
+    hash = "sha256-YKZUYnYHCJ8ARLLPjEY20bAZ2Qdx0PrsrteDdLJa4Es=";
   };
   appdir = appimageTools.extract { inherit pname version src; };
 in

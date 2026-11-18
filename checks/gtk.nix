@@ -14,8 +14,10 @@ pkgs.runCommand "check-gtk"
     pkg-config --exists 'gtk4 >= 4.14'
     pkg-config --exists 'gtk4-layer-shell-0 >= 1'
     pkg-config --exists 'libadwaita-1 >= 1.5'
+    pkg-config --exists 'webkitgtk-6.0'
     echo "gtk4: $(pkg-config --modversion gtk4)"
     echo "gtk4-layer-shell: $(pkg-config --modversion gtk4-layer-shell-0)"
     echo "libadwaita: $(pkg-config --modversion libadwaita-1)"
+    echo "webkitgtk: $(pkg-config --modversion webkitgtk-6.0)"
     touch $out
   ''

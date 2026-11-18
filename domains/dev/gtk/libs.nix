@@ -7,6 +7,7 @@ let
     gtk4
     gtk4-layer-shell
     libadwaita
+    webkitgtk_6_0
     glib
     pango
     cairo
@@ -19,6 +20,7 @@ let
     gtk4.dev
     gtk4-layer-shell.dev
     libadwaita.dev
+    webkitgtk_6_0.dev
     glib.dev
     pango.dev
     cairo.dev
