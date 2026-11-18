@@ -8,6 +8,7 @@ let
     gtk4-layer-shell
     libadwaita
     webkitgtk_6_0
+    libsoup_3
     glib
     pango
     cairo
@@ -21,6 +22,7 @@ let
     gtk4-layer-shell.dev
     libadwaita.dev
     webkitgtk_6_0.dev
+    libsoup_3.dev
     glib.dev
     pango.dev
     cairo.dev
