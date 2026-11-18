@@ -1,1 +1,4 @@
-{ description = "System audio processing via Pipewire"; }
+{
+  customXdg = true;
+  description = "System audio processing via Pipewire";
+}
