@@ -333,6 +333,22 @@ pkgs.writeShellApplication {
       done
     }
 
+    cmd_restart() {
+      local target="''${1:-$PWD}" hash state unit
+      hash="$(project_hash "$(realpath "$target")")"
+      state="$runtime_root/$hash"
+      if [ ! -f "$state/unit" ]; then
+        echo "opencode-mux: no project server state for $target" >&2
+        return 1
+      fi
+      unit="$(cat "$state/unit")"
+      if ! systemctl --user cat "$unit" >/dev/null 2>&1; then
+        echo "opencode-mux: systemd unit $unit is not installed" >&2
+        return 1
+      fi
+      systemctl --user restart "$unit"
+    }
+
     cmd_stop() {
       local target="''${1:-}" hash state unit
       if [ -n "$target" ]; then
@@ -377,8 +393,12 @@ pkgs.writeShellApplication {
         shift
         cmd_stop "$@"
         ;;
+      restart)
+        shift
+        cmd_restart "$@"
+        ;;
       *)
-        echo "usage: opencode-mux {client|server|reap|status|stop}" >&2
+        echo "usage: opencode-mux {client|server|reap|status|stop|restart}" >&2
         exit 2
         ;;
     esac

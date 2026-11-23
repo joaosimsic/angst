@@ -10,9 +10,20 @@ type Shell = (strings: TemplateStringsArray, ...values: unknown[]) => ShellPromi
 type PluginInput = { $: Shell }
 
 type CommandInput = { command: string; arguments: string }
+type CommandConfig = { template: string; description?: string }
+type ConfigInput = { command?: Record<string, CommandConfig> }
 type SystemOutput = { system: string[] }
 
 const LEVELS: Level[] = ["lite", "full", "ultra", "off"]
+
+const COMMAND = {
+  description: "Caveman voice: /caveman toggles on/off, or lite|full|ultra|off",
+  template: `Caveman control. Argument: "$ARGUMENTS"
+
+The caveman plugin already applied the mode.
+Reply with exactly one line using the Caveman level from your system instructions:
+Caveman level: <level>`,
+}
 
 function isLevel(value: unknown): value is Level {
   return typeof value === "string" && (LEVELS as string[]).includes(value)
@@ -54,6 +65,11 @@ export const CavemanPlugin = async ({ $ }: PluginInput) => {
   }
 
   return {
+    config: async (config) => {
+      if (!config) return
+      config.command ??= {}
+      config.command.caveman = { ...COMMAND }
+    },
     "command.execute.before": async (input: CommandInput) => {
       if (input?.command !== "caveman") return
       const argument = String(input?.arguments ?? "").trim().toLowerCase()

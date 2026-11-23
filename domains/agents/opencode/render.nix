@@ -147,18 +147,6 @@ let
         };
       };
     };
-    command = {
-      caveman = {
-        description = "Caveman voice: /caveman toggles on/off, or lite|full|ultra|off";
-        template = ''
-          Caveman control. Argument: "$ARGUMENTS"
-
-          The caveman plugin already applied the mode.
-          Reply with exactly one line using the Caveman level from your system instructions:
-          Caveman level: <level>
-        '';
-      };
-    };
   };
 in
 [

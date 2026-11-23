@@ -145,6 +145,8 @@ let
 
   checkOpencodeAttention = import ./opencode.nix { inherit pkgs; };
 
+  checkOpencodeRestart = import ./opencode-restart.nix { inherit pkgs; };
+
   checkOpencodeSessionNav = import ./opencode-session-nav.nix { inherit pkgs; };
 
   checkOpencodeUsage = import ./opencode-usage.nix { inherit pkgs; };
@@ -241,6 +243,7 @@ in
   check-tex = checkTex;
   check-zellij = checkZellij;
   check-opencode-attention = checkOpencodeAttention;
+  check-opencode-restart = checkOpencodeRestart;
   check-opencode-session-nav = checkOpencodeSessionNav;
   check-opencode-usage = checkOpencodeUsage;
   check-opencode-mux = checkOpencodeMux;
