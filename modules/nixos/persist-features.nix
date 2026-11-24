@@ -124,6 +124,13 @@
         durable = true;
       }
     ];
+    "git.gh" = [
+      {
+        dir = ".config/gh";
+        name = "gh";
+        durable = true;
+      }
+    ];
     "git.projects" = [
       {
         dir = "projects";

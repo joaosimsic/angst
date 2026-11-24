@@ -8,6 +8,7 @@
     "sql-client.sqlit"
     "sql-client.rainfrog"
     "http-client.posting"
+    "git.gh"
     "git.projects"
     "editor.lspmux"
   ];

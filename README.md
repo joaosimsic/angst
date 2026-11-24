@@ -34,7 +34,7 @@ nix run .#lint-themes                # fast, eval-only theme check
 ```
 @hosts/          machine declarations (hosts/<domain>/<hostname>/default.nix) — auto-discovered
 @checks/         build-time validation (theme lint, config rendering, secrets, projects, password, login shell, Nix lint)
-@domains/        features (51 domains / 27 categories) — each with a default.nix interface + optional home.nix/system.nix sides
+@domains/        features (52 domains / 27 categories) — each with a default.nix interface + optional home.nix/system.nix sides
 @secrets/        encrypted stores: master, apps, ssh, ftp, vpn, projects, db — age-encrypted vault tarballs (secrets/projects/*.tar.age, secrets/db/*.tar.age) under secrets/
 @lib/            build system, domain framework, host resolution, flake outputs
 @modules/        core NixOS/home/VM modules + age secrets integration
@@ -106,7 +106,7 @@ just reinstall
 
 ### `@domains/` — Feature Declarations
 
-Domains are the single unit of configuration — **51 features across 27 categories** (user apps *and* system features). Each `domains/<category>/<name>/` describes one feature, with optional user (`home.nix`) and system (`system.nix`) sides:
+Domains are the single unit of configuration — **52 features across 27 categories** (user apps *and* system features). Each `domains/<category>/<name>/` describes one feature, with optional user (`home.nix`) and system (`system.nix`) sides:
 
 | File | Purpose |
 |---|---|
@@ -122,9 +122,9 @@ The domain framework (`lib/domains/`):
 - **`scan.nix`** — recursively discovers domain dirs and runs `mkDomain` over each `default.nix`, producing `entries`/`systemEntries`.
 - **`module.nix`** — `mkDomainModule` auto-generates a home-manager module per feature (`enable` option, `home.packages`, `home.file` for rendered outputs, `xdg.configFile` for `config/`, `renderOverrideModule` for `mutable` files); validates the render output contract (`[{ path, text, checks? }]`). `mkNixosSystemModule` imports `system.nix` when present. Each side self-gates on `domains.<cat>.<name>.enable`; `host.type` decides which sides are built (`nixos` → both, `home` → home only).
 
-Full 51-domain inventory: see [openwiki/domains.md](openwiki/domains.md).
+Full 52-domain inventory: see [openwiki/domains.md](openwiki/domains.md).
 
-Domain categories: `agents/` (opencode, cursor-cli), `audio/` (easyeffects), `bar/` (i3status-rust), `browser/` (firefox), `capture/` (screenshot, obs), `chat/` (discord), `design/` (paper), `display/` (gpu, lightdm, ly, picom, x11), `editor/` (lspmux, nvim), `embedded/` (arduino, vial), `files/` (yazi), `gamedev/` (blender, env), `games/` (epic, minecraft, steam), `git/` (code, lazygit, projects), `http-client/` (posting), `kernel/` (audio, clipboard, container, cursor, graphical, monitoring, network, search), `launcher/` (rofi), `network/` (vpn), `nix/` (nh), `notifications/`, `office/` (libreoffice), `remote/` (ftp, ssh), `security/` (age), `shell/` (carapace, nushell, starship), `sql-client/` (rainfrog, sqlit), `terminal/` (ghostty, tmux, zellij), `wm/` (i3).
+Domain categories: `agents/` (opencode, cursor-cli), `audio/` (easyeffects), `bar/` (i3status-rust), `browser/` (firefox), `capture/` (screenshot, obs), `chat/` (discord), `design/` (paper), `display/` (gpu, lightdm, ly, picom, x11), `editor/` (lspmux, nvim), `embedded/` (arduino, vial), `files/` (yazi), `gamedev/` (blender, env), `games/` (epic, minecraft, steam), `git/` (code, gh, lazygit, projects), `http-client/` (posting), `kernel/` (audio, clipboard, container, cursor, graphical, monitoring, network, search), `launcher/` (rofi), `network/` (vpn), `nix/` (nh), `notifications/`, `office/` (libreoffice), `remote/` (ftp, ssh), `security/` (age), `shell/` (carapace, nushell, starship), `sql-client/` (rainfrog, sqlit), `terminal/` (ghostty, tmux, zellij), `wm/` (i3).
 
 Domains are enabled via **profile composition**, not per-host module files.
 
@@ -260,7 +260,7 @@ Profiles replace host-specific `home.nix` / `configuration.nix` files. Each is a
 |---|---|
 | `base` | nushell, carapace, starship, zellij, nvim, yazi, lazygit, nh, age, network, git, search, monitoring, container, **ssh** |
 | `desktop` | rofi, ghostty, x11, graphical, audio, clipboard |
-| `development` | opencode, cursor-cli, sqlit, rainfrog, posting, **git.projects** |
+| `development` | opencode, cursor-cli, sqlit, rainfrog, posting, **gh**, **git.projects** |
 | `server` | ssh (sshd is driven per-host via `host.ssh.server.enable`) |
 | `vm` | ssh + guest VM modules (runtime, variant, profile, host-mount); restricted to hostname `vm` |
 | `obs` | obs (capture.obs) |
