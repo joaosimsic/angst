@@ -1,14 +1,24 @@
 {
   config,
   lib,
+  pkgs,
+  store ? { },
+  themesLib,
   ...
 }:
 
 let
   cfg = config.domains.design.paper;
+  paperPkg = import ./launcher.nix {
+    inherit pkgs lib;
+    browser = store.defaultBrowser or "firefox";
+    isDark = (themesLib.get config.theme).isDark;
+  };
 in
 {
   config = lib.mkIf cfg.enable {
+    home.packages = [ paperPkg ];
+
     xdg.mimeApps = {
       enable = true;
       defaultApplications = {
@@ -27,8 +37,8 @@ in
       name = "Paper";
       genericName = "Design Tool";
       comment = "Paper Desktop – connected canvas (paper.design)";
-      exec = "${config.home.homeDirectory}/.nix-profile/bin/paper-desktop %U";
-      icon = "paper-desktop";
+      exec = "${paperPkg}/bin/paper-desktop %U";
+      icon = "applications-graphics";
       categories = [
         "Graphics"
         "Development"

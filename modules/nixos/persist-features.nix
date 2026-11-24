@@ -49,6 +49,18 @@
         durable = true;
       }
     ];
+    "design.paper" = [
+      {
+        dir = ".config/Paper";
+        name = "paper";
+        durable = true;
+      }
+      {
+        dir = ".local/share/paper-desktop";
+        name = "paper-desktop";
+        durable = true;
+      }
+    ];
     "display.x11" = [
       {
         dir = ".local/state/angst/display";

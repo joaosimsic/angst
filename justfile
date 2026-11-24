@@ -49,6 +49,7 @@ hm host="nixos":
 hm-switch host="":
     @if [ -n "{{ host }}" ]; then NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake .#{{ host }} --impure; else NIXPKGS_ALLOW_UNFREE=1 nix run .#hm-switch -- switch --flake . --impure; fi
 
+# Pinned fallback; design.paper already installs the runtime-download launcher.
 install-paper:
     NIXPKGS_ALLOW_UNFREE=1 nix profile install .#paper-desktop --impure
 
